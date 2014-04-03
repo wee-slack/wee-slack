@@ -49,6 +49,13 @@ def command_back(args):
 def command_debug(args):
   create_slack_debug_buffer()
 
+def command_debugstring(args):
+  global debug_string
+  if args == '':
+    debug_string = None
+  else:
+    debug_string = args
+
 def command_search(args):
   if not slack_buffer:
     create_slack_buffer()
@@ -103,6 +110,9 @@ def slack_cb(data, fd):
 def write_debug(message_json):
   dereference_hash(message_json)
   output = "%s" % ( json.dumps(message_json, sort_keys=True) )
+  if debug_string:
+    if output.find(debug_string) < 0:
+      return
   w.prnt(slack_debug,output)
 
 def process_presence_change(data):
@@ -327,7 +337,8 @@ def closed_slack_debug_buffer_cb(data, buffer):
   return w.WEECHAT_RC_OK
 
 def create_slack_debug_buffer():
-  global slack_debug
+  global slack_debug, debug_string
+  debug_string = None
   slack_debug = w.buffer_new("slack-debug", "", "closed_slack_debug_buffer_cb", "", "")
   w.buffer_set(slack_debug, "notify", "0")
   w.buffer_set(slack_debug, "display", "1")
