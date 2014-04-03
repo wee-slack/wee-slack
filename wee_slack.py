@@ -209,10 +209,18 @@ def create_browser_instance():
   return browser
 
 def buffer_switch_cb(signal, sig_type, data):
+  #NOTE: we flush both the next and previous buffer so that all read pointer id up to date
+  global previous_buffer
+#  w.prnt("",str(previous_buffer))
+  if reverse_channel_hash.has_key(previous_buffer):
+    slack_mark_channel_read(reverse_channel_hash[previous_buffer])
   if current_buffer_name().startswith(server):
     channel_name = current_buffer_name(short=True)
     if reverse_channel_hash.has_key(channel_name):
       slack_mark_channel_read(reverse_channel_hash[channel_name])
+      previous_buffer = channel_name
+  else:
+    previous_buffer = None
   return w.WEECHAT_RC_OK
 
 def keep_channel_read_cb(data, remaining):
@@ -314,6 +322,7 @@ if __name__ == "__main__":
     timeout   = w.config_get_plugin("timeout")
 
     timer = time.time()
+    previous_buffer = None
 
     browser = create_browser_instance()
     stuff = connect_to_slack(browser)
