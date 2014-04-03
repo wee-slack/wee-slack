@@ -214,14 +214,24 @@ def typing_notification_cb(signal, sig_type, data):
       pass
   return w.WEECHAT_RC_OK
 
+#NOTE: figured i'd do this because they are
+def slack_ping_cb(data, remaining):
+  global counter
+  if counter > 999:
+    counter = 0
+  request = {"type":"ping","id":counter}
+  ws.send(json.dumps(request))
+  counter += 1
+  return w.WEECHAT_RC_OK
+
+### Slack specific requests
+
 def slack_mark_channel_read(channel_id):
   t = int(time.time())
   if channel_id.startswith('C'):
     reply = async_slack_api_request(browser, "channels.mark", {"channel":channel_id,"ts":t})
   elif channel_id.startswith('D'):
     reply = async_slack_api_request(browser, "im.mark", {"channel":channel_id,"ts":t})
-
-### Slack specific requests
 
 def create_browser_instance():
   browser = mechanize.Browser()
@@ -368,9 +378,10 @@ if __name__ == "__main__":
     timeout   = w.config_get_plugin("timeout")
 
     timer = time.time()
+    counter = 0
     previous_buffer = None
 
-    create_slack_buffer()
+    #create_slack_buffer()
 
     browser = create_browser_instance()
     stuff = connect_to_slack(browser)
@@ -391,6 +402,7 @@ if __name__ == "__main__":
       w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "slack_cb", "")
       w.hook_timer(1000, 0, 0, "typing_update_cb", "")
       w.hook_timer(1000 * 60, 0, 0, "keep_channel_read_cb", "")
+      w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", "")
       w.hook_signal('buffer_switch', "buffer_switch_cb", "")
       w.hook_signal('window_switch', "buffer_switch_cb", "")
       w.hook_signal('input_text_changed', "typing_notification_cb", "")
