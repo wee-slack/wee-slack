@@ -337,7 +337,7 @@ if __name__ == "__main__":
       w.hook_signal('buffer_switch', "buffer_switch_cb", "")
       w.hook_signal('window_switch', "buffer_switch_cb", "")
       w.hook_signal('input_text_changed', "typing_notification_cb", "")
-      w.hook_command('slack','Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', 'search|nickup|awaybomb', 'slack_command_cb', '')
+      w.hook_command('slack','Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', 'search|nickup|nickup2|nickup3|awaybomb', 'slack_command_cb', '')
       w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
     else:
       w.prnt("", 'You need to configure this plugin!')
