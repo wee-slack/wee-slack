@@ -384,7 +384,6 @@ if __name__ == "__main__":
       w.hook_signal('window_switch', "buffer_switch_cb", "")
       w.hook_signal('input_text_changed', "typing_notification_cb", "")
       commands = [x[8:] for x in dir() if x.startswith('command_')]
-      w.prnt('',str(commands))
       w.hook_command('slack','Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', '|'.join(commands), 'slack_command_cb', '')
       w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
     else:
