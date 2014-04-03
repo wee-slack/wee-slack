@@ -13,7 +13,6 @@ import mechanize
 from websocket import create_connection
 
 import weechat as w
-import re
 
 SCRIPT_NAME  = "slack_extension"
 SCRIPT_AUTHOR  = "Ryan Huber <rhuber@gmail.com>"
@@ -30,10 +29,10 @@ def slack_command_cb(data, current_buffer, args):
   else:
     function_name, args = a[0], None
   function_name = "command_"+function_name
-  try:
-    eval(function_name)(args)
-  except:
-    w.prnt("", "Command not found "+function_name)
+#  try:
+  eval(function_name)(args)
+#  except:
+#    w.prnt("", "Command not found "+function_name)
   return w.WEECHAT_RC_OK
 
 def command_test(args):
@@ -381,6 +380,7 @@ if __name__ == "__main__":
     counter = 0
     previous_buffer = None
 
+    slack_buffer = None
     #create_slack_buffer()
 
     browser = create_browser_instance()
