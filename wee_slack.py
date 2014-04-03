@@ -17,7 +17,7 @@ import re
 
 SCRIPT_NAME  = "slack_extension"
 SCRIPT_AUTHOR  = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.1"
+SCRIPT_VERSION = "0.2"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC  = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -30,11 +30,10 @@ def slack_command_cb(data, current_buffer, args):
   else:
     function_name, args = a[0], None
   function_name = "command_"+function_name
-#  try:
-  eval(function_name)(args)
-#  except:
-    #w.prnt("", "Function not implemented "+function_name)
-#    pass
+  try:
+    eval(function_name)(args)
+  except:
+    w.prnt("", "Command not found "+function_name)
   return w.WEECHAT_RC_OK
 
 def command_test(args):
@@ -165,36 +164,6 @@ def typing_update_cb(data, remaining_calls):
       w.bar_item_update("slack_typing_notice")
   return w.WEECHAT_RC_OK
 
-def dereference_hash(data):
-  try:
-    if data.has_key("user"):
-      data["user"] = user_hash[data["user"]]
-    if data.has_key("channel"):
-      data["channel"] = channel_hash[data["channel"]]
-  except:
-    pass
-
-def create_user_hash(data):
-  blah = {}
-  for item in data["users"]:
-    blah[item["id"]] = item["name"]
-  return blah
-
-def create_channel_hash(data):
-  blah = {}
-  for item in data["channels"]:
-    blah[item["id"]] = item["name"]
-  for item in data["ims"]:
-    blah[item["id"]] = "DM/" + user_hash[item["user"]]
-  return blah
-
-def create_reverse_channel_hash(data):
-  blah = {}
-  for item in data["channels"]:
-    blah[item["name"]] = item["id"]
-  for item in data["ims"]:
-    blah[user_hash[item["user"]]] = item["id"]
-  return blah
 
 def buffer_switch_cb(signal, sig_type, data):
   #NOTE: we flush both the next and previous buffer so that all read pointer id up to date
@@ -293,6 +262,37 @@ def slack_api_request(browser, request, data):
   data = urllib.urlencode(data)
   reply = browser.open('https://%s/api/%s' % (domain, request), data)
   return reply
+
+def dereference_hash(data):
+  try:
+    if data.has_key("user"):
+      data["user"] = user_hash[data["user"]]
+    if data.has_key("channel"):
+      data["channel"] = channel_hash[data["channel"]]
+  except:
+    pass
+
+def create_user_hash(data):
+  blah = {}
+  for item in data["users"]:
+    blah[item["id"]] = item["name"]
+  return blah
+
+def create_channel_hash(data):
+  blah = {}
+  for item in data["channels"]:
+    blah[item["id"]] = item["name"]
+  for item in data["ims"]:
+    blah[item["id"]] = "DM/" + user_hash[item["user"]]
+  return blah
+
+def create_reverse_channel_hash(data):
+  blah = {}
+  for item in data["channels"]:
+    blah[item["name"]] = item["id"]
+  for item in data["ims"]:
+    blah[user_hash[item["user"]]] = item["id"]
+  return blah
 
 ### END Slack specific requests
 
