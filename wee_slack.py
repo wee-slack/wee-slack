@@ -24,74 +24,71 @@ SCRIPT_DESC  = "Extends weechat for typing notification/search/etc on slack.com"
 typing = {}
 
 def slack_command_cb(data, current_buffer, args):
-  if args == "away":
-    async_slack_api_request(None, 'presence.set', {"presence":"away"})
-  elif args == "back":
-    async_slack_api_request(None, 'presence.set', {"presence":"active"})
-  elif args.startswith("search"):
-    query = args.split(' ',1)[1]
-    w.prnt('',"\nSearched for: %s\n\n" % (query))
-    reply = slack_api_request(browser, 'search.messages', {"query":query}).read()
-    data = json.loads(reply)
-    #w.prnt('',str(data))
-    for message in data['messages']['matches']:
-      message["text"] = message["text"].encode('ascii', 'ignore')
-      formatted_message = "%s / %s:\t%s" % (message["channel"]["name"], message['username'], message['text'])
-      w.prnt('',str(formatted_message))
-  elif args == "awaybomb":
-    for i in range(1,10):
-      async_slack_api_request(None, 'presence.set', {"presence":"away"})
-      time.sleep(.2)
-      async_slack_api_request(None, 'presence.set', {"presence":"active"})
-      time.sleep(.2)
-  elif args == "nickup":
-    import random
-    import string
-    times = 26
-    for i in range(0,times):
-      browser.open("https://%s/account/settings" % (domain))
-      browser.select_form(nr=0)
-      if i != (times - 1):
-        name = string.ascii_lowercase[i]
-        #name = ''.join(random.choice(string.ascii_lowercase) for _ in range(10))
-      else:
-        name = nick
-      browser.form['username'] = name
-      reply = browser.submit()
-  elif args.startswith("nickup2"):
-    text = args.split()[1:]
-    for s in text:
-      browser.open("https://%s/account/settings" % (domain))
-      browser.select_form(nr=0)
-      name = s
-      browser.form['username'] = "a---" + name
-      reply = browser.submit()
-    browser.open("https://%s/account/settings" % (domain))
-    browser.select_form(nr=0)
-    browser.form['username'] = nick
-    reply = browser.submit()
-  elif args.startswith("nickup3"):
-    text = user_hash.values()
-    for s in text:
-      browser.open("https://%s/account/settings" % (domain))
-      browser.select_form(nr=0)
-      name = "cyber"+s
-      browser.form['username'] = name
-      reply = browser.submit()
-    browser.open("https://%s/account/settings" % (domain))
-    browser.select_form(nr=0)
-    browser.form['username'] = nick
-    reply = browser.submit()
+  a = args.split(' ',1)
+  if len(a) > 1:
+    function_name, args = a[0], a[1]
+  else:
+    function_name, args = a[0], None
+  function_name = "command_"+function_name
+#  try:
+  eval(function_name)(args)
+#  except:
+    #w.prnt("", "Function not implemented "+function_name)
+#    pass
   return w.WEECHAT_RC_OK
+
+def command_test(args):
+  if slack_buffer:
+    w.prnt(slack_buffer,"worked!")
+
+def command_away(args):
+  async_slack_api_request(None, 'presence.set', {"presence":"away"})
+
+def command_back(args):
+  async_slack_api_request(None, 'presence.set', {"presence":"active"})
+
+def command_debug(args):
+  create_slack_debug_buffer()
+
+def command_search(args):
+  if not slack_buffer:
+    create_slack_buffer()
+  w.buffer_set(slack_buffer, "display", "1")
+  query = args
+  w.prnt(slack_buffer,"\nSearched for: %s\n\n" % (query))
+  reply = slack_api_request(browser, 'search.messages', {"query":query}).read()
+  data = json.loads(reply)
+  for message in data['messages']['matches']:
+    message["text"] = message["text"].encode('ascii', 'ignore')
+    formatted_message = "%s / %s:\t%s" % (message["channel"]["name"], message['username'], message['text'])
+    w.prnt(slack_buffer,str(formatted_message))
+
+def command_awaybomb(args):
+  for i in range(1,10):
+    async_slack_api_request(None, 'presence.set', {"presence":"away"})
+    time.sleep(.2)
+    async_slack_api_request(None, 'presence.set', {"presence":"active"})
+    time.sleep(.2)
+
+def command_nick(args):
+  browser.open("https://%s/account/settings" % (domain))
+  browser.select_form(nr=0)
+  browser.form['username'] = args
+  reply = browser.submit()
+
+### Websocket handling methods
 
 def slack_cb(data, fd):
   try:
     data = ws.recv()
-    #w.prnt("",data)
-    #data =
     message_json = json.loads(data)
   except:
     return w.WEECHAT_RC_OK
+  try:
+    if slack_debug != None:
+      write_debug(message_json)
+  except:
+    pass
   dereference_hash(message_json)
   #dispatch here
   function_name = "process_"+message_json["type"]
@@ -103,6 +100,11 @@ def slack_cb(data, fd):
 
   w.bar_item_update("slack_typing_notice")
   return w.WEECHAT_RC_OK
+
+def write_debug(message_json):
+  dereference_hash(message_json)
+  output = "%s" % ( json.dumps(message_json, sort_keys=True) )
+  w.prnt(slack_debug,output)
 
 def process_presence_change(data):
   if data["user"] == nick:
@@ -139,6 +141,8 @@ def process_message(message_json):
 def process_user_typing(message_json):
   typing[message_json["channel"] + ":" + message_json["user"]] = time.time()
 
+### END Websocket handling methods
+
 def typing_bar_item_cb(data, buffer, args):
   if typing:
     typing_here = []
@@ -153,17 +157,6 @@ def typing_bar_item_cb(data, buffer, args):
     if len(typing_here) > 0:
       return "typing: " + ", ".join(typing_here)
   return ""
-
-def current_buffer_name(short=False):
-  buffer = w.current_buffer()
-  #number     = w.buffer_get_integer(buffer, "number")
-  name = w.buffer_get_string(buffer, "name")
-  if short:
-    try:
-      name = re.split('\.#?',name,1)[1]
-    except:
-      pass
-  return name
 
 def typing_update_cb(data, remaining_calls):
   for chan_and_user in typing.keys():
@@ -202,11 +195,6 @@ def create_reverse_channel_hash(data):
   for item in data["ims"]:
     blah[user_hash[item["user"]]] = item["id"]
   return blah
-
-def create_browser_instance():
-  browser = mechanize.Browser()
-  browser.set_handle_robots(False)
-  return browser
 
 def buffer_switch_cb(signal, sig_type, data):
   #NOTE: we flush both the next and previous buffer so that all read pointer id up to date
@@ -254,23 +242,12 @@ def slack_mark_channel_read(channel_id):
   elif channel_id.startswith('D'):
     reply = async_slack_api_request(browser, "im.mark", {"channel":channel_id,"ts":t})
 
-#NOTE: switched to async/curl because sync slowed down the UI
-def async_slack_api_request(browser, request, data):
-  t = int(time.time())
-  request += "?t=%s" % t
-  data["token"] = stuff["api_token"]
-  data = urllib.urlencode(data)
-  command = 'curl --data "%s" https://%s/api/%s' % (data,domain,request)
-  w.hook_process(command, 5000, '', '')
-  return True
+### Slack specific requests
 
-def slack_api_request(browser, request, data):
-  t = int(time.time())
-  request += "?t=%s" % t
-  data["token"] = stuff["api_token"]
-  data = urllib.urlencode(data)
-  reply = browser.open('https://%s/api/%s' % (domain, request), data)
-  return reply
+def create_browser_instance():
+  browser = mechanize.Browser()
+  browser.set_handle_robots(False)
+  return browser
 
 def connect_to_slack(browser):
   browser.open('https://%s' % (domain))
@@ -299,6 +276,64 @@ def create_slack_websocket(data):
   ws.sock.setblocking(0)
   return ws
 
+#NOTE: switched to async/curl because sync slowed down the UI
+def async_slack_api_request(browser, request, data):
+  t = int(time.time())
+  request += "?t=%s" % t
+  data["token"] = stuff["api_token"]
+  data = urllib.urlencode(data)
+  command = 'curl --data "%s" https://%s/api/%s' % (data,domain,request)
+  w.hook_process(command, 5000, '', '')
+  return True
+
+def slack_api_request(browser, request, data):
+  t = int(time.time())
+  request += "?t=%s" % t
+  data["token"] = stuff["api_token"]
+  data = urllib.urlencode(data)
+  reply = browser.open('https://%s/api/%s' % (domain, request), data)
+  return reply
+
+### END Slack specific requests
+
+### Utility Methods
+
+def current_buffer_name(short=False):
+  buffer = w.current_buffer()
+  #number     = w.buffer_get_integer(buffer, "number")
+  name = w.buffer_get_string(buffer, "name")
+  if short:
+    try:
+      name = re.split('\.#?',name,1)[1]
+    except:
+      pass
+  return name
+
+def closed_slack_buffer_cb(data, buffer):
+  global slack_buffer
+  slack_buffer = None
+  return w.WEECHAT_RC_OK
+
+def create_slack_buffer():
+  global slack_buffer
+  slack_buffer = w.buffer_new("slack", "", "", "closed_slack_buffer_cb", "")
+  w.buffer_set(slack_buffer, "notify", "0")
+  #w.buffer_set(slack_buffer, "display", "1")
+  return w.WEECHAT_RC_OK
+
+def closed_slack_debug_buffer_cb(data, buffer):
+  global slack_debug
+  slack_debug = None
+  return w.WEECHAT_RC_OK
+
+def create_slack_debug_buffer():
+  global slack_debug
+  slack_debug = w.buffer_new("slack-debug", "", "closed_slack_debug_buffer_cb", "", "")
+  w.buffer_set(slack_debug, "notify", "0")
+  w.buffer_set(slack_debug, "display", "1")
+
+### END Utility Methods
+
 # Main
 if __name__ == "__main__":
   if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
@@ -324,6 +359,8 @@ if __name__ == "__main__":
     timer = time.time()
     previous_buffer = None
 
+    create_slack_buffer()
+
     browser = create_browser_instance()
     stuff = connect_to_slack(browser)
     login_data = json.loads(stuff['login_data'])
@@ -346,7 +383,9 @@ if __name__ == "__main__":
       w.hook_signal('buffer_switch', "buffer_switch_cb", "")
       w.hook_signal('window_switch', "buffer_switch_cb", "")
       w.hook_signal('input_text_changed', "typing_notification_cb", "")
-      w.hook_command('slack','Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', 'search|nickup|nickup2|nickup3|awaybomb', 'slack_command_cb', '')
+      commands = [x[8:] for x in dir() if x.startswith('command_')]
+      w.prnt('',str(commands))
+      w.hook_command('slack','Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', '|'.join(commands), 'slack_command_cb', '')
       w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
     else:
       w.prnt("", 'You need to configure this plugin!')
