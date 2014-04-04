@@ -28,11 +28,10 @@ def slack_command_cb(data, current_buffer, args):
     function_name, args = a[0], a[1]
   else:
     function_name, args = a[0], None
-  function_name = "command_"+function_name
-#  try:
-  eval(function_name)(args)
-#  except:
-#    w.prnt("", "Command not found "+function_name)
+  try:
+    cmds[function_name](args)
+  except:
+    w.prnt("", "Command not found "+function_name)
   return w.WEECHAT_RC_OK
 
 def command_test(args):
@@ -96,9 +95,9 @@ def slack_cb(data, fd):
     pass
   dereference_hash(message_json)
   #dispatch here
-  function_name = "process_"+message_json["type"]
+  function_name = message_json["type"]
   try:
-    eval(function_name)(message_json)
+    proc[function_name](message_json)
   except:
     #w.prnt("", "Function not implemented "+function_name)
     pass
@@ -406,8 +405,9 @@ if __name__ == "__main__":
       w.hook_signal('buffer_switch', "buffer_switch_cb", "")
       w.hook_signal('window_switch', "buffer_switch_cb", "")
       w.hook_signal('input_text_changed', "typing_notification_cb", "")
-      commands = [x[8:] for x in dir() if x.startswith('command_')]
-      w.hook_command('slack','Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', '|'.join(commands), 'slack_command_cb', '')
+      cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
+      proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
+      w.hook_command('slack','Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', '|'.join(cmds.keys()), 'slack_command_cb', '')
       w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
     else:
       w.prnt("", 'You need to configure this plugin!')
