@@ -346,10 +346,13 @@ def closed_slack_debug_buffer_cb(data, buffer):
 
 def create_slack_debug_buffer():
   global slack_debug, debug_string
-  debug_string = None
-  slack_debug = w.buffer_new("slack-debug", "", "closed_slack_debug_buffer_cb", "", "")
-  w.buffer_set(slack_debug, "notify", "0")
-  w.buffer_set(slack_debug, "display", "1")
+  if slack_debug != None:
+    w.buffer_set(slack_debug, "display", "1")
+  else:
+    debug_string = None
+    slack_debug = w.buffer_new("slack-debug", "", "closed_slack_debug_buffer_cb", "", "")
+    w.buffer_set(slack_debug, "notify", "0")
+    w.buffer_set(slack_debug, "display", "1")
 
 ### END Utility Methods
 
