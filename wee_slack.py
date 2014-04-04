@@ -44,6 +44,9 @@ def command_away(args):
 def command_back(args):
   async_slack_api_request(None, 'presence.set', {"presence":"active"})
 
+def command_printvar(args):
+  w.prnt("", str(eval(args)))
+
 def command_debug(args):
   create_slack_debug_buffer()
 
@@ -350,7 +353,7 @@ def create_slack_debug_buffer():
     w.buffer_set(slack_debug, "display", "1")
   else:
     debug_string = None
-    slack_debug = w.buffer_new("slack-debug", "", "closed_slack_debug_buffer_cb", "", "")
+    slack_debug = w.buffer_new("slack-debug", "", "", "closed_slack_debug_buffer_cb", "")
     w.buffer_set(slack_debug, "notify", "0")
     w.buffer_set(slack_debug, "display", "1")
 
@@ -383,6 +386,7 @@ if __name__ == "__main__":
     previous_buffer = None
 
     slack_buffer = None
+    slack_debug = None
     #create_slack_buffer()
 
     browser = create_browser_instance()
