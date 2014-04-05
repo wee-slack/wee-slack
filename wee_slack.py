@@ -30,8 +30,8 @@ def slack_command_cb(data, current_buffer, args):
     function_name, args = a[0], None
   try:
     cmds[function_name](args)
-  except:
-    w.prnt("", "Command not found "+function_name)
+  except KeyError:
+    w.prnt("", "Command not found or exception: "+function_name)
   return w.WEECHAT_RC_OK
 
 def command_test(args):
@@ -101,10 +101,9 @@ def slack_cb(data, fd):
   function_name = message_json["type"]
   try:
     proc[function_name](message_json)
-  except:
+  except KeyError:
     #w.prnt("", "Function not implemented "+function_name)
     pass
-
   w.bar_item_update("slack_typing_notice")
   return w.WEECHAT_RC_OK
 
@@ -150,6 +149,10 @@ def process_message(message_json):
 
 def process_user_typing(message_json):
   typing[message_json["channel"] + ":" + message_json["user"]] = time.time()
+
+def process_error(message_json):
+  global connected
+  connected = False
 
 ### END Websocket handling methods
 
@@ -215,14 +218,24 @@ def typing_notification_cb(signal, sig_type, data):
       pass
   return w.WEECHAT_RC_OK
 
-#NOTE: figured i'd do this because they are
+#NOTE: figured i'd do this because they do
 def slack_ping_cb(data, remaining):
-  global counter
+  global counter, connected
   if counter > 999:
     counter = 0
   request = {"type":"ping","id":counter}
-  ws.send(json.dumps(request))
+  try:
+    ws.send(json.dumps(request))
+  except:
+    connected = False
   counter += 1
+  return w.WEECHAT_RC_OK
+
+def slack_connection_persistence_cb(data, remaining_calls):
+  global connected
+  if not connected:
+    w.prnt("", "Disconnected from slack, trying to reconnect..")
+    connect_to_slack(browser)
   return w.WEECHAT_RC_OK
 
 ### Slack specific requests
@@ -240,11 +253,15 @@ def create_browser_instance():
   return browser
 
 def connect_to_slack(browser):
-  browser.open('https://%s' % (domain))
-  browser.select_form(nr=0)
-  browser.form['email'] = email
-  browser.form['password'] = password
-  reply = browser.submit()
+  global stuff, login_data, nick, connected
+  reply = browser.open('https://%s' % (domain))
+  try:
+    browser.select_form(nr=0)
+    browser.form['email'] = email
+    browser.form['password'] = password
+    reply = browser.submit()
+  except:
+    pass
   #TODO: this is pretty hackish, i am grabbing json from an html comment
   if reply.code == 200:
     data = reply.read()
@@ -256,15 +273,35 @@ def connect_to_slack(browser):
     for setting in settings:
       name, setting = re.split('[^\w{[\']+',setting, 1)
       setting_hash[name] = setting.lstrip("'").rstrip(",'")
-    return setting_hash
+    stuff = setting_hash
+    login_data = json.loads(stuff['login_data'])
+    nick = login_data["self"]["name"]
+    create_slack_lookup_hashes()
+    create_slack_websocket(login_data)
+    connected = True
+    return True
   else:
     stuff = None
+    connected = False
+    return False
+
+def create_slack_lookup_hashes():
+  global user_hash, channel_hash, reverse_channel_hash
+  user_hash = create_user_hash(login_data)
+  channel_hash = create_channel_hash(login_data)
+  reverse_channel_hash = create_reverse_channel_hash(login_data)
 
 def create_slack_websocket(data):
+  global ws
   web_socket_url = data['url']
-  ws = create_connection(web_socket_url)
-  ws.sock.setblocking(0)
-  return ws
+  try:
+    ws = create_connection(web_socket_url)
+    ws.sock.setblocking(0)
+    w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "slack_cb", "")
+  except socket.error:
+    return False
+  return True
+#  return ws
 
 #NOTE: switched to async/curl because sync slowed down the UI
 def async_slack_api_request(browser, request, data):
@@ -375,47 +412,48 @@ if __name__ == "__main__":
     if not w.config_get_plugin('timeout'):
       w.config_set_plugin('timeout', "4")
 
+    ### Global var section
     email     = w.config_get_plugin("email")
     password  = w.config_get_plugin("password")
     domain    = w.config_get_plugin("domain")
     server    = w.config_get_plugin("server")
     timeout   = w.config_get_plugin("timeout")
 
-    timer = time.time()
-    counter = 0
-    previous_buffer = None
+    cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
+    proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
 
-    slack_buffer = None
-    slack_debug = None
-    #create_slack_buffer()
+    timer           = time.time()
+    counter         = 0
+    previous_buffer = None
+    slack_buffer    = None
+    slack_debug     = None
+    login_data      = None
+    nick            = None
+    connected       = False
+
+    ### End global var section
 
     browser = create_browser_instance()
-    stuff = connect_to_slack(browser)
-    login_data = json.loads(stuff['login_data'])
-    nick = login_data["self"]["name"]
-    #w.prnt("", str(login_data["self"]))
+    connect_to_slack(browser)
 
+    w.hook_timer(60000, 0, 0, "slack_connection_persistence_cb", "")
+
+    ### Vars read from already connected slac irc server
     general_buffer_ptr  = w.buffer_search("",server+".#general")
     nick_ptr            = w.nicklist_search_nick(general_buffer_ptr,'',nick)
     name = w.nicklist_nick_get_string(general_buffer_ptr,nick,'name')
+    ### END Vars read from already connected slac irc server
 
-
-    if stuff != None:
-      user_hash = create_user_hash(login_data)
-      channel_hash = create_channel_hash(login_data)
-      reverse_channel_hash = create_reverse_channel_hash(login_data)
-      ws = create_slack_websocket(login_data)
-      w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "slack_cb", "")
-      w.hook_timer(1000, 0, 0, "typing_update_cb", "")
-      w.hook_timer(1000 * 60, 0, 0, "keep_channel_read_cb", "")
-      w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", "")
-      w.hook_signal('buffer_switch', "buffer_switch_cb", "")
-      w.hook_signal('window_switch', "buffer_switch_cb", "")
-      w.hook_signal('input_text_changed', "typing_notification_cb", "")
-      cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
-      proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
-      w.hook_command('slack','Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', '|'.join(cmds.keys()), 'slack_command_cb', '')
-      w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
-    else:
-      w.prnt("", 'You need to configure this plugin!')
+#    if stuff != None:
+      #keep trying to connect to slack since most of this doesn't work otherwise
+    ### attach to the weechat hooks we need
+    w.hook_timer(1000, 0, 0, "typing_update_cb", "")
+    w.hook_timer(1000 * 60, 0, 0, "keep_channel_read_cb", "")
+    w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", "")
+    w.hook_signal('buffer_switch', "buffer_switch_cb", "")
+    w.hook_signal('window_switch', "buffer_switch_cb", "")
+    w.hook_signal('input_text_changed', "typing_notification_cb", "")
+    w.hook_command('slack','Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', '|'.join(cmds.keys()), 'slack_command_cb', '')
+    w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
+    ### END attach to the weechat hooks we need
 
