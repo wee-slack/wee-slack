@@ -444,8 +444,6 @@ if __name__ == "__main__":
     name = w.nicklist_nick_get_string(general_buffer_ptr,nick,'name')
     ### END Vars read from already connected slac irc server
 
-#    if stuff != None:
-      #keep trying to connect to slack since most of this doesn't work otherwise
     ### attach to the weechat hooks we need
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
     w.hook_timer(1000 * 60, 0, 0, "keep_channel_read_cb", "")
