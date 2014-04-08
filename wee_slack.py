@@ -154,6 +154,23 @@ def process_error(message_json):
   global connected
   connected = False
 
+def process_message(message_json):
+  channel = message_json["channel"]
+  user = user_hash[message_json["message"]["user"]]
+  if message_json["message"].has_key("attachments"):
+    text = message_json["message"]["attachments"][0]["fallback"]
+    text = text.encode('ascii', 'ignore')
+  else:
+    text = "%s\tEDITED: %s" % (user, message_json["message"]["text"])
+  if channel.startswith('DM/'):
+    buffer_name = "%s.%s" % (server, channel[3:])
+  else:
+    buffer_name = "%s.#%s" % (server, channel)
+  if message_json["subtype"] == "message_changed":
+    buf_ptr  = w.buffer_search("",buffer_name)
+    w.prnt(buf_ptr, text)
+  pass
+
 ### END Websocket handling methods
 
 def typing_bar_item_cb(data, buffer, args):
@@ -455,3 +472,8 @@ if __name__ == "__main__":
     w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
     ### END attach to the weechat hooks we need
 
+#    def my_process_cb(data, command, return_code, out, err):
+#      w.prnt("",out)
+#      w.prnt("",err)
+#      return w.WEECHAT_RC_OK
+#    w.hook_process("python print hi ", 5000, "my_process_cb", "")
