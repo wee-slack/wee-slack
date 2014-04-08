@@ -162,6 +162,7 @@ def process_message(message_json):
     text = text.encode('ascii', 'ignore')
   else:
     text = "%s\tEDITED: %s" % (user, message_json["message"]["text"])
+    text = text.encode('ascii', 'ignore')
   if channel.startswith('DM/'):
     buffer_name = "%s.%s" % (server, channel[3:])
   else:
