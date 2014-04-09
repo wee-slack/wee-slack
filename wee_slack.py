@@ -116,7 +116,9 @@ def write_debug(message_json):
   w.prnt(slack_debug,output)
 
 def process_presence_change(data):
+  global nick_ptr
   if data["user"] == nick:
+    nick_ptr = w.nicklist_search_nick(general_buffer_ptr,'',nick)
     if data["presence"] == 'active':
       w.nicklist_nick_set(general_buffer_ptr, nick_ptr, "prefix", "+")
     else:
@@ -271,7 +273,7 @@ def create_browser_instance():
   return browser
 
 def connect_to_slack(browser):
-  global stuff, login_data, nick, connected, nick_ptr
+  global stuff, login_data, nick, connected, general_buffer_ptr, nick_ptr, name
   reply = browser.open('https://%s' % (domain))
   try:
     browser.select_form(nr=0)
@@ -296,7 +298,9 @@ def connect_to_slack(browser):
     nick = login_data["self"]["name"]
     create_slack_lookup_hashes()
     create_slack_websocket(login_data)
+    general_buffer_ptr  = w.buffer_search("",server+".#general")
     nick_ptr = w.nicklist_search_nick(general_buffer_ptr,'',nick)
+    name = w.nicklist_nick_get_string(general_buffer_ptr,nick,'name')
     connected = True
     return True
   else:
@@ -441,15 +445,17 @@ if __name__ == "__main__":
     cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
     proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
 
-    timer           = time.time()
-    counter         = 0
-    previous_buffer = None
-    slack_buffer    = None
-    slack_debug     = None
-    login_data      = None
-    nick            = None
-    nick_ptr        = None
-    connected       = False
+    timer               = time.time()
+    counter             = 0
+    previous_buffer     = None
+    slack_buffer        = None
+    slack_debug         = None
+    login_data          = None
+    nick                = None
+    nick_ptr            = None
+    general_buffer_ptr  = None
+    name                = None
+    connected           = False
 
     ### End global var section
 
@@ -459,8 +465,6 @@ if __name__ == "__main__":
     w.hook_timer(60000, 0, 0, "slack_connection_persistence_cb", "")
 
     ### Vars read from already connected slac irc server
-    general_buffer_ptr  = w.buffer_search("",server+".#general")
-    name = w.nicklist_nick_get_string(general_buffer_ptr,nick,'name')
     ### END Vars read from already connected slac irc server
 
     ### attach to the weechat hooks we need
