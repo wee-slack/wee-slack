@@ -271,7 +271,7 @@ def create_browser_instance():
   return browser
 
 def connect_to_slack(browser):
-  global stuff, login_data, nick, connected
+  global stuff, login_data, nick, connected, nick_ptr
   reply = browser.open('https://%s' % (domain))
   try:
     browser.select_form(nr=0)
@@ -296,6 +296,7 @@ def connect_to_slack(browser):
     nick = login_data["self"]["name"]
     create_slack_lookup_hashes()
     create_slack_websocket(login_data)
+    nick_ptr = w.nicklist_search_nick(general_buffer_ptr,'',nick)
     connected = True
     return True
   else:
@@ -447,6 +448,7 @@ if __name__ == "__main__":
     slack_debug     = None
     login_data      = None
     nick            = None
+    nick_ptr        = None
     connected       = False
 
     ### End global var section
@@ -458,7 +460,6 @@ if __name__ == "__main__":
 
     ### Vars read from already connected slac irc server
     general_buffer_ptr  = w.buffer_search("",server+".#general")
-    nick_ptr            = w.nicklist_search_nick(general_buffer_ptr,'',nick)
     name = w.nicklist_nick_get_string(general_buffer_ptr,nick,'name')
     ### END Vars read from already connected slac irc server
 
