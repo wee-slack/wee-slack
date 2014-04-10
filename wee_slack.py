@@ -178,6 +178,8 @@ def process_message(message_json):
 
 def typing_bar_item_cb(data, buffer, args):
   if typing:
+    #TODO: make this a config option
+    color = w.color('yellow')
     typing_here = []
     for chan_and_user in typing.keys():
       chan, user = chan_and_user.split(":")
@@ -188,7 +190,7 @@ def typing_bar_item_cb(data, buffer, args):
           typing_here.append(user)
           pass
     if len(typing_here) > 0:
-      return "typing: " + ", ".join(typing_here)
+      return color + "typing: " + ", ".join(typing_here)
   return ""
 
 def typing_update_cb(data, remaining_calls):
