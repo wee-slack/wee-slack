@@ -7,4 +7,5 @@ A WeeChat plugin for Slack.com. Synchronizes read markers, provides typing notif
 ##Deps:
 
 pip install mechanize
+
 pip install websocket-client
