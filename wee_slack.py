@@ -44,6 +44,17 @@ def command_away(args):
 def command_back(args):
   async_slack_api_request(None, 'presence.set', {"presence":"active"})
 
+def command_neveraway(args):
+  global never_away
+  if never_away == True:
+    global never_away
+    never_away = False
+    w.prnt("", "unset never_away")
+  else:
+    global never_away
+    never_away = True
+    w.prnt("", "set never_away")
+
 def command_printvar(args):
   w.prnt("", str(eval(args)))
 
@@ -260,6 +271,16 @@ def slack_connection_persistence_cb(data, remaining_calls):
     connect_to_slack(browser)
   return w.WEECHAT_RC_OK
 
+def slack_never_away_cb(data, remaining):
+  global never_away
+  if never_away == True:
+    #w.prnt("", 'updating status as back')
+    name = reverse_channel_hash["general"]
+    request = {"type":"typing","channel":name}
+    ws.send(json.dumps(request))
+    #command_back(None)
+  return w.WEECHAT_RC_OK
+
 ### Slack specific requests
 
 def slack_mark_channel_read(channel_id):
@@ -287,16 +308,24 @@ def connect_to_slack(browser):
   #TODO: this is pretty hackish, i am grabbing json from an html comment
   if reply.code == 200:
     data = reply.read()
-    n = data.split('var boot_data = {')[1]
-    n = n.split("TS.boot(boot_data)")[0]
-    n = re.split('[\n\t]', n)
+    #n = data.split('var boot_data = {')[1]
+    n = data.split('boot_data.login_data = ')[1]
+    n = n.split(";\n")[0]
+#    n = re.split('[\n\t]', n)
+    api_token = data.split('api_token: \'')[1]
+    api_token = api_token.split("\',\n")[0]
+    w.prnt("",api_token)
+#    n = re.split('[\n\t]', n)
+#    w.prnt("",n)
     settings = filter(None, n)
     setting_hash = {}
-    for setting in settings:
-      name, setting = re.split('[^\w{[\']+',setting, 1)
-      setting_hash[name] = setting.lstrip("'").rstrip(",'")
+#    for setting in settings:
+#      name, setting = re.split('[^\w{[\']+',setting, 1)
+#      setting_hash[name] = setting.lstrip("'").rstrip(",'")
     stuff = setting_hash
-    login_data = json.loads(stuff['login_data'])
+#    login_data = json.loads(stuff['login_data'])
+    stuff["api_token"] = api_token
+    login_data = json.loads(n)
     nick = login_data["self"]["name"]
     create_slack_lookup_hashes()
     create_slack_websocket(login_data)
@@ -458,6 +487,7 @@ if __name__ == "__main__":
     general_buffer_ptr  = None
     name                = None
     connected           = False
+    never_away          = False
 
     ### End global var section
 
@@ -473,6 +503,7 @@ if __name__ == "__main__":
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
     w.hook_timer(1000 * 60, 0, 0, "keep_channel_read_cb", "")
     w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", "")
+    w.hook_timer(1000 * 60* 29, 0, 0, "slack_never_away_cb", "")
     w.hook_signal('buffer_switch', "buffer_switch_cb", "")
     w.hook_signal('window_switch', "buffer_switch_cb", "")
     w.hook_signal('input_text_changed', "typing_notification_cb", "")
