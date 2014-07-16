@@ -144,7 +144,8 @@ def process_channel_marked(message_json):
     buf_ptr  = w.buffer_search("",buffer_name)
     w.buffer_set(buf_ptr, "unread", "")
     #NOTE: only works with latest
-    w.buffer_set(buf_ptr, "hotlist", "-1")
+    if not legacy_mode:
+      w.buffer_set(buf_ptr, "hotlist", "-1")
 
 def process_im_marked(message_json):
   channel = message_json["channel"]
@@ -153,7 +154,8 @@ def process_im_marked(message_json):
     buf_ptr  = w.buffer_search("",buffer_name)
     w.buffer_set(buf_ptr, "unread", "")
     #NOTE: only works with latest
-    w.buffer_set(buf_ptr, "hotlist", "-1")
+    if not legacy_mode:
+      w.buffer_set(buf_ptr, "hotlist", "-1")
 
 def process_message(message_json):
   chan_and_user = message_json["channel"] + ":" + message_json["user"]
@@ -465,6 +467,12 @@ if __name__ == "__main__":
       w.config_set_plugin('server', "slack")
     if not w.config_get_plugin('timeout'):
       w.config_set_plugin('timeout', "4")
+
+    version = w.info_get("version_number", "") or 0
+    if int(version) >= 0x00040400:
+      legacy_mode = False
+    else:
+      legacy_mode = True
 
     ### Global var section
     email     = w.config_get_plugin("email")
