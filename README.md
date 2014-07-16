@@ -22,10 +22,10 @@ weechat build from May 17 onward
 
     /set plugins.var.python.slack_extension.domain example.slack.com
     /set plugins.var.python.slack_extension.email your_login_email@yourdomain.com
-    /set plugins.var.python.slack_extension.password your_password
+    /set plugins.var.python.slack_extension.password your_slack_password
     /set plugins.var.python.slack_extension.nick your_slack_nickname
-    /set plugins.var.python.slack_extension.server your_irc_server_name
-    ^^ (find this with /server list)
+    /set plugins.var.python.slack_extension.server weechat_server_short name
+                                                    ^^ (find this with /server list)
 
 #####4.
     
