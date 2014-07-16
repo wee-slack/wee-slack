@@ -10,7 +10,7 @@ pip install mechanize
 
 pip install websocket-client
 
-weechat build from May 17 onward
+weechat dev build from May 17 onward (or weechat > 4.4, expected Aug 15, 2014)
 
 ##Setup:
 
