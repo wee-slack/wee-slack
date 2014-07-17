@@ -129,6 +129,7 @@ def write_debug(message_json):
 def process_presence_change(data):
   global nick_ptr
   if data["user"] == nick:
+    w.prnt("", nick)
     nick_ptr = w.nicklist_search_nick(general_buffer_ptr,'',nick)
     if data["presence"] == 'active':
       w.nicklist_nick_set(general_buffer_ptr, nick_ptr, "prefix", "+")
@@ -298,43 +299,27 @@ def create_browser_instance():
   return browser
 
 def connect_to_slack(browser):
-  global stuff, login_data, nick, connected, general_buffer_ptr, nick_ptr, name
-  reply = browser.open('https://%s' % (domain))
-  try:
-    browser.select_form(nr=0)
-    browser.form['email'] = email
-    browser.form['password'] = password
-    reply = browser.submit()
-  except:
-    pass
-  #TODO: this is pretty hackish, i am grabbing json from an html comment
+  global stuff, login_data, nick, connected, general_buffer_ptr, nick_ptr, name, domain
+  data = {}
+  t = int(time.time())
+  request = "users.login?t=%s" % t
+  data["token"] = slack_api_token
+  data = urllib.urlencode(data)
+  reply = browser.open('https://slack.com/api/%s' % (request), data)
   if reply.code == 200:
     data = reply.read()
-    #n = data.split('var boot_data = {')[1]
-    n = data.split('boot_data.login_data = ')[1]
-    n = n.split(";\n")[0]
-#    n = re.split('[\n\t]', n)
-    api_token = data.split('api_token: \'')[1]
-    api_token = api_token.split("\',\n")[0]
-    w.prnt("",api_token)
-#    n = re.split('[\n\t]', n)
-#    w.prnt("",n)
-    settings = filter(None, n)
-    setting_hash = {}
-#    for setting in settings:
-#      name, setting = re.split('[^\w{[\']+',setting, 1)
-#      setting_hash[name] = setting.lstrip("'").rstrip(",'")
-    stuff = setting_hash
-#    login_data = json.loads(stuff['login_data'])
-    stuff["api_token"] = api_token
-    login_data = json.loads(n)
+
+    login_data = json.loads(data)
     nick = login_data["self"]["name"]
+    w.prnt("", nick)
     create_slack_lookup_hashes()
     create_slack_websocket(login_data)
+    stuff = {}
+    connected = True
     general_buffer_ptr  = w.buffer_search("",server+".#general")
     nick_ptr = w.nicklist_search_nick(general_buffer_ptr,'',nick)
     name = w.nicklist_nick_get_string(general_buffer_ptr,nick,'name')
-    connected = True
+    domain = login_data["team"]["domain"] + ".slack.com"
     return True
   else:
     stuff = None
@@ -363,7 +348,7 @@ def create_slack_websocket(data):
 def async_slack_api_request(browser, request, data):
   t = int(time.time())
   request += "?t=%s" % t
-  data["token"] = stuff["api_token"]
+  data["token"] = slack_api_token
   data = urllib.urlencode(data)
   command = 'curl --data "%s" https://%s/api/%s' % (data,domain,request)
   w.hook_process(command, 5000, '', '')
@@ -372,7 +357,7 @@ def async_slack_api_request(browser, request, data):
 def slack_api_request(browser, request, data):
   t = int(time.time())
   request += "?t=%s" % t
-  data["token"] = stuff["api_token"]
+  data["token"] = slack_api_token
   data = urllib.urlencode(data)
   reply = browser.open('https://%s/api/%s' % (domain, request), data)
   return reply
@@ -457,16 +442,12 @@ if __name__ == "__main__":
   if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
           SCRIPT_DESC, "", ""):
 
-    if not w.config_get_plugin('email'):
-      w.config_set_plugin('email', "user@example.com")
-    if not w.config_get_plugin('password'):
-      w.config_set_plugin('password', 'mypassword')
-    if not w.config_get_plugin('domain'):
-      w.config_set_plugin('domain', "example.slack.com")
     if not w.config_get_plugin('server'):
       w.config_set_plugin('server', "slack")
     if not w.config_get_plugin('timeout'):
       w.config_set_plugin('timeout', "4")
+    if not w.config_get_plugin('slack_api_token'):
+      w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
 
     version = w.info_get("version_number", "") or 0
     if int(version) >= 0x00040400:
@@ -475,9 +456,7 @@ if __name__ == "__main__":
       legacy_mode = True
 
     ### Global var section
-    email     = w.config_get_plugin("email")
-    password  = w.config_get_plugin("password")
-    domain    = w.config_get_plugin("domain")
+    slack_api_token = w.config_get_plugin("slack_api_token")
     server    = w.config_get_plugin("server")
     timeout   = w.config_get_plugin("timeout")
 
@@ -486,6 +465,7 @@ if __name__ == "__main__":
 
     timer               = time.time()
     counter             = 0
+    domain              = None
     previous_buffer     = None
     slack_buffer        = None
     slack_debug         = None
