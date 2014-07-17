@@ -46,13 +46,11 @@ def command_back(args):
 def command_neveraway(args):
   global never_away
   if never_away == True:
-    global never_away
     never_away = False
     w.prnt("", "unset never_away")
   else:
-    global never_away
     never_away = True
-    w.prnt("", "set never_away")
+    w.prnt("", "set as never_away")
 
 def command_printvar(args):
   w.prnt("", str(eval(args)))
