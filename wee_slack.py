@@ -15,7 +15,7 @@ import weechat as w
 
 SCRIPT_NAME  = "slack_extension"
 SCRIPT_AUTHOR  = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.2"
+SCRIPT_VERSION = "0.3"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC  = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -128,7 +128,6 @@ def write_debug(message_json):
 def process_presence_change(data):
   global nick_ptr
   if data["user"] == nick:
-    w.prnt("", nick)
     nick_ptr = w.nicklist_search_nick(general_buffer_ptr,'',nick)
     if data["presence"] == 'active':
       w.nicklist_nick_set(general_buffer_ptr, nick_ptr, "prefix", "+")
@@ -305,7 +304,6 @@ def connect_to_slack():
 
     login_data = json.loads(data)
     nick = login_data["self"]["name"]
-    w.prnt("", nick)
     create_slack_lookup_hashes()
     create_slack_websocket(login_data)
     stuff = {}
@@ -477,9 +475,6 @@ if __name__ == "__main__":
 
     w.hook_timer(60000, 0, 0, "slack_connection_persistence_cb", "")
 
-    ### Vars read from already connected slac irc server
-    ### END Vars read from already connected slac irc server
-
     ### attach to the weechat hooks we need
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
     w.hook_timer(1000 * 60, 0, 0, "keep_channel_read_cb", "")
@@ -492,8 +487,3 @@ if __name__ == "__main__":
     w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
     ### END attach to the weechat hooks we need
 
-#    def my_process_cb(data, command, return_code, out, err):
-#      w.prnt("",out)
-#      w.prnt("",err)
-#      return w.WEECHAT_RC_OK
-#    w.hook_process("python print hi ", 5000, "my_process_cb", "")
