@@ -290,7 +290,7 @@ def slack_mark_channel_read(channel_id):
     reply = async_slack_api_request("im.mark", {"channel":channel_id,"ts":t})
 
 def connect_to_slack():
-  global stuff, login_data, nick, connected, general_buffer_ptr, nick_ptr, name, domain
+  global login_data, nick, connected, general_buffer_ptr, nick_ptr, name, domain
   data = {}
   t = int(time.time())
   request = "users.login?t=%s" % t
@@ -299,24 +299,24 @@ def connect_to_slack():
   reply = urllib.urlopen('https://slack.com/api/%s' % (request), data)
   if reply.code == 200:
     data = reply.read()
-
     login_data = json.loads(data)
     nick = login_data["self"]["name"]
-    create_slack_lookup_hashes()
+    domain = login_data["team"]["domain"] + ".slack.com"
+
+    create_slack_lookup_hashes(login_data)
     create_slack_websocket(login_data)
-    stuff = {}
-    connected = True
+
     general_buffer_ptr  = w.buffer_search("",server+".#general")
     nick_ptr = w.nicklist_search_nick(general_buffer_ptr,'',nick)
     name = w.nicklist_nick_get_string(general_buffer_ptr,nick,'name')
-    domain = login_data["team"]["domain"] + ".slack.com"
+
+    connected = True
     return True
   else:
-    stuff = None
     connected = False
     return False
 
-def create_slack_lookup_hashes():
+def create_slack_lookup_hashes(login_data):
   global user_hash, channel_hash, reverse_channel_hash
   user_hash = create_user_hash(login_data)
   channel_hash = create_channel_hash(login_data)
