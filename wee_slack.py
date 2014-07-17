@@ -9,7 +9,6 @@ import socket
 import thread
 import urllib
 #import requests
-import mechanize
 from websocket import create_connection
 
 import weechat as w
@@ -39,10 +38,10 @@ def command_test(args):
     w.prnt(slack_buffer,"worked!")
 
 def command_away(args):
-  async_slack_api_request(None, 'presence.set', {"presence":"away"})
+  async_slack_api_request('presence.set', {"presence":"away"})
 
 def command_back(args):
-  async_slack_api_request(None, 'presence.set', {"presence":"active"})
+  async_slack_api_request('presence.set', {"presence":"active"})
 
 def command_neveraway(args):
   global never_away
@@ -74,7 +73,7 @@ def command_search(args):
   w.buffer_set(slack_buffer, "display", "1")
   query = args
   w.prnt(slack_buffer,"\nSearched for: %s\n\n" % (query))
-  reply = slack_api_request(browser, 'search.messages', {"query":query}).read()
+  reply = slack_api_request('search.messages', {"query":query}).read()
   data = json.loads(reply)
   for message in data['messages']['matches']:
     message["text"] = message["text"].encode('ascii', 'ignore')
@@ -83,13 +82,13 @@ def command_search(args):
 
 def command_awaybomb(args):
   for i in range(1,10):
-    async_slack_api_request(None, 'presence.set', {"presence":"away"})
+    async_slack_api_request('presence.set', {"presence":"away"})
     time.sleep(.2)
-    async_slack_api_request(None, 'presence.set', {"presence":"active"})
+    async_slack_api_request('presence.set', {"presence":"active"})
     time.sleep(.2)
 
 def command_nick(args):
-  browser.open("https://%s/account/settings" % (domain))
+  urllib.urlopen("https://%s/account/settings" % (domain))
   browser.select_form(nr=0)
   browser.form['username'] = args
   reply = browser.submit()
@@ -271,7 +270,7 @@ def slack_connection_persistence_cb(data, remaining_calls):
   global connected
   if not connected:
     w.prnt("", "Disconnected from slack, trying to reconnect..")
-    connect_to_slack(browser)
+    connect_to_slack()
   return w.WEECHAT_RC_OK
 
 def slack_never_away_cb(data, remaining):
@@ -289,23 +288,18 @@ def slack_never_away_cb(data, remaining):
 def slack_mark_channel_read(channel_id):
   t = int(time.time())
   if channel_id.startswith('C'):
-    reply = async_slack_api_request(browser, "channels.mark", {"channel":channel_id,"ts":t})
+    reply = async_slack_api_request("channels.mark", {"channel":channel_id,"ts":t})
   elif channel_id.startswith('D'):
-    reply = async_slack_api_request(browser, "im.mark", {"channel":channel_id,"ts":t})
+    reply = async_slack_api_request("im.mark", {"channel":channel_id,"ts":t})
 
-def create_browser_instance():
-  browser = mechanize.Browser()
-  browser.set_handle_robots(False)
-  return browser
-
-def connect_to_slack(browser):
+def connect_to_slack():
   global stuff, login_data, nick, connected, general_buffer_ptr, nick_ptr, name, domain
   data = {}
   t = int(time.time())
   request = "users.login?t=%s" % t
   data["token"] = slack_api_token
   data = urllib.urlencode(data)
-  reply = browser.open('https://slack.com/api/%s' % (request), data)
+  reply = urllib.urlopen('https://slack.com/api/%s' % (request), data)
   if reply.code == 200:
     data = reply.read()
 
@@ -345,7 +339,7 @@ def create_slack_websocket(data):
 #  return ws
 
 #NOTE: switched to async/curl because sync slowed down the UI
-def async_slack_api_request(browser, request, data):
+def async_slack_api_request(request, data):
   t = int(time.time())
   request += "?t=%s" % t
   data["token"] = slack_api_token
@@ -354,12 +348,12 @@ def async_slack_api_request(browser, request, data):
   w.hook_process(command, 5000, '', '')
   return True
 
-def slack_api_request(browser, request, data):
+def slack_api_request(request, data):
   t = int(time.time())
   request += "?t=%s" % t
   data["token"] = slack_api_token
   data = urllib.urlencode(data)
-  reply = browser.open('https://%s/api/%s' % (domain, request), data)
+  reply = urllib.urlopen('https://%s/api/%s' % (domain, request), data)
   return reply
 
 def dereference_hash(data):
@@ -479,8 +473,7 @@ if __name__ == "__main__":
 
     ### End global var section
 
-    browser = create_browser_instance()
-    connect_to_slack(browser)
+    connect_to_slack()
 
     w.hook_timer(60000, 0, 0, "slack_connection_persistence_cb", "")
 
