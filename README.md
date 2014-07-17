@@ -20,9 +20,9 @@ weechat dev build from May 17 onward (or weechat > 4.4, expected Aug 15, 2014)
 
 
     /set plugins.var.python.slack_extension.slack_api_token your_slack_token
-                                                    ^^ (find this at https://api.slack.com/ under Authentication)
+                                                            ^^ (find this at https://api.slack.com/ under Authentication)
     /set plugins.var.python.slack_extension.server weechat_server_short name
-                                                    ^^ (find this with /server list)
+                                                   ^^ (find this with /server list)
 
 #####4.
     
