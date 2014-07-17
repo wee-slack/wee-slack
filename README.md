@@ -4,13 +4,13 @@ wee-slack
 A WeeChat plugin for Slack.com. Synchronizes read markers, provides typing notification, search, and more!
 
 
-##Deps:
+#Dependencies
 
 pip install websocket-client
 
 weechat dev build from May 17 onward (or weechat > 4.4, expected Aug 15, 2014)
 
-##Setup:
+#Setup
 
 #####1. Add a slack as an IRC server in weechat
 
