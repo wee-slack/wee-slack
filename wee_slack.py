@@ -314,7 +314,8 @@ def connect_to_slack():
       connected = True
       return True
     else:
-      w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n\n")
+      w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with \"/set plugins.var.python.slack_extension.slack_api_token\"\n\n ")
+
   else:
     connected = False
     return False
