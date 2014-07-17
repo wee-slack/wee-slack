@@ -300,18 +300,21 @@ def connect_to_slack():
   if reply.code == 200:
     data = reply.read()
     login_data = json.loads(data)
-    nick = login_data["self"]["name"]
-    domain = login_data["team"]["domain"] + ".slack.com"
+    if login_data["ok"] == True:
+      nick = login_data["self"]["name"]
+      domain = login_data["team"]["domain"] + ".slack.com"
 
-    create_slack_lookup_hashes(login_data)
-    create_slack_websocket(login_data)
+      create_slack_lookup_hashes(login_data)
+      create_slack_websocket(login_data)
 
-    general_buffer_ptr  = w.buffer_search("",server+".#general")
-    nick_ptr = w.nicklist_search_nick(general_buffer_ptr,'',nick)
-    name = w.nicklist_nick_get_string(general_buffer_ptr,nick,'name')
+      general_buffer_ptr  = w.buffer_search("",server+".#general")
+      nick_ptr = w.nicklist_search_nick(general_buffer_ptr,'',nick)
+      name = w.nicklist_nick_get_string(general_buffer_ptr,nick,'name')
 
-    connected = True
-    return True
+      connected = True
+      return True
+    else:
+      w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n\n")
   else:
     connected = False
     return False
