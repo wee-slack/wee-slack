@@ -10,21 +10,33 @@ A WeeChat plugin for Slack.com. Synchronizes read markers, provides typing notif
 
 #Dependencies
 
-pip install websocket-client
+  * WeeChat http://weechat.org/ 
+    (dev build from May 17 onward or weechat > 4.4, expected Aug 15, 2014)
 
-weechat dev build from May 17 onward (or weechat > 4.4, expected Aug 15, 2014)
+  * websocket-client https://pypi.python.org/pypi/websocket-client/
 
 #Setup
 
-###1. Add a slack as an IRC server in weechat
+###1. Install websocket-client lib
+
+    pip install websocket-client
+
+###2. copy wee_slack.py to ~/.weechat/python/autoload
+
+    wget https://raw.githubusercontent.com/rawdigits/wee-slack/master/wee_slack.py
+    cp wee_slack.py ~/.weechat/python/autoload
+
+###3. Start WeeChat
+
+    weechat
+
+###4. Add a slack as an IRC server in weechat
 
     /server add slack (YOUR_IRC_SERVER)/6667 -nicks=(YOUR_SLACK_USERNAME) -ssl -ssl_dhkey_size=1 -autoconnect
     (YOUR IRC SERVER is your domain+irc.slack.com, ex: rednu.irc.slack.com)
     /set irc.server.slack.password (YOUR_SLACK_PASSWORD)
 
-###2. copy wee_slack.py to ~/.weechat/python/autoload
-
-###3. Configure the slack plugin
+###5. Configure the slack plugin
 
 
     /set plugins.var.python.slack_extension.slack_api_token (YOUR_SLACK_TOKEN)
@@ -32,12 +44,12 @@ weechat dev build from May 17 onward (or weechat > 4.4, expected Aug 15, 2014)
     /set plugins.var.python.slack_extension.server (WEECHAT_SERVER_SHORT_NAME)
                                                    ^^ (find this with /server list, probably 'slack')
 
-###4.
+###6.
     
     /save
     /python reload
     
-###5. Optional configuration (you want this)
+#Optional settings (you want this)
 
 ##### Show typing notification in main bar (slack_typing_notice)
 
