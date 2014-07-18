@@ -48,9 +48,11 @@ A WeeChat plugin for Slack.com. Synchronizes read markers, provides typing notif
 
 
     /set plugins.var.python.slack_extension.slack_api_token (YOUR_SLACK_TOKEN)
-                                                            ^^ (find this at https://api.slack.com/ under Authentication)
+
+^^ (find this at https://api.slack.com/#auth)
+
     /set plugins.var.python.slack_extension.server (WEECHAT_SERVER_SHORT_NAME)
-                                                   ^^ (find this with /server list, probably 'slack')
+^^ (find this with `/server list`, probably 'slack')
 
 ###6.
     
