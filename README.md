@@ -39,12 +39,21 @@ weechat dev build from May 17 onward (or weechat > 4.4, expected Aug 15, 2014)
     
 ###5. Optional configuration (you want this)
 
-##### Show typing notification in main bar
+##### Show typing notification in main bar (slack_typing_notice)
+
     /set weechat.bar.status.items [buffer_count],[buffer_plugin],buffer_number+:+buffer_name+{buffer_nicklist_count}+buffer_filter,[hotlist],completion,scroll,slack_typing_notice
 
 ##### Hide voice/devoice messages
+
     /filter add hide_irc_mode_messages * irc_mode *
 
+##### Persistent list of global users on left:
+
+    /bar add globalnicklist root left 0 1 @irc.slack.#general:buffer_nicklist
+
+##### Show channel name in hotlist after activity
+
+    /set weechat.look.hotlist_names_level 14
 
 
 
