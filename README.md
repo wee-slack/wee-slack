@@ -18,7 +18,7 @@ weechat dev build from May 17 onward (or weechat > 4.4, expected Aug 15, 2014)
     (YOUR IRC SERVER is your domain+irc.slack.com, ex: rednu.irc.slack.com)
     /set irc.server.slack.password (YOUR_SLACK_PASSWORD)
 
-####2. copy wee_slack.py to ~/.weechat/python/autoload
+###2. copy wee_slack.py to ~/.weechat/python/autoload
 
 ###3. Configure the slack plugin
 
