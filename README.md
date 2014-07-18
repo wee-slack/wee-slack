@@ -54,7 +54,7 @@ A WeeChat plugin for Slack.com. Synchronizes read markers, provides typing notif
     /set plugins.var.python.slack_extension.server (WEECHAT_SERVER_SHORT_NAME)
 ^^ (find this with `/server list`, probably 'slack')
 
-###6.
+###6. $PROFIT$
     
     /save
     /python reload
