@@ -15,6 +15,7 @@ A WeeChat plugin for Slack.com. Synchronizes read markers, provides typing notif
   * Search slack history allows you to do simple searches across all previous slack conversations
   * Away/back status handling
   * Expands/shows metadata for things like tweets/links
+  * Displays edited messages (slack.com irc mode currently doesn't show these)
   * *Super fun* debug mode. See what the websocket is saying with `/slack debug`
 
 #Dependencies
