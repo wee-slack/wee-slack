@@ -1,8 +1,12 @@
+
+
+
 wee-slack
 =========
 
 A WeeChat plugin for Slack.com. Synchronizes read markers, provides typing notification, search, and more!
 
+![animated screenshot](https://dl.dropboxusercontent.com/u/566560/slack.gif)
 
 #Dependencies
 
