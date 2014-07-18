@@ -8,7 +8,7 @@ A WeeChat plugin for Slack.com. Synchronizes read markers, provides typing notif
 
 ![animated screenshot](https://dl.dropboxusercontent.com/u/566560/slack.gif)
 
-###Features
+#Features
 
   * Supports bidirectional slack read notifications for all channels. (never reread the same messages on the web client or other devices). 
   * Typing notification, so you can see when others are typing, and they can see when you type. Appears globally for direct messages.
