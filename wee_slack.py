@@ -2,13 +2,9 @@
 #
 import time
 import json
-import sys
 import re
-import os
 import socket
-import thread
 import urllib
-#import requests
 from websocket import create_connection
 
 import weechat as w
@@ -136,7 +132,7 @@ def process_presence_change(data):
 
 def process_channel_marked(message_json):
   channel = message_json["channel"]
-  buffer_name = "%s.#%s" % (server, channel)
+  buffer_name = "%s.#%s" % (current_server_name(), channel)
   if buffer_name != current_buffer_name():
     buf_ptr  = w.buffer_search("",buffer_name)
     w.buffer_set(buf_ptr, "unread", "")
@@ -146,7 +142,7 @@ def process_channel_marked(message_json):
 
 def process_im_marked(message_json):
   channel = message_json["channel"]
-  buffer_name = "%s.%s" % (server, channel.lstrip('DM/'))
+  buffer_name = "%s.%s" % (current_server_name(), channel.lstrip('DM/'))
   if buffer_name != current_buffer_name():
     buf_ptr  = w.buffer_search("",buffer_name)
     w.buffer_set(buf_ptr, "unread", "")
@@ -176,9 +172,9 @@ def process_message(message_json):
     text = "%s\tEDITED: %s" % (user, message_json["message"]["text"])
     text = text.encode('ascii', 'ignore')
   if channel.startswith('DM/'):
-    buffer_name = "%s.%s" % (server, channel[3:])
+    buffer_name = "%s.%s" % (current_server_name(), channel[3:])
   else:
-    buffer_name = "%s.#%s" % (server, channel)
+    buffer_name = "%s.#%s" % (current_server_name(), channel)
   if message_json["subtype"] == "message_changed":
     buf_ptr  = w.buffer_search("",buffer_name)
     w.prnt(buf_ptr, text)
@@ -196,7 +192,7 @@ def typing_bar_item_cb(data, buffer, args):
       if chan.startswith("DM/"):
         typing_here.append("d/"+user)
       else:
-        if current_buffer_name() == "%s.#%s" % (server, chan):
+        if current_buffer_name() == "%s.#%s" % (current_server_name(), chan):
           typing_here.append(user)
           pass
     if len(typing_here) > 0:
@@ -217,7 +213,7 @@ def buffer_switch_cb(signal, sig_type, data):
 #  w.prnt("",str(previous_buffer))
   if reverse_channel_hash.has_key(previous_buffer):
     slack_mark_channel_read(reverse_channel_hash[previous_buffer])
-  if current_buffer_name().startswith(server):
+  if current_buffer_name().startswith(current_server_name()):
     channel_name = current_buffer_name(short=True)
     if reverse_channel_hash.has_key(channel_name):
       slack_mark_channel_read(reverse_channel_hash[channel_name])
@@ -240,7 +236,7 @@ def typing_notification_cb(signal, sig_type, data):
     name = current_buffer_name()
     try:
       srv, channel_name = re.split('\.#?',name,1)
-      if reverse_channel_hash.has_key(channel_name) and srv == server:
+      if reverse_channel_hash.has_key(channel_name) and srv == current_server_name():
         name = reverse_channel_hash[channel_name]
         request = {"type":"typing","channel":name}
         ws.send(json.dumps(request))
@@ -267,7 +263,7 @@ def slack_connection_persistence_cb(data, remaining_calls):
   global connected
   if not connected:
     w.prnt("", "Disconnected from slack, trying to reconnect..")
-    connect_to_slack()
+    connect_all_to_slack()
   return w.WEECHAT_RC_OK
 
 def slack_never_away_cb(data, remaining):
@@ -282,6 +278,19 @@ def slack_never_away_cb(data, remaining):
 
 ### Slack specific requests
 
+def slack_api_token(servername):
+  key = "%s.slack_api_token" % servername
+  return w.config_get_plugin(key)
+
+def current_server_name():
+  current_buffer = w.current_buffer()
+  name = w.buffer_get_string(current_buffer, "name")
+  name_parts = name.split(".")
+  if len(name_parts) < 2:
+    return ""
+
+  return name_parts[0]
+
 def slack_mark_channel_read(channel_id):
   t = int(time.time())
   if channel_id.startswith('C'):
@@ -289,12 +298,16 @@ def slack_mark_channel_read(channel_id):
   elif channel_id.startswith('D'):
     reply = async_slack_api_request("im.mark", {"channel":channel_id,"ts":t})
 
-def connect_to_slack():
+def connect_all_to_slack():
+  for server in enabled_servers():
+    connect_to_slack(server)
+
+def connect_to_slack(servername):
   global login_data, nick, connected, general_buffer_ptr, nick_ptr, name, domain
   data = {}
   t = int(time.time())
   request = "users.login?t=%s" % t
-  data["token"] = slack_api_token
+  data["token"] = slack_api_token(servername)
   data = urllib.urlencode(data)
   reply = urllib.urlopen('https://slack.com/api/%s' % (request), data)
   if reply.code == 200:
@@ -307,14 +320,14 @@ def connect_to_slack():
       create_slack_lookup_hashes(login_data)
       create_slack_websocket(login_data)
 
-      general_buffer_ptr  = w.buffer_search("",server+".#general")
+      general_buffer_ptr  = w.buffer_search("",current_server_name()+".#general")
       nick_ptr = w.nicklist_search_nick(general_buffer_ptr,'',nick)
       name = w.nicklist_nick_get_string(general_buffer_ptr,nick,'name')
 
       connected = True
       return True
     else:
-      w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with \"/set plugins.var.python.slack_extension.slack_api_token\"\n\n ")
+      w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with \"/set plugins.var.python.slack_extension.%s.slack_api_token\"\n\n " % servername)
   else:
     connected = False
     return False
@@ -341,7 +354,7 @@ def create_slack_websocket(data):
 def async_slack_api_request(request, data):
   t = int(time.time())
   request += "?t=%s" % t
-  data["token"] = slack_api_token
+  data["token"] = slack_api_token(current_server_name())
   data = urllib.urlencode(data)
   command = 'curl --data "%s" https://%s/api/%s' % (data,domain,request)
   w.hook_process(command, 5000, '', '')
@@ -350,7 +363,7 @@ def async_slack_api_request(request, data):
 def slack_api_request(request, data):
   t = int(time.time())
   request += "?t=%s" % t
-  data["token"] = slack_api_token
+  data["token"] = slack_api_token(current_server_name())
   data = urllib.urlencode(data)
   reply = urllib.urlopen('https://%s/api/%s' % (domain, request), data)
   return reply
@@ -428,6 +441,10 @@ def create_slack_debug_buffer():
     w.buffer_set(slack_debug, "notify", "0")
     w.buffer_set(slack_debug, "display", "1")
 
+def enabled_servers():
+  servers = w.config_get_plugin("servers")
+  return map(str.strip, servers.split(","))
+
 ### END Utility Methods
 
 # Main
@@ -435,12 +452,10 @@ if __name__ == "__main__":
   if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
           SCRIPT_DESC, "", ""):
 
-    if not w.config_get_plugin('server'):
-      w.config_set_plugin('server', "slack")
+    if not w.config_get_plugin('servers'):
+      w.config_set_plugin('servers', "")
     if not w.config_get_plugin('timeout'):
       w.config_set_plugin('timeout', "4")
-    if not w.config_get_plugin('slack_api_token'):
-      w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
 
     version = w.info_get("version_number", "") or 0
     if int(version) >= 0x00040400:
@@ -449,8 +464,6 @@ if __name__ == "__main__":
       legacy_mode = True
 
     ### Global var section
-    slack_api_token = w.config_get_plugin("slack_api_token")
-    server    = w.config_get_plugin("server")
     timeout   = w.config_get_plugin("timeout")
 
     cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
@@ -472,7 +485,7 @@ if __name__ == "__main__":
 
     ### End global var section
 
-    connect_to_slack()
+    connect_all_to_slack()
 
     w.hook_timer(60000, 0, 0, "slack_connection_persistence_cb", "")
 
@@ -488,3 +501,4 @@ if __name__ == "__main__":
     w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
     ### END attach to the weechat hooks we need
 
+# vim:sw=2:ts=2
