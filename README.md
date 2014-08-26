@@ -20,8 +20,7 @@ A WeeChat plugin for Slack.com. Synchronizes read markers, provides typing notif
 
 #Dependencies
 
-  * WeeChat http://weechat.org/ 
-    (dev build from May 17 onward or weechat > 4.4, expected Aug 15, 2014)
+  * WeeChat 1.0+ http://weechat.org/ 
 
   * websocket-client https://pypi.python.org/pypi/websocket-client/
 
