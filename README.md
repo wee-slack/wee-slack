@@ -4,7 +4,7 @@
 wee-slack
 =========
 
-A WeeChat plugin for Slack.com. Synchronizes read markers, provides typing notification, search, and more! Connects via the Slack API, and maintains a persistent websocket for notification of events.
+A WeeChat plugin for Slack.com IRC mode. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, search, (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
 
 ![animated screenshot](https://dl.dropboxusercontent.com/u/566560/slack.gif)
 
