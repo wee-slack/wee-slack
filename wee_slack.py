@@ -293,7 +293,7 @@ def connect_to_slack():
   global login_data, nick, connected, general_buffer_ptr, nick_ptr, name, domain
   data = {}
   t = int(time.time())
-  request = "users.login?t=%s" % t
+  request = "rtm.start?t=%s" % t
   data["token"] = slack_api_token
   data = urllib.urlencode(data)
   reply = urllib.urlopen('https://slack.com/api/%s' % (request), data)
