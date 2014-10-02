@@ -25,14 +25,14 @@ class Typing:
     self.dms      = {}
   def add(self, channel, user):
     if channel.startswith(DIRECT_MESSAGE):
-      self.dms[channel.lstrip(DIRECT_MESSAGE)] = time.time()
+      self.dms[len(DIRECT_MESSAGE):] = time.time()
     else:
       self.channels.setdefault(channel, {})
       self.channels[channel][user] = time.time()
   def delete(self, channel, user):
     if channel.startswith(DIRECT_MESSAGE):
       #probably unclear, but the line below makes sure not to stop the typing notice if it is the current user typing
-      channel = channel.lstrip(DIRECT_MESSAGE)
+      channel = channel[len(DIRECT_MESSAGE):]
       if channel == user:
         if self.dms.has_key(channel):
           del self.dms[channel]
@@ -209,7 +209,7 @@ def process_channel_marked(message_json):
 
 def process_im_marked(message_json):
   channel = message_json["channel"]
-  buffer_name = "%s.%s" % (server, channel.lstrip(DIRECT_MESSAGE))
+  buffer_name = "%s.%s" % (server, channel[len(DIRECT_MESSAGE)])
   if buffer_name != current_buffer_name():
     buf_ptr  = w.buffer_search("",buffer_name)
     w.buffer_set(buf_ptr, "unread", "")
