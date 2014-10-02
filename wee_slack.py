@@ -69,8 +69,6 @@ class BufferTmpRenamer:
   def __init__(self):
     self.FORMAT = "#%s..."
     self.renamed = []
-    weechat_buffer = w.info_get("irc_buffer", "%s,#%s" % (server, "random"))
-    w.buffer_set(weechat_buffer, "short_name", "#random")
   def get_channels(self):
     return self.renamed
   def rename(self, buffer_name):
