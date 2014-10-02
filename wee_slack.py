@@ -15,11 +15,76 @@ import weechat as w
 
 SCRIPT_NAME  = "slack_extension"
 SCRIPT_AUTHOR  = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.3"
+SCRIPT_VERSION = "0.5"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC  = "Extends weechat for typing notification/search/etc on slack.com"
 
-typing = {}
+class Typing:
+  def __init__(self):
+    self.channels = {}
+    self.dms      = {}
+  def add(self, channel, user):
+    if channel.startswith(DIRECT_MESSAGE):
+      self.dms[channel.lstrip(DIRECT_MESSAGE)] = time.time()
+    else:
+      self.channels.setdefault(channel, {})
+      self.channels[channel][user] = time.time()
+  def delete(self, channel, user):
+    if channel.startswith(DIRECT_MESSAGE):
+      #probably unclear, but the line below makes sure not to stop the typing notice if it is the current user typing
+      channel = channel.lstrip(DIRECT_MESSAGE)
+      if channel == user:
+        if self.dms.has_key(channel):
+          del self.dms[channel]
+    else:
+      if self.channels[channel].has_key(user):
+        del self.channels[channel][user]
+    self.update()
+  def update(self):
+    for c in self.channels.keys():
+      for u in self.channels[c].keys():
+        if self.channels[c][u] < time.time() - 5:
+          del self.channels[c][u]
+      if len(self.channels[c].keys()) == 0:
+        del self.channels[c]
+    for u in self.dms.keys():
+        if self.dms[u] < time.time() - 5:
+          del self.dms[u]
+  def get_typing_channels(self):
+    return self.channels.keys()
+  def get_typing_dms(self):
+    return ['d/' + x for x in self.dms.keys()]
+  def get_typing_current_channel(self, current_channel):
+    if self.channels.has_key(current_channel):
+      return self.channels[current_channel].keys()
+    else:
+      return []
+  def someone_typing(self):
+    if len(self.channels.keys()) > 0 or len(self.dms.keys()) > 0:
+      return True
+    else:
+      return False
+
+class BufferTmpRenamer:
+  def __init__(self):
+    self.FORMAT = "#%s..."
+    self.renamed = []
+    weechat_buffer = w.info_get("irc_buffer", "%s,#%s" % (server, "random"))
+    w.buffer_set(weechat_buffer, "short_name", "#random")
+  def get_channels(self):
+    return self.renamed
+  def rename(self, buffer_name):
+    weechat_buffer = w.info_get("irc_buffer", "%s,#%s" % (server, buffer_name))
+    if self.renamed.count(buffer_name) == 0:
+      new_buffer_name = self.FORMAT % (buffer_name)
+      self.renamed.append(buffer_name)
+      w.buffer_set(weechat_buffer, "short_name", new_buffer_name)
+  def unrename(self, buffer_name):
+    if self.renamed.count(buffer_name) > 0:
+      weechat_buffer = w.info_get("irc_buffer", "%s,#%s" % (server, buffer_name))
+      new_buffer_name = "#" + buffer_name
+      w.buffer_set(weechat_buffer, "short_name", new_buffer_name)
+      self.renamed.remove(buffer_name)
 
 def slack_command_cb(data, current_buffer, args):
   a = args.split(' ',1)
@@ -146,7 +211,7 @@ def process_channel_marked(message_json):
 
 def process_im_marked(message_json):
   channel = message_json["channel"]
-  buffer_name = "%s.%s" % (server, channel.lstrip('DM/'))
+  buffer_name = "%s.%s" % (server, channel.lstrip(DIRECT_MESSAGE))
   if buffer_name != current_buffer_name():
     buf_ptr  = w.buffer_search("",buffer_name)
     w.buffer_set(buf_ptr, "unread", "")
@@ -154,19 +219,15 @@ def process_im_marked(message_json):
     if not legacy_mode:
       w.buffer_set(buf_ptr, "hotlist", "-1")
 
-def process_message(message_json):
-  chan_and_user = message_json["channel"] + ":" + message_json["user"]
-  if typing.has_key(chan_and_user):
-    del typing[chan_and_user]
-
 def process_user_typing(message_json):
-  typing[message_json["channel"] + ":" + message_json["user"]] = time.time()
+  typing.add(message_json["channel"], message_json["user"])
 
 def process_error(message_json):
   global connected
   connected = False
 
 def process_message(message_json):
+  typing.delete(message_json["channel"], message_json["user"])
   channel = message_json["channel"]
   user = user_hash[message_json["message"]["user"]]
   if message_json["message"].has_key("attachments"):
@@ -175,7 +236,7 @@ def process_message(message_json):
   else:
     text = "%s\tEDITED: %s" % (user, message_json["message"]["text"])
     text = text.encode('ascii', 'ignore')
-  if channel.startswith('DM/'):
+  if channel.startswith(DIRECT_MESSAGE):
     buffer_name = "%s.%s" % (server, channel[3:])
   else:
     buffer_name = "%s.#%s" % (server, channel)
@@ -187,29 +248,36 @@ def process_message(message_json):
 ### END Websocket handling methods
 
 def typing_bar_item_cb(data, buffer, args):
-  if typing:
+  if typing.someone_typing:
     #TODO: make this a config option
     color = w.color('yellow')
-    typing_here = []
-    for chan_and_user in typing.keys():
-      chan, user = chan_and_user.split(":")
-      if chan.startswith("DM/"):
-        typing_here.append("d/"+user)
-      else:
-        if current_buffer_name() == "%s.#%s" % (server, chan):
-          typing_here.append(user)
-          pass
+    if current_buffer_name().find("%s.#" % (server)) > -1:
+      current_channel = current_buffer_name().split('.#')[1]
+    else:
+      current_channel = None
+    typing_here = ", ".join(typing.get_typing_dms() + typing.get_typing_current_channel(current_channel))
     if len(typing_here) > 0:
-      return color + "typing: " + ", ".join(typing_here)
+      return color + "typing: " + typing_here
   return ""
 
 def typing_update_cb(data, remaining_calls):
-  for chan_and_user in typing.keys():
-    if typing[chan_and_user] < time.time() - 5:
-      del typing[chan_and_user]
-      w.bar_item_update("slack_typing_notice")
+  typing.update()
+  w.bar_item_update("slack_typing_notice")
   return w.WEECHAT_RC_OK
 
+def buffer_typing_update_cb(data, remaining_calls):
+  #if typing.someone_typing:
+  typing_channels = typing.get_typing_channels()
+  for c in typing_channels:
+    buffer_namer.rename(c)
+  for c in buffer_namer.get_channels():
+    if not c in typing_channels:
+      buffer_namer.unrename(c)
+
+#    for channel in typing.get_typing_channels:
+#      typing.update()
+#      w.bar_item_update("slack_typing_notice")
+  return w.WEECHAT_RC_OK
 
 def buffer_switch_cb(signal, sig_type, data):
   #NOTE: we flush both the next and previous buffer so that all read pointer id up to date
@@ -234,9 +302,9 @@ def keep_channel_read_cb(data, remaining):
   return w.WEECHAT_RC_OK
 
 def typing_notification_cb(signal, sig_type, data):
-  global timer
+  global typing_timer
   now = time.time()
-  if timer + 4 < now:
+  if typing_timer + 4 < now:
     name = current_buffer_name()
     try:
       srv, channel_name = re.split('\.#?',name,1)
@@ -245,7 +313,7 @@ def typing_notification_cb(signal, sig_type, data):
         request = {"type":"typing","channel":name}
         ws.send(json.dumps(request))
         #w.prnt("",json.dumps(request))
-      timer = now
+      typing_timer = now
     except:
       pass
   return w.WEECHAT_RC_OK
@@ -375,7 +443,7 @@ def create_channel_hash(data):
   for item in data["channels"]:
     blah[item["id"]] = item["name"]
   for item in data["ims"]:
-    blah[item["id"]] = "DM/" + user_hash[item["user"]]
+    blah[item["id"]] = DIRECT_MESSAGE + user_hash[item["user"]]
   return blah
 
 def create_reverse_channel_hash(data):
@@ -448,6 +516,12 @@ if __name__ == "__main__":
     else:
       legacy_mode = True
 
+    ### Global constants
+
+    DIRECT_MESSAGE = '*direct*'
+
+    ### End global constants
+
     ### Global var section
     slack_api_token = w.config_get_plugin("slack_api_token")
     server    = w.config_get_plugin("server")
@@ -456,7 +530,9 @@ if __name__ == "__main__":
     cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
     proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
 
-    timer               = time.time()
+    typing              = Typing()
+    typing_timer        = time.time()
+    buffer_namer        = BufferTmpRenamer()
     counter             = 0
     domain              = None
     previous_buffer     = None
@@ -478,6 +554,7 @@ if __name__ == "__main__":
 
     ### attach to the weechat hooks we need
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
+    w.hook_timer(1000, 0, 0, "buffer_typing_update_cb", "")
     w.hook_timer(1000 * 60, 0, 0, "keep_channel_read_cb", "")
     w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", "")
     w.hook_timer(1000 * 60* 29, 0, 0, "slack_never_away_cb", "")
