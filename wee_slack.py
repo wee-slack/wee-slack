@@ -225,6 +225,7 @@ def process_error(message_json):
   connected = False
 
 def process_message(message_json):
+  mark_silly_channels_read(message_json["channel"])
   typing.delete(message_json["channel"], message_json["user"])
   channel = message_json["channel"]
   user = user_hash[message_json["message"]["user"]]
@@ -290,13 +291,6 @@ def buffer_switch_cb(signal, sig_type, data):
       previous_buffer = channel_name
   else:
     previous_buffer = None
-  return w.WEECHAT_RC_OK
-
-def keep_channel_read_cb(data, remaining):
-#TODO move this
-  for each in ["client_events","events"]:
-    if reverse_channel_hash.has_key(each):
-      slack_mark_channel_read(reverse_channel_hash[each])
   return w.WEECHAT_RC_OK
 
 def typing_notification_cb(signal, sig_type, data):
@@ -452,6 +446,10 @@ def create_reverse_channel_hash(data):
     blah[user_hash[item["user"]]] = item["id"]
   return blah
 
+def mark_silly_channels_read(channel):
+  if channel in channels_always_marked_read:
+    slack_mark_channel_read(reverse_channel_hash[channel])
+
 ### END Slack specific requests
 
 ### Utility Methods
@@ -507,6 +505,8 @@ if __name__ == "__main__":
       w.config_set_plugin('timeout', "4")
     if not w.config_get_plugin('slack_api_token'):
       w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
+    if not w.config_get_plugin('channels_always_marked_read'):
+      w.config_set_plugin('channels_always_marked_read', "")
 
     version = w.info_get("version_number", "") or 0
     if int(version) >= 0x00040400:
@@ -524,6 +524,7 @@ if __name__ == "__main__":
     slack_api_token = w.config_get_plugin("slack_api_token")
     server    = w.config_get_plugin("server")
     timeout   = w.config_get_plugin("timeout")
+    channels_always_marked_read = w.config_get_plugin("channels_always_marked_read").split(',')
 
     cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
     proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
@@ -553,7 +554,6 @@ if __name__ == "__main__":
     ### attach to the weechat hooks we need
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
     w.hook_timer(1000, 0, 0, "buffer_typing_update_cb", "")
-    w.hook_timer(1000 * 60, 0, 0, "keep_channel_read_cb", "")
     w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", "")
     w.hook_timer(1000 * 60* 29, 0, 0, "slack_never_away_cb", "")
     w.hook_signal('buffer_switch', "buffer_switch_cb", "")
