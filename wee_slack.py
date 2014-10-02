@@ -524,7 +524,7 @@ if __name__ == "__main__":
     slack_api_token = w.config_get_plugin("slack_api_token")
     server    = w.config_get_plugin("server")
     timeout   = w.config_get_plugin("timeout")
-    channels_always_marked_read = w.config_get_plugin("channels_always_marked_read").split(',')
+    channels_always_marked_read = [x.strip() for x in w.config_get_plugin("channels_always_marked_read").split(',')]
 
     cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
     proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
