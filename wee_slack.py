@@ -343,7 +343,7 @@ def slack_never_away_cb(data, remaining):
 ### Slack specific requests
 
 def slack_mark_channel_read(channel_id):
-  t = int(time.time())
+  t = time.time() + 1
   if channel_id.startswith('C'):
     reply = async_slack_api_request("channels.mark", {"channel":channel_id,"ts":t})
   elif channel_id.startswith('D'):
@@ -352,7 +352,7 @@ def slack_mark_channel_read(channel_id):
 def connect_to_slack():
   global login_data, nick, connected, general_buffer_ptr, nick_ptr, name, domain
   data = {}
-  t = int(time.time())
+  t = time.time()
   request = "rtm.start?t=%s" % t
   data["token"] = slack_api_token
   data = urllib.urlencode(data)
@@ -399,7 +399,7 @@ def create_slack_websocket(data):
 
 #NOTE: switched to async/curl because sync slowed down the UI
 def async_slack_api_request(request, data):
-  t = int(time.time())
+  t = time.time()
   request += "?t=%s" % t
   data["token"] = slack_api_token
   data = urllib.urlencode(data)
@@ -408,7 +408,7 @@ def async_slack_api_request(request, data):
   return True
 
 def slack_api_request(request, data):
-  t = int(time.time())
+  t = time.time()
   request += "?t=%s" % t
   data["token"] = slack_api_token
   data = urllib.urlencode(data)
