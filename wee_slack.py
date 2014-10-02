@@ -156,7 +156,7 @@ def command_nick(args):
 
 ### Websocket handling methods
 
-def slack_cb(data, fd):
+def slack_websocket_cb(data, fd):
   try:
     data = ws.recv()
     message_json = json.loads(data)
@@ -391,7 +391,7 @@ def create_slack_websocket(data):
   try:
     ws = create_connection(web_socket_url)
     ws.sock.setblocking(0)
-    w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "slack_cb", "")
+    w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "slack_websocket_cb", "")
   except socket.error:
     return False
   return True
