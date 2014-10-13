@@ -229,8 +229,8 @@ def process_message(message_json):
   #below prevents typing notification from disapearing if the server sends an unfurled message
   if message_json.has_key("user"):
     typing.delete(message_json["channel"], message_json["user"])
+    user = user_hash[message_json["user"]]
   channel = message_json["channel"]
-  user = user_hash[message_json["message"]["user"]]
   if message_json["message"].has_key("attachments"):
     attachments = [x["text"] for x in message_json["message"]["attachments"]]
     text = "\n".join(attachments)
