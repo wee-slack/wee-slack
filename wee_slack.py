@@ -232,7 +232,8 @@ def process_message(message_json):
   channel = message_json["channel"]
   user = user_hash[message_json["message"]["user"]]
   if message_json["message"].has_key("attachments"):
-    text = message_json["message"]["attachments"][0]["fallback"]
+    attachments = [x["text"] for x in message_json["message"]["attachments"]]
+    text = "\n".join(attachments)
     text = text.encode('ascii', 'ignore')
   else:
     text = "%s\tEDITED: %s" % (user, message_json["message"]["text"])
