@@ -226,7 +226,9 @@ def process_error(message_json):
 
 def process_message(message_json):
   mark_silly_channels_read(message_json["channel"])
-  typing.delete(message_json["channel"], message_json["user"])
+  #below prevents typing notification from disapearing if the server sends an unfurled message
+  if message_json.has_key("user"):
+    typing.delete(message_json["channel"], message_json["user"])
   channel = message_json["channel"]
   user = user_hash[message_json["message"]["user"]]
   if message_json["message"].has_key("attachments"):
@@ -236,7 +238,7 @@ def process_message(message_json):
     text = "%s\tEDITED: %s" % (user, message_json["message"]["text"])
     text = text.encode('ascii', 'ignore')
   if channel.startswith(DIRECT_MESSAGE):
-    buffer_name = "%s.%s" % (server, channel[3:])
+    buffer_name = "%s.%s" % (server, channel[len(DIRECT_MESSAGE):])
   else:
     buffer_name = "%s.#%s" % (server, channel)
   if message_json["subtype"] == "message_changed":
