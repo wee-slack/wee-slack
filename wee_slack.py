@@ -24,21 +24,20 @@ class Typing:
     self.channels = {}
     self.dms      = {}
   def add(self, channel, user):
-    if channel.startswith(DIRECT_MESSAGE):
-      self.dms[channel[len(DIRECT_MESSAGE):]] = time.time()
-    else:
+    if channel.startswith("#"):
       self.channels.setdefault(channel, {})
       self.channels[channel][user] = time.time()
+    else:
+      self.dms[channel] = time.time()
   def delete(self, channel, user):
-    if channel.startswith(DIRECT_MESSAGE):
+    if channel.startswith("#"):
+      if self.channels[channel].has_key(user):
+        del self.channels[channel][user]
+    else:
       #probably unclear, but the line below makes sure not to stop the typing notice if it is the current user typing
-      channel = channel[len(DIRECT_MESSAGE):]
       if channel == user:
         if self.dms.has_key(channel):
           del self.dms[channel]
-    else:
-      if self.channels[channel].has_key(user):
-        del self.channels[channel][user]
     self.update()
   def update(self):
     for c in self.channels.keys():
@@ -66,21 +65,21 @@ class Typing:
       return False
 
 class BufferTmpRenamer:
-  def __init__(self):
-    self.FORMAT = "#%s..."
+  def __init__(self, fmt="%s..."):
+    self.FORMAT = fmt
     self.renamed = []
   def get_channels(self):
     return self.renamed
   def rename(self, buffer_name):
-    weechat_buffer = w.info_get("irc_buffer", "%s,#%s" % (server, buffer_name))
+    weechat_buffer = w.info_get("irc_buffer", "%s,%s" % (server, buffer_name))
     if self.renamed.count(buffer_name) == 0:
       new_buffer_name = self.FORMAT % (buffer_name)
       self.renamed.append(buffer_name)
       w.buffer_set(weechat_buffer, "short_name", new_buffer_name)
   def unrename(self, buffer_name):
     if self.renamed.count(buffer_name) > 0:
-      weechat_buffer = w.info_get("irc_buffer", "%s,#%s" % (server, buffer_name))
-      new_buffer_name = "#" + buffer_name
+      weechat_buffer = w.info_get("irc_buffer", "%s,%s" % (server, buffer_name))
+      new_buffer_name = buffer_name
       w.buffer_set(weechat_buffer, "short_name", new_buffer_name)
       self.renamed.remove(buffer_name)
 
@@ -186,6 +185,12 @@ def write_debug(message_json):
       return
   w.prnt(slack_debug,output)
 
+def modify_buffer_name(name, new_name_fmt="%s"):
+  buffer_name = "%s.%s" % (server, name)
+  buf_ptr  = w.buffer_search("",buffer_name)
+  new_buffer_name = new_name_fmt % (name)
+  w.buffer_set(buf_ptr, "short_name", new_buffer_name)
+
 def process_presence_change(data):
   global nick_ptr
   if data["user"] == nick:
@@ -195,11 +200,17 @@ def process_presence_change(data):
     else:
       w.nicklist_nick_set(general_buffer_ptr, nick_ptr, "prefix", " ")
   else:
-    pass
+    #this puts +/- in front of usernames in the buffer list. (req buffers.pl)
+    buffer_name = "%s.%s" % (server, data["user"])
+    buf_ptr  = w.buffer_search("",buffer_name)
+    if data["presence"] == 'active':
+      modify_buffer_name(data["user"], "+%s")
+    else:
+      modify_buffer_name(data["user"], "-%s")
 
 def process_channel_marked(message_json):
   channel = message_json["channel"]
-  buffer_name = "%s.#%s" % (server, channel)
+  buffer_name = "%s.%s" % (server, channel)
   if buffer_name != current_buffer_name():
     buf_ptr  = w.buffer_search("",buffer_name)
     w.buffer_set(buf_ptr, "unread", "")
@@ -209,7 +220,7 @@ def process_channel_marked(message_json):
 
 def process_im_marked(message_json):
   channel = message_json["channel"]
-  buffer_name = "%s.%s" % (server, channel[len(DIRECT_MESSAGE):])
+  buffer_name = "%s.%s" % (server, channel)
   if buffer_name != current_buffer_name():
     buf_ptr  = w.buffer_search("",buffer_name)
     w.buffer_set(buf_ptr, "unread", "")
@@ -238,10 +249,7 @@ def process_message(message_json):
   else:
     text = "%s\tEDITED: %s" % (user, message_json["message"]["text"])
     text = text.encode('ascii', 'ignore')
-  if channel.startswith(DIRECT_MESSAGE):
-    buffer_name = "%s.%s" % (server, channel[len(DIRECT_MESSAGE):])
-  else:
-    buffer_name = "%s.#%s" % (server, channel)
+  buffer_name = "%s.%s" % (server, channel)
   if message_json["subtype"] == "message_changed":
     buf_ptr  = w.buffer_search("",buffer_name)
     w.prnt(buf_ptr, text)
@@ -254,7 +262,7 @@ def typing_bar_item_cb(data, buffer, args):
     #TODO: make this a config option
     color = w.color('yellow')
     if current_buffer_name().find("%s.#" % (server)) > -1:
-      current_channel = current_buffer_name().split('.#')[1]
+      current_channel = current_buffer_name().split('.')[1]
     else:
       current_channel = None
     typing_here = ", ".join(typing.get_typing_dms() + typing.get_typing_current_channel(current_channel))
@@ -284,7 +292,6 @@ def buffer_typing_update_cb(data, remaining_calls):
 def buffer_switch_cb(signal, sig_type, data):
   #NOTE: we flush both the next and previous buffer so that all read pointer id up to date
   global previous_buffer
-#  w.prnt("",str(previous_buffer))
   if reverse_channel_hash.has_key(previous_buffer):
     slack_mark_channel_read(reverse_channel_hash[previous_buffer])
   if current_buffer_name().startswith(server):
@@ -302,7 +309,7 @@ def typing_notification_cb(signal, sig_type, data):
   if typing_timer + 4 < now:
     name = current_buffer_name()
     try:
-      srv, channel_name = re.split('\.#?',name,1)
+      srv, channel_name = re.split('\.',name,1)
       if reverse_channel_hash.has_key(channel_name) and srv == server:
         name = reverse_channel_hash[channel_name]
         request = {"type":"typing","channel":name}
@@ -374,6 +381,8 @@ def connect_to_slack():
       nick_ptr = w.nicklist_search_nick(general_buffer_ptr,'',nick)
       name = w.nicklist_nick_get_string(general_buffer_ptr,nick,'name')
 
+      set_initial_statii(login_data["users"])
+
       connected = True
       return True
     else:
@@ -381,6 +390,13 @@ def connect_to_slack():
   else:
     connected = False
     return False
+
+def set_initial_statii(data):
+  for user in data:
+    if user["presence"] == "active":
+      modify_buffer_name(user["name"], "+%s")
+    else:
+      modify_buffer_name(user["name"], "-%s")
 
 def create_slack_lookup_hashes(login_data):
   global user_hash, channel_hash, reverse_channel_hash
@@ -436,15 +452,15 @@ def create_user_hash(data):
 def create_channel_hash(data):
   blah = {}
   for item in data["channels"]:
-    blah[item["id"]] = item["name"]
+    blah[item["id"]] = "#" + item["name"]
   for item in data["ims"]:
-    blah[item["id"]] = DIRECT_MESSAGE + user_hash[item["user"]]
+    blah[item["id"]] = user_hash[item["user"]]
   return blah
 
 def create_reverse_channel_hash(data):
   blah = {}
   for item in data["channels"]:
-    blah[item["name"]] = item["id"]
+    blah["#" + item["name"]] = item["id"]
   for item in data["ims"]:
     blah[user_hash[item["user"]]] = item["id"]
   return blah
@@ -463,7 +479,7 @@ def current_buffer_name(short=False):
   name = w.buffer_get_string(buffer, "name")
   if short:
     try:
-      name = re.split('\.#?',name,1)[1]
+      name = re.split('\.',name,1)[1]
     except:
       pass
   return name
