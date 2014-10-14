@@ -206,7 +206,7 @@ def process_presence_change(data):
     if data["presence"] == 'active':
       modify_buffer_name(data["user"], "+%s")
     else:
-      modify_buffer_name(data["user"], "-%s")
+      modify_buffer_name(data["user"], " %s")
 
 def process_channel_marked(message_json):
   channel = message_json["channel"]
@@ -396,7 +396,7 @@ def set_initial_statii(data):
     if user["presence"] == "active":
       modify_buffer_name(user["name"], "+%s")
     else:
-      modify_buffer_name(user["name"], "-%s")
+      modify_buffer_name(user["name"], " %s")
 
 def create_slack_lookup_hashes(login_data):
   global user_hash, channel_hash, reverse_channel_hash
