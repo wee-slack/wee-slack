@@ -89,10 +89,10 @@ def slack_command_cb(data, current_buffer, args):
     function_name, args = a[0], a[1]
   else:
     function_name, args = a[0], None
-  try:
-    cmds[function_name](args)
-  except KeyError:
-    w.prnt("", "Command not found or exception: "+function_name)
+#  try:
+  cmds[function_name](args)
+#  except KeyError:
+#    w.prnt("", "Command not found or exception: "+function_name)
   return w.WEECHAT_RC_OK
 
 def command_test(args):
@@ -104,6 +104,14 @@ def command_away(args):
 
 def command_back(args):
   async_slack_api_request('presence.set', {"presence":"active"})
+
+def command_markread(args):
+  channel = current_buffer_name(short=True)
+  buffer_name = "%s.%s" % (server, channel)
+  buf_ptr  = w.buffer_search("",buffer_name)
+  w.buffer_set(buf_ptr, "unread", "")
+  if reverse_channel_hash.has_key(channel):
+    slack_mark_channel_read(reverse_channel_hash[channel])
 
 def command_neveraway(args):
   global never_away
@@ -312,9 +320,9 @@ def buffer_switch_cb(signal, sig_type, data):
           count += w.infolist_integer(hotlist, "count_0%s" % (i))
     if count == 0:
       w.buffer_set(w.current_buffer(), "unread", "")
+      if reverse_channel_hash.has_key(channel_name):
+        slack_mark_channel_read(reverse_channel_hash[channel_name])
     #end TESTING
-    if reverse_channel_hash.has_key(channel_name):
-      slack_mark_channel_read(reverse_channel_hash[channel_name])
       previous_buffer = channel_name
   else:
     previous_buffer = None
@@ -371,6 +379,8 @@ def slack_never_away_cb(data, remaining):
 
 def slack_mark_channel_read(channel_id):
   t = time.time() + 1
+  weechat_buffer = w.info_get("irc_buffer", "%s,%s" % (server, channel_hash["C0255AL33"]))
+  w.buffer_set(weechat_buffer, "unread", "")
   if channel_id.startswith('C'):
     reply = async_slack_api_request("channels.mark", {"channel":channel_id,"ts":t})
   elif channel_id.startswith('D'):
