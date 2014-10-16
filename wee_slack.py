@@ -241,9 +241,11 @@ def process_message(message_json):
   if message_json.has_key("user"):
     typing.delete(message_json["channel"], message_json["user"])
     user = user_hash[message_json["user"]]
+  else:
+    user = "unknown user"
   channel = message_json["channel"]
   if message_json["message"].has_key("attachments"):
-    attachments = [x["text"] for x in message_json["message"]["attachments"]]
+    attachments = [x["fallback"] for x in message_json["message"]["attachments"]]
     text = "\n".join(attachments)
     text = text.encode('ascii', 'ignore')
   else:
@@ -289,13 +291,28 @@ def buffer_typing_update_cb(data, remaining_calls):
 #      w.bar_item_update("slack_typing_notice")
   return w.WEECHAT_RC_OK
 
+def hotlist_cache_update_cb(data, remaining_calls):
+  #this keeps the hotlist dupe up to date for the buffer switch, but is prob technically a race condition. (meh)
+  global hotlist
+  hotlist = w.infolist_get("hotlist", "", "")
+  return w.WEECHAT_RC_OK
+
 def buffer_switch_cb(signal, sig_type, data):
   #NOTE: we flush both the next and previous buffer so that all read pointer id up to date
-  global previous_buffer
+  global previous_buffer, hotlist
   if reverse_channel_hash.has_key(previous_buffer):
     slack_mark_channel_read(reverse_channel_hash[previous_buffer])
   if current_buffer_name().startswith(server):
     channel_name = current_buffer_name(short=True)
+    #TESTING ... this code checks to see if there are any unread messages and doesn't reposition the read marker if there are
+    count = 0
+    while w.infolist_next(hotlist):
+      if w.infolist_pointer(hotlist, "buffer_pointer") == w.current_buffer():
+        for i in [0,1,2,3]:
+          count += w.infolist_integer(hotlist, "count_0%s" % (i))
+    if count == 0:
+      w.buffer_set(w.current_buffer(), "unread", "")
+    #end TESTING
     if reverse_channel_hash.has_key(channel_name):
       slack_mark_channel_read(reverse_channel_hash[channel_name])
       previous_buffer = channel_name
@@ -563,6 +580,7 @@ if __name__ == "__main__":
     name                = None
     connected           = False
     never_away          = False
+    hotlist             = w.infolist_get("hotlist", "", "")
 
     ### End global var section
 
@@ -573,6 +591,7 @@ if __name__ == "__main__":
     ### attach to the weechat hooks we need
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
     w.hook_timer(1000, 0, 0, "buffer_typing_update_cb", "")
+    w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
     w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", "")
     w.hook_timer(1000 * 60* 29, 0, 0, "slack_never_away_cb", "")
     w.hook_signal('buffer_switch', "buffer_switch_cb", "")
