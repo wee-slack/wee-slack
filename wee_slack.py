@@ -323,7 +323,7 @@ def buffer_switch_cb(signal, sig_type, data):
       if reverse_channel_hash.has_key(channel_name):
         slack_mark_channel_read(reverse_channel_hash[channel_name])
     #end TESTING
-      previous_buffer = channel_name
+    previous_buffer = channel_name
   else:
     previous_buffer = None
   return w.WEECHAT_RC_OK
@@ -379,7 +379,7 @@ def slack_never_away_cb(data, remaining):
 
 def slack_mark_channel_read(channel_id):
   t = time.time() + 1
-  weechat_buffer = w.info_get("irc_buffer", "%s,%s" % (server, channel_hash["C0255AL33"]))
+  weechat_buffer = w.info_get("irc_buffer", "%s,%s" % (server, channel_hash[channel_id]))
   w.buffer_set(weechat_buffer, "unread", "")
   if channel_id.startswith('C'):
     reply = async_slack_api_request("channels.mark", {"channel":channel_id,"ts":t})
