@@ -73,7 +73,7 @@ class BufferTmpRenamer:
   def rename(self, buffer_name):
     weechat_buffer = w.info_get("irc_buffer", "%s,%s" % (server, buffer_name))
     if self.renamed.count(buffer_name) == 0:
-      new_buffer_name = self.FORMAT % (buffer_name)
+      new_buffer_name = self.FORMAT % (buffer_name[:-3])
       self.renamed.append(buffer_name)
       w.buffer_set(weechat_buffer, "short_name", new_buffer_name)
   def unrename(self, buffer_name):
@@ -371,7 +371,7 @@ def slack_never_away_cb(data, remaining):
   global never_away
   if never_away == True:
     #w.prnt("", 'updating status as back')
-    name = reverse_channel_hash["general"]
+    name = reverse_channel_hash["#general"]
     request = {"type":"typing","channel":name}
     ws.send(json.dumps(request))
     #command_back(None)
