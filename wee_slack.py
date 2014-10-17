@@ -302,7 +302,9 @@ def buffer_typing_update_cb(data, remaining_calls):
 def hotlist_cache_update_cb(data, remaining_calls):
   #this keeps the hotlist dupe up to date for the buffer switch, but is prob technically a race condition. (meh)
   global hotlist
+  prev_hotlist = hotlist
   hotlist = w.infolist_get("hotlist", "", "")
+  w.infolist_free(prev_hotlist)
   return w.WEECHAT_RC_OK
 
 def buffer_switch_cb(signal, sig_type, data):
