@@ -99,6 +99,7 @@ class DmChannel(Channel):
       w.buffer_set(self.weechat_buffer, "unread", "")
     reply = async_slack_api_request("im.mark", {"channel":self.identifier,"ts":t})
   def rename(self, name=None, fmt=None):
+    color = w.info_get('irc_nick_color', self.name)
     if self.weechat_buffer:
       if name:
         new_name = name
@@ -106,7 +107,7 @@ class DmChannel(Channel):
         new_name = fmt % (self.name)
       else:
         new_name = self.name
-      w.buffer_set(self.weechat_buffer, "short_name", new_name)
+      w.buffer_set(self.weechat_buffer, "short_name", color + new_name)
 
 class User(SlackThing):
   def __init__(self, name, identifier, presence="away"):
