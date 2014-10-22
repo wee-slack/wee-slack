@@ -364,9 +364,12 @@ def hotlist_cache_update_cb(data, remaining_calls):
   return w.WEECHAT_RC_OK
 
 def buffer_opened_cb(signal, sig_type, data):
-  name = w.buffer_get_string(data, "name").split(".")[1]
-  if channels.find(name):
-    channels.find(name).attach_buffer()
+  try:
+    name = w.buffer_get_string(data, "name").split(".")[1]
+    if channels.find(name):
+      channels.find(name).attach_buffer()
+  except:
+    pass
   return w.WEECHAT_RC_OK
 
 def buffer_closing_cb(signal, sig_type, data):
