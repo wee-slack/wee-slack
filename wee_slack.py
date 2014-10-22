@@ -36,7 +36,7 @@ class SlackThing(object):
     self.name = name
     self.identifier = identifier
   def __eq__(self, compare_str):
-    if compare_str == self.name or compare_str == self.identifier or compare_str == self.name[1:]:
+    if compare_str == self.name or compare_str == self.identifier or compare_str == self.name[1:] or compare_str == self.weechat_buffer:
       return True
     else:
       return False
@@ -50,11 +50,15 @@ class Channel(SlackThing):
     super(Channel, self).__init__(name, identifier)
     self.name = prepend_name + self.name
     self.typing = {}
-    weechat_buffer = w.info_get("irc_buffer", "%s,%s" % (server, self.name))
+    self.attach_buffer()
+  def attach_buffer(self):
+    weechat_buffer = w.buffer_search("", "%s.%s" % (server, self.name))
     if weechat_buffer != main_weechat_buffer:
       self.weechat_buffer = weechat_buffer
     else:
       self.weechat_buffer = None
+  def detach_buffer(self):
+    self.weechat_buffer = None
   def set_typing(self, user):
     self.typing[user] = time.time()
   def unset_typing(self, user):
@@ -359,6 +363,17 @@ def hotlist_cache_update_cb(data, remaining_calls):
   w.infolist_free(prev_hotlist)
   return w.WEECHAT_RC_OK
 
+def buffer_opened_cb(signal, sig_type, data):
+  name = w.buffer_get_string(data, "name").split(".")[1]
+  w.prnt("", str(name))
+  channels.find(name).attach_buffer()
+  return w.WEECHAT_RC_OK
+
+def buffer_closing_cb(signal, sig_type, data):
+  w.prnt("", str(channels.find(data)))
+  channels.find(data).detach_buffer()
+  return w.WEECHAT_RC_OK
+
 def buffer_switch_cb(signal, sig_type, data):
   #NOTE: we flush both the next and previous buffer so that all read pointer id up to date
   global previous_buffer, hotlist
@@ -627,6 +642,8 @@ if __name__ == "__main__":
     w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
     w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", "")
     w.hook_timer(1000 * 60* 29, 0, 0, "slack_never_away_cb", "")
+    w.hook_signal('buffer_opened', "buffer_opened_cb", "")
+    w.hook_signal('buffer_closing', "buffer_closing_cb", "")
     w.hook_signal('buffer_switch', "buffer_switch_cb", "")
     w.hook_signal('window_switch', "buffer_switch_cb", "")
     w.hook_signal('input_text_changed', "typing_notification_cb", "")
