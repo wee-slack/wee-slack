@@ -243,6 +243,9 @@ def command_talk(args):
 def command_join(args):
   channels.find(args).open()
 
+def command_changetoken(args):
+  w.config_set_plugin('slack_api_token', args)
+
 def command_test(args):
   if slack_buffer:
     w.prnt(slack_buffer,"worked!")
