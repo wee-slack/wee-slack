@@ -18,6 +18,11 @@ SCRIPT_VERSION = "0.7"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC  = "Extends weechat for typing notification/search/etc on slack.com"
 
+BACKLOG_SIZE = 500
+
+def dbg(message):
+  w.prnt("", str(message))
+
 class SearchList(list):
   def find(self, item):
     try:
@@ -35,36 +40,60 @@ class SlackThing(object):
   def __init__(self, name, identifier):
     self.name = name
     self.identifier = identifier
+    self.weechat_buffer = None
+    self.channel_buffer = None
   def __eq__(self, compare_str):
-    if compare_str == self.name or compare_str == self.identifier or compare_str == self.name[1:] or compare_str == self.weechat_buffer:
+    if compare_str == self.name or compare_str == self.identifier or compare_str == self.name[1:] or compare_str == self.channel_buffer:
       return True
     else:
       return False
   def __str__(self):
-    return "Name: %s Id: %s" % (self.name, self.identifier)
+    return "Name: %s Id: %s Buffer: %s CB: %s\n" % (self.name, self.identifier, self.weechat_buffer, self.channel_buffer)
   def __repr__(self):
-    return "Name: %s Id: %s" % (self.name, self.identifier)
+    return "Name: %s Id: %s Buffer: %s CB: %s" % (self.name, self.identifier, self.weechat_buffer, self.channel_buffer)
+
+def input(b,c,data):
+  channels.find(b).send_message(data)
+  channels.find(b).prnt(nick, data)
+  return w.WEECHAT_RC_ERROR
 
 class Channel(SlackThing):
-  def __init__(self, name, identifier, prepend_name=""):
+  def __init__(self, name, identifier, active, prepend_name=""):
     super(Channel, self).__init__(name, identifier)
     self.name = prepend_name + self.name
     self.typing = {}
-    self.attach_buffer()
-  def attach_buffer(self):
-    weechat_buffer = w.buffer_search("", "%s.%s" % (server, self.name))
-    if weechat_buffer != main_weechat_buffer:
-      self.weechat_buffer = weechat_buffer
+    if active:
+      self.create_buffer()
+      self.attach_buffer()
+  def create_buffer(self):
+    channel_buffer = w.buffer_search("", "%s/%s" % (domain.split(".")[0], self.name))
+    if channel_buffer:
+      self.channel_buffer = channel_buffer
     else:
-      self.weechat_buffer = None
+      self.channel_buffer = w.buffer_new(domain.split(".")[0] + "/" + self.name, "input", self.name, "", "")
+  def attach_buffer(self):
+    channel_buffer = w.buffer_search("", "%s/%s" % (domain.split(".")[0], self.name))
+    if channel_buffer != main_weechat_buffer:
+      self.channel_buffer = channel_buffer
+    else:
+      self.channel_buffer = None
   def detach_buffer(self):
-    self.weechat_buffer = None
+    self.channel_buffer = None
+    #self.weechat_buffer = None
   def set_typing(self, user):
+    dbg("typing")
     self.typing[user] = time.time()
+  def send_message(self, message):
+    request = {"type":"message","channel":self.identifier, "text": message}
+    ws.send(json.dumps(request))
   def open(self):
-    pass
+    t = time.time() + 1
+    dbg(self.name.lstrip("#"))
+    reply = async_slack_api_request("channels.join", {"name":self.name.lstrip("#"),"ts":t})
+    self.create_buffer()
   def close(self):
-    pass
+    t = time.time() + 1
+    reply = async_slack_api_request("channels.leave", {"channel":self.identifier,"ts":t})
   def unset_typing(self, user):
     try:
       del self.typing[user]
@@ -83,50 +112,91 @@ class Channel(SlackThing):
     return typing
   def mark_read(self):
     t = time.time() + 1
-    if self.weechat_buffer:
-      w.buffer_set(self.weechat_buffer, "unread", "")
+    if self.channel_buffer:
+      w.buffer_set(self.channel_buffer, "unread", "")
     reply = async_slack_api_request("channels.mark", {"channel":self.identifier,"ts":t})
   def rename(self, name=None, fmt=None):
-    if self.weechat_buffer:
+    if self.channel_buffer:
       if name:
         new_name = name
       elif fmt:
         new_name = fmt % (self.name[1:])
       else:
         new_name = self.name
-      w.buffer_set(self.weechat_buffer, "short_name", new_name)
+      #w.buffer_set(self.weechat_buffer, "short_name", new_name)
+      w.buffer_set(self.channel_buffer, "short_name", new_name)
+  def prnt(self, user='unknown user', message='no message'):
+    message = message.encode('ascii', 'ignore')
+    if self.channel_buffer:
+      w.prnt(self.channel_buffer, "%s\t%s" % (user, message))
+#    if self.channel_buffer:
+#      w.prnt(self.weechat_buffer, "%s\t%s" % (user, message))
+    else:
+      pass
+      #w.prnt("", "%s\t%s" % (user, message))
+  def get_history(self):
+    t = time.time()
+    reply = slack_api_request("channels.history", {"channel":self.identifier,"ts":t, "count":BACKLOG_SIZE})
+    blah = reply.read()
+    message_json = json.loads(blah)
+    if message_json.has_key("messages"):
+      messages = message_json["messages"].reverse()
+      for message in message_json["messages"]:
+        message["channel"] = self.identifier
+        process_message(message)
 
 class GroupChannel(Channel):
   def mark_read(self):
     t = time.time() + 1
-    if self.weechat_buffer:
-      w.buffer_set(self.weechat_buffer, "unread", "")
+    if self.channel_buffer:
+      w.buffer_set(self.channel_buffer, "unread", "")
     reply = async_slack_api_request("groups.mark", {"channel":self.identifier,"ts":t})
+  def get_history(self):
+    t = time.time()
+    reply = slack_api_request("group.history", {"channel":self.identifier,"ts":t, "count":BACKLOG_SIZE})
+    blah = reply.read()
+    message_json = json.loads(blah)
+    if message_json.has_key("messages"):
+      messages = message_json["messages"].reverse()
+      for message in message_json["messages"]:
+        message["channel"] = self.identifier
+        process_message(message)
 
 class DmChannel(Channel):
   def mark_read(self):
     t = time.time() + 1
-    if self.weechat_buffer:
-      w.buffer_set(self.weechat_buffer, "unread", "")
+    if self.channel_buffer:
+      w.buffer_set(self.channel_buffer, "unread", "")
     reply = async_slack_api_request("im.mark", {"channel":self.identifier,"ts":t})
   def close(self):
     t = time.time() + 1
     reply = async_slack_api_request("im.close", {"channel":self.identifier,"ts":t})
   def rename(self, name=None, fmt=None):
     color = w.info_get('irc_nick_color', self.name)
-    if self.weechat_buffer:
+    if self.channel_buffer:
       if name:
         new_name = name
       elif fmt:
         new_name = fmt % (self.name)
       else:
         new_name = self.name
-      w.buffer_set(self.weechat_buffer, "short_name", color + new_name)
+      w.buffer_set(self.channel_buffer, "short_name", color + new_name)
+      #w.buffer_set(self.weechat_buffer, "short_name", color + new_name)
+  def get_history(self):
+    t = time.time()
+    reply = slack_api_request("im.history", {"channel":self.identifier,"ts":t, "count":BACKLOG_SIZE})
+    blah = reply.read()
+    message_json = json.loads(blah)
+    if message_json.has_key("messages"):
+      messages = message_json["messages"].reverse()
+      for message in message_json["messages"]:
+        message["channel"] = self.identifier
+        process_message(message)
 
 class User(SlackThing):
   def __init__(self, name, identifier, presence="away"):
     super(User, self).__init__(name, identifier)
-    self.weechat_buffer = w.info_get("irc_buffer", "%s,%s" % (server, self.name))
+    self.channel_buffer = w.info_get("irc_buffer", "%s,%s" % (server, self.name))
     self.presence = presence
   def set_active(self):
     self.presence = "active"
@@ -151,6 +221,9 @@ def slack_command_cb(data, current_buffer, args):
 #  except KeyError:
 #    w.prnt("", "Command not found or exception: "+function_name)
   return w.WEECHAT_RC_OK
+
+def command_talk(args):
+  channels.find(args).open()
 
 def command_test(args):
   if slack_buffer:
@@ -229,8 +302,8 @@ def slack_websocket_cb(data, fd):
   except:
     pass
   #dispatch here
-  function_name = message_json["type"]
   try:
+    function_name = message_json["type"]
     proc[function_name](message_json)
   except KeyError:
     #w.prnt("", "Function not implemented "+function_name)
@@ -295,6 +368,26 @@ def process_group_marked(message_json):
     if not legacy_mode:
       w.buffer_set(buf_ptr, "hotlist", "-1")
 
+def process_channel_left(message_json):
+  buf = channels.find(message_json["channel"]).channel_buffer
+  channels.find(message_json["channel"]).detach_buffer()
+  w.buffer_close(buf)
+
+def process_channel_joined(message_json):
+  channels.find(message_json["channel"]["id"]).create_buffer()
+  #buf = channels.find(message_json["channel"]).channel_buffer
+  #w.buffer_close(buf)
+
+def process_im_close(message_json):
+  buf = channels.find(message_json["channel"]).channel_buffer
+  channels.find(message_json["channel"]).detach_buffer()
+  w.buffer_close(buf)
+
+def process_im_open(message_json):
+  channels.find(message_json["channel"]).create_buffer()
+  #buf = channels.find(message_json["channel"]).channel_buffer
+  #w.buffer_close(buf)
+
 def process_im_marked(message_json):
   channel = message_json["channel"]
   buffer_name = "%s.%s" % (server, channel)
@@ -313,37 +406,27 @@ def process_error(message_json):
   connected = False
 
 def process_message(message_json):
+  global channels
+
   mark_silly_channels_read(message_json["channel"])
-  #below prevents typing notification from disapearing if the server sends an unfurled message
-  if message_json.has_key("user"):
-    channels.find(message_json["channel"]).unset_typing(users.find(message_json["user"]).name)
-    user = users.find(message_json["user"]).name
-  else:
-    user = "unknown user"
+
   channel = message_json["channel"]
-  buf_ptr = channels.find(channel).weechat_buffer
-  if message_json["type"] == "message":
-    if message_json.has_key("message"):
-      if message_json["message"].has_key("attachments"):
-        attachments = [x["fallback"] for x in message_json["message"]["attachments"]]
-        text = "\n".join(attachments)
-        text = text.encode('ascii', 'ignore')
-    if message_json.has_key("subtype"):
-      if message_json["subtype"] == "message_changed":
-        text = "%s\tEDITED: %s" % (users.find(message_json["message"]["user"]).colorized_name(), message_json["message"]["text"])
-        text = text.encode('ascii', 'ignore')
-    else:
-      text = "%s\t%s" % (users.find(message_json["user"]).colorized_name(),message_json["text"])
 
-#  buffer_name = "%s.%s" % (server, channel)
-#  if message_json["subtype"] == "message_changed":
-  try:
-    w.prnt(buf_ptr, text)
-  except:
-    w.prnt(buf_ptr, str(message_json))
+#  if message_json.has_key("subtype"):
+#    return
+  #this handles edits
+  if message_json.has_key("message"):
+    message_json["text"] = "Edited: " + message_json["message"]["text"]
+    message_json["user"] = message_json["message"]["user"]
 
-#  w.prnt(buf_ptr, "test")
-  pass
+  if message_json.has_key("user") and message_json.has_key("text"):
+    #below prevents typing notification from disapearing if the server sends an unfurled message
+    #w.prnt('',str(channels))
+#    channels.find(message_json["channel"]).unset_typing(users.find(message_json["user"]).name)
+    user = users.find(message_json["user"]).colorized_name()
+    channels.find(channel).prnt(user,message_json["text"])
+  else:
+    channels.find(channel).prnt('unknown user',str(message_json))
 
 ### END Websocket handling methods
 
@@ -403,14 +486,12 @@ def incoming_irc_message_cb(data, modifier, modifier_data, line):
     return line
 
 def buffer_opened_cb(signal, sig_type, data):
-  try:
-    name = w.buffer_get_string(data, "name").split(".")[1]
-    if users.find(name):
-      users.find(name).open()
-    if channels.find(name):
-      channels.find(name).attach_buffer()
-  except:
-    pass
+  name = w.buffer_get_string(data, "name").split("/")[1]
+  if users.find(name):
+    users.find(name).open()
+  if channels.find(name):
+    channels.find(name).attach_buffer()
+    channels.find(name).get_history()
   return w.WEECHAT_RC_OK
 
 def buffer_closing_cb(signal, sig_type, data):
@@ -505,8 +586,8 @@ def connect_to_slack():
       nick = login_data["self"]["name"]
       domain = login_data["team"]["domain"] + ".slack.com"
 
-      create_slack_mappings(login_data)
       create_slack_websocket(login_data)
+      create_slack_mappings(login_data)
 
       general_buffer_ptr  = w.buffer_search("",server+".#general")
       nick_ptr = w.nicklist_search_nick(general_buffer_ptr,'',nick)
@@ -538,12 +619,15 @@ def create_slack_mappings(data):
     users.append(User(item["name"], item["id"], item["presence"]))
 
   for item in data["channels"]:
-    channels.append(Channel(item["name"], item["id"], "#"))
+    channels.append(Channel(item["name"], item["id"], item["is_member"], "#"))
   for item in data["groups"]:
-    channels.append(GroupChannel(item["name"], item["id"], "#"))
+    channels.append(GroupChannel(item["name"], item["id"], item["is_open"], "#"))
   for item in data["ims"]:
     name = users.find(item["user"]).name
-    channels.append(DmChannel(name, item["id"]))
+    channels.append(DmChannel(name, item["id"], item["is_open"]))
+
+  for item in channels:
+    item.get_history()
 
 def create_slack_websocket(data):
   global ws
@@ -589,7 +673,7 @@ def current_buffer_name(short=False):
   name = w.buffer_get_string(buffer, "name")
   if short:
     try:
-      name = re.split('\.',name,1)[1]
+      name = re.split('\.?\/?',name,1)[1]
     except:
       pass
   return name
@@ -689,13 +773,14 @@ if __name__ == "__main__":
     w.hook_timer(1000 * 60* 29, 0, 0, "slack_never_away_cb", "")
 #    w.hook_modifier('irc_in2_xxx', "incoming_irc_message_cb", "")
 #    w.hook_modifier('irc_in_xxx', "incoming_irc_message_cb", "")
-    w.hook_modifier('weechat_print', "incoming_irc_message_cb", "")
+#    w.hook_modifier('weechat_print', "incoming_irc_message_cb", "")
     w.hook_signal('buffer_opened', "buffer_opened_cb", "")
     w.hook_signal('buffer_closing', "buffer_closing_cb", "")
     w.hook_signal('buffer_switch', "buffer_switch_cb", "")
     w.hook_signal('window_switch', "buffer_switch_cb", "")
     w.hook_signal('input_text_changed', "typing_notification_cb", "")
     w.hook_command('slack','Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', '|'.join(cmds.keys()), 'slack_command_cb', '')
+#    w.hook_command('tt','talk to someone', 'stuff', 'stuff2', '|'.join(cmds.keys()), 'slack_command_cb', '')
     w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
     ### END attach to the weechat hooks we need
 
