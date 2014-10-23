@@ -81,14 +81,12 @@ class Channel(SlackThing):
     self.channel_buffer = None
     #self.weechat_buffer = None
   def set_typing(self, user):
-    dbg("typing")
     self.typing[user] = time.time()
   def send_message(self, message):
     request = {"type":"message","channel":self.identifier, "text": message}
     ws.send(json.dumps(request))
   def open(self):
     t = time.time() + 1
-    dbg(self.name.lstrip("#"))
     reply = async_slack_api_request("channels.join", {"name":self.name.lstrip("#"),"ts":t})
     self.create_buffer()
   def close(self):
