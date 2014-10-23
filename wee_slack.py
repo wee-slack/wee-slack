@@ -61,6 +61,8 @@ class Channel(SlackThing):
     self.weechat_buffer = None
   def set_typing(self, user):
     self.typing[user] = time.time()
+  def open(self):
+    pass
   def close(self):
     pass
   def unset_typing(self, user):
@@ -133,6 +135,10 @@ class User(SlackThing):
   def colorized_name(self):
     color = w.info_get('irc_nick_color', self.name)
     return color+self.name
+  def open(self):
+    t = time.time() + 1
+    #reply = async_slack_api_request("im.open", {"channel":self.identifier,"ts":t})
+    reply = async_slack_api_request("im.open", {"user":self.identifier,"ts":t})
 
 def slack_command_cb(data, current_buffer, args):
   a = args.split(' ',1)
@@ -395,6 +401,8 @@ def incoming_irc_message_cb(data, modifier, modifier_data, line):
 def buffer_opened_cb(signal, sig_type, data):
   try:
     name = w.buffer_get_string(data, "name").split(".")[1]
+    if users.find(name):
+      users.find(name).open()
     if channels.find(name):
       channels.find(name).attach_buffer()
   except:
