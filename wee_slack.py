@@ -61,8 +61,13 @@ class Channel(SlackThing):
     self.weechat_buffer = None
   def set_typing(self, user):
     self.typing[user] = time.time()
+  def close(self):
+    pass
   def unset_typing(self, user):
-    del self.typing[user]
+    try:
+      del self.typing[user]
+    except:
+      pass
   def is_someone_typing(self):
     for user in self.typing.keys():
       if self.typing[user] + 4 > time.time():
@@ -102,6 +107,9 @@ class DmChannel(Channel):
     if self.weechat_buffer:
       w.buffer_set(self.weechat_buffer, "unread", "")
     reply = async_slack_api_request("im.mark", {"channel":self.identifier,"ts":t})
+  def close(self):
+    t = time.time() + 1
+    reply = async_slack_api_request("im.close", {"channel":self.identifier,"ts":t})
   def rename(self, name=None, fmt=None):
     color = w.info_get('irc_nick_color', self.name)
     if self.weechat_buffer:
@@ -122,6 +130,9 @@ class User(SlackThing):
     self.presence = "active"
   def set_inactive(self):
     self.presence = "away"
+  def colorized_name(self):
+    color = w.info_get('irc_nick_color', self.name)
+    return color+self.name
 
 def slack_command_cb(data, current_buffer, args):
   a = args.split(' ',1)
@@ -304,17 +315,24 @@ def process_message(message_json):
   else:
     user = "unknown user"
   channel = message_json["channel"]
-  if message_json["message"].has_key("attachments"):
-    attachments = [x["fallback"] for x in message_json["message"]["attachments"]]
-    text = "\n".join(attachments)
-    text = text.encode('ascii', 'ignore')
-  else:
-    text = "%s\tEDITED: %s" % (user, message_json["message"]["text"])
-    text = text.encode('ascii', 'ignore')
-  buffer_name = "%s.%s" % (server, channel)
-  if message_json["subtype"] == "message_changed":
-    buf_ptr  = w.buffer_search("",buffer_name)
-    w.prnt(buf_ptr, text)
+  buf_ptr = channels.find(channel).weechat_buffer
+  if message_json["type"] == "message":
+    if message_json.has_key("message"):
+      if message_json["message"].has_key("attachments"):
+        attachments = [x["fallback"] for x in message_json["message"]["attachments"]]
+        text = "\n".join(attachments)
+        text = text.encode('ascii', 'ignore')
+    if message_json.has_key("subtype"):
+      if message_json["subtype"] == "message_changed":
+        text = "%s\tEDITED: %s" % (users.find(message_json["message"]["user"]).colorized_name(), message_json["message"]["text"])
+        text = text.encode('ascii', 'ignore')
+    else:
+      text = "%s\t%s" % (users.find(message_json["user"]).colorized_name(),message_json["text"])
+
+#  buffer_name = "%s.%s" % (server, channel)
+#  if message_json["subtype"] == "message_changed":
+  w.prnt(buf_ptr, text)
+#  w.prnt(buf_ptr, "test")
   pass
 
 ### END Websocket handling methods
@@ -363,6 +381,17 @@ def hotlist_cache_update_cb(data, remaining_calls):
   w.infolist_free(prev_hotlist)
   return w.WEECHAT_RC_OK
 
+def incoming_irc_message_cb(data, modifier, modifier_data, line):
+# currently blocks incoming irc messages. lets do this on websockets!
+#  irc_privmsg
+#  w.prnt("", str(data))
+#  w.prnt("", str(modifier))
+#  w.prnt("", str(modifier_data))
+  if modifier_data.count('irc_privmsg') > 0:
+    return ""
+  else:
+    return line
+
 def buffer_opened_cb(signal, sig_type, data):
   try:
     name = w.buffer_get_string(data, "name").split(".")[1]
@@ -374,6 +403,7 @@ def buffer_opened_cb(signal, sig_type, data):
 
 def buffer_closing_cb(signal, sig_type, data):
   if channels.find(data):
+    channels.find(data).close()
     channels.find(data).detach_buffer()
   return w.WEECHAT_RC_OK
 
@@ -645,6 +675,9 @@ if __name__ == "__main__":
     w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
     w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", "")
     w.hook_timer(1000 * 60* 29, 0, 0, "slack_never_away_cb", "")
+#    w.hook_modifier('irc_in2_xxx', "incoming_irc_message_cb", "")
+#    w.hook_modifier('irc_in_xxx', "incoming_irc_message_cb", "")
+    w.hook_modifier('weechat_print', "incoming_irc_message_cb", "")
     w.hook_signal('buffer_opened', "buffer_opened_cb", "")
     w.hook_signal('buffer_closing', "buffer_closing_cb", "")
     w.hook_signal('buffer_switch', "buffer_switch_cb", "")
