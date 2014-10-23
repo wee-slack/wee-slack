@@ -337,7 +337,11 @@ def process_message(message_json):
 
 #  buffer_name = "%s.%s" % (server, channel)
 #  if message_json["subtype"] == "message_changed":
-  w.prnt(buf_ptr, text)
+  try:
+    w.prnt(buf_ptr, text)
+  except:
+    w.prnt(buf_ptr, str(message_json))
+
 #  w.prnt(buf_ptr, "test")
   pass
 
