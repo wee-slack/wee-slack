@@ -703,19 +703,19 @@ def create_slack_websocket(data):
 
 #NOTE: switched to async/curl because sync slowed down the UI
 def async_slack_api_request(request, data):
-  t = time.time() + random.random()
-  request += "?t=%s" % t
-  data["token"] = slack_api_token
-  data = urllib.urlencode(data)
-  post = {"maxconnects": "1", "post": "1", "postfields": data}
-  url = 'https://%s/api/%s' % (domain, request)
-  queue.append(['url:%s' % (url), post, 20000, 'url_processor_cb', str(data)])
+    t = time.time() + random.random()
+    request += "?t=%s" % t
+    data["token"] = slack_api_token
+    data = urllib.urlencode(data)
+    post = {"maxconnects": "1", "post": "1", "postfields": data}
+    url = 'https://%s/api/%s' % (domain, request)
+    queue.append(['url:%s' % (url), post, 20000, 'url_processor_cb', str(data)])
 
 
 queue = []
 url_processor_lock=False
 #funny, right?
-big_data = ''
+big_data = {}
 
 def async_queue_cb(data, remaining_calls):
   global url_processor_lock
@@ -734,33 +734,36 @@ def async_queue_cb(data, remaining_calls):
   return w.WEECHAT_RC_OK
 
 def url_processor_cb(data, command, return_code, out, err):
-  global url_processor_lock, big_data
-  dbg(command)
+  global url_processor_lock
   if return_code == 0:
     url_processor_lock=False
+  #dbg(return_code)
+  query = urlparse.parse_qs(data)
+  if query.has_key("channel"):
+    channel = channels.find(query["channel"][0]).name
+  global big_data
+  identifier = sha.sha(str(data) + command).hexdigest()
+  if not big_data.has_key(identifier):
+    big_data[identifier] = ''
+  big_data[identifier] += out
+  try:
+    my_json = json.loads(big_data[identifier])
+  except:
+    my_json = False
+  if my_json:
+#    try:
+    #dbg('%-10s %-10s success %s %s' % (channel, len(big_data[identifier]), big_data[identifier][:5], big_data[identifier][-5:] ))
+#    dbg('%s %s success' % (big_data.keys(), identifier))
     query = urlparse.parse_qs(data)
     if query.has_key("channel"):
-      channel = channels.find(query["channel"][0]).name
-      if command.find("history") > -1:
-        dbg("getting history for channel %s" % (channel))
-    big_data += out
-    try:
-      my_json = json.loads(big_data)
-    except:
-      my_json = False
-    if my_json:
-      query = urlparse.parse_qs(data)
-      if query.has_key("channel"):
-        channel = query["channel"][0]
-      message_json = json.loads(big_data)
-      big_data = ''
-      if message_json.has_key("messages"):
-        messages = message_json["messages"].reverse()
-        for message in message_json["messages"]:
-          message["channel"] = channels.find(channel)
-          process_message(message)
-  else:
-    print data
+      channel = query["channel"][0]
+    message_json = json.loads(big_data[identifier])
+    del big_data[identifier]
+    if message_json.has_key("messages"):
+      messages = message_json["messages"].reverse()
+      for message in message_json["messages"]:
+        message["channel"] = channels.find(channel)
+        process_message(message)
 
   return w.WEECHAT_RC_OK
 
