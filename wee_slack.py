@@ -61,14 +61,18 @@ class Meta(list):
     self.search_list.get_all(self.attribute)
   def find(self, name):
     items = self.search_list.find_deep(name, self.attribute)
+    items = [x for x in items if x != None]
     if len(items) == 1:
       return items[0]
+    elif len(items) == 0:
+      pass
     else:
-      raise AmbiguousProblemError
+      dbg("probably something bad happened with meta items: %s" % items)
+      return items
+#      raise AmbiguousProblemError
   def find_by_class(self, class_name):
-    items = []
     #for each in self.search_list.find_by_class(class_name):
-    items += self.search_list.find_by_class_deep(class_name, self.attribute)
+    items = self.search_list.find_by_class_deep(class_name, self.attribute)
     return items
 
 class SearchList(list):
@@ -82,16 +86,19 @@ class SearchList(list):
           items.append(child)
     if len(items) == 1:
       return items[0]
-    else:
+    elif items != []:
       return items
   def find_deep(self, name, attribute):
     items = []
     for child in self:
       if child.__class__ == self.__class__:
-        items += child.find_deep(name, attribute)
+        if items != None:
+          items += child.find_deep(name, attribute)
       elif dir(child).count('find') == 1:
-        items.append(child.find(name, attribute))
-    return items
+        if items != None:
+          items.append(child.find(name, attribute))
+    if items != []:
+      return items
   def get_all(self, attribute):
     items = []
     for child in self:
@@ -203,6 +210,17 @@ class SlackServer(object):
 
     for item in self.channels:
       item.get_history()
+  def prnt(self, message='no message', user="SYSTEM", backlog=False):
+    message = message.encode('ascii', 'ignore')
+    if backlog == True:
+      tags = "no_highlight,notify_none,logger_backlog_end"
+    else:
+      tags = ""
+    if self.buffer:
+      w.prnt_date_tags(self.buffer, 0, tags, "%s\t%s" % (user, message))
+    else:
+      pass
+      #w.prnt("", "%s\t%s" % (user, message))
 
 class SlackThing(object):
   def __init__(self, name, identifier):
@@ -215,8 +233,9 @@ class SlackThing(object):
     return "Name: %s Id: %s CB: %s" % (self.name, self.identifier, self.channel_buffer)
 
 def input(b,c,data):
-  channels.find(b).send_message(data)
-  channels.find(b).prnt(data)
+  channel = channels.find(b)
+  channel.send_message(data)
+  channel.prnt(channel.server.nick, data)
   return w.WEECHAT_RC_ERROR
 
 class Channel(SlackThing):
@@ -311,26 +330,22 @@ class Channel(SlackThing):
       w.buffer_set(self.channel_buffer, "short_name", new_name)
   def prnt(self, user='unknown user', message='no message', time=0, backlog=False):
     message = message.encode('ascii', 'ignore')
-    if time != 0 and self.last_read > time:
+    if backlog == True or (time != 0 and self.last_read > time):
       tags = "no_highlight,notify_none,logger_backlog_end"
     else:
       tags = ""
     time = int(float(time))
     if self.channel_buffer:
       w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (user, message))
-      #w.prnt_date_tags(self.channel_buffer, time, "", "%s\t%s" % (user, message))
-#      w.prnt(self.channel_buffer, "%s\t%s" % (user, message))
-#    if self.channel_buffer:
-#      w.prnt(self.weechat_buffer, "%s\t%s" % (user, message))
     else:
       pass
       #w.prnt("", "%s\t%s" % (user, message))
   def get_history(self):
     if self.active:
       t = time.time()
-      async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "oldest":self.last_read})
-      queue.append(self)
       async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "count":BACKLOG_SIZE, "latest":self.last_read})
+      queue.append(self)
+      async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "oldest":self.last_read})
 
 class GroupChannel(Channel):
   def __init__(self, server, name, identifier, active, last_read=0, prepend_name=""):
@@ -381,10 +396,10 @@ def slack_command_cb(data, current_buffer, args):
     function_name, args = a[0], " ".join(a[1:])
   else:
     function_name, args = a[0], None
-#  try:
-  cmds[function_name](current_buffer, args)
-#  except KeyError:
-#    w.prnt("", "Command not found or exception: "+function_name)
+  try:
+    cmds[function_name](current_buffer, args)
+  except KeyError:
+    w.prnt("", "Command not found or exception: "+function_name)
   return w.WEECHAT_RC_OK
 
 def command_talk(current_buffer, args):
@@ -407,19 +422,21 @@ def command_back(current_buffer, args):
   async_slack_api_request('presence.set', {"presence":"active"})
 
 def command_markread(current_buffer, args):
+  #refactor this - one liner i think
   channel = current_buffer_name(short=True)
   domain = current_domain_name()
   if servers.find(domain).channels.find(channel):
     servers.find(domain).channels.find(channel).mark_read()
 
 def command_neveraway(current_buffer, args):
+  buf = channels.find(current_buffer).server.buffer
   global never_away
   if never_away == True:
     never_away = False
-    w.prnt("", "unset never_away")
+    w.prnt(buf, "unset never_away")
   else:
     never_away = True
-    w.prnt("", "set as never_away")
+    w.prnt(buf, "set as never_away")
 
 def command_printvar(current_buffer, args):
   w.prnt("", str(eval(args)))
@@ -668,7 +685,7 @@ def buffer_list_update_cb(data, remaining_calls):
     else:
       channel.rename()
   for channel in channels.find_by_class(DmChannel):
-    if users.find(channel.name).presence == "active":
+    if channel.server.users.find(channel.name).presence == "active":
       channel.rename(fmt="+%s")
     else:
       channel.rename(fmt=" %s")
@@ -800,12 +817,13 @@ def async_queue_cb(data, remaining_calls):
   if url_processor_lock == False:
     url_processor_lock=True
     if len(queue) > 0:
-      item = queue.pop()
+      item = queue.pop(0)
       try:
         query = urlparse.parse_qs(item[-1])
         if query.has_key("channel") and item[0].find('history') > -1:
           channel = query["channel"][0]
-          dbg("downloading channel history for %s" % (channel))
+          channel = channels.find(channel)
+          channel.server.prnt("downloading channel history for %s" % (channel.name), backlog=True)
       except:
         pass
       if item.__class__ == list:
@@ -846,13 +864,13 @@ def url_processor_cb(data, command, return_code, out, err):
         process_message(message)
   return w.WEECHAT_RC_OK
 
-def slack_api_request(request, data):
-  t = time.time()
-  request += "?t=%s" % t
-  data["token"] = slack_api_token
-  data = urllib.urlencode(data)
-  reply = urllib.urlopen('https://%s/api/%s' % (domain, request), data)
-  return reply
+#def slack_api_request(request, data):
+#  t = time.time()
+#  request += "?t=%s" % t
+#  data["token"] = slack_api_token
+#  data = urllib.urlencode(data)
+#  reply = urllib.urlopen('https://%s/api/%s' % (domain, request), data)
+#  return reply
 
 def mark_silly_channels_read(channel):
   if channel in channels_always_marked_read:
@@ -965,7 +983,8 @@ if __name__ == "__main__":
 
     #channels            = SearchList()
     servers = SearchList()
-    servers.append(SlackServer(slack_api_token))
+    for token in slack_api_token.split(','):
+      servers.append(SlackServer(token))
     channels = Meta('channels', servers)
     users = Meta('users', servers)
 
