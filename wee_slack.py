@@ -761,10 +761,11 @@ def typing_notification_cb(signal, sig_type, data):
 #    try:
 #    for server in servers:
     channel = channels.find(current_buffer_name())
-    identifier = channel.identifier
-    request = {"type":"typing","channel":identifier}
-    channel.server.ws.send(json.dumps(request))
-    typing_timer = now
+    if channel:
+      identifier = channel.identifier
+      request = {"type":"typing","channel":identifier}
+      channel.server.ws.send(json.dumps(request))
+      typing_timer = now
 #    except:
 #      pass
   return w.WEECHAT_RC_OK
