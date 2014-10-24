@@ -626,9 +626,15 @@ def process_message(message_json):
 #    return
   time = message_json["ts"]
   #this handles edits
-  if message_json.has_key("message"):
-    message_json["text"] = "Edited: " + message_json["message"]["text"]
-    message_json["user"] = message_json["message"]["user"]
+  try:
+    if message_json.has_key("message"):
+      message_json["text"] = "Edited: " + message_json["message"]["text"]
+      if message_json.has_key("user"):
+        message_json["user"] = message_json["message"]["user"]
+      elif message_json.has_key("username"):
+        message_json["user"] = message_json["message"]["username"]
+  except:
+    dbg(message_json)
 
   if message_json.has_key("user") and message_json.has_key("text"):
     #below prevents typing notification from disapearing if the server sends an unfurled message
