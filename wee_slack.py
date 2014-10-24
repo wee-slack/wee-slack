@@ -647,8 +647,6 @@ def connect_to_slack():
       nick_ptr = w.nicklist_search_nick(general_buffer_ptr,'',nick)
       name = w.nicklist_nick_get_string(general_buffer_ptr,nick,'name')
 
-#      set_initial_statii(login_data["users"])
-
       connected = True
       return True
     else:
@@ -656,13 +654,6 @@ def connect_to_slack():
   else:
     connected = False
     return False
-
-#def set_initial_statii(data):
-#  for user in users:
-#    if user.presence == "active":
-#      modify_buffer_name(user["name"], "!%s")
-#    else:
-#      modify_buffer_name(user["name"], " %s")
 
 def create_slack_mappings(data):
   global users, channels
@@ -743,9 +734,6 @@ def url_processor_cb(data, command, return_code, out, err):
   global url_processor_lock, big_data
   if return_code == 0:
     url_processor_lock=False
-#  query = urlparse.parse_qs(data)
-#  if query.has_key("channel"):
-#    channel = channels.find(query["channel"][0]).name
   identifier = sha.sha(str(data) + command).hexdigest()
   if not big_data.has_key(identifier):
     big_data[identifier] = ''
@@ -882,7 +870,6 @@ if __name__ == "__main__":
     connect_to_slack()
 
     w.hook_timer(60000, 0, 0, "slack_connection_persistence_cb", "")
-
     w.hook_timer(10, 0, 0, "async_queue_cb", "")
 
     ### attach to the weechat hooks we need
@@ -891,16 +878,12 @@ if __name__ == "__main__":
     w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
     w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", "")
     w.hook_timer(1000 * 60* 29, 0, 0, "slack_never_away_cb", "")
-#    w.hook_modifier('irc_in2_xxx', "incoming_irc_message_cb", "")
-#    w.hook_modifier('irc_in_xxx', "incoming_irc_message_cb", "")
-#    w.hook_modifier('weechat_print', "incoming_irc_message_cb", "")
     w.hook_signal('buffer_opened', "buffer_opened_cb", "")
     w.hook_signal('buffer_closing', "buffer_closing_cb", "")
     w.hook_signal('buffer_switch', "buffer_switch_cb", "")
     w.hook_signal('window_switch', "buffer_switch_cb", "")
     w.hook_signal('input_text_changed', "typing_notification_cb", "")
     w.hook_command('slack','Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', '|'.join(cmds.keys()), 'slack_command_cb', '')
-#    w.hook_command('tt','talk to someone', 'stuff', 'stuff2', '|'.join(cmds.keys()), 'slack_command_cb', '')
     w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
     ### END attach to the weechat hooks we need
 
