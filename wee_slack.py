@@ -163,11 +163,11 @@ class SlackServer(object):
         self.nick = login_data["self"]["name"]
         self.domain = login_data["team"]["domain"] + ".slack.com"
         self.identifier = self.domain
+        self.buffer = w.buffer_new(self.domain, "input", "", "", "")
 
         self.create_slack_websocket(login_data)
         self.create_slack_mappings(login_data)
 
-        self.buffer = w.buffer_new(self.domain, "input", "", "", "")
         self.general_buffer_ptr  = w.buffer_search("",self.domain+".#general")
         nick_ptr = w.nicklist_search_nick(self.general_buffer_ptr,'',self.nick)
         name = w.nicklist_nick_get_string(self.general_buffer_ptr,self.nick,'name')
@@ -758,14 +758,15 @@ def typing_notification_cb(signal, sig_type, data):
   global typing_timer
   now = time.time()
   if typing_timer + 4 < now:
-    try:
-      for server in servers:
-        identifier = server.channels.find(current_buffer_name(True)).identifier
-        request = {"type":"typing","channel":identifier}
-        server.ws.send(json.dumps(request))
-        typing_timer = now
-    except:
-      pass
+#    try:
+#    for server in servers:
+    channel = channels.find(current_buffer_name())
+    identifier = channel.identifier
+    request = {"type":"typing","channel":identifier}
+    channel.server.ws.send(json.dumps(request))
+    typing_timer = now
+#    except:
+#      pass
   return w.WEECHAT_RC_OK
 
 #NOTE: figured i'd do this because they do
