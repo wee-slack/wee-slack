@@ -806,6 +806,13 @@ def async_slack_api_request(domain, token, request, data):
   url = 'https://%s/api/%s' % (domain, request)
   queue.append(['url:%s' % (url), post, 20000, 'url_processor_cb', str(data)])
 
+#def async_slack_api_request(request, data):
+#  t = time.time()
+#  request += "?t=%s" % t
+#  data["token"] = slack_api_token
+#  data = urllib.urlencode(data)
+#  command = 'curl --data "%s" https://%s/api/%s' % (data,domain,request)
+#  w.hook_process(command, 5000, '', '')
 
 queue = []
 url_processor_lock=False
@@ -827,7 +834,9 @@ def async_queue_cb(data, remaining_calls):
       except:
         pass
       if item.__class__ == list:
-        w.hook_process_hashtable(*item)
+        #w.hook_process_hashtable(*item)
+        command = 'curl --data "%s" %s' % (item[1]["postfields"], item[0][4:])
+        w.hook_process(command, 10000, item[3], item[4])
       else:
         item.mark_read(False)
         url_processor_lock=False
@@ -836,8 +845,8 @@ def async_queue_cb(data, remaining_calls):
   return w.WEECHAT_RC_OK
 
 def url_processor_cb(data, command, return_code, out, err):
-  url_processor_lock=False
   global url_processor_lock, big_data
+  url_processor_lock=False
   if return_code == 0:
     url_processor_lock=False
   identifier = sha.sha(str(data) + command).hexdigest()
