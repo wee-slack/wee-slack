@@ -21,7 +21,7 @@ SCRIPT_VERSION = "0.7"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC  = "Extends weechat for typing notification/search/etc on slack.com"
 
-BACKLOG_SIZE = 100
+BACKLOG_SIZE = 200
 
 SLACK_API_TRANSLATOR = {
                             "channel": {
@@ -723,10 +723,16 @@ def async_queue_cb(data, remaining_calls):
     url_processor_lock=True
     if len(queue) > 0:
       item = queue.pop()
+      try:
+        query = urlparse.parse_qs(item[-1])
+        if query.has_key("channel") and item[0].find('history') > -1:
+          channel = query["channel"][0]
+          dbg("downloading channel history for %s" % (channels.find(channel).name))
+      except:
+        pass
       if item.__class__ == list:
         w.hook_process_hashtable(*item)
       else:
-        #dbg(item)
         item.mark_read(False)
         url_processor_lock=False
     else:
@@ -734,14 +740,12 @@ def async_queue_cb(data, remaining_calls):
   return w.WEECHAT_RC_OK
 
 def url_processor_cb(data, command, return_code, out, err):
-  global url_processor_lock
+  global url_processor_lock, big_data
   if return_code == 0:
     url_processor_lock=False
-  #dbg(return_code)
-  query = urlparse.parse_qs(data)
-  if query.has_key("channel"):
-    channel = channels.find(query["channel"][0]).name
-  global big_data
+#  query = urlparse.parse_qs(data)
+#  if query.has_key("channel"):
+#    channel = channels.find(query["channel"][0]).name
   identifier = sha.sha(str(data) + command).hexdigest()
   if not big_data.has_key(identifier):
     big_data[identifier] = ''
@@ -751,9 +755,6 @@ def url_processor_cb(data, command, return_code, out, err):
   except:
     my_json = False
   if my_json:
-#    try:
-    #dbg('%-10s %-10s success %s %s' % (channel, len(big_data[identifier]), big_data[identifier][:5], big_data[identifier][-5:] ))
-#    dbg('%s %s success' % (big_data.keys(), identifier))
     query = urlparse.parse_qs(data)
     if query.has_key("channel"):
       channel = query["channel"][0]
@@ -764,7 +765,6 @@ def url_processor_cb(data, command, return_code, out, err):
       for message in message_json["messages"]:
         message["channel"] = channels.find(channel)
         process_message(message)
-
   return w.WEECHAT_RC_OK
 
 def slack_api_request(request, data):
