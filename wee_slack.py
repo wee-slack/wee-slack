@@ -181,12 +181,9 @@ class Channel(SlackThing):
   def get_history(self):
     if self.active:
       t = time.time()
-#      if self.last_read > 0:
       async_slack_api_request(SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "oldest":self.last_read})
       queue.append(self)
       async_slack_api_request(SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "count":BACKLOG_SIZE, "latest":self.last_read})
-        #async_slack_api_request("channels.history", {"channel":self.identifier,"ts":t, "count":BACKLOG_SIZE})
-      #async_slack_api_request("channels.history", {"channel":self.identifier,"ts":t, "count":BACKLOG_SIZE})
 
 class GroupChannel(Channel):
   def __init__(self, name, identifier, active, last_read=0, prepend_name=""):
