@@ -274,7 +274,7 @@ class Channel(SlackThing):
     channel_buffer = w.buffer_search("", "%s.%s" % (self.server.domain, self.name))
     if channel_buffer != main_weechat_buffer:
       self.channel_buffer = channel_buffer
-      w.buffer_set(self.channel_buffer, "highlight_words", self.server.nick)
+#      w.buffer_set(self.channel_buffer, "highlight_words", self.server.nick)
     else:
       self.channel_buffer = None
   def detach_buffer(self):
@@ -338,10 +338,10 @@ class Channel(SlackThing):
     message = message.encode('ascii', 'ignore')
     if backlog == True or (time != 0 and self.last_read > time):
       tags = "no_highlight,notify_none,logger_backlog_end"
-#    elif message.find(self.server.nick) > -1:
-#      tags = "highlight"
+    elif message.find(self.server.nick) > -1:
+      tags = "notify_highlight"
     else:
-      tags = ""
+      tags = "notify_message"
     time = int(float(time))
     if self.channel_buffer:
       w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (user, message))
@@ -907,7 +907,7 @@ def url_processor_cb(data, command, return_code, out, err):
     except:
       url_processor_lock=False
       backoff.back_off()
-      dbg("curl failed, doing again...\n%s" % (big_data[identifier]))
+      dbg("curl failed, doing again...")
       async_slack_api_request(*data, priority=True)
       my_json = False
       pass
