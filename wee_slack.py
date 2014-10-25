@@ -374,6 +374,19 @@ class DmChannel(Channel):
       else:
         new_name = self.name
       w.buffer_set(self.channel_buffer, "short_name", color + new_name)
+  def prnt(self, user='unknown user', message='no message', time=0, backlog=False):
+    message = message.encode('ascii', 'ignore')
+    if backlog == True or (time != 0 and self.last_read > time):
+      tags = "no_highlight,notify_none,logger_backlog_end"
+    elif message.find(self.server.nick) > -1:
+      tags = "notify_highlight"
+    else:
+      tags = "notify_private,notify_message"
+    time = int(float(time))
+    if self.channel_buffer:
+      w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (user, message))
+    else:
+      pass
 
 class User(SlackThing):
   def __init__(self, server, name, identifier, presence="away"):
