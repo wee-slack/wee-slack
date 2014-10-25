@@ -59,6 +59,10 @@ class Meta(list):
     return string
   def __repr__(self):
     self.search_list.get_all(self.attribute)
+  def get_all(self):
+    items = []
+    items += self.search_list.get_all(self.attribute)
+    return items
   def find(self, name):
     items = self.search_list.find_deep(name, self.attribute)
     items = [x for x in items if x != None]
@@ -660,7 +664,7 @@ def process_message(message_json):
 ### END Websocket handling methods
 
 def typing_bar_item_cb(data, buffer, args):
-  typers = [x for x in channels if x.is_someone_typing() == True]
+  typers = [x for x in channels.get_all() if x.is_someone_typing() == True]
   if len(typers) > 0:
     direct_typers = []
     channel_typers = []
