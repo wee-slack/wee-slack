@@ -646,9 +646,14 @@ def process_message(message_json):
 
   if message_json.has_key("user") and message_json.has_key("text"):
     #below prevents typing notification from disapearing if the server sends an unfurled message
-    server.channels.find(message_json["channel"]).unset_typing(server.users.find(message_json["user"]).name)
-    user = server.users.find(message_json["user"]).colorized_name()
-    server.channels.find(channel).prnt(user,message_json["text"], time)
+    channel = server.channels.find(message_json["channel"])
+    channel.unset_typing(server.users.find(message_json["user"]).name)
+    user = server.users.find(message_json["user"])
+    if user.name != channel.server.nick:
+      user = user.colorized_name()
+    else:
+      user = user.name
+    channel.prnt(user,message_json["text"], time)
   else:
     if message_json.has_key("attachments"):
       if message_json.has_key("username"):
