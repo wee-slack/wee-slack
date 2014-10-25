@@ -273,6 +273,7 @@ class Channel(SlackThing):
     channel_buffer = w.buffer_search("", "%s.%s" % (self.server.domain, self.name))
     if channel_buffer != main_weechat_buffer:
       self.channel_buffer = channel_buffer
+      w.buffer_set(self.channel_buffer, "highlight_words", self.server.nick)
     else:
       self.channel_buffer = None
   def detach_buffer(self):
@@ -336,8 +337,8 @@ class Channel(SlackThing):
     message = message.encode('ascii', 'ignore')
     if backlog == True or (time != 0 and self.last_read > time):
       tags = "no_highlight,notify_none,logger_backlog_end"
-    elif message.find(self.server.nick) > -1:
-      tags = "highlight"
+#    elif message.find(self.server.nick) > -1:
+#      tags = "highlight"
     else:
       tags = ""
     time = int(float(time))
