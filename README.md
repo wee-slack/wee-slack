@@ -12,12 +12,33 @@ Currently testing a branch that supports multiple teams and NO LONGER REQUIRES I
     cd wee-slack
     git checkout alpha_features
 
-Notes (important!):
+Notes for alpha (important!):
   * Turn off irc (and disable autoconnect)!
   * Only need to set API Token, all other vars are pulled from Slack
+  * new command to join slack channels
+    ```/slack join (channel)```
+
+  * new command to open a direct chat
+    ```/slack talk (username)```
+
   * To test multi team, just do:
-  
+
   ```/set plugins.var.python.slack_extension.slack_api_token (token1),(token2),(token3)```
+
+
+Alpha Features:
+  * Doesn't use IRC gateway. Connects directly with Slack via API/Websocket
+  * Multiple Teams supported! Just add multiple api tokens separated by commas
+  * Replays history during startup. (and sets read marker to the correct position in history)
+  * Open channels synchronized with Slack. When you open/close a channel on another client it is reflected in wee-slack
+  * Colorized nicks in buffer list when used with buffers.pl
+  * Colorized nicks in chat
+
+In Development:
+  * cache history pulls
+  * fix search
+  * add notification of new versions of wee-slack
+  * growl notification
 
 
 A WeeChat plugin for Slack.com IRC mode. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, search, (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
