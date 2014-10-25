@@ -4,6 +4,22 @@
 wee-slack
 =========
 
+#Update!
+
+Currently testing a branch that supports multiple teams and NO LONGER REQUIRES IRC! To try, just pull the branch called "alpha_features"
+
+    git clone git@github.com:rawdigits/wee-slack.git
+    cd wee-slack
+    git checkout alpha_features
+
+Notes (important!):
+  * Turn off irc (and disable autoconnect)!
+  * Only need to set API Token, all other vars are pulled from Slack
+  * To test multi team, just do:
+  
+  ```/set plugins.var.python.slack_extension.slack_api_token (token1),(token2),(token3)```
+
+
 A WeeChat plugin for Slack.com IRC mode. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, search, (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
 
 ![animated screenshot](https://dl.dropboxusercontent.com/u/566560/slack.gif)
