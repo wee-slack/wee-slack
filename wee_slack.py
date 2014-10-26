@@ -408,7 +408,11 @@ class User(SlackThing):
     self.channel_buffer = w.info_get("irc_buffer", "%s.%s" % (domain, self.name))
     self.presence = presence
     self.server = server
-    w.nicklist_add_nick(server.buffer, "", self.colorized_name(), "", "", "", 1)
+    if self.presence == 'away':
+      self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, w.info_get('irc_nick_color_name', self.name), " ", "", 0)
+    else:
+      self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, w.info_get('irc_nick_color_name', self.name), "+", "", 1)
+#    w.nicklist_add_nick(server.buffer, "", self.colorized_name(), "", "", "", 1)
   def __eq__(self, compare_str):
     if compare_str == self.name or compare_str == self.identifier:
       return True
@@ -416,8 +420,12 @@ class User(SlackThing):
       return False
   def set_active(self):
     self.presence = "active"
+    w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "prefix", "+")
+    w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "1")
   def set_inactive(self):
     self.presence = "away"
+    w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "prefix", " ")
+    w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
   def colorized_name(self):
     color = w.info_get('irc_nick_color', self.name)
     def_color = w.color('default')
