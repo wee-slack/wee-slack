@@ -596,6 +596,9 @@ def write_debug(message_json):
       return
   w.prnt(slack_debug,output)
 
+def process_pong(message_json):
+  pass
+
 def process_presence_change(message_json):
   buffer_name = "%s.%s" % (domain, message_json["user"])
   buf_ptr  = w.buffer_search("",buffer_name)
@@ -1015,12 +1018,10 @@ if __name__ == "__main__":
     proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
 
     typing_timer        = time.time()
-    counter             = 0
     domain              = None
     previous_buffer     = None
     slack_buffer        = None
     slack_debug         = None
-    login_data          = None
     name                = None
     never_away          = False
     hotlist             = w.infolist_get("hotlist", "", "")
