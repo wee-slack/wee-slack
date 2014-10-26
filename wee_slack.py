@@ -60,6 +60,13 @@ class Meta(list):
     return string
   def __repr__(self):
     self.search_list.get_all(self.attribute)
+  def __getitem__(self, index):
+    channels = self.get_all()
+    return channels[index]
+  def __iter__(self):
+    channels = self.get_all()
+    for channel in channels:
+      yield channel
   def get_all(self):
     items = []
     items += self.search_list.get_all(self.attribute)
@@ -262,9 +269,9 @@ class Channel(SlackThing):
     else:
       return False
   def __str__(self):
-    return "Name: %s Id: %s CB: %s Active: %s" % (self.name, self.identifier, self.channel_buffer, self.active)
+    return "Name: %s Id: %s Buffer: %s Active: %s" % (self.name, self.identifier, self.channel_buffer, self.active)
   def __repr__(self):
-    return "Name: %s Id: %s CB: %s Active: %s" % (self.name, self.identifier, self.channel_buffer, self.active)
+    return "Name: %s Id: %s Buffer: %s Active: %s" % (self.name, self.identifier, self.channel_buffer, self.active)
   def create_buffer(self):
     channel_buffer = w.buffer_search("", "%s.%s" % (self.server.domain, self.name))
     if channel_buffer:
@@ -408,7 +415,8 @@ class User(SlackThing):
     self.presence = "away"
   def colorized_name(self):
     color = w.info_get('irc_nick_color', self.name)
-    return color+self.name
+    def_color = w.color('default')
+    return color+self.name+def_color
   def open(self):
     t = time.time() + 1
     #reply = async_slack_api_request("im.open", {"channel":self.identifier,"ts":t})
@@ -431,6 +439,18 @@ def command_talk(current_buffer, args):
 
 def command_join(current_buffer, args):
   servers.find(current_domain_name()).channels.find(args).open()
+
+def command_channels(current_buffer, args):
+  server = servers.find(current_domain_name())
+  for channel in server.channels:
+    line = "%-25s %s %s" % (channel.name, channel.identifier, channel.active)
+    server.buffer_prnt(line)
+
+def command_users(current_buffer, args):
+  server = servers.find(current_domain_name())
+  for user in server.users:
+    line = "%-25s %s %s" % (user.colorized_name(), user.identifier, user.presence)
+    server.buffer_prnt(line)
 
 def command_changetoken(current_buffer, args):
   w.config_set_plugin('slack_api_token', args)
