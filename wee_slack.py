@@ -246,7 +246,7 @@ class SlackThing(object):
     return "Name: %s Id: %s CB: %s" % (self.name, self.identifier, self.channel_buffer)
 
 def input(b,c,data):
-  channel = channels.find(b)
+  channel = channels.find(c)
   channel.send_message(data)
   channel.buffer_prnt(channel.server.nick, data)
   return w.WEECHAT_RC_ERROR
@@ -388,6 +388,8 @@ class DmChannel(Channel):
     message = message.encode('ascii', 'ignore')
     if backlog == True or (time != 0 and self.last_read > time):
       tags = "no_highlight,notify_none,logger_backlog_end"
+    elif user == self.server.nick:
+      tags = ""
     elif message.find(self.server.nick) > -1:
       tags = "notify_highlight"
     else:
