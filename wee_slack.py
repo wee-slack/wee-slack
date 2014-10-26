@@ -80,9 +80,8 @@ class Meta(list):
     else:
       dbg("probably something bad happened with meta items: %s" % items)
       return items
-#      raise AmbiguousProblemError
+      raise AmbiguousProblemError
   def find_by_class(self, class_name):
-    #for each in self.search_list.find_by_class(class_name):
     items = self.search_list.find_by_class_deep(class_name, self.attribute)
     return items
 
@@ -182,14 +181,13 @@ class SlackServer(object):
       self.nick = login_data["self"]["name"]
       self.create_local_buffer()
 
-      self.create_slack_websocket(login_data)
-      if len(self.users) and 0 or len(self.channels) == 0:
-        self.create_slack_mappings(login_data)
+      if self.create_slack_websocket(login_data):
+        w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", self.domain)
+        if len(self.users) and 0 or len(self.channels) == 0:
+          self.create_slack_mappings(login_data)
 
-      self.connected = True
+        self.connected = True
 
-      w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", self.domain)
-      w.hook_timer(6000, 0, 0, "slack_connection_persistence_cb", self.domain)
       return True
     else:
       w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with \"/set plugins.var.python.slack_extension.slack_api_token\"\n\n ")
@@ -200,14 +198,13 @@ class SlackServer(object):
         w.buffer_set(self.buffer, "nicklist", "1")
   def create_slack_websocket(self, data):
     web_socket_url = data['url']
-#    try:
-    self.ws = create_connection(web_socket_url)
-    self.ws.sock.setblocking(0)
-    self.ws_hook = w.hook_fd(self.ws.sock._sock.fileno(), 1, 0, 0, "slack_websocket_cb", self.identifier)
-#    except socket.error:
-#      return False
-    return True
-  #  return ws
+    try:
+      self.ws = create_connection(web_socket_url)
+      self.ws.sock.setblocking(0)
+      self.ws_hook = w.hook_fd(self.ws.sock._sock.fileno(), 1, 0, 0, "slack_websocket_cb", self.identifier)
+      return True
+    except:
+      return False
   def create_slack_mappings(self, data):
 
     for item in data["users"]:
@@ -808,11 +805,12 @@ def slack_ping_cb(data, remaining):
   return w.WEECHAT_RC_OK
 
 def slack_connection_persistence_cb(data, remaining_calls):
-  server = servers.find(data)
-  if not server.connected:
-    w.prnt("", "Disconnected from slack, trying to reconnect..")
-    w.unhook(server.ws_hook)
-    server.connect_to_slack()
+  for server in servers:
+    if not server.connected:
+      w.prnt("", "Disconnected from slack, trying to reconnect..")
+      if server.ws_hook != None:
+        w.unhook(server.ws_hook)
+      server.connect_to_slack()
   return w.WEECHAT_RC_OK
 
 def slack_never_away_cb(data, remaining):
@@ -830,6 +828,10 @@ def slack_never_away_cb(data, remaining):
 #NOTE: switched to async/curl because sync slowed down the UI
 def async_slack_api_request(domain, token, request, post_data, priority=False):
   t = time.time()
+  dbg(str(domain))
+  dbg(token)
+  dbg(request)
+  dbg(post_data)
   post_elements = pickle.dumps([domain, token, request, post_data])
   request += "?t=%s" % t
   post_data["token"] = token
@@ -1039,6 +1041,7 @@ if __name__ == "__main__":
 
 
     w.hook_timer(10, 0, 0, "async_queue_cb", "")
+    w.hook_timer(6000, 0, 0, "slack_connection_persistence_cb", "")
 
     ### attach to the weechat hooks we need
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
