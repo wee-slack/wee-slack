@@ -39,10 +39,10 @@ SLACK_API_TRANSLATOR = {
 
                        }
 
-def dbg(message, f=False):
+def dbg(message, fout=False):
   if debug_mode == True:
     message = "DEBUG: " + str(message)
-    if f:
+    if fout:
       file('/tmp/debug.log','a+').writelines(message+'\n')
     else:
       w.prnt("", message)
@@ -175,11 +175,10 @@ class SlackServer(object):
     t = time.time()
     async_slack_api_request("slack.com", self.token, "rtm.start", {"ts":t})
   def connected_to_slack(self, login_data):
-    dbg("connected..")
     if login_data["ok"] == True:
       self.domain = login_data["team"]["domain"] + ".slack.com"
+      dbg("connected to %s" % self.domain)
       self.identifier = self.domain
-      dbg(self.domain)
       self.nick = login_data["self"]["name"]
       self.create_local_buffer()
 
@@ -459,10 +458,10 @@ def slack_command_cb(data, current_buffer, args):
     function_name, args = a[0], " ".join(a[1:])
   else:
     function_name, args = a[0], None
-  try:
-    cmds[function_name](current_buffer, args)
-  except KeyError:
-    w.prnt("", "Command not found or exception: "+function_name)
+#  try:
+  cmds[function_name](current_buffer, args)
+#  except KeyError:
+#    w.prnt("", "Command not found or exception: "+function_name)
   return w.WEECHAT_RC_OK
 
 def command_talk(current_buffer, args):
@@ -511,14 +510,13 @@ def command_markread(current_buffer, args):
     servers.find(domain).channels.find(channel).mark_read()
 
 def command_neveraway(current_buffer, args):
-  buf = channels.find(current_buffer).server.buffer
   global never_away
   if never_away == True:
     never_away = False
-    w.prnt(buf, "unset never_away")
+    dbg("unset never_away")
   else:
     never_away = True
-    w.prnt(buf, "set as never_away")
+    dbg("set never_away")
 
 def command_printvar(current_buffer, args):
   w.prnt("", str(eval(args)))
@@ -778,61 +776,30 @@ def hotlist_cache_update_cb(data, remaining_calls):
   w.infolist_free(prev_hotlist)
   return w.WEECHAT_RC_OK
 
-#def buffer_opened_cb(signal, sig_type, data):
-#  name = w.buffer_get_string(data, "name")
-#  channel = channels.find(name)
-#  try:
-#    channel.set_active()
-#  channel.attach_buffer()
-#  channel.get_history()
-  return w.WEECHAT_RC_OK
-
 def buffer_closing_cb(signal, sig_type, data):
   if channels.find(data):
     channels.find(data).closed()
-#    channels.find(data).detach_buffer()
   return w.WEECHAT_RC_OK
 
 def buffer_switch_cb(signal, sig_type, data):
-  #NOTE: we flush both the next and previous buffer so that all read pointer id up to date
   global previous_buffer, hotlist
   if channels.find(previous_buffer):
     channels.find(previous_buffer).mark_read()
 
   channel_name = current_buffer_name()
   previous_buffer = data
-
-#  if current_buffer_name().startswith(domain):
-#    channel_name = current_buffer_name(short=True)
-#    #TESTING ... this code checks to see if there are any unread messages and doesn't reposition the read marker if there are
-#    count = 0
-#    while w.infolist_next(hotlist):
-#      if w.infolist_pointer(hotlist, "buffer_pointer") == w.current_buffer():
-#        for i in [0,1,2,3]:
-#          count += w.infolist_integer(hotlist, "count_0%s" % (i))
-#    if count == 0:
-#      if channels.find(previous_buffer):
-#        channels.find(previous_buffer).mark_read()
-#    #end TESTING
-#    previous_buffer = channel_name
-#  else:
-#    previous_buffer = None
   return w.WEECHAT_RC_OK
 
 def typing_notification_cb(signal, sig_type, data):
   global typing_timer
   now = time.time()
   if typing_timer + 4 < now:
-#    try:
-#    for server in servers:
     channel = channels.find(current_buffer_name())
     if channel:
       identifier = channel.identifier
       request = {"type":"typing","channel":identifier}
       channel.server.ws.send(json.dumps(request))
       typing_timer = now
-#    except:
-#      pass
   return w.WEECHAT_RC_OK
 
 #NOTE: figured i'd do this because they do
@@ -851,11 +818,11 @@ def slack_connection_persistence_cb(data, remaining_calls):
 def slack_never_away_cb(data, remaining):
   global never_away
   if never_away == True:
-    #w.prnt("", 'updating status as back')
-    name = channels.find("#general")
-    request = {"type":"typing","channel":name}
-    ws.send(json.dumps(request))
-    #command_back(None)
+    for server in servers:
+      identifier = server.channels.find("slackbot").identifier
+      request = {"type":"typing","channel":identifier}
+      #request = {"type":"typing","channel":"slackbot"}
+      server.ws.send(json.dumps(request))
   return w.WEECHAT_RC_OK
 
 ### Slack specific requests
@@ -870,7 +837,6 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
   post = {"post": "1", "postfields": post_data}
   url = 'https://%s/api/%s' % (domain, request)
   queue_item = ['url:%s' % (url), post, 20000, 'url_processor_cb', post_elements]
-  dbg(queue_item)
   if priority != True:
     queue.append(QueueItem(queue_item, 'do_url', 'url_processor_cb'))
   else:
@@ -878,7 +844,6 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
 
 queue = []
 async_queue_lock=False
-#funny, right?
 
 class QueueItem(object):
   def __init__(self, data, method, callback_method=None):
@@ -902,13 +867,7 @@ def do_url(item):
   except:
     pass
   command = 'curl --data "%s" %s' % (item[1]["postfields"], item[0][4:])
-  dbg(command)
   w.hook_process(command, 10000, item[3], item[4])
-#  pass
-
-#def do_mark_read(item):
-#  dbg('queue ran mark_read')
-#  channels.find(str(item)).mark_read(False)
 
 def async_queue_cb(data, remaining_calls):
   global async_queue_lock
@@ -923,10 +882,10 @@ def async_queue_cb(data, remaining_calls):
       async_queue_lock=False
   return w.WEECHAT_RC_OK
 
+#funny, right?
 big_data = {}
 def url_processor_cb(data, command, return_code, out, err):
   data=pickle.loads(data)
-  dbg(out)
   global async_queue_lock, big_data
   identifier = sha.sha(str(data) + command).hexdigest()
   if not big_data.has_key(identifier):
@@ -961,16 +920,6 @@ def url_processor_cb(data, command, return_code, out, err):
             process_message(message)
 
   return w.WEECHAT_RC_OK
-
-#def reply_rtm_start(data):
-
-#def slack_api_request(request, data):
-#  t = time.time()
-#  request += "?t=%s" % t
-#  data["token"] = slack_api_token
-#  data = urllib.urlencode(data)
-#  reply = urllib.urlopen('https://%s/api/%s' % (domain, request), data)
-#  return reply
 
 def mark_silly_channels_read(channel):
   if channel in channels_always_marked_read:
@@ -1074,7 +1023,6 @@ if __name__ == "__main__":
     slack_buffer        = None
     slack_debug         = None
     login_data          = None
-    nick                = None
     name                = None
     never_away          = False
     hotlist             = w.infolist_get("hotlist", "", "")
@@ -1096,8 +1044,8 @@ if __name__ == "__main__":
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
     w.hook_timer(1000, 0, 0, "buffer_list_update_cb", "")
     w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
+    w.hook_timer(1000 * 3, 0, 0, "slack_never_away_cb", "")
     w.hook_timer(1000 * 60* 29, 0, 0, "slack_never_away_cb", "")
-#    w.hook_signal('buffer_opened', "buffer_opened_cb", "")
     w.hook_signal('buffer_closing', "buffer_closing_cb", "")
     w.hook_signal('buffer_switch', "buffer_switch_cb", "")
     w.hook_signal('window_switch', "buffer_switch_cb", "")
