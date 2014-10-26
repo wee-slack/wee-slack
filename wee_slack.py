@@ -575,10 +575,10 @@ def slack_websocket_cb(data, fd):
     proc[function_name](message_json)
   except KeyError:
     pass
-#    if function_name:
-#      dbg("Function not implemented: %s\n%s" % (function_name, message_json))
-#    else:
-#      dbg("Function not implemented\n%s" % (message_json))
+    if function_name:
+      dbg("Function not implemented: %s\n%s" % (function_name, message_json))
+    else:
+      dbg("Function not implemented\n%s" % (message_json))
   w.bar_item_update("slack_typing_notice")
   return w.WEECHAT_RC_OK
 
@@ -828,10 +828,6 @@ def slack_never_away_cb(data, remaining):
 #NOTE: switched to async/curl because sync slowed down the UI
 def async_slack_api_request(domain, token, request, post_data, priority=False):
   t = time.time()
-  dbg(str(domain))
-  dbg(token)
-  dbg(request)
-  dbg(post_data)
   post_elements = pickle.dumps([domain, token, request, post_data])
   request += "?t=%s" % t
   post_data["token"] = token
