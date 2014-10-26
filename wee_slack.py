@@ -2,14 +2,8 @@
 #
 import time
 import json
-import sys
-import re
-import os
 import pickle
-import random
-import socket
 import sha
-import thread
 import urllib
 import urlparse
 from websocket import create_connection
@@ -22,7 +16,7 @@ SCRIPT_VERSION = "0.7"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC  = "Extends weechat for typing notification/search/etc on slack.com"
 
-BACKLOG_SIZE = 200
+BACKLOG_SIZE = 1
 
 SLACK_API_TRANSLATOR = {
                             "channel": {
@@ -165,6 +159,7 @@ class SlackServer(object):
   def connect_to_slack(self):
     data = {}
     t = time.time()
+    async_slack_api_request("slack.com", self.token, "rtm.start", {"ts":t})
     request = "rtm.start?t=%s" % t
     data["token"] = self.token
     data = urllib.urlencode(data)
@@ -207,7 +202,6 @@ class SlackServer(object):
 
     for item in data["users"]:
       self.users.append(User(self, item["name"], item["id"], item["presence"]))
-
 
     for item in data["channels"]:
       if not item.has_key("last_read"):
@@ -473,10 +467,12 @@ def command_test(current_buffer, args):
     w.prnt(slack_buffer,"worked!")
 
 def command_away(current_buffer, args):
-  async_slack_api_request('presence.set', {"presence":"away"})
+  server = servers.find(current_domain_name())
+  async_slack_api_request(server.domain, server.token, 'presence.set', {"presence":"away"})
 
 def command_back(current_buffer, args):
-  async_slack_api_request('presence.set', {"presence":"active"})
+  server = servers.find(current_domain_name())
+  async_slack_api_request(server.domain, server.token, 'presence.set', {"presence":"active"})
 
 def command_markread(current_buffer, args):
   #refactor this - one liner i think
@@ -883,70 +879,39 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
   else:
     queue.insert(0, queue_item)
 
-#def async_slack_api_request(request, data):
-#  t = time.time()
-#  request += "?t=%s" % t
-#  data["token"] = slack_api_token
-#  data = urllib.urlencode(data)
-#  command = 'curl --data "%s" https://%s/api/%s' % (data,domain,request)
-#  w.hook_process(command, 5000, '', '')
-
 queue = []
 url_processor_lock=False
 #funny, right?
 big_data = {}
 
-class Backoff(object):
-  def __init__(self):
-    self.timer = time.time()
-    self.counter = 0
-    self.backoff = False
-    self.INTERVAL = 1
-  def check(self):
-    if self.backoff == False:
-      return True
-    else:
-      wait_until = (self.counter * self.INTERVAL) + self.timer
-      if time.time() > wait_until:
-        self.backoff = False
-        self.counter = 0
-      return False
-  def back_off(self):
-    if self.counter == 0:
-      self.timer = time.time()
-    self.backoff = True
-    self.counter += 1
-
-backoff = Backoff()
-
 def async_queue_cb(data, remaining_calls):
-  if backoff.check():
-    global url_processor_lock
-    if url_processor_lock == False:
-      url_processor_lock=True
-      if len(queue) > 0:
-        item = queue.pop(0)
-        try:
-          query = urlparse.parse_qs(item[1]["postfields"])
-          if query.has_key("channel") and item[0].find('history') > -1:
-            channel = query["channel"][0]
-            channel = channels.find(channel)
-            channel.server.buffer_prnt("downloading channel history for %s" % (channel.name), backlog=True)
-        except:
-          pass
-        if item.__class__ == list:
-          #w.hook_process_hashtable(*item)
-          command = 'curl --data "%s" %s' % (item[1]["postfields"], item[0][4:])
-          w.hook_process(command, 10000, item[3], item[4])
-        else:
-          item.mark_read(False)
-          url_processor_lock=False
+  global url_processor_lock
+  if url_processor_lock == False:
+    url_processor_lock=True
+    if len(queue) > 0:
+      item = queue.pop(0)
+      try:
+        query = urlparse.parse_qs(item[1]["postfields"])
+        if query.has_key("channel") and item[0].find('history') > -1:
+          channel = query["channel"][0]
+          channel = channels.find(channel)
+          channel.server.buffer_prnt("downloading channel history for %s" % (channel.name), backlog=True)
+      except:
+        pass
+      if item.__class__ == list:
+        #w.hook_process_hashtable(*item)
+        command = 'curl --data "%s" %s' % (item[1]["postfields"], item[0][4:])
+        w.hook_process(command, 10000, item[3], item[4])
       else:
+        item.mark_read(False)
         url_processor_lock=False
+    else:
+      url_processor_lock=False
   return w.WEECHAT_RC_OK
 
 def url_processor_cb(data, command, return_code, out, err):
   data=pickle.loads(data)
+#  dbg(data)
   global url_processor_lock, big_data
   identifier = sha.sha(str(data) + command).hexdigest()
   if not big_data.has_key(identifier):
@@ -962,7 +927,6 @@ def url_processor_cb(data, command, return_code, out, err):
       my_json = json.loads(big_data[identifier])
     except:
       url_processor_lock=False
-      backoff.back_off()
       dbg("curl failed, doing again...")
       async_slack_api_request(*data, priority=True)
       my_json = False
@@ -970,6 +934,7 @@ def url_processor_cb(data, command, return_code, out, err):
 #      my_json = False
 
     if my_json:
+#      dbg(my_json)
       query = data[3]
       if query.has_key("channel"):
         channel = query["channel"]
@@ -1019,7 +984,6 @@ def current_buffer_name(short=False):
   if short:
     try:
       name = name.split('.')[-1]
-      #name = re.split('\.',name,1)[-1:]
     except:
       pass
   return name
