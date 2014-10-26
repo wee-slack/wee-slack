@@ -325,12 +325,12 @@ class Channel(SlackThing):
         typing.append(user)
     return typing
   def mark_read(self, update_remote=True):
-    self.last_read = time.time()
     t = time.time() + 1
 
     if self.channel_buffer:
       w.buffer_set(self.channel_buffer, "unread", "")
     if update_remote:
+      self.last_read = time.time()
       async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel":self.identifier,"ts":t})
   def rename(self, name=None, fmt=None):
     if self.channel_buffer:
