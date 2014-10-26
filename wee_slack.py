@@ -177,6 +177,7 @@ class SlackServer(object):
         self.domain = login_data["team"]["domain"] + ".slack.com"
         self.identifier = self.domain
         self.buffer = w.buffer_new(self.domain, "input", "", "", "")
+        w.buffer_set(self.buffer, "nicklist", "1")
 
         self.create_slack_websocket(login_data)
         self.create_slack_mappings(login_data)
@@ -206,6 +207,7 @@ class SlackServer(object):
 
     for item in data["users"]:
       self.users.append(User(self, item["name"], item["id"], item["presence"]))
+
 
     for item in data["channels"]:
       if not item.has_key("last_read"):
@@ -406,6 +408,7 @@ class User(SlackThing):
     self.channel_buffer = w.info_get("irc_buffer", "%s.%s" % (domain, self.name))
     self.presence = presence
     self.server = server
+    w.nicklist_add_nick(server.buffer, "", self.colorized_name(), "", "", "", 1)
   def __eq__(self, compare_str):
     if compare_str == self.name or compare_str == self.identifier:
       return True
@@ -451,7 +454,7 @@ def command_channels(current_buffer, args):
 def command_users(current_buffer, args):
   server = servers.find(current_domain_name())
   for user in server.users:
-    line = "%-25s %s %s" % (user.colorized_name(), user.identifier, user.presence)
+    line = "%-40s %s %s" % (user.colorized_name(), user.identifier, user.presence)
     server.buffer_prnt(line)
 
 def command_changetoken(current_buffer, args):
