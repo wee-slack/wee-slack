@@ -142,13 +142,14 @@ class SlackServer(object):
     self.buffer = None
     self.token = token
     self.ws = None
+    self.ws_hook = None
     self.users = SearchList()
     self.channels = SearchList()
     self.connected = False
+    self.pingcounter = 0
 
     self.identifier = None
     self.connect_to_slack()
-    #w.hook_timer(6000, 0, 0, "slack_connection_persistence_cb", self.identifier)
   def __eq__(self, compare_str):
     if compare_str == self.identifier or compare_str == self.token or compare_str == self.buffer:
       return True
@@ -161,6 +162,15 @@ class SlackServer(object):
   def find(self, name, attribute):
     attribute = eval("self."+attribute)
     return attribute.find(name)
+  def ping(self):
+    if self.pingcounter > 999:
+      self.pingcounter = 0
+    request = {"type":"ping","id":self.pingcounter}
+    try:
+      self.ws.send(json.dumps(request))
+    except:
+      self.connected = False
+    self.pingcounter += 1
   def connect_to_slack(self):
     t = time.time()
     async_slack_api_request("slack.com", self.token, "rtm.start", {"ts":t})
@@ -169,24 +179,32 @@ class SlackServer(object):
     if login_data["ok"] == True:
       self.domain = login_data["team"]["domain"] + ".slack.com"
       self.identifier = self.domain
+      dbg(self.domain)
       self.nick = login_data["self"]["name"]
-      self.buffer = w.buffer_new(self.domain, "input", "", "", "")
-      w.buffer_set(self.buffer, "nicklist", "1")
+      self.create_local_buffer()
 
       self.create_slack_websocket(login_data)
-      self.create_slack_mappings(login_data)
+      if len(self.users) and 0 or len(self.channels) == 0:
+        self.create_slack_mappings(login_data)
 
       self.connected = True
+
+      w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", self.domain)
+      w.hook_timer(6000, 0, 0, "slack_connection_persistence_cb", self.domain)
       return True
     else:
       w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with \"/set plugins.var.python.slack_extension.slack_api_token\"\n\n ")
       self.connected = False
+  def create_local_buffer(self):
+      if not w.buffer_search("", self.domain):
+        self.buffer = w.buffer_new(self.domain, "input", "", "", "")
+        w.buffer_set(self.buffer, "nicklist", "1")
   def create_slack_websocket(self, data):
     web_socket_url = data['url']
 #    try:
     self.ws = create_connection(web_socket_url)
     self.ws.sock.setblocking(0)
-    w.hook_fd(self.ws.sock._sock.fileno(), 1, 0, 0, "slack_websocket_cb", self.identifier)
+    self.ws_hook = w.hook_fd(self.ws.sock._sock.fileno(), 1, 0, 0, "slack_websocket_cb", self.identifier)
 #    except socket.error:
 #      return False
     return True
@@ -330,7 +348,7 @@ class Channel(SlackThing):
       w.buffer_set(self.channel_buffer, "unread", "")
     if update_remote:
       self.last_read = time.time()
-      async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel":self.identifier,"ts":t})
+      self.set_read_marker(self.last_read)
   def set_read_marker(self, time):
     async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel":self.identifier,"ts":time})
   def rename(self, name=None, fmt=None):
@@ -360,14 +378,11 @@ class Channel(SlackThing):
       if set_read_marker:
         self.mark_read(False)
     else:
-      pass
-      #w.prnt("", "%s\t%s" % (user, message))
+      dbg("failed to print something..")
   def get_history(self):
     if self.active:
       t = time.time()
       async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "count":BACKLOG_SIZE})
-      #async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "count":BACKLOG_SIZE, "latest":self.last_read})
-      #async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "oldest":self.last_read})
 
 class GroupChannel(Channel):
   def __init__(self, server, name, identifier, active, last_read=0, prepend_name=""):
@@ -564,10 +579,11 @@ def slack_websocket_cb(data, fd):
   try:
     proc[function_name](message_json)
   except KeyError:
-    if function_name:
-      dbg("Function not implemented: %s\n%s" % (function_name, message_json))
-    else:
-      dbg("Function not implemented\n%s" % (message_json))
+    pass
+#    if function_name:
+#      dbg("Function not implemented: %s\n%s" % (function_name, message_json))
+#    else:
+#      dbg("Function not implemented\n%s" % (message_json))
   w.bar_item_update("slack_typing_notice")
   return w.WEECHAT_RC_OK
 
@@ -821,21 +837,15 @@ def typing_notification_cb(signal, sig_type, data):
 
 #NOTE: figured i'd do this because they do
 def slack_ping_cb(data, remaining):
-  global counter, connected
-  if counter > 999:
-    counter = 0
-  request = {"type":"ping","id":counter}
-  try:
-    ws.send(json.dumps(request))
-  except:
-    connected = False
-  counter += 1
+  servers.find(data).ping()
   return w.WEECHAT_RC_OK
 
 def slack_connection_persistence_cb(data, remaining_calls):
-  if not servers.find(data).connected:
+  server = servers.find(data)
+  if not server.connected:
     w.prnt("", "Disconnected from slack, trying to reconnect..")
-    servers.find(data).connect_to_slack()
+    w.unhook(server.ws_hook)
+    server.connect_to_slack()
   return w.WEECHAT_RC_OK
 
 def slack_never_away_cb(data, remaining):
@@ -860,6 +870,7 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
   post = {"post": "1", "postfields": post_data}
   url = 'https://%s/api/%s' % (domain, request)
   queue_item = ['url:%s' % (url), post, 20000, 'url_processor_cb', post_elements]
+  dbg(queue_item)
   if priority != True:
     queue.append(QueueItem(queue_item, 'do_url', 'url_processor_cb'))
   else:
@@ -891,6 +902,7 @@ def do_url(item):
   except:
     pass
   command = 'curl --data "%s" %s' % (item[1]["postfields"], item[0][4:])
+  dbg(command)
   w.hook_process(command, 10000, item[3], item[4])
 #  pass
 
@@ -914,6 +926,7 @@ def async_queue_cb(data, remaining_calls):
 big_data = {}
 def url_processor_cb(data, command, return_code, out, err):
   data=pickle.loads(data)
+  dbg(out)
   global async_queue_lock, big_data
   identifier = sha.sha(str(data) + command).hexdigest()
   if not big_data.has_key(identifier):
@@ -924,11 +937,13 @@ def url_processor_cb(data, command, return_code, out, err):
     try:
       my_json = json.loads(big_data[identifier])
     except:
+#      if big_data[identifier] != '':
       async_queue_lock=False
       dbg("curl failed, doing again...")
       async_slack_api_request(*data, priority=True)
-      my_json = False
       pass
+      my_json = False
+    del big_data[identifier]
 
     if my_json:
       if data[2] == 'rtm.start':
@@ -938,11 +953,9 @@ def url_processor_cb(data, command, return_code, out, err):
         if query.has_key("channel"):
           channel = query["channel"]
         token = data[1]
-        message_json = json.loads(big_data[identifier])
-        del big_data[identifier]
-        if message_json.has_key("messages"):
-          messages = message_json["messages"].reverse()
-          for message in message_json["messages"]:
+        if my_json.has_key("messages"):
+          messages = my_json["messages"].reverse()
+          for message in my_json["messages"]:
             message["myserver"] = servers.find(token).domain
             message["channel"] = servers.find(token).channels.find(channel)
             process_message(message)
@@ -1063,7 +1076,6 @@ if __name__ == "__main__":
     login_data          = None
     nick                = None
     name                = None
-    connected           = False
     never_away          = False
     hotlist             = w.infolist_get("hotlist", "", "")
     main_weechat_buffer = w.info_get("irc_buffer", "%s.%s" % (domain, "DOESNOTEXIST!@#$"))
@@ -1078,14 +1090,12 @@ if __name__ == "__main__":
     users = Meta('users', servers)
 
 
-#    w.hook_timer(60000, 0, 0, "slack_connection_persistence_cb", "")
     w.hook_timer(10, 0, 0, "async_queue_cb", "")
 
     ### attach to the weechat hooks we need
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
     w.hook_timer(1000, 0, 0, "buffer_list_update_cb", "")
     w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
-    w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", "")
     w.hook_timer(1000 * 60* 29, 0, 0, "slack_never_away_cb", "")
 #    w.hook_signal('buffer_opened', "buffer_opened_cb", "")
     w.hook_signal('buffer_closing', "buffer_closing_cb", "")
