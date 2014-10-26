@@ -328,6 +328,8 @@ class Channel(SlackThing):
     if update_remote:
       self.last_read = time.time()
       async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel":self.identifier,"ts":t})
+  def set_read_marker(self, time):
+    async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel":self.identifier,"ts":time})
   def rename(self, name=None, fmt=None):
     if self.channel_buffer:
       if name:
@@ -357,7 +359,7 @@ class Channel(SlackThing):
     if self.active:
       t = time.time()
       async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "count":BACKLOG_SIZE, "latest":self.last_read})
-      queue.append(self)
+      queue.append(QueueItem(self.channel_buffer, 'do_mark_read'))
       async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "oldest":self.last_read})
 
 class GroupChannel(Channel):
@@ -458,6 +460,11 @@ def command_users(current_buffer, args):
   for user in server.users:
     line = "%-40s %s %s" % (user.colorized_name(), user.identifier, user.presence)
     server.buffer_prnt(line)
+
+def command_setallreadmarkers(current_buffer, args):
+  if args:
+    for channel in channels:
+      channel.set_read_marker(args)
 
 def command_changetoken(current_buffer, args):
   w.config_set_plugin('slack_api_token', args)
@@ -875,44 +882,59 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
   url = 'https://%s/api/%s' % (domain, request)
   queue_item = ['url:%s' % (url), post, 20000, 'url_processor_cb', post_elements]
   if priority != True:
-    queue.append(queue_item)
+    queue.append(QueueItem(queue_item, 'do_url', 'url_processor_cb'))
   else:
-    queue.insert(0, queue_item)
+    queue.insert(0, QueueItem(queue_item, 'do_url', 'url_processor_cb'))
 
 queue = []
-url_processor_lock=False
+async_queue_lock=False
 #funny, right?
-big_data = {}
+
+class QueueItem(object):
+  def __init__(self, data, method, callback_method=None):
+    self.method = method
+    self.callback_method = callback_method
+    self.data = data
+  def __getitem__(self, index):
+    return self.data[index]
+  def __str__(self):
+    return str(self.data)
+  def __repr__(self):
+    return str(self.data)
+
+def do_url(item):
+  try:
+    query = urlparse.parse_qs(item[1]["postfields"])
+    if query.has_key("channel") and item[0].find('history') > -1:
+      channel = query["channel"][0]
+      channel = channels.find(channel)
+      channel.server.buffer_prnt("downloading channel history for %s" % (channel.name), backlog=True)
+  except:
+    pass
+  command = 'curl --data "%s" %s' % (item[1]["postfields"], item[0][4:])
+  w.hook_process(command, 10000, item[3], item[4])
+#  pass
+
+def do_mark_read(item):
+  channels.find(str(item)).mark_read(False)
 
 def async_queue_cb(data, remaining_calls):
-  global url_processor_lock
-  if url_processor_lock == False:
-    url_processor_lock=True
+  global async_queue_lock
+  if async_queue_lock == False:
+    async_queue_lock=True
     if len(queue) > 0:
       item = queue.pop(0)
-      try:
-        query = urlparse.parse_qs(item[1]["postfields"])
-        if query.has_key("channel") and item[0].find('history') > -1:
-          channel = query["channel"][0]
-          channel = channels.find(channel)
-          channel.server.buffer_prnt("downloading channel history for %s" % (channel.name), backlog=True)
-      except:
-        pass
-      if item.__class__ == list:
-        #w.hook_process_hashtable(*item)
-        command = 'curl --data "%s" %s' % (item[1]["postfields"], item[0][4:])
-        w.hook_process(command, 10000, item[3], item[4])
-      else:
-        item.mark_read(False)
-        url_processor_lock=False
+      method = eval(item.method)
+      method(item)
+      async_queue_lock=False
     else:
-      url_processor_lock=False
+      async_queue_lock=False
   return w.WEECHAT_RC_OK
 
+big_data = {}
 def url_processor_cb(data, command, return_code, out, err):
   data=pickle.loads(data)
-#  dbg(data)
-  global url_processor_lock, big_data
+  global async_queue_lock, big_data
   identifier = sha.sha(str(data) + command).hexdigest()
   if not big_data.has_key(identifier):
     big_data[identifier] = ''
@@ -921,20 +943,17 @@ def url_processor_cb(data, command, return_code, out, err):
   if query.has_key("channel"):
     channel = query["channel"]
   if return_code == 0:
-    url_processor_lock=False
+    async_queue_lock=False
     try:
-#    big_data[identifier] = big_data[identifier].encode('ascii', 'ignore')
       my_json = json.loads(big_data[identifier])
     except:
-      url_processor_lock=False
+      async_queue_lock=False
       dbg("curl failed, doing again...")
       async_slack_api_request(*data, priority=True)
       my_json = False
       pass
-#      my_json = False
 
     if my_json:
-#      dbg(my_json)
       query = data[3]
       if query.has_key("channel"):
         channel = query["channel"]
