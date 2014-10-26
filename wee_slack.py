@@ -16,7 +16,7 @@ SCRIPT_VERSION = "0.7"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC  = "Extends weechat for typing notification/search/etc on slack.com"
 
-BACKLOG_SIZE = 1
+BACKLOG_SIZE = 200
 
 SLACK_API_TRANSLATOR = {
                             "channel": {
@@ -324,7 +324,7 @@ class Channel(SlackThing):
         typing.append(user)
     return typing
   def mark_read(self, update_remote=True):
-    t = time.time() + 1
+    t = time.time()
 
     if self.channel_buffer:
       w.buffer_set(self.channel_buffer, "unread", "")
@@ -344,10 +344,12 @@ class Channel(SlackThing):
       #w.buffer_set(self.weechat_buffer, "short_name", new_name)
       w.buffer_set(self.channel_buffer, "short_name", new_name)
   def buffer_prnt(self, user='unknown user', message='no message', time=0, backlog=False):
+    set_read_marker = False
     time = float(time)
     message = message.encode('ascii', 'ignore')
     if backlog == True or (time != 0 and self.last_read > time):
       tags = "no_highlight,notify_none,logger_backlog_end"
+      set_read_marker = True
     elif message.find(self.server.nick) > -1:
       tags = "notify_highlight"
     else:
@@ -355,15 +357,17 @@ class Channel(SlackThing):
     time = int(float(time))
     if self.channel_buffer:
       w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (user, message))
+      if set_read_marker:
+        self.mark_read(False)
     else:
       pass
       #w.prnt("", "%s\t%s" % (user, message))
   def get_history(self):
     if self.active:
       t = time.time()
-      async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "count":BACKLOG_SIZE, "latest":self.last_read})
-      queue.append(QueueItem(self.channel_buffer, 'do_mark_read'))
-      async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "oldest":self.last_read})
+      async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "count":BACKLOG_SIZE})
+      #async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "count":BACKLOG_SIZE, "latest":self.last_read})
+      #async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier,"ts":t, "oldest":self.last_read})
 
 class GroupChannel(Channel):
   def __init__(self, server, name, identifier, active, last_read=0, prepend_name=""):
@@ -846,9 +850,6 @@ def slack_never_away_cb(data, remaining):
 
 ### Slack specific requests
 
-def slack_mark_channel_read(channel_id):
-  channel.find(channel_id).mark_read()
-
 #NOTE: switched to async/curl because sync slowed down the UI
 def async_slack_api_request(domain, token, request, post_data, priority=False):
   t = time.time()
@@ -893,8 +894,9 @@ def do_url(item):
   w.hook_process(command, 10000, item[3], item[4])
 #  pass
 
-def do_mark_read(item):
-  channels.find(str(item)).mark_read(False)
+#def do_mark_read(item):
+#  dbg('queue ran mark_read')
+#  channels.find(str(item)).mark_read(False)
 
 def async_queue_cb(data, remaining_calls):
   global async_queue_lock
