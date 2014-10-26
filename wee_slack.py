@@ -559,6 +559,7 @@ def slack_websocket_cb(data, fd):
     message_json = json.loads(data)
     #this magic attaches json that helps find the right dest
     message_json['myserver'] = server
+    dbg(message_json)
   except:
     return w.WEECHAT_RC_OK
   try:
@@ -608,36 +609,22 @@ def process_presence_change(message_json):
     users.find(message_json["user"]).set_inactive()
 
 def process_channel_marked(message_json):
-  server = servers.find(message_json["myserver"])
-  channel = message_json["channel"]
-  buffer_name = "%s.%s" % (domain, channel)
-  if buffer_name != current_buffer_name():
-    buf_ptr  = w.buffer_search("",buffer_name)
-    w.buffer_set(buf_ptr, "unread", "")
-    #NOTE: only works with latest
-    if not legacy_mode:
-      w.buffer_set(buf_ptr, "hotlist", "-1")
+  channel = channels.find(message_json["channel"])
+  channel.mark_read(False)
+  if not legacy_mode:
+    w.buffer_set(channel.channel_buffer, "hotlist", "-1")
 
 def process_group_marked(message_json):
-  server = servers.find(message_json["myserver"])
-  channel = message_json["channel"]
-  buffer_name = "%s.%s" % (domain, channel)
-  if buffer_name != current_buffer_name():
-    buf_ptr  = w.buffer_search("",buffer_name)
-    w.buffer_set(buf_ptr, "unread", "")
-    #NOTE: only works with latest
-    if not legacy_mode:
-      w.buffer_set(buf_ptr, "hotlist", "-1")
+  channel = channels.find(message_json["channel"])
+  channel.mark_read(False)
+  if not legacy_mode:
+    w.buffer_set(channel.channel_buffer, "hotlist", "-1")
+
 def process_im_marked(message_json):
-  server = servers.find(message_json["myserver"])
-  channel = message_json["channel"]
-  buffer_name = "%s.%s" % (domain, channel)
-  if buffer_name != current_buffer_name():
-    buf_ptr  = w.buffer_search("",buffer_name)
-    w.buffer_set(buf_ptr, "unread", "")
-    #NOTE: only works with latest
-    if not legacy_mode:
-      w.buffer_set(buf_ptr, "hotlist", "-1")
+  channel = channels.find(message_json["channel"])
+  channel.mark_read(False)
+  if not legacy_mode:
+    w.buffer_set(channel.channel_buffer, "hotlist", "-1")
 
 def process_channel_created(message_json):
   server = servers.find(message_json["myserver"])
