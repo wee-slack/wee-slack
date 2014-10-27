@@ -656,6 +656,14 @@ def process_channel_join(message_json):
     channel = server.channels.find(message_json["channel"])
     channel.user_join(message_json["user"])
 
+def process_channel_joined(message_json):
+    server = servers.find(message_json["myserver"])
+    if server.channels.find(message_json["channel"]["name"]):
+        server.channels.find(message_json["channel"]["name"]).open(False)
+    else:
+        item = message_json["channel"]
+        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#"))
+
 def process_channel_leave(message_json):
     server = servers.find(message_json["myserver"])
     channel = server.channels.find(message_json["channel"])
