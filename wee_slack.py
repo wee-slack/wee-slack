@@ -40,12 +40,11 @@ SLACK_API_TRANSLATOR = {
                        }
 
 def dbg(message, fout=False):
+    message = "DEBUG: " + str(message)
+    if fout:
+        file('/tmp/debug.log', 'a+').writelines(message+'\n')
     if slack_debug != None:
-        message = "DEBUG: " + str(message)
-        if fout:
-            file('/tmp/debug.log', 'a+').writelines(message+'\n')
-        else:
-            w.prnt(slack_debug, message)
+        w.prnt(slack_debug, message)
 
 #hilarious, i know
 class Meta(list):
@@ -176,6 +175,7 @@ class SlackServer(object):
     def connected_to_slack(self, login_data):
         if login_data["ok"] == True:
             self.domain = login_data["team"]["domain"] + ".slack.com"
+            dbg(login_data["channels"], True)
             dbg("connected to %s" % self.domain)
             self.identifier = self.domain
             self.nick = login_data["self"]["name"]
@@ -213,11 +213,13 @@ class SlackServer(object):
         for item in data["channels"]:
             if not item.has_key("last_read"):
                 item["last_read"] = 0
-            self.channels.append(Channel(self, item["name"], item["id"], item["is_member"], item["last_read"], "#"))
+            if not item.has_key("members"):
+                item["members"] = []
+            self.channels.append(Channel(self, item["name"], item["id"], item["is_member"], item["last_read"], "#", item["members"]))
         for item in data["groups"]:
             if not item.has_key("last_read"):
                 item["last_read"] = 0
-            self.channels.append(GroupChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#"))
+            self.channels.append(GroupChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"]))
         for item in data["ims"]:
             if not item.has_key("last_read"):
                 item["last_read"] = 0
@@ -255,17 +257,19 @@ def input(b, c, data):
     return w.WEECHAT_RC_ERROR
 
 class Channel(SlackThing):
-    def __init__(self, server, name, identifier, active, last_read=0, prepend_name=""):
+    def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[]):
         super(Channel, self).__init__(name, identifier)
         self.type = "channel"
         self.server = server
         self.name = prepend_name + self.name
         self.typing = {}
         self.active = active
+        self.members = set(members)
         self.last_read = float(last_read)
         if active:
             self.create_buffer()
             self.attach_buffer()
+            self.update_nicklist()
     def __eq__(self, compare_str):
         if compare_str == self.fullname() or compare_str == self.name or compare_str == self.identifier or compare_str == self.name[1:] or (compare_str == self.channel_buffer and self.channel_buffer != None):
             return True
@@ -293,8 +297,26 @@ class Channel(SlackThing):
         if self.channel_buffer != None:
             w.buffer_close(self.channel_buffer)
             self.channel_buffer = None
+    def update_nicklist(self):
+        w.buffer_set(self.channel_buffer, "nicklist", "1")
+        w.nicklist_remove_all(self.channel_buffer)
+        for user in self.members:
+            user = self.server.users.find(user)
+            if user.presence == 'away':
+                w.nicklist_add_nick(self.channel_buffer, "", user.name, w.info_get('irc_nick_color_name', user.name), " ", "", 1)
+            else:
+                w.nicklist_add_nick(self.channel_buffer, "", user.name, w.info_get('irc_nick_color_name', user.name), "+", "", 1)
     def fullname(self):
         return "%s.%s" % (self.server.domain, self.name)
+    def has_user(self, name):
+        return name in self.members
+    def user_join(self, name):
+        self.members.add(name)
+        self.update_nicklist()
+    def user_leave(self, name):
+        if name in self.members:
+            self.members.remove(name)
+        self.update_nicklist()
     def set_active(self):
         self.active = True
     def set_inactive(self):
@@ -381,8 +403,8 @@ class Channel(SlackThing):
             async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier, "ts":t, "count":BACKLOG_SIZE})
 
 class GroupChannel(Channel):
-    def __init__(self, server, name, identifier, active, last_read=0, prepend_name=""):
-        super(GroupChannel, self).__init__(server, name, identifier, active, last_read, prepend_name)
+    def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[]):
+        super(GroupChannel, self).__init__(server, name, identifier, active, last_read, prepend_name, members)
         self.type = "group"
 
 class DmChannel(Channel):
@@ -439,10 +461,16 @@ class User(SlackThing):
             return False
     def set_active(self):
         self.presence = "active"
+        for channel in self.server.channels:
+            if channel.has_user(self.identifier):
+                channel.update_nicklist()
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "prefix", "+")
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "1")
     def set_inactive(self):
         self.presence = "away"
+        for channel in self.server.channels:
+            if channel.has_user(self.identifier):
+                channel.update_nicklist()
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "prefix", " ")
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
     def colorized_name(self):
@@ -624,9 +652,15 @@ def process_channel_left(message_json):
     server = servers.find(message_json["myserver"])
     server.channels.find(message_json["channel"]).close(False)
 
-def process_channel_joined(message_json):
+def process_channel_join(message_json):
     server = servers.find(message_json["myserver"])
-    server.channels.find(message_json["channel"]["id"]).open(False)
+    channel = server.channels.find(message_json["channel"])
+    channel.user_join(message_json["user"])
+
+def process_channel_leave(message_json):
+    server = servers.find(message_json["myserver"])
+    channel = server.channels.find(message_json["channel"])
+    channel.user_leave(message_json["user"])
 
 def process_group_left(message_json):
     server = servers.find(message_json["myserver"])
@@ -656,13 +690,17 @@ def process_user_typing(message_json):
 def process_error(message_json):
     connected = False
 
+
 def process_message(message_json):
+    known_subtypes = ['channel_join', 'channel_leave']
+    if message_json.has_key("subtype") and message_json["subtype"] in known_subtypes:
+        proc[message_json["subtype"]](message_json)
+#        return
+
     server = servers.find(message_json["myserver"])
 
     mark_silly_channels_read(message_json["channel"])
     channel = message_json["channel"]
-#    if message_json.has_key("subtype"):
-#        return
     time = message_json["ts"]
     #this handles edits
     try:
