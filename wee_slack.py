@@ -645,7 +645,11 @@ def process_im_marked(message_json):
 def process_channel_created(message_json):
     server = servers.find(message_json["myserver"])
     item = message_json["channel"]
-    server.channels.append(Channel(server, item["name"], item["id"], False, 0, "#"))
+    if server.channels.find(message_json["channel"]["name"]):
+        server.channels.find(message_json["channel"]["name"]).open(False)
+    else:
+        item = message_json["channel"]
+        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"]))
     w.prnt(server.buffer, "New channel created: %s" % item["name"])
 
 def process_channel_left(message_json):
@@ -663,7 +667,7 @@ def process_channel_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#"))
+        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"]))
 
 def process_channel_leave(message_json):
     server = servers.find(message_json["myserver"])
@@ -680,7 +684,7 @@ def process_group_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#"))
+        server.channels.append(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"]))
 
 def process_im_close(message_json):
     server = servers.find(message_json["myserver"])
@@ -767,8 +771,11 @@ def typing_bar_item_cb(data, buffer, args):
         direct_typers = ["D/" + x for x in direct_typers]
         current_channel = w.current_buffer()
         channel = channels.find(current_channel)
-        if channel and channel.__class__ != DmChannel:
-            channel_typers = channels.find(current_channel).get_typing_list()
+        try:
+            if channel and channel.__class__ != DmChannel:
+                channel_typers = channels.find(current_channel).get_typing_list()
+        except:
+            w.prnt("", "Bug on %s" % channel)
         typing_here = ", ".join(channel_typers + direct_typers)
         if len(typing_here) > 0:
             color = w.color('yellow')
