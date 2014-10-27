@@ -40,12 +40,12 @@ SLACK_API_TRANSLATOR = {
                        }
 
 def dbg(message, fout=False):
-  if debug_mode == True:
+  if slack_debug != None:
     message = "DEBUG: " + str(message)
     if fout:
       file('/tmp/debug.log','a+').writelines(message+'\n')
     else:
-      w.prnt("", message)
+      w.prnt(slack_debug, message)
 
 #hilarious, i know
 class Meta(list):
@@ -400,10 +400,12 @@ class DmChannel(Channel):
         new_name = self.name
       w.buffer_set(self.channel_buffer, "short_name", color + new_name)
   def buffer_prnt(self, user='unknown user', message='no message', time=0, backlog=False):
+    set_read_marker = False
     time = float(time)
     message = message.encode('ascii', 'ignore')
     if backlog == True or (time != 0 and self.last_read > time):
       tags = "no_highlight,notify_none,logger_backlog_end"
+      set_read_marker = True
     elif user == self.server.nick:
       tags = ""
     elif message.find(self.server.nick) > -1:
@@ -413,7 +415,10 @@ class DmChannel(Channel):
     time = int(float(time))
     if self.channel_buffer:
       w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (user, message))
+      if set_read_marker:
+        self.mark_read(False)
     else:
+      dbg("failed to print something..")
       pass
 
 class User(SlackThing):
@@ -559,14 +564,9 @@ def slack_websocket_cb(data, fd):
     message_json = json.loads(data)
     #this magic attaches json that helps find the right dest
     message_json['myserver'] = server
-    dbg(message_json)
   except:
     return w.WEECHAT_RC_OK
-  try:
-    if slack_debug != None:
-      write_debug(message_json)
-  except:
-    pass
+  dbg(message_json)
   #dispatch here
   if message_json.has_key("type"):
     function_name = message_json["type"]
@@ -582,20 +582,6 @@ def slack_websocket_cb(data, fd):
       dbg("Function not implemented\n%s" % (message_json))
   w.bar_item_update("slack_typing_notice")
   return w.WEECHAT_RC_OK
-
-def write_debug(message_json):
-  try:
-    if message_json.has_key("user"):
-      message_json["user"] = users.find(message_json["user"]).name
-    if message_json.has_key("channel"):
-      message_json["channel"] = channels.find(message_json["channel"]).name
-  except:
-    pass
-  output = "%s" % ( json.dumps(message_json, sort_keys=True) )
-  if debug_string:
-    if output.find(debug_string) < 0:
-      return
-  w.prnt(slack_debug,output)
 
 def process_pong(message_json):
   pass
@@ -964,7 +950,7 @@ def create_slack_debug_buffer():
     debug_string = None
     slack_debug = w.buffer_new("slack-debug", "", "", "closed_slack_debug_buffer_cb", "")
     w.buffer_set(slack_debug, "notify", "0")
-    w.buffer_set(slack_debug, "display", "1")
+#    w.buffer_set(slack_debug, "display", "1")
 
 ### END Utility Methods
 
@@ -995,11 +981,11 @@ if __name__ == "__main__":
     ### Global var section
     slack_api_token = w.config_get_plugin("slack_api_token")
     channels_always_marked_read = [x.strip() for x in w.config_get_plugin("channels_always_marked_read").split(',')]
+
+    slack_debug         = None
     debug_mode = w.config_get_plugin("debug_mode").lower()
-    if debug_mode == '' or debug_mode == 'false':
-      debug_mode = False
-    else:
-      debug_mode = True
+    if debug_mode != '' or debug_mode != 'false':
+      create_slack_debug_buffer()
 
     cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
     proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
@@ -1008,7 +994,6 @@ if __name__ == "__main__":
     domain              = None
     previous_buffer     = None
     slack_buffer        = None
-    slack_debug         = None
     name                = None
     never_away          = False
     hotlist             = w.infolist_get("hotlist", "", "")
