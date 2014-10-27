@@ -253,6 +253,7 @@ def input(b, c, data):
     channel = channels.find(c)
     channel.send_message(data)
     channel.buffer_prnt(channel.server.nick, data)
+    channel.mark_read(True)
     return w.WEECHAT_RC_ERROR
 
 class Channel(SlackThing):
@@ -764,7 +765,7 @@ def typing_bar_item_cb(data, buffer, args):
         for dm in channels.find_by_class(DmChannel):
             direct_typers.extend(dm.get_typing_list())
         direct_typers = ["D/" + x for x in direct_typers]
-        current_channel = current_buffer_name(short=True)
+        current_channel = w.current_buffer()
         channel = channels.find(current_channel)
         if channel and channel.__class__ != DmChannel:
             channel_typers = channels.find(current_channel).get_typing_list()
