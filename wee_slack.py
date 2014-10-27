@@ -595,7 +595,7 @@ def slack_websocket_cb(data, fd):
         message_json['myserver'] = server
     except:
         return w.WEECHAT_RC_OK
-    dbg(message_json)
+    #dbg(message_json)
     #dispatch here
     if message_json.has_key("type"):
         function_name = message_json["type"]
@@ -695,8 +695,6 @@ def process_message(message_json):
     if message_json.has_key("subtype") and message_json["subtype"] in known_subtypes:
         proc[message_json["subtype"]](message_json)
         return
-    else:
-        dbg('Unknown subtype: ' + str(message_json))
     server = servers.find(message_json["myserver"])
 
     mark_silly_channels_read(message_json["channel"])
@@ -740,7 +738,7 @@ def process_message(message_json):
 
 def process_message_changed(message_json):
     if message_json["type"] != "message":
-        dbg("message changed: " + str(message_json))
+        #dbg("message changed: " + str(message_json))
         server = servers.find(message_json["myserver"])
         channel = server.channels.find(message_json["channel"])
         user = server.users.find(message_json["message"]["user"])
