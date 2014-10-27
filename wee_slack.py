@@ -190,7 +190,7 @@ class SlackServer(object):
 
             return True
         else:
-            w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with \"/set plugins.var.python.slack_extension.slack_api_token\"\n\n ")
+            w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with\n \"/set plugins.var.python.slack_extension.slack_api_token (token)\"\n\n ")
             self.connected = False
     def create_local_buffer(self):
         if not w.buffer_search("", self.domain):
