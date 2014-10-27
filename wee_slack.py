@@ -691,11 +691,12 @@ def process_error(message_json):
 
 
 def process_message(message_json):
-    known_subtypes = ['channel_join', 'channel_leave']
+    known_subtypes = ['channel_join', 'channel_leave', 'message_changed']
     if message_json.has_key("subtype") and message_json["subtype"] in known_subtypes:
         proc[message_json["subtype"]](message_json)
-#        return
-
+        return
+    else:
+        dbg('Unknown subtype: ' + str(message_json))
     server = servers.find(message_json["myserver"])
 
     mark_silly_channels_read(message_json["channel"])
@@ -710,7 +711,8 @@ def process_message(message_json):
             elif message_json.has_key("username"):
                 message_json["user"] = message_json["message"]["username"]
     except:
-        dbg(message_json)
+        pass
+#        dbg(message_json)
 
     if message_json.has_key("user") and message_json.has_key("text"):
         #below prevents typing notification from disapearing if the server sends an unfurled message
@@ -735,6 +737,16 @@ def process_message(message_json):
                     server.channels.find(channel).buffer_prnt('unknown user', str(message_json), time)
         else:
             server.channels.find(channel).buffer_prnt('unknown user', str(message_json), time)
+
+def process_message_changed(message_json):
+    if message_json["type"] != "message":
+        dbg("message changed: " + str(message_json))
+        server = servers.find(message_json["myserver"])
+        channel = server.channels.find(message_json["channel"])
+        user = server.users.find(message_json["message"]["user"])
+        text = "Edited: " + message_json["message"]["text"]
+        time = message_json["ts"]
+        channel.buffer_prnt(user.name, text, time)
 
 ### END Websocket handling methods
 
