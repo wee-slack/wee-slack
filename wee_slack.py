@@ -175,7 +175,6 @@ class SlackServer(object):
     def connected_to_slack(self, login_data):
         if login_data["ok"] == True:
             self.domain = login_data["team"]["domain"] + ".slack.com"
-            dbg(login_data["channels"], True)
             dbg("connected to %s" % self.domain)
             self.identifier = self.domain
             self.nick = login_data["self"]["name"]
