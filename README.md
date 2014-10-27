@@ -22,18 +22,19 @@ A WeeChat plugin for Slack.com IRC mode. Provides supplemental features only ava
 
 Features
 --------
+  * **New** Doesn't use IRC gateway. Connects directly with Slack via API/Websocket
+  * **New** Multiple Teams supported! Just add multiple api tokens separated by commas
+  * **New** Replays history automatically during startup. (and sets read marker to the correct position in history)
+  * **New** Open channels synchronized with Slack. When you open/close a channel on another client it is reflected in wee-slack
+  * **New** Colorized nicks in buffer list when used with buffers.pl
+  * **New** Colorized nicks in chat
   * Supports bidirectional slack read notifications for all channels. (never reread the same messages on the web client or other devices).
   * Typing notification, so you can see when others are typing, and they can see when you type. Appears globally for direct messages
   * Search slack history allows you to do simple searches across all previous slack conversations
   * Away/back status handling
   * Expands/shows metadata for things like tweets/links
   * Displays edited messages (slack.com irc mode currently doesn't show these)
-  * Doesn't use IRC gateway. Connects directly with Slack via API/Websocket
-  * Multiple Teams supported! Just add multiple api tokens separated by commas
-  * Replays history during startup. (and sets read marker to the correct position in history)
-  * Open channels synchronized with Slack. When you open/close a channel on another client it is reflected in wee-slack
-  * Colorized nicks in buffer list when used with buffers.pl
-  * Colorized nicks in chat
+
   * *Super fun* debug mode. See what the websocket is saying with `/slack debug`
 
 In Development
@@ -53,7 +54,9 @@ Setup
 ------
 
 ####1. Install websocket-client lib
-```pip install websocket-client```
+```
+pip install websocket-client
+```
 
 ####2. copy wee_slack.py to ~/.weechat/python/autoload
 ```
