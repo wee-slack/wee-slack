@@ -4,6 +4,7 @@ import time
 import json
 import pickle
 import sha
+import re
 import urllib
 import urlparse
 from websocket import create_connection
@@ -41,6 +42,7 @@ SLACK_API_TRANSLATOR = {
 
 def dbg(message, fout=False):
     message = "DEBUG: " + str(message)
+    message = message.encode('ascii', 'ignore')
     if fout:
         file('/tmp/debug.log', 'a+').writelines(message+'\n')
     if slack_debug != None:
@@ -704,50 +706,84 @@ def process_error(message_json):
 
 
 def process_message(message_json):
+    mark_silly_channels_read(message_json["channel"])
+#    try:
     known_subtypes = ['channel_join', 'channel_leave', 'message_changed']
     if message_json.has_key("subtype") and message_json["subtype"] in known_subtypes:
         proc[message_json["subtype"]](message_json)
-        return
-    server = servers.find(message_json["myserver"])
-
-    mark_silly_channels_read(message_json["channel"])
-    channel = message_json["channel"]
-    time = message_json["ts"]
-    #this handles edits
-    try:
-        if message_json.has_key("message"):
-            message_json["text"] = "Edited: " + message_json["message"]["text"]
-            if message_json.has_key("user"):
-                message_json["user"] = message_json["message"]["user"]
-            elif message_json.has_key("username"):
-                message_json["user"] = message_json["message"]["username"]
-    except:
-        pass
-#        dbg(message_json)
-
-    if message_json.has_key("user") and message_json.has_key("text"):
-        #below prevents typing notification from disapearing if the server sends an unfurled message
-        channel = server.channels.find(message_json["channel"])
-        channel.unset_typing(server.users.find(message_json["user"]).name)
-        user = server.users.find(message_json["user"])
-        if user.name != channel.server.nick:
-            user = user.colorized_name()
-        else:
-            user = user.name
-        channel.buffer_prnt(user, message_json["text"], time)
     else:
-        if message_json.has_key("attachments"):
-            if message_json.has_key("username"):
-                name = message_json["username"]
-            for message in message_json["attachments"]:
-                if message.has_key("service_name"):
-                    name = message["service_name"]
-                try:
-                    server.channels.find(channel).buffer_prnt("-%s-" % name, str(message["fallback"]), time)
-                except:
-                    server.channels.find(channel).buffer_prnt('unknown user', str(message_json), time)
+        server = servers.find(message_json["myserver"])
+        time = message_json['ts']
+        channel = message_json["channel"]
+
+        if message_json.has_key('text'):
+            text = message_json["text"]
+        elif message_json.has_key('fallback'):
+            text = message_json["fallback"]
+        elif message_json.has_key('title'):
+            text += message_json["title"]
         else:
-            server.channels.find(channel).buffer_prnt('unknown user', str(message_json), time)
+            dbg(message_json)
+            text = ""
+        text = text.encode('ascii', 'ignore')
+
+        if message_json.has_key('attachments'):
+            for attachment in message_json["attachments"]:
+                dbg(attachment)
+                if attachment.has_key('title'):
+                    text += "%s" % (attachment['title'])
+#                if attachment.has_key('fallback'):
+#                    text += "%s\n" % (attachment['fallback'])
+                if attachment.has_key('author_link'):
+                    text += "%s: " % (attachment['author_link'])
+#                if attachment.has_key('author_name'):
+#                    text += "%s: " % (attachment['author_name'])
+                if attachment.has_key('text'):
+                    text += "%s" % (attachment['text'])
+
+        #clean up tweets
+        text = re.sub("<.*?\\|(.*?)>", "\\1", text)
+
+        #first figure out the name
+        if message_json.has_key('user'):
+            name = server.users.find(message_json['user']).name
+        elif message_json.has_key('username'):
+            name = "-%s-" % message_json["username"]
+        elif message_json.has_key('service_name'):
+            name = "-%s-" % message_json["service_name"]
+        elif message_json.has_key('bot_id'):
+            name = "-%s-" % message_json["bot_id"]
+        else:
+            name = "unknown name"
+
+        color = w.info_get('irc_nick_color', name)
+        def_color = w.color('default')
+        name = "%s%s%s" % (color, name, def_color)
+
+        server.channels.find(channel).buffer_prnt(name, text, time)
+
+#    except:
+#        dbg("BROKE! %s" % (message_json), True)
+
+#        if message_json.has_key("user") and message_json.has_key("text"):
+##            channel = server.channels.find(message_json["channel"])
+#            channel.unset_typing(server.users.find(message_json["user"]).name)
+#            user = server.users.find(message_json["user"])
+#            if user.name != channel.server.nick:
+#                user = user.colorized_name()
+#            else:
+#                user = user.name
+#        if message_json.has_key("attachments"):
+#            if message_json.has_key("username"):
+#                for message in message_json["attachments"]:
+#                    if message.has_key("service_name"):
+#                        name = message["service_name"]
+#                    try:
+#                        server.channels.find(channel).buffer_prnt("-%s-" % name, str(message["fallback"]), time)
+#                    except:
+#                        server.channels.find(channel).buffer_prnt('unknown user', str(message_json), time)
+#        else:
+#            server.channels.find(channel).buffer_prnt('unknown user', str(message_json), time)
 
 def process_message_changed(message_json):
     if message_json["type"] != "message":
@@ -945,6 +981,7 @@ def url_processor_cb(data, command, return_code, out, err):
         if my_json:
             if data[2] == 'rtm.start':
                 servers.find(data[1]).connected_to_slack(my_json)
+
             else:
                 query = data[3]
                 if query.has_key("channel"):
@@ -954,7 +991,7 @@ def url_processor_cb(data, command, return_code, out, err):
                     messages = my_json["messages"].reverse()
                     for message in my_json["messages"]:
                         message["myserver"] = servers.find(token).domain
-                        message["channel"] = servers.find(token).channels.find(channel)
+                        message["channel"] = servers.find(token).channels.find(channel).identifier
                         process_message(message)
 
     return w.WEECHAT_RC_OK
