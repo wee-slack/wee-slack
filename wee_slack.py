@@ -742,7 +742,8 @@ def process_message(message_json):
               if item.startswith('<@U'):
                 dbg('found user reference!')
                 item = item[2:-1]
-                item = "@" + users.find(item).name
+                if users.find(item):
+                    item = "@" + users.find(item).name
               newtext.append(item)
               dbg(text)
             text = " ".join(newtext)
