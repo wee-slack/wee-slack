@@ -385,7 +385,7 @@ class Channel(SlackThing):
         set_read_marker = False
         time = float(time)
         message = message.encode('ascii', 'ignore')
-        if backlog == True or (time != 0 and self.last_read > time):
+        if backlog == True or (time != 0 and self.last_read >= time):
             tags = "no_highlight,notify_none,logger_backlog_end"
             set_read_marker = True
         elif message.find(self.server.nick) > -1:
@@ -394,6 +394,7 @@ class Channel(SlackThing):
             tags = "notify_message"
         time = int(float(time))
         if self.channel_buffer:
+            w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s   %s" % (user, time, self.last_read))
             w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (user, message))
             if set_read_marker:
                 self.mark_read(False)
