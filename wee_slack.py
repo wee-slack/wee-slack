@@ -4,6 +4,7 @@ import time
 import json
 import pickle
 import sha
+import re
 import urllib
 import urlparse
 from websocket import create_connection
@@ -41,6 +42,7 @@ SLACK_API_TRANSLATOR = {
 
 def dbg(message, fout=False):
     message = "DEBUG: " + str(message)
+    message = message.encode('ascii', 'ignore')
     if fout:
         file('/tmp/debug.log', 'a+').writelines(message+'\n')
     if slack_debug != None:
@@ -54,7 +56,7 @@ class Meta(list):
     def __str__(self):
         string = ''
         for each in self.search_list.get_all(self.attribute):
-            string += str(each)
+            string += str(each) + ' '
         return string
     def __repr__(self):
         self.search_list.get_all(self.attribute)
@@ -245,9 +247,9 @@ class SlackThing(object):
         self.identifier = identifier
         self.channel_buffer = None
     def __str__(self):
-        return "Name: %s Id: %s CB: %s" % (self.name, self.identifier, self.channel_buffer)
+        return self.name
     def __repr__(self):
-        return "Name: %s Id: %s CB: %s" % (self.name, self.identifier, self.channel_buffer)
+        return self.name
 
 def input(b, c, data):
     channel = channels.find(c)
@@ -275,10 +277,6 @@ class Channel(SlackThing):
             return True
         else:
             return False
-    def __str__(self):
-        return "Name: %s Id: %s Buffer: %s Active: %s" % (self.name, self.identifier, self.channel_buffer, self.active)
-    def __repr__(self):
-        return "Name: %s Id: %s Buffer: %s Active: %s" % (self.name, self.identifier, self.channel_buffer, self.active)
     def create_buffer(self):
         channel_buffer = w.buffer_search("", "%s.%s" % (self.server.domain, self.name))
         if channel_buffer:
@@ -303,9 +301,9 @@ class Channel(SlackThing):
         for user in self.members:
             user = self.server.users.find(user)
             if user.presence == 'away':
-                w.nicklist_add_nick(self.channel_buffer, "", user.name, w.info_get('irc_nick_color_name', user.name), " ", "", 1)
+                w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color(), " ", "", 1)
             else:
-                w.nicklist_add_nick(self.channel_buffer, "", user.name, w.info_get('irc_nick_color_name', user.name), "+", "", 1)
+                w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color(), "+", "", 1)
     def fullname(self):
         return "%s.%s" % (self.server.domain, self.name)
     def has_user(self, name):
@@ -386,16 +384,22 @@ class Channel(SlackThing):
         set_read_marker = False
         time = float(time)
         message = message.encode('ascii', 'ignore')
-        if backlog == True or (time != 0 and self.last_read > time):
+        if time != 0 and self.last_read >= time:
             tags = "no_highlight,notify_none,logger_backlog_end"
             set_read_marker = True
         elif message.find(self.server.nick) > -1:
             tags = "notify_highlight"
+        elif user != self.server.nick and self.name in self.server.users:
+            tags = "notify_private,notify_message"
         else:
             tags = "notify_message"
         time = int(float(time))
         if self.channel_buffer:
-            w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (user, message))
+            if self.server.users.find(user) and user != self.server.nick:
+                colorized_name = self.server.users.find(user).colorized_name()
+            else:
+                colorized_name = user
+            w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (colorized_name, message))
             if set_read_marker:
                 self.mark_read(False)
         else:
@@ -427,27 +431,6 @@ class DmChannel(Channel):
             else:
                 new_name = self.name
             w.buffer_set(self.channel_buffer, "short_name", color + new_name)
-    def buffer_prnt(self, user='unknown user', message='no message', time=0, backlog=False):
-        set_read_marker = False
-        time = float(time)
-        message = message.encode('ascii', 'ignore')
-        if backlog == True or (time != 0 and self.last_read > time):
-            tags = "no_highlight,notify_none,logger_backlog_end"
-            set_read_marker = True
-        elif user == self.server.nick:
-            tags = ""
-        elif message.find(self.server.nick) > -1:
-            tags = "notify_highlight"
-        else:
-            tags = "notify_private,notify_message"
-        time = int(float(time))
-        if self.channel_buffer:
-            w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (user, message))
-            if set_read_marker:
-                self.mark_read(False)
-        else:
-            dbg("failed to print something..")
-            pass
 
 class User(SlackThing):
     def __init__(self, server, name, identifier, presence="away"):
@@ -456,9 +439,9 @@ class User(SlackThing):
         self.presence = presence
         self.server = server
         if self.presence == 'away':
-            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, w.info_get('irc_nick_color_name', self.name), " ", "", 0)
+            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color(), " ", "", 0)
         else:
-            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, w.info_get('irc_nick_color_name', self.name), "+", "", 1)
+            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color(), "+", "", 1)
 #        w.nicklist_add_nick(server.buffer, "", self.colorized_name(), "", "", "", 1)
     def __eq__(self, compare_str):
         if compare_str == self.name or compare_str == self.identifier:
@@ -479,6 +462,8 @@ class User(SlackThing):
                 channel.update_nicklist()
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "prefix", " ")
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
+    def color(self):
+        return w.info_get('irc_nick_color_name', self.name)
     def colorized_name(self):
         color = w.info_get('irc_nick_color', self.name)
         def_color = w.color('default')
@@ -602,7 +587,6 @@ def slack_websocket_cb(data, fd):
         message_json['myserver'] = server
     except:
         return w.WEECHAT_RC_OK
-    #dbg(message_json)
     #dispatch here
     if message_json.has_key("type"):
         function_name = message_json["type"]
@@ -651,7 +635,11 @@ def process_im_marked(message_json):
 def process_channel_created(message_json):
     server = servers.find(message_json["myserver"])
     item = message_json["channel"]
-    server.channels.append(Channel(server, item["name"], item["id"], False, 0, "#"))
+    if server.channels.find(message_json["channel"]["name"]):
+        server.channels.find(message_json["channel"]["name"]).open(False)
+    else:
+        item = message_json["channel"]
+        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"]))
     w.prnt(server.buffer, "New channel created: %s" % item["name"])
 
 def process_channel_left(message_json):
@@ -669,7 +657,7 @@ def process_channel_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#"))
+        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"]))
 
 def process_channel_leave(message_json):
     server = servers.find(message_json["myserver"])
@@ -686,7 +674,7 @@ def process_group_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#"))
+        server.channels.append(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"]))
 
 def process_im_close(message_json):
     server = servers.find(message_json["myserver"])
@@ -706,50 +694,63 @@ def process_error(message_json):
 
 
 def process_message(message_json):
+    mark_silly_channels_read(message_json["channel"])
+#    try:
     known_subtypes = ['channel_join', 'channel_leave', 'message_changed']
     if message_json.has_key("subtype") and message_json["subtype"] in known_subtypes:
         proc[message_json["subtype"]](message_json)
-        return
-    server = servers.find(message_json["myserver"])
-
-    mark_silly_channels_read(message_json["channel"])
-    channel = message_json["channel"]
-    time = message_json["ts"]
-    #this handles edits
-    try:
-        if message_json.has_key("message"):
-            message_json["text"] = "Edited: " + message_json["message"]["text"]
-            if message_json.has_key("user"):
-                message_json["user"] = message_json["message"]["user"]
-            elif message_json.has_key("username"):
-                message_json["user"] = message_json["message"]["username"]
-    except:
-        pass
-#        dbg(message_json)
-
-    if message_json.has_key("user") and message_json.has_key("text"):
-        #below prevents typing notification from disapearing if the server sends an unfurled message
-        channel = server.channels.find(message_json["channel"])
-        channel.unset_typing(server.users.find(message_json["user"]).name)
-        user = server.users.find(message_json["user"])
-        if user.name != channel.server.nick:
-            user = user.colorized_name()
-        else:
-            user = user.name
-        channel.buffer_prnt(user, message_json["text"], time)
     else:
-        if message_json.has_key("attachments"):
-            if message_json.has_key("username"):
-                name = message_json["username"]
-            for message in message_json["attachments"]:
-                if message.has_key("service_name"):
-                    name = message["service_name"]
-                try:
-                    server.channels.find(channel).buffer_prnt("-%s-" % name, str(message["fallback"]), time)
-                except:
-                    server.channels.find(channel).buffer_prnt('unknown user', str(message_json), time)
+        server = servers.find(message_json["myserver"])
+        time = message_json['ts']
+        channel = message_json["channel"]
+
+        if message_json.has_key('text'):
+            text = message_json["text"]
+        elif message_json.has_key('fallback'):
+            text = message_json["fallback"]
+        elif message_json.has_key('title'):
+            text += message_json["title"]
         else:
-            server.channels.find(channel).buffer_prnt('unknown user', str(message_json), time)
+            dbg(message_json)
+            text = ""
+        text = text.encode('ascii', 'ignore')
+
+        if message_json.has_key('attachments'):
+            for attachment in message_json["attachments"]:
+                dbg(attachment)
+                if attachment.has_key('title'):
+                    text += "%s" % (attachment['title'])
+#                if attachment.has_key('fallback'):
+#                    text += "%s\n" % (attachment['fallback'])
+                if attachment.has_key('author_link'):
+                    text += "%s: " % (attachment['author_link'])
+#                if attachment.has_key('author_name'):
+#                    text += "%s: " % (attachment['author_name'])
+                if attachment.has_key('text'):
+                    text += "%s" % (attachment['text'])
+
+        #clean up tweets
+        text = re.sub("<.*?\\|(.*?)>", "\\1", text)
+
+        text = text.replace('\t', '    ')
+
+        #first figure out the name
+        if message_json.has_key('user'):
+            name = server.users.find(message_json['user']).name
+        elif message_json.has_key('username'):
+            name = "-%s-" % message_json["username"]
+        elif message_json.has_key('service_name'):
+            name = "-%s-" % message_json["service_name"]
+        elif message_json.has_key('bot_id'):
+            name = "-%s-" % message_json["bot_id"]
+        else:
+            name = "unknown name"
+
+        #color = w.info_get('irc_nick_color', name)
+        #def_color = w.color('default')
+        #name = "%s%s%s" % (color, name, def_color)
+
+        server.channels.find(channel).buffer_prnt(name, text, time)
 
 def process_message_changed(message_json):
     if message_json["type"] != "message":
@@ -773,8 +774,11 @@ def typing_bar_item_cb(data, buffer, args):
         direct_typers = ["D/" + x for x in direct_typers]
         current_channel = w.current_buffer()
         channel = channels.find(current_channel)
-        if channel and channel.__class__ != DmChannel:
-            channel_typers = channels.find(current_channel).get_typing_list()
+        try:
+            if channel and channel.__class__ != DmChannel:
+                channel_typers = channels.find(current_channel).get_typing_list()
+        except:
+            w.prnt("", "Bug on %s" % channel)
         typing_here = ", ".join(channel_typers + direct_typers)
         if len(typing_here) > 0:
             color = w.color('yellow')
@@ -953,6 +957,7 @@ def url_processor_cb(data, command, return_code, out, err):
         if my_json:
             if data[2] == 'rtm.start':
                 servers.find(data[1]).connected_to_slack(my_json)
+
             else:
                 query = data[3]
                 if query.has_key("channel"):
@@ -962,7 +967,7 @@ def url_processor_cb(data, command, return_code, out, err):
                     messages = my_json["messages"].reverse()
                     for message in my_json["messages"]:
                         message["myserver"] = servers.find(token).domain
-                        message["channel"] = servers.find(token).channels.find(channel)
+                        message["channel"] = servers.find(token).channels.find(channel).identifier
                         process_message(message)
 
     return w.WEECHAT_RC_OK
