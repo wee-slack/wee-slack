@@ -612,6 +612,12 @@ def slack_websocket_cb(data, fd):
 def process_pong(message_json):
     pass
 
+def process_team_join(message_json):
+    server = servers.find(message_json["myserver"])
+    item = message_json["user"]
+    server.users.append(User(server, item["name"], item["id"], item["presence"]))
+    w.prnt(server.buffer, "New user joined: %s" % item["name"])
+
 def process_presence_change(message_json):
     buffer_name = "%s.%s" % (domain, message_json["user"])
     buf_ptr = w.buffer_search("", buffer_name)
@@ -692,12 +698,14 @@ def process_im_marked(message_json):
 
 def process_im_created(message_json):
     server = servers.find(message_json["myserver"])
+    dbg(message_json)
     item = message_json["channel"]
-    if server.channels.find(message_json["channel"]["name"]):
-        server.channels.find(message_json["channel"]["name"]).open(False)
+    channel_name = server.users.find(item["user"]).name
+    if server.channels.find(channel_name):
+        server.channels.find(channel_name).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(DmChannel(server, item["name"], item["id"], item["is_open"], item["last_read"]))
+        server.channels.append(DmChannel(server, channel_name, item["id"], item["is_open"], item["last_read"]))
     w.prnt(server.buffer, "New channel created: %s" % item["name"])
 
 def process_user_typing(message_json):
