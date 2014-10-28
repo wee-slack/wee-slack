@@ -369,7 +369,11 @@ class Channel(SlackThing):
             self.set_read_marker(self.last_read)
     def set_read_marker(self, time):
         async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel":self.identifier, "ts":time})
-    def rename(self, name=None, fmt=None):
+    def rename(self, name=None, fmt=None, gray=False):
+        if not gray:
+            color = w.color('default')
+        else:
+            color = w.color('darkgray')
         if self.channel_buffer:
             if name:
                 new_name = name
@@ -377,8 +381,7 @@ class Channel(SlackThing):
                 new_name = fmt % (self.name[1:])
             else:
                 new_name = self.name
-            #w.buffer_set(self.weechat_buffer, "short_name", new_name)
-            w.buffer_set(self.channel_buffer, "short_name", new_name)
+            w.buffer_set(self.channel_buffer, "short_name", color + new_name)
     def buffer_prnt(self, user='unknown user', message='no message', time=0, backlog=False):
         set_read_marker = False
         time = float(time)
@@ -411,8 +414,11 @@ class DmChannel(Channel):
     def __init__(self, server, name, identifier, active, last_read=0, prepend_name=""):
         super(DmChannel, self).__init__(server, name, identifier, active, last_read, prepend_name)
         self.type = "im"
-    def rename(self, name=None, fmt=None):
-        color = w.info_get('irc_nick_color', self.name)
+    def rename(self, name=None, fmt=None, gray=False):
+        if not gray:
+            color = w.info_get('irc_nick_color', self.name)
+        else:
+            color = w.color('darkgray')
         if self.channel_buffer:
             if name:
                 new_name = name
@@ -780,21 +786,28 @@ def typing_update_cb(data, remaining_calls):
     return w.WEECHAT_RC_OK
 
 def buffer_list_update_cb(data, remaining_calls):
-    for channel in channels.find_by_class(Channel):
-        if channel.is_someone_typing() == True:
-            channel.rename(fmt=">%s")
+    gray_check = False
+    gray = False
+    if len(servers) > 1:
+        gray_check = True
+    for channel in channels.find_by_class(Channel) + channels.find_by_class(GroupChannel):
+        if current_domain_name() != channel.server.domain and gray_check:
+            gray = True
         else:
-            channel.rename()
-    for channel in channels.find_by_class(GroupChannel):
+            gray = False
         if channel.is_someone_typing() == True:
-            channel.rename(fmt=">%s")
+            channel.rename(fmt=">%s", gray=gray)
         else:
-            channel.rename()
+            channel.rename(gray = gray)
     for channel in channels.find_by_class(DmChannel):
-        if channel.server.users.find(channel.name).presence == "active":
-            channel.rename(fmt="+%s")
+        if current_domain_name() != channel.server.domain and gray_check:
+            gray = True
         else:
-            channel.rename(fmt=" %s")
+            gray = False
+        if channel.server.users.find(channel.name).presence == "active":
+            channel.rename(fmt="+%s", gray=gray)
+        else:
+            channel.rename(fmt=" %s", gray=gray)
         pass
     return w.WEECHAT_RC_OK
 
@@ -813,6 +826,8 @@ def buffer_closing_cb(signal, sig_type, data):
 
 def buffer_switch_cb(signal, sig_type, data):
     global previous_buffer, hotlist
+    #this is to see if we need to grey out things in the buffer list
+    buffer_list_update_cb('','')
     if channels.find(previous_buffer):
         channels.find(previous_buffer).mark_read()
 
