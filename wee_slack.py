@@ -82,6 +82,12 @@ class Meta(list):
             dbg("probably something bad happened with meta items: %s" % items)
             return items
             raise AmbiguousProblemError
+    def find_first(self, name):
+        items = self.find(name)
+        if items.__class__ == list:
+            return items[0]
+        else:
+            return False
     def find_by_class(self, class_name):
         items = self.search_list.find_by_class_deep(class_name, self.attribute)
         return items
@@ -742,8 +748,8 @@ def process_message(message_json):
               if item.startswith('<@U'):
                 dbg('found user reference!')
                 item = item[2:-1]
-                if users.find(item):
-                    item = "@" + users.find(item).name
+                if users.find_first(item):
+                    item = "@" + users.find_first(item).name
               newtext.append(item)
               dbg(text)
             text = " ".join(newtext)
