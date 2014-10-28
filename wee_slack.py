@@ -732,6 +732,22 @@ def process_message(message_json):
         #clean up tweets
         text = re.sub("<.*?\\|(.*?)>", "\\1", text)
 
+        #clean up references
+        if text.find('<@') > -1:
+            dbg('found reference!')
+            newtext = []
+            text = text.split()
+            dbg(text)
+            for item in text:
+              if item.startswith('<@U'):
+                dbg('found user reference!')
+                item = item[2:-1]
+                item = "@" + users.find(item).name
+              newtext.append(item)
+              dbg(text)
+            text = " ".join(newtext)
+
+
         text = text.replace('\t', '    ')
 
         #first figure out the name
