@@ -632,12 +632,6 @@ def process_group_marked(message_json):
     if not legacy_mode:
         w.buffer_set(channel.channel_buffer, "hotlist", "-1")
 
-def process_im_marked(message_json):
-    channel = channels.find(message_json["channel"])
-    channel.mark_read(False)
-    if not legacy_mode:
-        w.buffer_set(channel.channel_buffer, "hotlist", "-1")
-
 def process_channel_created(message_json):
     server = servers.find(message_json["myserver"])
     item = message_json["channel"]
@@ -689,6 +683,22 @@ def process_im_close(message_json):
 def process_im_open(message_json):
     server = servers.find(message_json["myserver"])
     server.channels.find(message_json["channel"]).open(False)
+
+def process_im_marked(message_json):
+    channel = channels.find(message_json["channel"])
+    channel.mark_read(False)
+    if not legacy_mode:
+        w.buffer_set(channel.channel_buffer, "hotlist", "-1")
+
+def process_im_created(message_json):
+    server = servers.find(message_json["myserver"])
+    item = message_json["channel"]
+    if server.channels.find(message_json["channel"]["name"]):
+        server.channels.find(message_json["channel"]["name"]).open(False)
+    else:
+        item = message_json["channel"]
+        server.channels.append(DmChannel(server, item["name"], item["id"], item["is_open"], item["last_read"]))
+    w.prnt(server.buffer, "New channel created: %s" % item["name"])
 
 def process_user_typing(message_json):
     server = servers.find(message_json["myserver"])
