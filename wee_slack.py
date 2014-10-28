@@ -378,8 +378,6 @@ class Channel(SlackThing):
             #w.buffer_set(self.weechat_buffer, "short_name", new_name)
             w.buffer_set(self.channel_buffer, "short_name", new_name)
     def buffer_prnt(self, user='unknown user', message='no message', time=0):
-        if self.server.users.find(user) and user != self.server.nick:
-            user = self.server.users.find(user).colorized_name()
         set_read_marker = False
         time = float(time)
         message = message.encode('ascii', 'ignore')
@@ -388,13 +386,17 @@ class Channel(SlackThing):
             set_read_marker = True
         elif message.find(self.server.nick) > -1:
             tags = "notify_highlight"
-        elif self.name in self.server.users:
+        elif user != self.server.nick and self.name in self.server.users:
             tags = "notify_private,notify_message"
         else:
             tags = "notify_message"
         time = int(float(time))
         if self.channel_buffer:
-            w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (user, message))
+            if self.server.users.find(user) and user != self.server.nick:
+                colorized_name = self.server.users.find(user).colorized_name()
+            else:
+                colorized_name = user
+            w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (colorized_name, message))
             if set_read_marker:
                 self.mark_read(False)
         else:
@@ -723,6 +725,8 @@ def process_message(message_json):
 
         #clean up tweets
         text = re.sub("<.*?\\|(.*?)>", "\\1", text)
+
+        text = text.replace('\t', '    ')
 
         #first figure out the name
         if message_json.has_key('user'):
