@@ -42,7 +42,7 @@ SLACK_API_TRANSLATOR = {
 
 def dbg(message, fout=False):
     message = "DEBUG: " + str(message)
-    message = message.encode('ascii', 'ignore')
+    message = message.encode('ascii', 'replace')
     if fout:
         file('/tmp/debug.log', 'a+').writelines(message+'\n')
     if slack_debug != None:
@@ -230,7 +230,7 @@ class SlackServer(object):
         for item in self.channels:
             item.get_history()
     def buffer_prnt(self, message='no message', user="SYSTEM", backlog=False):
-        message = message.encode('ascii', 'ignore')
+        message = message.encode('ascii', 'replace')
         if backlog == True:
             tags = "no_highlight,notify_none,logger_backlog_end"
         else:
@@ -383,7 +383,7 @@ class Channel(SlackThing):
     def buffer_prnt(self, user='unknown user', message='no message', time=0, backlog=False):
         set_read_marker = False
         time = float(time)
-        message = message.encode('ascii', 'ignore')
+        message = message.encode('ascii', 'replace')
         if time != 0 and self.last_read >= time:
             tags = "no_highlight,notify_none,logger_backlog_end"
             set_read_marker = True
