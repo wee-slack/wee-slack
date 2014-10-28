@@ -388,6 +388,8 @@ class Channel(SlackThing):
             set_read_marker = True
         elif message.find(self.server.nick) > -1:
             tags = "notify_highlight"
+        elif self.name in self.server.users:
+            tags = "notify_private,notify_message"
         else:
             tags = "notify_message"
         time = int(float(time))
