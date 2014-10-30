@@ -278,7 +278,8 @@ class Channel(SlackThing):
         self.active = active
         self.members = set(members)
         self.last_read = float(last_read)
-        self.previous_message = ""
+        self.previous_prnt_name = ""
+        self.previous_prnt_message = ""
         if active:
             self.create_buffer()
             self.attach_buffer()
@@ -407,13 +408,19 @@ class Channel(SlackThing):
         time = int(float(time))
         if self.channel_buffer:
             if self.server.users.find(user) and user != self.server.nick:
-                colorized_name = self.server.users.find(user).colorized_name()
+                name = self.server.users.find(user).colorized_name()
             else:
-                colorized_name = user
-            if message != self.previous_message:
-                dbg([message, self.previous_message])
-                w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (colorized_name, message))
-            self.previous_message = message
+                name = user
+            if message != self.previous_prnt_message:
+                #dbg([message, self.previous_prnt_message])
+                w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (name, message))
+                #eventually maybe - doesn't reprint name if next message is same user
+                #if name != self.previous_prnt_name:
+                #    w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (name, message))
+                #    self.previous_prnt_name = name
+                #else:
+                #    w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % ("", message))
+            self.previous_prnt_message = message
             if set_read_marker:
                 self.mark_read(False)
         else:
@@ -736,46 +743,51 @@ def process_message(message_json):
 
     else:
         #move message properties down to root of json object
-        dbg(message_json)
-        if message_json.has_key("message"):
-            if message_json["message"].has_key("attachments"):
-                message_json["attachments"] = message_json["message"]["attachments"]
-            if message_json["message"].has_key("text"):
-                message_json["text"] = message_json["message"]["text"]
-            if message_json["message"].has_key("fallback"):
-                message_json["fallback"] = message_json["message"]["fallback"]
+        message_json = unwrap_message(message_json)
+
         server = servers.find(message_json["myserver"])
         channel = channels.find(message_json["channel"])
         time = message_json['ts']
-        if message_json.has_key("text"):
-            text = message_json["text"]
         if message_json.has_key("fallback"):
             text = message_json["fallback"]
+        elif message_json.has_key("text"):
+            text = message_json["text"]
+        else:
+            text = ""
 
-#        if message_json.has_key("text"):
-#            text = unfurl_refs(message_json["text"]) + "\n"
-#        else:
-#            text = ""
-#        text += unwrap_message(message_json)
-#        text += unfurl_refs(text)
+        text = unfurl_refs(text)
+        if message_json.has_key("attachments"):
+            text += "\n%s" % (unwrap_attachments(message_json))
+        text = text.lstrip()
+        text = text.replace("\t", "    ")
         name = get_user(message_json, server)
 
         server.channels.find(channel).buffer_prnt(name, text, time)
 
 def unwrap_message(message_json):
-#        w.prnt("", 'unwrap called')
-    text = ""
-    if message_json.has_key('attachments'):
-        for attachment in message_json["attachments"]:
-            if attachment.has_key('title'):
-                text += "%s " % (attachment['title'])
-            if attachment.has_key('author_link'):
-                text += "%s: " % (attachment['author_link'])
-                if attachment.has_key('author_name'):
-                    text += "%s: " % (attachment['author_name'])
-            if attachment.has_key('text'):
-                text += "%s " % (attachment['text'])
-    return text
+    if message_json.has_key("message"):
+        if message_json["message"].has_key("attachments"):
+            message_json["attachments"] = message_json["message"]["attachments"]
+        if message_json["message"].has_key("text"):
+            if message_json.has_key("text"):
+                message_json["text"] += message_json["message"]["text"]
+                dbg("added text!")
+            else:
+                message_json["text"] = message_json["message"]["text"]
+        if message_json["message"].has_key("fallback"):
+            if message_json.has_key("fallback"):
+                message_json["fallback"] += message_json["message"]["fallback"]
+            else:
+                message_json["fallback"] = message_json["message"]["fallback"]
+    return message_json
+
+def unwrap_attachments(message_json):
+    attachment_text = ''
+    for attachment in message_json["attachments"]:
+        if attachment.has_key("fallback"):
+            attachment_text += attachment["fallback"]
+    attachment_text = attachment_text.encode('ascii', 'ignore')
+    return attachment_text
 
 def unfurl_refs(text):
     if text.find('<') > -1:
@@ -789,6 +801,15 @@ def unfurl_refs(text):
                 if item.find('|') > -1:
                     item = item.split('|')[0]
                 dbg('made ref: %s' % item)
+                if item.startswith('@U'):
+                    if users.find(item[1:]):
+                        try:
+                            item = "@%s" % users.find(item[1:]).name
+                        except:
+                            dbg("NAME: " + str(item))
+                if item.startswith('#c'):
+                    if channels.find(item[1:]):
+                        item = "#%s" % channels.find(item[1:]).name
             newtext.append(item)
         text = " ".join(newtext)
         return text
