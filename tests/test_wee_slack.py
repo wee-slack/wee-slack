@@ -1,8 +1,11 @@
 #!/usr/bin/python
 
+
+
 import unittest
 
 import sys
+sys.dont_write_bytecode = True
 import os
 sys.path.append(os.path.join('..', '.'))
 
