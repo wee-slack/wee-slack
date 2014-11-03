@@ -44,13 +44,16 @@ SLACK_API_TRANSLATOR = {
 
                        }
 
-def dbg(message, fout=False):
+def dbg(message, fout=False, main_buffer=False):
     message = "DEBUG: " + str(message)
     message = message.encode('ascii', 'ignore')
     if fout:
         file('/tmp/debug.log', 'a+').writelines(message+'\n')
     if slack_debug != None:
-        w.prnt(slack_debug, message)
+        if not main_buffer:
+            w.prnt(slack_debug, message)
+        else:
+            w.prnt("", message)
 
 #hilarious, i know
 class Meta(list):
@@ -379,18 +382,17 @@ class Channel(SlackThing):
             self.set_read_marker(self.last_read)
     def set_read_marker(self, time):
         async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel":self.identifier, "ts":time})
-    def rename(self, name=None, fmt=None, gray=False):
-        if not gray:
-            color = w.color('default')
+    def rename(self):
+        if current_domain_name() != self.server.domain and channels_not_on_current_server_color:
+            color = channels_not_on_current_server_color
         else:
-            color = w.color('darkgray')
+            color = "default"
+        color = w.color(color)
+        if self.is_someone_typing() == True:
+            new_name = ">%s" % self.name[1:]
+        else:
+            new_name = self.name
         if self.channel_buffer:
-            if name:
-                new_name = name
-            elif fmt:
-                new_name = fmt % (self.name[1:])
-            else:
-                new_name = self.name
             w.buffer_set(self.channel_buffer, "short_name", color + new_name)
     def buffer_prnt(self, user='unknown user', message='no message', time=0, backlog=False):
         set_read_marker = False
@@ -439,18 +441,17 @@ class DmChannel(Channel):
     def __init__(self, server, name, identifier, active, last_read=0, prepend_name=""):
         super(DmChannel, self).__init__(server, name, identifier, active, last_read, prepend_name)
         self.type = "im"
-    def rename(self, name=None, fmt=None, gray=False):
-        if not gray:
-            color = w.info_get('irc_nick_color', self.name)
+    def rename(self):
+        if current_domain_name() != self.server.domain and channels_not_on_current_server_color:
+            color = channels_not_on_current_server_color
         else:
-            color = w.color('darkgray')
+            color = self.server.users.find(self.name).color()
+        color = w.color(color)
+        if self.server.users.find(self.name).presence == "active":
+            new_name = ("+%s" % (self.name))
+        else:
+            new_name = (" %s" % (self.name))
         if self.channel_buffer:
-            if name:
-                new_name = name
-            elif fmt:
-                new_name = fmt % (self.name)
-            else:
-                new_name = self.name
             w.buffer_set(self.channel_buffer, "short_name", color + new_name)
 
 class User(SlackThing):
@@ -484,11 +485,17 @@ class User(SlackThing):
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "prefix", " ")
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
     def color(self):
-        return w.info_get('irc_nick_color_name', self.name)
+        if colorize_nicks:
+            return w.info_get('irc_nick_color_name', self.name)
+        else:
+            return "default"
     def colorized_name(self):
-        color = w.info_get('irc_nick_color', self.name)
-        def_color = w.color('default')
-        return color+self.name+def_color
+        if colorize_nicks:
+            color = w.info_get('irc_nick_color', self.name)
+            def_color = w.color('default')
+            return color+self.name+def_color
+        else:
+            return self.name
     def open(self):
         t = time.time() + 1
         #reply = async_slack_api_request("im.open", {"channel":self.identifier,"ts":t})
@@ -762,6 +769,8 @@ def process_message(message_json):
         text = text.replace("\t", "    ")
         name = get_user(message_json, server)
 
+        channel.unset_typing(name)
+
         server.channels.find(channel).buffer_prnt(name, text, time)
 
 def unwrap_message(message_json):
@@ -856,28 +865,11 @@ def typing_update_cb(data, remaining_calls):
 
 def buffer_list_update_cb(data, remaining_calls):
     gray_check = False
-    gray = False
     if len(servers) > 1:
         gray_check = True
-    for channel in channels.find_by_class(Channel) + channels.find_by_class(GroupChannel):
-        if current_domain_name() != channel.server.domain and gray_check:
-            gray = True
-        else:
-            gray = False
-        if channel.is_someone_typing() == True:
-            channel.rename(fmt=">%s", gray=gray)
-        else:
-            channel.rename(gray = gray)
-    for channel in channels.find_by_class(DmChannel):
-        if current_domain_name() != channel.server.domain and gray_check:
-            gray = True
-        else:
-            gray = False
-        if channel.server.users.find(channel.name).presence == "active":
-            channel.rename(fmt="+%s", gray=gray)
-        else:
-            channel.rename(fmt=" %s", gray=gray)
-        pass
+    #for channel in channels.find_by_class(Channel) + channels.find_by_class(GroupChannel):
+    for channel in channels:
+        channel.rename()
     return w.WEECHAT_RC_OK
 
 def hotlist_cache_update_cb(data, remaining_calls):
@@ -895,7 +887,7 @@ def buffer_closing_cb(signal, sig_type, data):
 
 def buffer_switch_cb(signal, sig_type, data):
     global previous_buffer, hotlist
-    #this is to see if we need to grey out things in the buffer list
+    #this is to see if we need to gray out things in the buffer list
     buffer_list_update_cb('','')
     if channels.find(previous_buffer):
         channels.find(previous_buffer).mark_read()
@@ -1092,7 +1084,20 @@ def create_slack_debug_buffer():
         debug_string = None
         slack_debug = w.buffer_new("slack-debug", "", "", "closed_slack_debug_buffer_cb", "")
         w.buffer_set(slack_debug, "notify", "0")
-#        w.buffer_set(slack_debug, "display", "1")
+
+def config_changed_cb(data, option, value):
+    global slack_api_token, channels_always_marked_read, channels_not_on_current_server_color, colorize_nicks, slack_debug, debug_mode
+    slack_api_token = w.config_get_plugin("slack_api_token")
+    channels_always_marked_read = [x.strip() for x in w.config_get_plugin("channels_always_marked_read").split(',')]
+    channels_not_on_current_server_color = w.config_get_plugin("channels_not_on_current_server_color")
+    if channels_not_on_current_server_color == "0":
+        channels_not_on_current_server_color = False
+    colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
+    slack_debug = None
+    debug_mode = w.config_get_plugin("debug_mode").lower()
+    if debug_mode != '' or debug_mode != 'false':
+        create_slack_debug_buffer()
+    return w.WEECHAT_RC_OK
 
 ### END Utility Methods
 
@@ -1105,8 +1110,13 @@ if __name__ == "__main__":
             w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
         if not w.config_get_plugin('channels_always_marked_read'):
             w.config_set_plugin('channels_always_marked_read', "")
+        if not w.config_get_plugin('channels_not_on_current_server_color'):
+            w.config_set_plugin('channels_not_on_current_server_color', "0")
         if not w.config_get_plugin('debug_mode'):
             w.config_set_plugin('debug_mode', "")
+        if not w.config_get_plugin('colorize_nicks'):
+            w.config_set_plugin('colorize_nicks', "1")
+
 
         version = w.info_get("version_number", "") or 0
         if int(version) >= 0x00040400:
@@ -1115,13 +1125,8 @@ if __name__ == "__main__":
             legacy_mode = True
 
         ### Global var section
-        slack_api_token = w.config_get_plugin("slack_api_token")
-        channels_always_marked_read = [x.strip() for x in w.config_get_plugin("channels_always_marked_read").split(',')]
+        config_changed_cb("", "", "")
 
-        slack_debug = None
-        debug_mode = w.config_get_plugin("debug_mode").lower()
-        if debug_mode != '' or debug_mode != 'false':
-            create_slack_debug_buffer()
 
         cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
         proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
@@ -1145,6 +1150,7 @@ if __name__ == "__main__":
         users = Meta('users', servers)
 
 
+        w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
         w.hook_timer(10, 0, 0, "async_queue_cb", "")
         w.hook_timer(6000, 0, 0, "slack_connection_persistence_cb", "")
 
