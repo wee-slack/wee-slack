@@ -414,6 +414,8 @@ class Channel(SlackThing):
             else:
                 name = user
             if message != self.previous_prnt_message:
+                if message.startswith(self.previous_prnt_message):
+                    message = message[len(self.previous_prnt_message):]
                 #dbg([message, self.previous_prnt_message])
                 w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (name, message))
                 #eventually maybe - doesn't reprint name if next message is same user
@@ -426,7 +428,7 @@ class Channel(SlackThing):
             if set_read_marker:
                 self.mark_read(False)
         else:
-            dbg("failed to print something..")
+            self.open(False)
     def get_history(self):
         if self.active:
             t = time.time()
@@ -650,6 +652,7 @@ def slack_websocket_cb(data, fd):
         function_name = "unknown"
     try:
         proc[function_name](message_json)
+        dbg(function_name)
     except KeyError:
         pass
         if function_name:
