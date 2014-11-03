@@ -441,15 +441,16 @@ class DmChannel(Channel):
     def __init__(self, server, name, identifier, active, last_read=0, prepend_name=""):
         super(DmChannel, self).__init__(server, name, identifier, active, last_read, prepend_name)
         self.type = "im"
-    def rename(self, name=None, fmt=None, color=False):
+    def rename(self):
+        if current_domain_name() != self.server.domain and channels_not_on_current_server_color:
+            color = channels_not_on_current_server_color
+        else:
+            color = self.server.users.find(self.name).color()
+        color = w.color(color)
         if self.server.users.find(self.name).presence == "active":
             new_name = ("+%s" % (self.name))
         else:
             new_name = (" %s" % (self.name))
-        if color:
-            color = w.color(color)
-        else:
-            color = w.color(self.server.users.find(self.name).color())
         if self.channel_buffer:
             w.buffer_set(self.channel_buffer, "short_name", color + new_name)
 
@@ -1095,7 +1096,7 @@ if __name__ == "__main__":
         if not w.config_get_plugin('channels_always_marked_read'):
             w.config_set_plugin('channels_always_marked_read', "")
         if not w.config_get_plugin('channels_not_on_current_server_color'):
-            w.config_set_plugin('channels_not_on_current_server_color', "default")
+            w.config_set_plugin('channels_not_on_current_server_color', "0")
         if not w.config_get_plugin('debug_mode'):
             w.config_set_plugin('debug_mode', "")
         if not w.config_get_plugin('colorize_nicks'):
@@ -1112,6 +1113,8 @@ if __name__ == "__main__":
         slack_api_token = w.config_get_plugin("slack_api_token")
         channels_always_marked_read = [x.strip() for x in w.config_get_plugin("channels_always_marked_read").split(',')]
         channels_not_on_current_server_color = w.config_get_plugin("channels_not_on_current_server_color")
+        if channels_not_on_current_server_color == "0":
+            channels_not_on_current_server_color = False
         colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
 
         slack_debug = None
@@ -1132,10 +1135,6 @@ if __name__ == "__main__":
         main_weechat_buffer = w.info_get("irc_buffer", "%s.%s" % (domain, "DOESNOTEXIST!@#$"))
 
         ### End global var section
-        if colorize_nicks:
-            dbg("TRUE!", main_buffer=True)
-        else:
-            dbg("FALSE!", main_buffer=True)
 
         #channels = SearchList()
         servers = SearchList()
