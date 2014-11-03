@@ -806,10 +806,8 @@ def unfurl_refs(text):
             #dbg(item)
             if item.startswith('<') and item.endswith('>'):
                 item = item[1:-1]
-                dbg('found ref: %s' % item)
                 if item.find('|') > -1:
                     item = item.split('|')[0]
-                dbg('made ref: %s' % item)
                 if item.startswith('@U'):
                     if users.find(item[1:]):
                         try:
