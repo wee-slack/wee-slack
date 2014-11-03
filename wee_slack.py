@@ -208,7 +208,7 @@ class SlackServer(object):
             self.connected = False
     def create_local_buffer(self):
         if not w.buffer_search("", self.domain):
-            self.buffer = w.buffer_new(self.domain, "input", "", "", "")
+            self.buffer = w.buffer_new(self.domain, "buffer_input_cb", "", "", "")
             w.buffer_set(self.buffer, "nicklist", "1")
     def create_slack_websocket(self, data):
         web_socket_url = data['url']
@@ -264,8 +264,8 @@ class SlackThing(object):
     def __repr__(self):
         return self.name
 
-def input(b, c, data):
-    channel = channels.find(c)
+def buffer_input_cb(b, buffer, data):
+    channel = channels.find(buffer)
     channel.send_message(data)
     channel.buffer_prnt(channel.server.nick, data)
     channel.mark_read(True)
@@ -297,7 +297,7 @@ class Channel(SlackThing):
         if channel_buffer:
             self.channel_buffer = channel_buffer
         else:
-            self.channel_buffer = w.buffer_new("%s.%s" % (self.server.domain, self.name), "input", self.name, "", "")
+            self.channel_buffer = w.buffer_new("%s.%s" % (self.server.domain, self.name), "buffer_input_cb", self.name, "", "")
             w.buffer_set(self.channel_buffer, "short_name", 'loading..')
     def attach_buffer(self):
         channel_buffer = w.buffer_search("", "%s.%s" % (self.server.domain, self.name))
@@ -512,6 +512,34 @@ def slack_command_cb(data, current_buffer, args):
 #    except KeyError:
 #        w.prnt("", "Command not found or exception: "+function_name)
     return w.WEECHAT_RC_OK
+
+def me_command_cb(data, current_buffer, args):
+    if channels.find(current_buffer):
+        channel = channels.find(current_buffer)
+        nick = channel.server.nick
+        message = "%s %s" % (nick, args)
+        buffer_input_cb("", current_buffer, message)
+    return w.WEECHAT_RC_OK
+
+def join_command_cb(data, current_buffer, args):
+    if channels.find(current_buffer) or servers.find(current_buffer):
+        channel = args.split()[1]
+        servers.find(current_domain_name()).channels.find(channel).open()
+        return w.WEECHAT_RC_OK_EAT
+    else:
+        return w.WEECHAT_RC_OK
+
+def part_command_cb(data, current_buffer, args):
+    if channels.find(current_buffer) or servers.find(current_buffer):
+        args = args.split()
+        if len(args) > 1:
+            channel = args[1:]
+            servers.find(current_domain_name()).channels.find(channel).close(True)
+        else:
+            channels.find(current_buffer).close(True)
+        return w.WEECHAT_RC_OK_EAT
+    else:
+        return w.WEECHAT_RC_OK
 
 def command_talk(current_buffer, args):
     servers.find(current_domain_name()).users.find(args).open()
@@ -1165,6 +1193,11 @@ if __name__ == "__main__":
         w.hook_signal('window_switch', "buffer_switch_cb", "")
         w.hook_signal('input_text_changed', "typing_notification_cb", "")
         w.hook_command('slack','Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', '|'.join(cmds.keys()), 'slack_command_cb', '')
+        w.hook_command('me','', 'stuff', 'stuff2', '', 'me_command_cb', '')
+#        w.hook_command('me', 'me_command_cb', '')
+        w.hook_command_run('/join', 'join_command_cb', '')
+        w.hook_command_run('/part', 'part_command_cb', '')
+        w.hook_command_run('/leave', 'part_command_cb', '')
         w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
         ### END attach to the weechat hooks we need
 
