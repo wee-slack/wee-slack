@@ -44,13 +44,16 @@ SLACK_API_TRANSLATOR = {
 
                        }
 
-def dbg(message, fout=False):
+def dbg(message, fout=False, main_buffer=False):
     message = "DEBUG: " + str(message)
     message = message.encode('ascii', 'ignore')
     if fout:
         file('/tmp/debug.log', 'a+').writelines(message+'\n')
     if slack_debug != None:
-        w.prnt(slack_debug, message)
+        if not main_buffer:
+            w.prnt(slack_debug, message)
+        else:
+            w.prnt("", message)
 
 #hilarious, i know
 class Meta(list):
@@ -484,11 +487,17 @@ class User(SlackThing):
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "prefix", " ")
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
     def color(self):
-        return w.info_get('irc_nick_color_name', self.name)
+        if colorize_nicks:
+            return w.info_get('irc_nick_color_name', self.name)
+        else:
+            return "default"
     def colorized_name(self):
-        color = w.info_get('irc_nick_color', self.name)
-        def_color = w.color('default')
-        return color+self.name+def_color
+        if colorize_nicks:
+            color = w.info_get('irc_nick_color', self.name)
+            def_color = w.color('default')
+            return color+self.name+def_color
+        else:
+            return self.name
     def open(self):
         t = time.time() + 1
         #reply = async_slack_api_request("im.open", {"channel":self.identifier,"ts":t})
@@ -1107,8 +1116,13 @@ if __name__ == "__main__":
             w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
         if not w.config_get_plugin('channels_always_marked_read'):
             w.config_set_plugin('channels_always_marked_read', "")
+        if not w.config_get_plugin('channels_not_on_current_server_color'):
+            w.config_set_plugin('channels_not_on_current_server_color', "default")
         if not w.config_get_plugin('debug_mode'):
             w.config_set_plugin('debug_mode', "")
+
+        colorize_nicks = w.config_boolean(w.config_get_plugin('colorize_nicks'))
+        w.config_set_plugin('colorize_nicks', w.config_boolean(True))
 
         version = w.info_get("version_number", "") or 0
         if int(version) >= 0x00040400:
@@ -1119,6 +1133,7 @@ if __name__ == "__main__":
         ### Global var section
         slack_api_token = w.config_get_plugin("slack_api_token")
         channels_always_marked_read = [x.strip() for x in w.config_get_plugin("channels_always_marked_read").split(',')]
+        channels_not_on_current_server_color = w.config_get_plugin("channels_not_on_current_server_color")
 
         slack_debug = None
         debug_mode = w.config_get_plugin("debug_mode").lower()
@@ -1138,6 +1153,10 @@ if __name__ == "__main__":
         main_weechat_buffer = w.info_get("irc_buffer", "%s.%s" % (domain, "DOESNOTEXIST!@#$"))
 
         ### End global var section
+        if colorize_nicks:
+            dbg("TRUE!", main_buffer=True)
+        else:
+            dbg("FALSE!", main_buffer=True)
 
         #channels = SearchList()
         servers = SearchList()
