@@ -15,7 +15,7 @@ wee-slack has been refactored, and no longer depends on the Slack IRC gateway. T
 /python reload
 ```
 
-A WeeChat plugin for Slack.com IRC mode. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, search, (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
+A WeeChat native client for Slack.com. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, search, (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
 
 ![animated screenshot](https://dl.dropboxusercontent.com/u/566560/slack.gif)
 
