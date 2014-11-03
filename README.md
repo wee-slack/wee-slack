@@ -119,6 +119,11 @@ Set yourself away/back:
 /slack back
 ```
 
+Turn off colorized nicks:
+```
+/set plugins.var.python.slack_extension.colorize_nicks 0
+```
+
 Set all read markers to a specific time:
 ```
 /slack setallreadmarkers (time in epoch)
