@@ -769,6 +769,8 @@ def process_message(message_json):
         text = text.replace("\t", "    ")
         name = get_user(message_json, server)
 
+        channel.unset_typing(name)
+
         server.channels.find(channel).buffer_prnt(name, text, time)
 
 def unwrap_message(message_json):
@@ -1082,7 +1084,20 @@ def create_slack_debug_buffer():
         debug_string = None
         slack_debug = w.buffer_new("slack-debug", "", "", "closed_slack_debug_buffer_cb", "")
         w.buffer_set(slack_debug, "notify", "0")
-#        w.buffer_set(slack_debug, "display", "1")
+
+def config_changed_cb(data, option, value):
+    global slack_api_token, channels_always_marked_read, channels_not_on_current_server_color, colorize_nicks, slack_debug, debug_mode
+    slack_api_token = w.config_get_plugin("slack_api_token")
+    channels_always_marked_read = [x.strip() for x in w.config_get_plugin("channels_always_marked_read").split(',')]
+    channels_not_on_current_server_color = w.config_get_plugin("channels_not_on_current_server_color")
+    if channels_not_on_current_server_color == "0":
+        channels_not_on_current_server_color = False
+    colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
+    slack_debug = None
+    debug_mode = w.config_get_plugin("debug_mode").lower()
+    if debug_mode != '' or debug_mode != 'false':
+        create_slack_debug_buffer()
+    return w.WEECHAT_RC_OK
 
 ### END Utility Methods
 
@@ -1110,17 +1125,8 @@ if __name__ == "__main__":
             legacy_mode = True
 
         ### Global var section
-        slack_api_token = w.config_get_plugin("slack_api_token")
-        channels_always_marked_read = [x.strip() for x in w.config_get_plugin("channels_always_marked_read").split(',')]
-        channels_not_on_current_server_color = w.config_get_plugin("channels_not_on_current_server_color")
-        if channels_not_on_current_server_color == "0":
-            channels_not_on_current_server_color = False
-        colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
+        config_changed_cb("", "", "")
 
-        slack_debug = None
-        debug_mode = w.config_get_plugin("debug_mode").lower()
-        if debug_mode != '' or debug_mode != 'false':
-            create_slack_debug_buffer()
 
         cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
         proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
@@ -1144,6 +1150,7 @@ if __name__ == "__main__":
         users = Meta('users', servers)
 
 
+        w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
         w.hook_timer(10, 0, 0, "async_queue_cb", "")
         w.hook_timer(6000, 0, 0, "slack_connection_persistence_cb", "")
 
