@@ -90,6 +90,7 @@ Commands
 
 Join a channel:
 ```
+/join [channel]
 /slack join [channel]
 ```
 
@@ -110,6 +111,8 @@ List users:
 
 Close channel/dm:
 ```
+/part
+/leave
 /close
 ```
 
