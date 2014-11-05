@@ -28,7 +28,8 @@ SLACK_API_TRANSLATOR = {
                               "history" : "channels.history",
                               "join"    : "channels.join",
                               "leave"   : "channels.leave",
-                              "mark"    : "channels.mark"
+                              "mark"    : "channels.mark",
+                              "info"    : "channels.info"
                             },
                             "im": {
                               "history" : "im.history",
@@ -343,8 +344,9 @@ class Channel(SlackThing):
         self.create_buffer()
         self.active = True
         self.get_history()
+        t = time.time()
+        async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name":self.name.lstrip("#"), "ts":t})
         if update_remote:
-            t = time.time()
             async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name":self.name.lstrip("#"), "ts":t})
     def close(self, update_remote=True):
         if self.active == True:
@@ -1057,6 +1059,9 @@ def url_processor_cb(data, command, return_code, out, err):
                         message["myserver"] = servers.find(token).domain
                         message["channel"] = servers.find(token).channels.find(channel).identifier
                         process_message(message)
+                if my_json.has_key("channel"):
+                    if my_json["channel"].has_key("members"):
+                      channels.find(my_json["channel"]["id"]).members = set(my_json["channel"]["members"])
 
     return w.WEECHAT_RC_OK
 
