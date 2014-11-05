@@ -1066,9 +1066,10 @@ def url_processor_cb(data, command, return_code, out, err):
     return w.WEECHAT_RC_OK
 
 def mark_silly_channels_read(channel):
-    if channel in channels_always_marked_read:
-        if channels.find("channel"):
-            channels.find("channel").mark_read()
+    name = channels.find(channel).name
+    if name in channels_always_marked_read:
+        if channels.find(channel):
+            channels.find(channel).mark_read()
 
 ### END Slack specific requests
 
