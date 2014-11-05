@@ -1119,6 +1119,10 @@ def create_slack_debug_buffer():
 def config_changed_cb(data, option, value):
     global slack_api_token, channels_always_marked_read, channels_not_on_current_server_color, colorize_nicks, slack_debug, debug_mode
     slack_api_token = w.config_get_plugin("slack_api_token")
+
+    if slack_api_token.startswith('${sec.data'):
+        slack_api_token = w.string_eval_expression(slack_api_token, {}, {}, {})
+
     channels_always_marked_read = [x.strip() for x in w.config_get_plugin("channels_always_marked_read").split(',')]
     channels_not_on_current_server_color = w.config_get_plugin("channels_not_on_current_server_color")
     if channels_not_on_current_server_color == "0":
