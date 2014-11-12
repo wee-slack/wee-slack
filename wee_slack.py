@@ -299,6 +299,10 @@ class Channel(SlackThing):
             self.channel_buffer = channel_buffer
         else:
             self.channel_buffer = w.buffer_new("%s.%s" % (self.server.domain, self.name), "buffer_input_cb", self.name, "", "")
+            if self.type == "im":
+                w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
+            else:
+                w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
             w.buffer_set(self.channel_buffer, "short_name", 'loading..')
     def attach_buffer(self):
         channel_buffer = w.buffer_search("", "%s.%s" % (self.server.domain, self.name))
