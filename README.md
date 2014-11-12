@@ -3,19 +3,7 @@
 wee-slack
 =========
 
-#Important Update
-
-wee-slack has been refactored, and no longer depends on the Slack IRC gateway. To use this plugin, please disable any IRC connections you have set up for Slack. Once you do this, your existing configuration should work as expected.
-
-```
-/server list
-    All servers:
-        slack
-/server del slack
-/python reload
-```
-
-A WeeChat plugin for Slack.com IRC mode. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, search, (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
+A WeeChat native client for Slack.com. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, search, (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
 
 ![animated screenshot](https://dl.dropboxusercontent.com/u/566560/slack.gif)
 
@@ -52,6 +40,19 @@ Dependencies
 Setup
 ------
 
+
+####0.
+
+wee-slack doesn't use the Slack IRC gateway. If you currently connect via the gateway, you should probably remove the server definition.
+
+```
+/server list
+    All servers:
+        slack
+/server del slack
+/python reload
+```
+
 ####1. Install websocket-client lib
 ```
 pip install websocket-client
@@ -73,6 +74,15 @@ weechat
 /set plugins.var.python.slack_extension.slack_api_token (YOUR_SLACK_TOKEN)
 ```
 ^^ (find this at https://api.slack.com/#auth)
+
+If you don't want to store your API token in plaintext you can use the secure features of weechat:
+
+```
+/secure passphrase this is a super secret password
+/secure set slack_token (YOUR_SLACK_TOKEN)
+/set plugins.var.python.slack_extension.slack_api_token ${sec.data.slack_token}
+```
+
 ##### Optional: If you would like to connect to multiple groups, use the above command with multiple tokens separated by commas. (NO SPACES)
     
 ```
@@ -90,6 +100,7 @@ Commands
 
 Join a channel:
 ```
+/join [channel]
 /slack join [channel]
 ```
 
@@ -110,6 +121,8 @@ List users:
 
 Close channel/dm:
 ```
+/part
+/leave
 /close
 ```
 
@@ -117,6 +130,11 @@ Set yourself away/back:
 ```
 /slack away
 /slack back
+```
+
+Turn off colorized nicks:
+```
+/set plugins.var.python.slack_extension.colorize_nicks 0
 ```
 
 Set all read markers to a specific time:
@@ -137,18 +155,15 @@ Show typing notification in main bar (slack_typing_notice):
 /set weechat.bar.status.items [buffer_count],[buffer_plugin],buffer_number+:+buffer_name+{buffer_nicklist_count}+buffer_filter,[hotlist],completion,scroll,slack_typing_notice
 ```
 
-Persistent list of global users on left:
--------------
-```
-/bar add globalnicklist root left 0 1 @irc.slack.#general:buffer_nicklist
-```
-
 Show channel name in hotlist after activity
 ```
 /set weechat.look.hotlist_names_level 14
 ```
 
+Support
+--------------
 
+wee-slack is provided without any warranty whatsoever, but you are welcome to ask questions in #wee-slack on freenode.
 
 
 
