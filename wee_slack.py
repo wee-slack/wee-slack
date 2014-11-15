@@ -841,8 +841,10 @@ def unfurl_refs(text):
         text = text.split(" ")
         for item in text:
             #dbg(item)
-            if item.startswith('<') and item.endswith('>'):
-                item = item[1:-1]
+            start = item.find('<')
+            end = item.find('>')
+            if start > -1 and end > -1:
+                item = item[start+1:end]
                 if item.find('|') > -1:
                     item = item.split('|')[0]
                 if item.startswith('@U'):
@@ -851,9 +853,9 @@ def unfurl_refs(text):
                             item = "@%s" % users.find(item[1:]).name
                         except:
                             dbg("NAME: " + str(item))
-                if item.startswith('#c'):
+                if item.startswith('#C'):
                     if channels.find(item[1:]):
-                        item = "#%s" % channels.find(item[1:]).name
+                        item = "%s" % channels.find(item[1:]).name
             newtext.append(item)
         text = " ".join(newtext)
         return text
