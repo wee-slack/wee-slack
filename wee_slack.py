@@ -230,11 +230,14 @@ class SlackServer(object):
                 item["last_read"] = 0
             if not item.has_key("members"):
                 item["members"] = []
-            self.channels.append(Channel(self, item["name"], item["id"], item["is_member"], item["last_read"], "#", item["members"]))
+            if not item.has_key("topic"):
+                item["topic"] = {}
+                item["topic"]["value"] = ""
+            self.channels.append(Channel(self, item["name"], item["id"], item["is_member"], item["last_read"], "#", item["members"], item["topic"]["value"]))
         for item in data["groups"]:
             if not item.has_key("last_read"):
                 item["last_read"] = 0
-            self.channels.append(GroupChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"]))
+            self.channels.append(GroupChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
         for item in data["ims"]:
             if not item.has_key("last_read"):
                 item["last_read"] = 0
@@ -273,7 +276,7 @@ def buffer_input_cb(b, buffer, data):
     return w.WEECHAT_RC_ERROR
 
 class Channel(SlackThing):
-    def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[]):
+    def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[], topic=""):
         super(Channel, self).__init__(name, identifier)
         self.type = "channel"
         self.server = server
@@ -281,6 +284,7 @@ class Channel(SlackThing):
         self.typing = {}
         self.active = active
         self.members = set(members)
+        self.topic = topic
         self.last_read = float(last_read)
         self.previous_prnt_name = ""
         self.previous_prnt_message = ""
@@ -288,6 +292,7 @@ class Channel(SlackThing):
             self.create_buffer()
             self.attach_buffer()
             self.update_nicklist()
+            self.set_topic(self.topic)
     def __eq__(self, compare_str):
         if compare_str == self.fullname() or compare_str == self.name or compare_str == self.identifier or compare_str == self.name[1:] or (compare_str == self.channel_buffer and self.channel_buffer != None):
             return True
@@ -344,6 +349,9 @@ class Channel(SlackThing):
     def send_message(self, message):
         request = {"type":"message", "channel":self.identifier, "text": message}
         self.server.ws.send(json.dumps(request))
+    def set_topic(self, topic):
+        topic = topic.encode('ascii', 'ignore')
+        w.buffer_set(self.channel_buffer, "title", topic);
     def open(self, update_remote=True):
         self.create_buffer()
         self.active = True
@@ -441,8 +449,8 @@ class Channel(SlackThing):
             async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel":self.identifier, "ts":t, "count":BACKLOG_SIZE})
 
 class GroupChannel(Channel):
-    def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[]):
-        super(GroupChannel, self).__init__(server, name, identifier, active, last_read, prepend_name, members)
+    def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[], topic=""):
+        super(GroupChannel, self).__init__(server, name, identifier, active, last_read, prepend_name, members, topic)
         self.type = "group"
 
 class DmChannel(Channel):
@@ -704,7 +712,7 @@ def process_channel_created(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"]))
+        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]))
     w.prnt(server.buffer, "New channel created: %s" % item["name"])
 
 def process_channel_left(message_json):
@@ -716,13 +724,18 @@ def process_channel_join(message_json):
     channel = server.channels.find(message_json["channel"])
     channel.user_join(message_json["user"])
 
+def process_channel_topic(message_json):
+    server = servers.find(message_json["myserver"])
+    channel = server.channels.find(message_json["channel"])
+    channel.set_topic(message_json["topic"])
+
 def process_channel_joined(message_json):
     server = servers.find(message_json["myserver"])
     if server.channels.find(message_json["channel"]["name"]):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"]))
+        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]))
 
 def process_channel_leave(message_json):
     server = servers.find(message_json["myserver"])
@@ -739,7 +752,7 @@ def process_group_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"]))
+        server.channels.append(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]))
 
 def process_im_close(message_json):
     server = servers.find(message_json["myserver"])
@@ -781,7 +794,7 @@ def process_message(message_json):
     mark_silly_channels_read(message_json["channel"])
 
     #send these messages elsewhere
-    known_subtypes = ['channel_join', 'channel_leave']
+    known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
     if message_json.has_key("subtype") and message_json["subtype"] in known_subtypes:
         proc[message_json["subtype"]](message_json)
 
@@ -801,7 +814,7 @@ def process_message(message_json):
 
         text = unfurl_refs(text)
         if message_json.has_key("attachments"):
-            text += "\n%s" % (unwrap_attachments(message_json))
+            text += "--- %s" % (unwrap_attachments(message_json))
         text = text.lstrip()
         text = text.replace("\t", "    ")
         name = get_user(message_json, server)
@@ -955,7 +968,7 @@ def slack_ping_cb(data, remaining):
 def slack_connection_persistence_cb(data, remaining_calls):
     for server in servers:
         if not server.connected:
-            w.prnt("", "Disconnected from slack, trying to reconnect..")
+            w.prnt("", "%s disconnected from slack, trying to reconnect.." % (server.token))
             if server.ws_hook != None:
                 w.unhook(server.ws_hook)
             server.connect_to_slack()
