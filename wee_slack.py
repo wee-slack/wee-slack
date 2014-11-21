@@ -949,15 +949,16 @@ def buffer_switch_cb(signal, sig_type, data):
     return w.WEECHAT_RC_OK
 
 def typing_notification_cb(signal, sig_type, data):
-    global typing_timer
-    now = time.time()
-    if typing_timer + 4 < now:
-        channel = channels.find(current_buffer_name())
-        if channel:
-            identifier = channel.identifier
-            request = {"type":"typing", "channel":identifier}
-            channel.server.ws.send(json.dumps(request))
-            typing_timer = now
+    if len(w.buffer_get_string(data, "input")) > 8:
+        global typing_timer
+        now = time.time()
+        if typing_timer + 4 < now:
+            channel = channels.find(current_buffer_name())
+            if channel:
+                identifier = channel.identifier
+                request = {"type":"typing", "channel":identifier}
+                channel.server.ws.send(json.dumps(request))
+                typing_timer = now
     return w.WEECHAT_RC_OK
 
 #NOTE: figured i'd do this because they do
