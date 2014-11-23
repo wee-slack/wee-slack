@@ -7,6 +7,7 @@ import sha
 import re
 import urllib
 import urlparse
+import HTMLParser
 from websocket import create_connection
 
 #hack to make tests possible.. better way?
@@ -430,7 +431,7 @@ class Channel(SlackThing):
             if message != self.previous_prnt_message:
                 if message.startswith(self.previous_prnt_message):
                     message = message[len(self.previous_prnt_message):]
-                #dbg([message, self.previous_prnt_message])
+                message = HTMLParser.HTMLParser().unescape(message)
                 w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (name, message))
                 #eventually maybe - doesn't reprint name if next message is same user
                 #if name != self.previous_prnt_name:
@@ -969,7 +970,7 @@ def slack_ping_cb(data, remaining):
 def slack_connection_persistence_cb(data, remaining_calls):
     for server in servers:
         if not server.connected:
-            w.prnt("", "%s disconnected from slack, trying to reconnect.." % (server.token))
+            server.buffer_prnt("Disconnected from slack, trying to reconnect..")
             if server.ws_hook != None:
                 w.unhook(server.ws_hook)
             server.connect_to_slack()
