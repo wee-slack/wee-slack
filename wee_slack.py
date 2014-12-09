@@ -1053,17 +1053,17 @@ def url_processor_cb(data, command, return_code, out, err):
         big_data[identifier] = ''
     big_data[identifier] += out
     if return_code == 0:
-        async_queue_lock = False
         try:
             my_json = json.loads(big_data[identifier])
+            async_queue_lock = False
         except:
 #            if big_data[identifier] != '':
-            async_queue_lock = False
             dbg("curl failed, doing again...")
             dbg("curl length: {} identifier {}\n{}".format(len(big_data[identifier]), identifier, data))
             async_slack_api_request(*data, priority=True)
             pass
             my_json = False
+            async_queue_lock = False
         del big_data[identifier]
 
         if my_json:
@@ -1216,7 +1216,7 @@ if __name__ == "__main__":
 
 
         w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
-        w.hook_timer(1000, 0, 0, "async_queue_cb", "")
+        w.hook_timer(10, 0, 0, "async_queue_cb", "")
         w.hook_timer(6000, 0, 0, "slack_connection_persistence_cb", "")
 
         ### attach to the weechat hooks we need
