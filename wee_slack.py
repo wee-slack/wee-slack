@@ -22,7 +22,7 @@ SCRIPT_VERSION = "0.97"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
-BACKLOG_SIZE = 200
+BACKLOG_SIZE = 50
 
 SLACK_API_TRANSLATOR = {
                             "channel": {
@@ -667,7 +667,7 @@ def slack_websocket_cb(data, fd):
         function_name = "unknown"
     try:
         proc[function_name](message_json)
-        dbg(function_name)
+        #dbg(function_name)
     except KeyError:
         pass
         if function_name:
@@ -1028,7 +1028,7 @@ def do_url(item):
     except:
         pass
     command = 'curl --data "%s" %s' % (item[1]["postfields"], item[0][4:])
-    w.hook_process(command, 10000, item[3], item[4])
+    w.hook_process(command, 20000, item[3], item[4])
 
 def async_queue_cb(data, remaining_calls):
     global async_queue_lock
@@ -1060,6 +1060,7 @@ def url_processor_cb(data, command, return_code, out, err):
 #            if big_data[identifier] != '':
             async_queue_lock = False
             dbg("curl failed, doing again...")
+            dbg("curl length: {} identifier {}\n{}".format(len(big_data[identifier]), identifier, data))
             async_slack_api_request(*data, priority=True)
             pass
             my_json = False
@@ -1083,6 +1084,8 @@ def url_processor_cb(data, command, return_code, out, err):
                 if my_json.has_key("channel"):
                     if my_json["channel"].has_key("members"):
                       channels.find(my_json["channel"]["id"]).members = set(my_json["channel"]["members"])
+    else:
+        dbg("return code: {}".format(return_code))
 
     return w.WEECHAT_RC_OK
 
@@ -1213,7 +1216,7 @@ if __name__ == "__main__":
 
 
         w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
-        w.hook_timer(10, 0, 0, "async_queue_cb", "")
+        w.hook_timer(1000, 0, 0, "async_queue_cb", "")
         w.hook_timer(6000, 0, 0, "slack_connection_persistence_cb", "")
 
         ### attach to the weechat hooks we need
