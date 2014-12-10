@@ -160,8 +160,10 @@ class SlackServer(object):
         self.ws_hook = None
         self.users = SearchList()
         self.channels = SearchList()
+        self.connecting = False
         self.connected = False
-        self.pingcounter = 0
+        self.ping_counter = 0
+        self.ping_hook = None
 
         self.identifier = None
         self.connect_to_slack()
@@ -177,18 +179,23 @@ class SlackServer(object):
     def find(self, name, attribute):
         attribute = eval("self."+attribute)
         return attribute.find(name)
-    def ping(self):
-        if self.pingcounter > 999:
-            self.pingcounter = 0
-        request = {"type":"ping", "id":self.pingcounter}
+    def send_to_websocket(self, data):
         try:
-            self.ws.send(json.dumps(request))
+            self.ws.send(data)
+            dbg("Sent {}...".format(data[:100]))
         except:
             self.connected = False
-        self.pingcounter += 1
+    def ping(self):
+        if self.ping_counter > 999:
+            self.ping_counter = 0
+        request = {"type":"ping", "id":self.ping_counter}
+        self.send_to_websocket(json.dumps(request))
+        self.ping_counter += 1
     def connect_to_slack(self):
         t = time.time()
-        async_slack_api_request("slack.com", self.token, "rtm.start", {"ts":t})
+        if not self.connecting:
+            async_slack_api_request("slack.com", self.token, "rtm.start", {"ts":t})
+            self.connecting = True
     def connected_to_slack(self, login_data):
         if login_data["ok"] == True:
             self.domain = login_data["team"]["domain"] + ".slack.com"
@@ -198,11 +205,15 @@ class SlackServer(object):
             self.create_local_buffer()
 
             if self.create_slack_websocket(login_data):
-                #w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", self.domain)
+                if self.ping_hook:
+                    w.unhook(self.ping_hook)
+                    self.ping_counter = 0
+                self.ping_hook = w.hook_timer(1000 * 5, 0, 0, "slack_ping_cb", self.domain)
                 if len(self.users) and 0 or len(self.channels) == 0:
                     self.create_slack_mappings(login_data)
 
                 self.connected = True
+                self.connecting = False
 
             return True
         else:
@@ -351,7 +362,7 @@ class Channel(SlackThing):
         message = self.linkify_text(message)
         dbg(message)
         request = {"type":"message", "channel":self.identifier, "text": message}
-        self.server.ws.send(json.dumps(request))
+        self.server.send_to_websocket(json.dumps(request))
     def linkify_text(self, message):
         message = message.split(' ')
         for item in enumerate(message):
@@ -974,7 +985,7 @@ def typing_notification_cb(signal, sig_type, data):
             if channel:
                 identifier = channel.identifier
                 request = {"type":"typing", "channel":identifier}
-                channel.server.ws.send(json.dumps(request))
+                channel.server.send_to_websocket(json.dumps(request))
                 typing_timer = now
     return w.WEECHAT_RC_OK
 
@@ -999,7 +1010,7 @@ def slack_never_away_cb(data, remaining):
             identifier = server.channels.find("slackbot").identifier
             request = {"type":"typing", "channel":identifier}
             #request = {"type":"typing","channel":"slackbot"}
-            server.ws.send(json.dumps(request))
+            server.send_to_websocket(json.dumps(request))
     return w.WEECHAT_RC_OK
 
 ### Slack specific requests
@@ -1055,8 +1066,10 @@ class QueueItem(object):
 
 queue = []
 async_queue_lock = QueueLock()
+captain_of_hooks = []
 
 def do_url(item):
+    global captain_of_hooks
     try:
         query = urlparse.parse_qs(item[1]["postfields"])
         if query.has_key("channel") and item[0].find('history') > -1:
@@ -1067,7 +1080,7 @@ def do_url(item):
         pass
     command = 'curl -s --data "%s" %s' % (item[1]["postfields"], item[0][4:])
 #    w.hook_process_hashtable(*item)
-    w.hook_process(command, 20000, item[3], item[4])
+    captain_of_hooks.append(w.hook_process(command, 20000, item[3], item[4]))
 
 def async_queue_cb(data, remaining_calls):
     global async_queue_lock
@@ -1082,13 +1095,13 @@ def async_queue_cb(data, remaining_calls):
 #funny, right?
 big_data = {}
 def url_processor_cb(data, command, return_code, out, err):
-    if return_code == 0 or -1:
-        data = pickle.loads(data)
-        global async_queue_lock, big_data
-        identifier = sha.sha(str(data) + command).hexdigest()
-        if not big_data.has_key(identifier):
-            big_data[identifier] = ''
-        big_data[identifier] += out
+    global async_queue_lock, big_data, captain_of_hooks
+#    if return_code == 0 or -1:
+    data = pickle.loads(data)
+    identifier = sha.sha(str(data) + command).hexdigest()
+    if not big_data.has_key(identifier):
+        big_data[identifier] = ''
+    big_data[identifier] += out
     if return_code == 0:
         async_queue_lock.unlock()
         try:
@@ -1098,11 +1111,12 @@ def url_processor_cb(data, command, return_code, out, err):
 #            if big_data[identifier] != '':
             dbg("curl failed, doing again...")
             dbg("curl length: {} identifier {}\n{}".format(len(big_data[identifier]), identifier, data))
+
             async_queue_lock.bad()
             async_slack_api_request(*data, priority=True)
-            pass
             my_json = False
-        del big_data[identifier]
+
+        big_data.pop(identifier, None)
 
         if my_json:
             if data[2] == 'rtm.start':
@@ -1123,6 +1137,7 @@ def url_processor_cb(data, command, return_code, out, err):
                     if my_json["channel"].has_key("members"):
                       channels.find(my_json["channel"]["id"]).members = set(my_json["channel"]["members"])
     elif return_code != -1:
+        big_data.pop(identifier, None)
         async_queue_lock.unlock()
         dbg("return code: {}".format(return_code))
 
@@ -1255,8 +1270,8 @@ if __name__ == "__main__":
 
 
         w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
-        w.hook_timer(10, 0, 0, "async_queue_cb", "")
-        w.hook_timer(60000, 0, 0, "slack_connection_persistence_cb", "")
+        w.hook_timer(100, 0, 0, "async_queue_cb", "")
+        w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
 
         ### attach to the weechat hooks we need
         w.hook_timer(1000, 0, 0, "typing_update_cb", "")
