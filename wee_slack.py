@@ -348,8 +348,18 @@ class Channel(SlackThing):
     def set_typing(self, user):
         self.typing[user] = time.time()
     def send_message(self, message):
+        message = self.linkify_text(message)
+        dbg(message)
         request = {"type":"message", "channel":self.identifier, "text": message}
         self.server.ws.send(json.dumps(request))
+    def linkify_text(self, message):
+        message = message.split(' ')
+        for item in enumerate(message):
+            if item[1].startswith('@') and self.server.users.find(item[1]):
+                message[item[0]] = "<@{}>".format(self.server.users.find(item[1]).identifier)
+            if item[1].startswith('#') and self.server.channels.find(item[1]):
+                message[item[0]] = "<#{}>".format(self.server.channels.find(item[1]).identifier)
+        return " ".join(message)
     def set_topic(self, topic):
         topic = topic.encode('ascii', 'ignore')
         w.buffer_set(self.channel_buffer, "title", topic);
@@ -483,7 +493,7 @@ class User(SlackThing):
             self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color(), "+", "", 1)
 #        w.nicklist_add_nick(server.buffer, "", self.colorized_name(), "", "", "", 1)
     def __eq__(self, compare_str):
-        if compare_str == self.name or compare_str == self.identifier:
+        if compare_str == self.name  or compare_str == "@" + self.name or compare_str == self.identifier:
             return True
         else:
             return False
