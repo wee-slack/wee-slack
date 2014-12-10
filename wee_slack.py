@@ -355,10 +355,15 @@ class Channel(SlackThing):
     def linkify_text(self, message):
         message = message.split(' ')
         for item in enumerate(message):
-            if item[1].startswith('@') and self.server.users.find(item[1]):
-                message[item[0]] = "<@{}>".format(self.server.users.find(item[1]).identifier)
+            if item[1].startswith('@'):
+                named = re.match('.*[@#](\w+)(\W*)', item[1]).groups()
+                if self.server.users.find(named[0]):
+                    message[item[0]] = "<@{}>{}".format(self.server.users.find(named[0]).identifier, named[1])
             if item[1].startswith('#') and self.server.channels.find(item[1]):
-                message[item[0]] = "<#{}>".format(self.server.channels.find(item[1]).identifier)
+                named = re.match('.*[@#](\w+)(\W*)', item[1]).groups()
+                if self.server.channels.find(named[0]):
+                    message[item[0]] = "<#{}>{}".format(self.server.channels.find(named[0]).identifier, named[1])
+        dbg(message)
         return " ".join(message)
     def set_topic(self, topic):
         topic = topic.encode('ascii', 'ignore')
