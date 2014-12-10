@@ -22,7 +22,7 @@ SCRIPT_VERSION = "0.97"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
-BACKLOG_SIZE = 50
+BACKLOG_SIZE = 200
 
 SLACK_API_TRANSLATOR = {
                             "channel": {
@@ -198,7 +198,7 @@ class SlackServer(object):
             self.create_local_buffer()
 
             if self.create_slack_websocket(login_data):
-                w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", self.domain)
+                #w.hook_timer(1000 * 3, 0, 0, "slack_ping_cb", self.domain)
                 if len(self.users) and 0 or len(self.channels) == 0:
                     self.create_slack_mappings(login_data)
 
@@ -216,8 +216,8 @@ class SlackServer(object):
         web_socket_url = data['url']
         try:
             self.ws = create_connection(web_socket_url)
-            self.ws.sock.setblocking(0)
             self.ws_hook = w.hook_fd(self.ws.sock._sock.fileno(), 1, 0, 0, "slack_websocket_cb", self.identifier)
+            self.ws.sock.setblocking(0)
             return True
         except:
             return False
@@ -801,7 +801,8 @@ def process_user_typing(message_json):
 
 #todo: does this work?
 def process_error(message_json):
-    connected = False
+    pass
+    #connected = False
 
 #def process_message_changed(message_json):
 #    process_message(message_json)
@@ -1005,9 +1006,9 @@ def slack_never_away_cb(data, remaining):
 
 #NOTE: switched to async/curl because sync slowed down the UI
 def async_slack_api_request(domain, token, request, post_data, priority=False):
-    t = time.time()
+    #t = time.time()
     post_elements = pickle.dumps([domain, token, request, post_data])
-    request += "?t=%s" % t
+    #request += "?t=%s" % t
     post_data["token"] = token
     post_data = urllib.urlencode(post_data)
     post = {"post": "1", "postfields": post_data}
@@ -1018,8 +1019,27 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
     else:
         queue.insert(0, QueueItem(queue_item, 'do_url', 'url_processor_cb'))
 
-queue = []
-async_queue_lock = False
+class QueueLock(object):
+    def __init__(self):
+        self.max_active = 3
+        self.active_count = 0
+        self.counter = 0
+        self.timer = time.time()
+        pass
+    def lock(self):
+        self.active_count += 1
+    def unlock(self):
+        self.active_count -= 1
+    def check(self):
+        if time.time() > (self.counter + self.timer) and self.active_count < self.max_active:
+            return True
+        else:
+            return False
+    def bad(self):
+        self.counter += 1
+        self.timer = time.time()
+    def good(self):
+        self.counter = 0
 
 class QueueItem(object):
     def __init__(self, data, method, callback_method=None):
@@ -1033,6 +1053,9 @@ class QueueItem(object):
     def __repr__(self):
         return str(self.data)
 
+queue = []
+async_queue_lock = QueueLock()
+
 def do_url(item):
     try:
         query = urlparse.parse_qs(item[1]["postfields"])
@@ -1042,43 +1065,43 @@ def do_url(item):
             channel.server.buffer_prnt("downloading channel history for %s" % (channel.name), backlog=True)
     except:
         pass
-    command = 'curl --data "%s" %s' % (item[1]["postfields"], item[0][4:])
+    command = 'curl -s --data "%s" %s' % (item[1]["postfields"], item[0][4:])
+#    w.hook_process_hashtable(*item)
     w.hook_process(command, 20000, item[3], item[4])
 
 def async_queue_cb(data, remaining_calls):
     global async_queue_lock
-    if async_queue_lock == False:
-        async_queue_lock = True
+    if async_queue_lock.check():
         if len(queue) > 0:
+            async_queue_lock.lock()
             item = queue.pop(0)
             method = eval(item.method)
             method(item)
-            async_queue_lock = False
-        else:
-            async_queue_lock = False
     return w.WEECHAT_RC_OK
 
 #funny, right?
 big_data = {}
 def url_processor_cb(data, command, return_code, out, err):
-    data = pickle.loads(data)
-    global async_queue_lock, big_data
-    identifier = sha.sha(str(data) + command).hexdigest()
-    if not big_data.has_key(identifier):
-        big_data[identifier] = ''
-    big_data[identifier] += out
+    if return_code == 0 or -1:
+        data = pickle.loads(data)
+        global async_queue_lock, big_data
+        identifier = sha.sha(str(data) + command).hexdigest()
+        if not big_data.has_key(identifier):
+            big_data[identifier] = ''
+        big_data[identifier] += out
     if return_code == 0:
+        async_queue_lock.unlock()
         try:
             my_json = json.loads(big_data[identifier])
-            async_queue_lock = False
+            async_queue_lock.good()
         except:
 #            if big_data[identifier] != '':
             dbg("curl failed, doing again...")
             dbg("curl length: {} identifier {}\n{}".format(len(big_data[identifier]), identifier, data))
+            async_queue_lock.bad()
             async_slack_api_request(*data, priority=True)
             pass
             my_json = False
-            async_queue_lock = False
         del big_data[identifier]
 
         if my_json:
@@ -1099,7 +1122,8 @@ def url_processor_cb(data, command, return_code, out, err):
                 if my_json.has_key("channel"):
                     if my_json["channel"].has_key("members"):
                       channels.find(my_json["channel"]["id"]).members = set(my_json["channel"]["members"])
-    else:
+    elif return_code != -1:
+        async_queue_lock.unlock()
         dbg("return code: {}".format(return_code))
 
     return w.WEECHAT_RC_OK
@@ -1232,7 +1256,7 @@ if __name__ == "__main__":
 
         w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
         w.hook_timer(10, 0, 0, "async_queue_cb", "")
-        w.hook_timer(6000, 0, 0, "slack_connection_persistence_cb", "")
+        w.hook_timer(60000, 0, 0, "slack_connection_persistence_cb", "")
 
         ### attach to the weechat hooks we need
         w.hook_timer(1000, 0, 0, "typing_update_cb", "")
