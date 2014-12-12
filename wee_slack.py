@@ -1268,7 +1268,6 @@ if __name__ == "__main__":
         channels = Meta('channels', servers)
         users = Meta('users', servers)
 
-
         w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
         w.hook_timer(100, 0, 0, "async_queue_cb", "")
         w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
@@ -1277,7 +1276,6 @@ if __name__ == "__main__":
         w.hook_timer(1000, 0, 0, "typing_update_cb", "")
         w.hook_timer(1000, 0, 0, "buffer_list_update_cb", "")
         w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
-        w.hook_timer(1000 * 3, 0, 0, "slack_never_away_cb", "")
         w.hook_timer(1000 * 60* 29, 0, 0, "slack_never_away_cb", "")
         w.hook_signal('buffer_closing', "buffer_closing_cb", "")
         w.hook_signal('buffer_switch', "buffer_switch_cb", "")
