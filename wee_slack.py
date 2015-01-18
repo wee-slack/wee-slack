@@ -737,6 +737,9 @@ def command_uncache(current_buffer, args):
     message_cache.pop(identifier)
     cache_write_cb("","")
 
+def command_cachenow(current_buffer, args):
+    cache_write_cb("","")
+
 def command_neveraway(current_buffer, args):
     global never_away
     if never_away:
@@ -954,15 +957,13 @@ def process_error(message_json):
 def cache_message(message_json):
     global message_cache
 
-    max_size = 200
-
     channel = message_json["channel"]
     if channel not in message_cache:
         message_cache[channel] = []
     if message_json not in message_cache[channel]:
         message_cache[channel].append(message_json)
-    if len(message_cache[channel]) > max_size:
-        message_cache[channel] = message_cache[channel][-max_size:]
+    if len(message_cache[channel]) > BACKLOG_SIZE:
+        message_cache[channel] = message_cache[channel][-BACKLOG_SIZE:]
 
 def process_message(message_json):
     cache_message(message_json)
@@ -1235,7 +1236,7 @@ def url_processor_cb(data, command, return_code, out, err):
     return w.WEECHAT_RC_OK
 
 def cache_write_cb(data, remaining):
-    open("{}/wee-slack.cache".format(WEECHAT_HOME), 'w').write(json.dumps(message_cache))
+    open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'w').write(json.dumps(message_cache))
     return w.WEECHAT_RC_OK
 
 
@@ -1324,7 +1325,7 @@ if __name__ == "__main__":
                   SCRIPT_DESC, "", ""):
 
         WEECHAT_HOME = w.info_get("weechat_dir", "")
-        CACHE_NAME = "wee-slack.cache"
+        CACHE_NAME = "slack.cache"
 
         if not w.config_get_plugin('slack_api_token'):
             w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
@@ -1359,7 +1360,7 @@ if __name__ == "__main__":
         main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
 
         try:
-            cache_file = open("{}/wee-slack.cache".format(WEECHAT_HOME), 'r')
+            cache_file = open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'r')
             message_cache = json.loads(cache_file.read())
         except IOError:
             message_cache = {}
@@ -1380,7 +1381,7 @@ if __name__ == "__main__":
         w.hook_timer(1000, 0, 0, "buffer_list_update_cb", "")
         w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
         w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
-        w.hook_timer(1000 * 10, 0, 0, "cache_write_cb", "")
+        w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
         w.hook_signal('buffer_closing', "buffer_closing_cb", "")
         w.hook_signal('buffer_switch', "buffer_switch_cb", "")
         w.hook_signal('window_switch', "buffer_switch_cb", "")
