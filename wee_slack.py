@@ -46,7 +46,6 @@ SLACK_API_TRANSLATOR = {
 
 }
 
-
 def dbg(message, fout=False, main_buffer=False):
     message = "DEBUG: {}".format(message)
     #message = message.encode('utf-8', 'replace')
@@ -337,6 +336,7 @@ class Channel(SlackThing):
         self.members = set(members)
         self.topic = topic
         self.last_read = float(last_read)
+        self.last_received = "0"
         self.previous_prnt_name = ""
         self.previous_prnt_message = ""
         if active:
@@ -481,9 +481,9 @@ class Channel(SlackThing):
             w.buffer_set(self.channel_buffer, "unread", "")
         if update_remote:
             self.last_read = time.time()
-            self.set_read_marker(self.last_read)
+            self.update_read_marker(self.last_read)
 
-    def set_read_marker(self, time):
+    def update_read_marker(self, time):
         async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": time})
 
     def rename(self):
@@ -501,17 +501,17 @@ class Channel(SlackThing):
 
     def buffer_prnt(self, user='unknown user', message='no message', time=0, backlog=False):
         set_read_marker = False
-        time = float(time)
-        if time != 0 and self.last_read >= time:
+        time_float = float(time)
+        if time_float != 0 and self.last_read >= time_float:
             tags = "no_highlight,notify_none,logger_backlog_end"
-            set_read_marker = True
+            #set_read_marker = True
         elif message.find(self.server.nick.encode('utf-8')) > -1:
             tags = "notify_highlight"
         elif user != self.server.nick and self.name in self.server.users:
             tags = "notify_private,notify_message"
         else:
             tags = "notify_message"
-        time = int(float(time))
+        time_int = int(time_float)
         if self.channel_buffer:
             if self.server.users.find(user) and user != self.server.nick:
                 name = self.server.users.find(user).colorized_name()
@@ -524,23 +524,25 @@ class Channel(SlackThing):
                     message = message[len(self.previous_prnt_message):]
                 message = HTMLParser.HTMLParser().unescape(message)
                 data = u"{}\t{}".format(name, message).encode('utf-8')
-                w.prnt_date_tags(self.channel_buffer, time, tags, data)
-                # eventually maybe - doesn't reprint name if next message is same user
-                # if name != self.previous_prnt_name:
-                #    w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (name, message))
-                #    self.previous_prnt_name = name
-                # else:
-                #    w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % ("", message))
+                w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
             self.previous_prnt_message = message
             if set_read_marker:
                 self.mark_read(False)
         else:
             self.open(False)
+        self.last_received = time
 
     def get_history(self):
         if self.active:
-            t = time.time()
-            async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "ts": t, "count": BACKLOG_SIZE})
+            if self.identifier in message_cache.keys():
+                for message in message_cache[self.identifier]:
+                    process_message(message)
+
+            if self.last_received != '0':
+                async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "oldest": self.last_received, "count": BACKLOG_SIZE})
+            else:
+                pass
+                async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE})
 
 
 class GroupChannel(Channel):
@@ -724,6 +726,18 @@ def command_markread(current_buffer, args):
     if servers.find(domain).channels.find(channel):
         servers.find(domain).channels.find(channel).mark_read()
 
+def command_cacheinfo(current_buffer, args):
+    # refactor this - one liner i think
+    for channel in message_cache.keys():
+        c = channels.find(channel)
+        w.prnt("", "{} {}".format(channels.find(channel), len(message_cache[channel])))
+#        server.buffer_prnt("{} {}".format(channels.find(channel), len(message_cache[channel])))
+
+def command_uncache(current_buffer, args):
+    # refactor this - one liner i think
+    identifier = channels.find(current_buffer).identifier
+    message_cache.pop(identifier)
+    cache_write_cb("","")
 
 def command_neveraway(current_buffer, args):
     global never_away
@@ -939,9 +953,21 @@ def process_error(message_json):
 # def process_message_changed(message_json):
 #    process_message(message_json)
 
+def cache_message(message_json):
+    global message_cache
+
+    max_size = 200
+
+    channel = message_json["channel"]
+    if channel not in message_cache:
+        message_cache[channel] = []
+    if message_json not in message_cache[channel]:
+        message_cache[channel].append(message_json)
+    if len(message_cache[channel]) > max_size:
+        message_cache[channel] = message_cache[channel][-max_size:]
 
 def process_message(message_json):
-    mark_silly_channels_read(message_json["channel"])
+    cache_message(message_json)
 
     # send these messages elsewhere
     known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
@@ -973,7 +999,9 @@ def process_message(message_json):
 
         text = text.encode('utf-8')
         name = name.encode('utf-8')
-        server.channels.find(channel).buffer_prnt(name, text, time)
+
+        channel.buffer_prnt(name, text, time)
+#        server.channels.find(channel).buffer_prnt(name, text, time)
 
 
 def unwrap_message(message_json):
@@ -1161,6 +1189,7 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
     post_data["token"] = token
     url = 'https://{}/api/{}'.format(domain, request)
     command = 'curl -s --data "{}" {}'.format(urllib.urlencode(post_data), url)
+    print command
     context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
     w.hook_process(command, 20000, "url_processor_cb", context)
 
@@ -1168,7 +1197,7 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
 big_data = {}
 
 def url_processor_cb(data, command, return_code, out, err):
-    global big_data
+    global big_data, message_cache
     data = pickle.loads(data)
     identifier = sha.sha("{}{}".format(data, command)).hexdigest()
     if identifier not in big_data:
@@ -1207,12 +1236,11 @@ def url_processor_cb(data, command, return_code, out, err):
 
     return w.WEECHAT_RC_OK
 
+def cache_write_cb(data, remaining):
+    open("{}/wee-slack.cache".format(WEECHAT_HOME), 'w').write(json.dumps(message_cache))
+    return w.WEECHAT_RC_OK
 
-def mark_silly_channels_read(channel):
-    name = channels.find(channel).name
-    if name in channels_always_marked_read:
-        if channels.find(channel):
-            channels.find(channel).mark_read()
+
 
 # END Slack specific requests
 
@@ -1297,6 +1325,9 @@ if __name__ == "__main__":
     if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
                   SCRIPT_DESC, "", ""):
 
+        WEECHAT_HOME = w.info_get("weechat_dir", "")
+        CACHE_NAME = "wee-slack.cache"
+
         if not w.config_get_plugin('slack_api_token'):
             w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
         if not w.config_get_plugin('channels_always_marked_read'):
@@ -1329,6 +1360,11 @@ if __name__ == "__main__":
         hotlist = w.infolist_get("hotlist", "", "")
         main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
 
+        try:
+            cache_file = open("{}/wee-slack.cache".format(WEECHAT_HOME), 'r')
+            message_cache = json.loads(cache_file.read())
+        except IOError:
+            message_cache = {}
         # End global var section
 
         #channels = SearchList()
@@ -1346,6 +1382,7 @@ if __name__ == "__main__":
         w.hook_timer(1000, 0, 0, "buffer_list_update_cb", "")
         w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
         w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
+        w.hook_timer(1000 * 10, 0, 0, "cache_write_cb", "")
         w.hook_signal('buffer_closing', "buffer_closing_cb", "")
         w.hook_signal('buffer_switch', "buffer_switch_cb", "")
         w.hook_signal('window_switch', "buffer_switch_cb", "")
