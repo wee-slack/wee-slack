@@ -49,7 +49,7 @@ SLACK_API_TRANSLATOR = {
 
 def dbg(message, fout=False, main_buffer=False):
     message = "DEBUG: {}".format(message)
-    message = message.encode('utf-8', 'replace')
+    #message = message.encode('utf-8', 'replace')
     if fout:
         file('/tmp/debug.log', 'a+').writelines(message + '\n')
     if slack_debug is not None:
@@ -502,7 +502,6 @@ class Channel(SlackThing):
     def buffer_prnt(self, user='unknown user', message='no message', time=0, backlog=False):
         set_read_marker = False
         time = float(time)
-        message = message.encode('ascii', 'ignore')
         if time != 0 and self.last_read >= time:
             tags = "no_highlight,notify_none,logger_backlog_end"
             set_read_marker = True
@@ -518,11 +517,14 @@ class Channel(SlackThing):
                 name = self.server.users.find(user).colorized_name()
             else:
                 name = user
+            name = name.decode('utf-8')
+            message = message.decode('UTF-8', 'replace')
             if message != self.previous_prnt_message:
                 if message.startswith(self.previous_prnt_message):
                     message = message[len(self.previous_prnt_message):]
                 message = HTMLParser.HTMLParser().unescape(message)
-                w.prnt_date_tags(self.channel_buffer, time, tags, "{}\t{}".format(name, message))
+                data = u"{}\t{}".format(name, message).encode('utf-8')
+                w.prnt_date_tags(self.channel_buffer, time, tags, data)
                 # eventually maybe - doesn't reprint name if next message is same user
                 # if name != self.previous_prnt_name:
                 #    w.prnt_date_tags(self.channel_buffer, time, tags, "%s\t%s" % (name, message))
@@ -641,6 +643,7 @@ def me_command_cb(data, current_buffer, args):
         channel = channels.find(current_buffer)
         nick = channel.server.nick
         message = "{} {}".format(nick, args)
+        message = message.encode('utf-8')
         buffer_input_cb("", current_buffer, message)
     return w.WEECHAT_RC_OK
 
@@ -777,8 +780,7 @@ def command_nick(current_buffer, args):
 # Websocket handling methods
 
 
-def slack_websocket_cb(data, fd):
-    server = data
+def slack_websocket_cb(server, fd):
     try:
         data = servers.find(server).ws.recv()
         message_json = json.loads(data)
@@ -795,7 +797,6 @@ def slack_websocket_cb(data, fd):
         proc[function_name](message_json)
         # dbg(function_name)
     except KeyError:
-        pass
         if function_name:
             dbg("Function not implemented: {}\n{}".format(function_name, message_json))
         else:
@@ -963,13 +964,15 @@ def process_message(message_json):
 
         text = unfurl_refs(text)
         if "attachments" in message_json:
-            text += "--- {}".format(unwrap_attachments(message_json))
+            text += u"--- {}".format(unwrap_attachments(message_json))
         text = text.lstrip()
         text = text.replace("\t", "    ")
         name = get_user(message_json, server)
 
         channel.unset_typing(name)
 
+        text = text.encode('utf-8')
+        name = name.encode('utf-8')
         server.channels.find(channel).buffer_prnt(name, text, time)
 
 
@@ -996,7 +999,7 @@ def unwrap_attachments(message_json):
     for attachment in message_json["attachments"]:
         if "fallback" in attachment:
             attachment_text += attachment["fallback"]
-    attachment_text = attachment_text.encode('ascii', 'ignore')
+#    attachment_text = attachment_text.encode('ascii', 'ignore')
     return attachment_text
 
 
@@ -1032,13 +1035,13 @@ def get_user(message_json, server):
     if 'user' in message_json:
         name = server.users.find(message_json['user']).name
     elif 'username' in message_json:
-        name = "-{}-".format(message_json["username"])
+        name = u"-{}-".format(message_json["username"])
     elif 'service_name' in message_json:
-        name = "-{}-".format(message_json["service_name"])
+        name = u"-{}-".format(message_json["service_name"])
     elif 'bot_id' in message_json:
-        name = "-{}-".format(message_json["bot_id"])
+        name = u"-{}-".format(message_json["bot_id"])
     else:
-        name = ""
+        name = u""
     return name
 
 # END Websocket handling methods
