@@ -1185,12 +1185,12 @@ def slack_never_away_cb(data, remaining):
 
 
 def async_slack_api_request(domain, token, request, post_data, priority=False):
-    post_data["token"] = token
-    url = 'https://{}/api/{}'.format(domain, request)
-    command = 'curl -s --data "{}" {}'.format(urllib.urlencode(post_data), url)
-    print command
-    context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
-    w.hook_process(command, 20000, "url_processor_cb", context)
+    if not STOP_TALKING_TO_SLACK:
+        post_data["token"] = token
+        url = 'https://{}/api/{}'.format(domain, request)
+        command = 'curl -s --data "{}" {}'.format(urllib.urlencode(post_data), url)
+        context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
+        w.hook_process(command, 20000, "url_processor_cb", context)
 
 # funny, right?
 big_data = {}
@@ -1317,6 +1317,11 @@ def config_changed_cb(data, option, value):
         create_slack_debug_buffer()
     return w.WEECHAT_RC_OK
 
+def quit_notification_cb(signal, sig_type, data):
+    global STOP_TALKING_TO_SLACK
+    STOP_TALKING_TO_SLACK = True
+    cache_write_cb("", "")
+
 # END Utility Methods
 
 # Main
@@ -1326,6 +1331,7 @@ if __name__ == "__main__":
 
         WEECHAT_HOME = w.info_get("weechat_dir", "")
         CACHE_NAME = "slack.cache"
+        STOP_TALKING_TO_SLACK = False
 
         if not w.config_get_plugin('slack_api_token'):
             w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
@@ -1386,6 +1392,7 @@ if __name__ == "__main__":
         w.hook_signal('buffer_switch', "buffer_switch_cb", "")
         w.hook_signal('window_switch', "buffer_switch_cb", "")
         w.hook_signal('input_text_changed', "typing_notification_cb", "")
+        w.hook_signal('quit', "quit_notification_cb", "")
         w.hook_command('slack', 'Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', '|'.join(cmds.keys()), 'slack_command_cb', '')
         w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
 #        w.hook_command('me', 'me_command_cb', '')
