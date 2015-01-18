@@ -1158,132 +1158,40 @@ def slack_never_away_cb(data, remaining):
 
 
 def async_slack_api_request(domain, token, request, post_data, priority=False):
-    #t = time.time()
-    post_elements = pickle.dumps([domain, token, request, post_data])
-    #request += "?t=%s" % t
     post_data["token"] = token
-    post_data = urllib.urlencode(post_data)
-    post = {"post": "1", "postfields": post_data}
     url = 'https://{}/api/{}'.format(domain, request)
-    queue_item = ['url:{}'.format(url), post, 20000, 'url_processor_cb', post_elements]
-    if not priority:
-        queue.append(QueueItem(queue_item, 'do_url', 'url_processor_cb'))
-    else:
-        queue.insert(0, QueueItem(queue_item, 'do_url', 'url_processor_cb'))
-
-
-class QueueLock(object):
-
-    def __init__(self):
-        self.max_active = 3
-        self.active_count = 0
-        self.counter = 0
-        self.timer = time.time()
-        pass
-
-    def lock(self):
-        self.active_count += 1
-
-    def unlock(self):
-        self.active_count -= 1
-
-    def check(self):
-        if time.time() > (self.counter + self.timer) and self.active_count < self.max_active:
-            return True
-        else:
-            return False
-
-    def bad(self):
-        self.counter += 1
-        self.timer = time.time()
-
-    def good(self):
-        self.counter = 0
-
-
-class QueueItem(object):
-
-    def __init__(self, data, method, callback_method=None):
-        self.method = method
-        self.callback_method = callback_method
-        self.data = data
-
-    def __getitem__(self, index):
-        return self.data[index]
-
-    def __str__(self):
-        return unicode(self.data)
-
-    def __repr__(self):
-        return unicode(self.data)
-
-queue = []
-async_queue_lock = QueueLock()
-captain_of_hooks = []
-
-
-def do_url(item):
-    global captain_of_hooks
-    try:
-        query = urlparse.parse_qs(item[1]["postfields"])
-        if "channel" in query and item[0].find('history') > -1:
-            channel = query["channel"][0]
-            channel = channels.find(channel)
-            channel.server.buffer_prnt("downloading channel history for {}".format(channel.name), backlog=True)
-    except:
-        pass
-    command = 'curl -s --data "{}" {}'.format(item[1]["postfields"], item[0][4:])
-#    w.hook_process_hashtable(*item)
-    captain_of_hooks.append(w.hook_process(command, 20000, item[3], item[4]))
-
-
-def async_queue_cb(data, remaining_calls):
-    global async_queue_lock
-    if async_queue_lock.check():
-        if len(queue) > 0:
-            async_queue_lock.lock()
-            item = queue.pop(0)
-            method = eval(item.method)
-            method(item)
-    return w.WEECHAT_RC_OK
+    command = 'curl -s --data "{}" {}'.format(urllib.urlencode(post_data), url)
+    context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
+    w.hook_process(command, 20000, "url_processor_cb", context)
 
 # funny, right?
 big_data = {}
 
-
 def url_processor_cb(data, command, return_code, out, err):
-    global async_queue_lock, big_data, captain_of_hooks
-#    if return_code == 0 or -1:
+    global big_data
     data = pickle.loads(data)
     identifier = sha.sha("{}{}".format(data, command)).hexdigest()
     if identifier not in big_data:
         big_data[identifier] = ''
     big_data[identifier] += out
     if return_code == 0:
-        async_queue_lock.unlock()
         try:
             my_json = json.loads(big_data[identifier])
-            async_queue_lock.good()
         except:
-            #            if big_data[identifier] != '':
             dbg("curl failed, doing again...")
             dbg("curl length: {} identifier {}\n{}".format(len(big_data[identifier]), identifier, data))
-
-            async_queue_lock.bad()
-            async_slack_api_request(*data, priority=True)
             my_json = False
 
         big_data.pop(identifier, None)
 
         if my_json:
-            if data[2] == 'rtm.start':
-                servers.find(data[1]).connected_to_slack(my_json)
+            if data["request"] == 'rtm.start':
+                servers.find(data["token"]).connected_to_slack(my_json)
 
             else:
-                query = data[3]
-                if "channel" in query:
-                    channel = query["channel"]
-                token = data[1]
+                if "channel" in data["post_data"]:
+                    channel = data["post_data"]["channel"]
+                token = data["token"]
                 if "messages" in my_json:
                     messages = my_json["messages"].reverse()
                     for message in my_json["messages"]:
@@ -1295,7 +1203,6 @@ def url_processor_cb(data, command, return_code, out, err):
                         channels.find(my_json["channel"]["id"]).members = set(my_json["channel"]["members"])
     elif return_code != -1:
         big_data.pop(identifier, None)
-        async_queue_lock.unlock()
         dbg("return code: {}".format(return_code))
 
     return w.WEECHAT_RC_OK
@@ -1432,7 +1339,6 @@ if __name__ == "__main__":
         users = Meta('users', servers)
 
         w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
-        w.hook_timer(100, 0, 0, "async_queue_cb", "")
         w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
 
         # attach to the weechat hooks we need
