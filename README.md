@@ -3,6 +3,11 @@
 wee-slack
 =========
 
+**Important:**
+  Weechat 1.1-dev (and 1.1 when released) fix a weechat bug that greatly impacts wee-slack. It is highly recommended   that you update to the stable version when available or the dev version if you're slightly adventurous.
+
+-----------
+
 A WeeChat native client for Slack.com. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, search, (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
 
 ![animated screenshot](https://dl.dropboxusercontent.com/u/566560/slack.gif)
