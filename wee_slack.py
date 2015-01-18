@@ -49,7 +49,7 @@ SLACK_API_TRANSLATOR = {
 
 def dbg(message, fout=False, main_buffer=False):
     message = "DEBUG: {}".format(message)
-    message = message.encode('ascii', 'ignore')
+    message = message.encode('utf-8', 'replace')
     if fout:
         file('/tmp/debug.log', 'a+').writelines(message + '\n')
     if slack_debug is not None:
@@ -77,12 +77,12 @@ class Meta(list):
         self.search_list.get_all(self.attribute)
 
     def __getitem__(self, index):
-        channels = self.get_all()
-        return channels[index]
+        things = self.get_all()
+        return things[index]
 
     def __iter__(self):
-        channels = self.get_all()
-        for channel in channels:
+        things = self.get_all()
+        for channel in things:
             yield channel
 
     def get_all(self):
@@ -100,7 +100,7 @@ class Meta(list):
         else:
             dbg("probably something bad happened with meta items: {}".format(items))
             return items
-            raise AmbiguousProblemError
+            #raise AmbiguousProblemError
 
     def find_first(self, name):
         items = self.find(name)
@@ -1414,7 +1414,7 @@ if __name__ == "__main__":
         domain = None
         previous_buffer = None
         slack_buffer = None
-        name = None
+        #name = None
         never_away = False
         hotlist = w.infolist_get("hotlist", "", "")
         main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
