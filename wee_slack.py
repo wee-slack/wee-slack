@@ -48,7 +48,7 @@ SLACK_API_TRANSLATOR = {
 
 
 def dbg(message, fout=False, main_buffer=False):
-    message = "DEBUG: " + str(message)
+    message = "DEBUG: {}".format(message)
     message = message.encode('ascii', 'ignore')
     if fout:
         file('/tmp/debug.log', 'a+').writelines(message + '\n')
@@ -70,7 +70,7 @@ class Meta(list):
     def __str__(self):
         string = ''
         for each in self.search_list.get_all(self.attribute):
-            string += str(each) + ' '
+            string += "{} ".format(each)
         return string
 
     def __repr__(self):
@@ -733,11 +733,11 @@ def command_neveraway(current_buffer, args):
 
 
 def command_printvar(current_buffer, args):
-    w.prnt("", str(eval(args)))
+    w.prnt("", "{}".format(eval(args)))
 
 
 def command_p(current_buffer, args):
-    w.prnt("", str(eval(args)))
+    w.prnt("", "{}".format(eval(args)))
 
 
 def command_debug(current_buffer, args):
@@ -1017,7 +1017,7 @@ def unfurl_refs(text):
                         try:
                             item = "@{}".format(users.find(item[1:]).name)
                         except:
-                            dbg("NAME: " + str(item))
+                            dbg("NAME: {}".format(item))
                 if item.startswith('#C'):
                     if channels.find(item[1:]):
                         item = "{}".format(channels.find(item[1:]).name)
@@ -1209,10 +1209,10 @@ class QueueItem(object):
         return self.data[index]
 
     def __str__(self):
-        return str(self.data)
+        return unicode(self.data)
 
     def __repr__(self):
-        return str(self.data)
+        return unicode(self.data)
 
 queue = []
 async_queue_lock = QueueLock()
@@ -1252,7 +1252,7 @@ def url_processor_cb(data, command, return_code, out, err):
     global async_queue_lock, big_data, captain_of_hooks
 #    if return_code == 0 or -1:
     data = pickle.loads(data)
-    identifier = sha.sha(str(data) + command).hexdigest()
+    identifier = sha.sha("{}{}".format(data, command)).hexdigest()
     if identifier not in big_data:
         big_data[identifier] = ''
     big_data[identifier] += out
