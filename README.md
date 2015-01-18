@@ -4,7 +4,7 @@ wee-slack
 =========
 
 **Important:**
-  Weechat 1.1-dev (and 1.1 when released) fix a weechat bug that greatly impacts wee-slack. It is highly recommended   that you update to the stable version when available or the dev version if you're slightly adventurous.
+  Weechat 1.1 and newer are now required. There was code to work around issues that no longer exist in newer versions. You should upgrade to 1.1 if you wish to use wee-slack going forward.
 
 -----------
 
@@ -14,12 +14,14 @@ A WeeChat native client for Slack.com. Provides supplemental features only avail
 
 Features
 --------
-  * **New** Doesn't use IRC gateway. Connects directly with Slack via API/Websocket
-  * **New** Multiple Teams supported! Just add multiple api tokens separated by commas
-  * **New** Replays history automatically during startup. (and sets read marker to the correct position in history)
-  * **New** Open channels synchronized with Slack. When you open/close a channel on another client it is reflected in wee-slack
-  * **New** Colorized nicks in buffer list when used with buffers.pl
-  * **New** Colorized nicks in chat
+  * **New** Caches message history, making startup MUCH faster
+  * **New** beta UTF-8 support
+  * Doesn't use IRC gateway. Connects directly with Slack via API/Websocket
+  * Multiple Teams supported! Just add multiple api tokens separated by commas
+  * Replays history automatically during startup. (and sets read marker to the correct position in history)
+  * Open channels synchronized with Slack. When you open/close a channel on another client it is reflected in wee-slack
+  * Colorized nicks in buffer list when used with buffers.pl
+  * Colorized nicks in chat
   * Supports bidirectional slack read notifications for all channels. (never reread the same messages on the web client or other devices).
   * Typing notification, so you can see when others are typing, and they can see when you type. Appears globally for direct messages
   * Search slack history allows you to do simple searches across all previous slack conversations
@@ -31,7 +33,6 @@ Features
 
 In Development
 --------------
-  * cache history pulls
   * fix search
   * add notification of new versions of wee-slack
   * growl notification
@@ -39,7 +40,7 @@ In Development
 
 Dependencies
 ------------
-  * WeeChat 1.0+ http://weechat.org/ 
+  * WeeChat 1.1+ http://weechat.org/ 
   * websocket-client https://pypi.python.org/pypi/websocket-client/
 
 Setup
