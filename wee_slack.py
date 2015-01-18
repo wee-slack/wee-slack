@@ -727,14 +727,12 @@ def command_markread(current_buffer, args):
         servers.find(domain).channels.find(channel).mark_read()
 
 def command_cacheinfo(current_buffer, args):
-    # refactor this - one liner i think
     for channel in message_cache.keys():
         c = channels.find(channel)
         w.prnt("", "{} {}".format(channels.find(channel), len(message_cache[channel])))
 #        server.buffer_prnt("{} {}".format(channels.find(channel), len(message_cache[channel])))
 
 def command_uncache(current_buffer, args):
-    # refactor this - one liner i think
     identifier = channels.find(current_buffer).identifier
     message_cache.pop(identifier)
     cache_write_cb("","")
