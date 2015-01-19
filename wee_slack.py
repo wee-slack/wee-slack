@@ -509,7 +509,8 @@ class Channel(SlackThing):
         else:
             new_name = self.name
         if self.channel_buffer:
-            w.buffer_set(self.channel_buffer, "short_name", color + new_name)
+            if w.buffer_get_string(self.channel_buffer, "short_name") != (color + new_name):
+                w.buffer_set(self.channel_buffer, "short_name", color + new_name)
 
     def buffer_prnt(self, user='unknown user', message='no message', time=0):
         set_read_marker = False
