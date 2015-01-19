@@ -345,6 +345,7 @@ class Channel(SlackThing):
             self.attach_buffer()
             self.update_nicklist()
             self.set_topic(self.topic)
+            buffer_list_update_next()
 
     def __eq__(self, compare_str):
         if compare_str == self.fullname() or compare_str == self.name or compare_str == self.identifier or compare_str == self.name[1:] or (compare_str == self.channel_buffer and self.channel_buffer is not None):
@@ -413,12 +414,12 @@ class Channel(SlackThing):
 
     def set_typing(self, user):
         self.typing[user] = time.time()
-        buffer_list_update_cb("", "")
+        buffer_list_update_next()
 
     def unset_typing(self, user):
         try:
             del self.typing[user]
-            buffer_list_update_cb("", "")
+            buffer_list_update_next()
         except:
             pass
 
@@ -473,6 +474,9 @@ class Channel(SlackThing):
         for user in self.typing.keys():
             if self.typing[user] + 4 > time.time():
                 return True
+        if len(self.typing) > 0:
+            self.typing = {}
+            buffer_list_update_next()
         return False
 
     def get_typing_list(self):
@@ -607,7 +611,7 @@ class User(SlackThing):
                 channel.update_nicklist()
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "prefix", "+")
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "1")
-        buffer_list_update_cb('', '')
+        buffer_list_update_next()
 
     def set_inactive(self):
         self.presence = "away"
@@ -616,7 +620,7 @@ class User(SlackThing):
                 channel.update_nicklist()
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "prefix", " ")
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
-        buffer_list_update_cb('', '')
+        buffer_list_update_next()
 
     def update_color(self):
         if colorize_nicks:
@@ -1132,14 +1136,22 @@ def typing_update_cb(data, remaining_calls):
 
 
 def buffer_list_update_cb(data, remaining_calls):
-    gray_check = False
-    if len(servers) > 1:
-        gray_check = True
-    # for channel in channels.find_by_class(Channel) + channels.find_by_class(GroupChannel):
-    for channel in channels:
-        channel.rename()
+    global buffer_list_update
+
+    now = time.time()
+    if buffer_list_update and previous_buffer_list_update + 1 < now:
+        gray_check = False
+        if len(servers) > 1:
+            gray_check = True
+        # for channel in channels.find_by_class(Channel) + channels.find_by_class(GroupChannel):
+        for channel in channels:
+            channel.rename()
+        buffer_list_update = False
     return w.WEECHAT_RC_OK
 
+def buffer_list_update_next():
+    global buffer_list_update
+    buffer_list_update = True
 
 def hotlist_cache_update_cb(data, remaining_calls):
     # this keeps the hotlist dupe up to date for the buffer switch, but is prob technically a race condition. (meh)
@@ -1159,7 +1171,7 @@ def buffer_closing_cb(signal, sig_type, data):
 def buffer_switch_cb(signal, sig_type, data):
     global previous_buffer, hotlist
     # this is to see if we need to gray out things in the buffer list
-    buffer_list_update_cb('', '')
+    buffer_list_update_next()
     if channels.find(previous_buffer):
         channels.find(previous_buffer).mark_read()
 
@@ -1390,6 +1402,10 @@ if __name__ == "__main__":
         domain = None
         previous_buffer = None
         slack_buffer = None
+
+        buffer_list_update = False
+        previous_buffer_list_update = 0
+
         #name = None
         never_away = False
         hotlist = w.infolist_get("hotlist", "", "")
@@ -1414,7 +1430,7 @@ if __name__ == "__main__":
 
         # attach to the weechat hooks we need
         w.hook_timer(1000, 0, 0, "typing_update_cb", "")
-#        w.hook_timer(1000, 0, 0, "buffer_list_update_cb", "")
+        w.hook_timer(1000, 0, 0, "buffer_list_update_cb", "")
         w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
         w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
         w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
