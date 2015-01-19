@@ -680,8 +680,18 @@ def command_talk(current_buffer, args):
 
 
 def command_join(current_buffer, args):
-    servers.find(current_domain_name()).channels.find(args).open()
-
+    domain = current_domain_name()
+    if domain == "":
+        if len(servers) == 1:
+            domain = servers[0]
+        else:
+            w.prnt(current_buffer, "You are connected to multiple Slack instances, please execute /join from a server buffer. i.e. (domain).slack.com")
+            return
+    channel = servers.find(domain).channels.find(args)
+    if channel != None:
+        servers.find(domain).channels.find(args).open()
+    else:
+        w.prnt(current_buffer, "Channel not found.")
 
 def command_channels(current_buffer, args):
     server = servers.find(current_domain_name())
