@@ -507,7 +507,7 @@ class Channel(SlackThing):
         time_float = float(time)
         if time_float != 0 and self.last_read >= time_float:
             tags = "no_highlight,notify_none,logger_backlog_end"
-            #set_read_marker = True
+            set_read_marker = True
         elif message.find(self.server.nick.encode('utf-8')) > -1:
             tags = "notify_highlight"
         elif user != self.server.nick and self.name in self.server.users:
