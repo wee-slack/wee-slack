@@ -333,10 +333,11 @@ class Channel(SlackThing):
         self.name = prepend_name + self.name
         self.typing = {}
         self.active = active
+        self.opening = False
         self.members = set(members)
         self.topic = topic
         self.last_read = float(last_read)
-        self.last_received = "0"
+        self.last_received = None
         self.previous_prnt_name = ""
         self.previous_prnt_message = ""
         if active:
@@ -438,13 +439,14 @@ class Channel(SlackThing):
         w.buffer_set(self.channel_buffer, "title", topic)
 
     def open(self, update_remote=True):
+        self.opening = True
         self.create_buffer()
         self.active = True
         self.get_history()
-        t = time.time()
-        async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name": self.name.lstrip("#"), "ts": t})
+        async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name": self.name.lstrip("#")})
         if update_remote:
-            async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.name.lstrip("#"), "ts": t})
+            async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.name.lstrip("#")})
+        self.opening = False
 
     def close(self, update_remote=True):
         if self.active:
@@ -452,10 +454,11 @@ class Channel(SlackThing):
             self.detach_buffer()
         if update_remote:
             t = time.time()
-            async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier, "ts": t})
+            async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier})
 
     def closed(self):
         self.channel_buffer = None
+        self.last_received = None
         self.close()
 
     def unset_typing(self, user):
@@ -502,7 +505,7 @@ class Channel(SlackThing):
         if self.channel_buffer:
             w.buffer_set(self.channel_buffer, "short_name", color + new_name)
 
-    def buffer_prnt(self, user='unknown user', message='no message', time=0, backlog=False):
+    def buffer_prnt(self, user='unknown user', message='no message', time=0):
         set_read_marker = False
         time_float = float(time)
         if time_float != 0 and self.last_read >= time_float:
@@ -540,8 +543,7 @@ class Channel(SlackThing):
             if self.identifier in message_cache.keys():
                 for message in message_cache[self.identifier]:
                     process_message(message)
-
-            if self.last_received != '0':
+            if self.last_received != None:
                 async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "oldest": self.last_received, "count": BACKLOG_SIZE})
             else:
                 async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE})
@@ -978,41 +980,49 @@ def cache_message(message_json):
         message_cache[channel] = message_cache[channel][-BACKLOG_SIZE:]
 
 def process_message(message_json):
-    cache_message(message_json)
+    if "reply_to" not in message_json:
 
-    # send these messages elsewhere
-    known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
-    if "subtype" in message_json and message_json["subtype"] in known_subtypes:
-        proc[message_json["subtype"]](message_json)
+        # send these messages elsewhere
+        known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
+        if "subtype" in message_json and message_json["subtype"] in known_subtypes:
+            proc[message_json["subtype"]](message_json)
 
-    else:
-        # move message properties down to root of json object
-        message_json = unwrap_message(message_json)
-
-        server = servers.find(message_json["myserver"])
-        channel = channels.find(message_json["channel"])
-        time = message_json['ts']
-        if "fallback" in message_json:
-            text = message_json["fallback"]
-        elif "text" in message_json:
-            text = message_json["text"]
         else:
-            text = ""
+            # move message properties down to root of json object
+            message_json = unwrap_message(message_json)
 
-        text = unfurl_refs(text)
-        if "attachments" in message_json:
-            text += u"--- {}".format(unwrap_attachments(message_json))
-        text = text.lstrip()
-        text = text.replace("\t", "    ")
-        name = get_user(message_json, server)
+            server = servers.find(message_json["myserver"])
+            channel = channels.find(message_json["channel"])
 
-        channel.unset_typing(name)
+            #do not process messages in unexpected channels
+            if not channel.active:
+                dbg("message came for closed channel {}".format(channel.name))
+                return
 
-        text = text.encode('utf-8')
-        name = name.encode('utf-8')
+            cache_message(message_json)
 
-        channel.buffer_prnt(name, text, time)
-#        server.channels.find(channel).buffer_prnt(name, text, time)
+            time = message_json['ts']
+            if "fallback" in message_json:
+                text = message_json["fallback"]
+            elif "text" in message_json:
+                text = message_json["text"]
+            else:
+                text = ""
+
+            text = unfurl_refs(text)
+            if "attachments" in message_json:
+                text += u"--- {}".format(unwrap_attachments(message_json))
+            text = text.lstrip()
+            text = text.replace("\t", "    ")
+            name = get_user(message_json, server)
+
+            channel.unset_typing(name)
+
+            text = text.encode('utf-8')
+            name = name.encode('utf-8')
+
+            channel.buffer_prnt(name, text, time)
+    #        server.channels.find(channel).buffer_prnt(name, text, time)
 
 
 def unwrap_message(message_json):
