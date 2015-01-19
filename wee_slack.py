@@ -1132,7 +1132,6 @@ def typing_update_cb(data, remaining_calls):
 
 
 def buffer_list_update_cb(data, remaining_calls):
-    print 'called!'
     gray_check = False
     if len(servers) > 1:
         gray_check = True
