@@ -4,7 +4,7 @@ wee-slack
 =========
 
 **Important:**
-  Weechat 1.1 or newer is now required. There was code to work around issues that no longer exist in newer versions. You should upgrade to if you wish to use continue using wee-slack.
+  Just updated with some huge performance improvements! Weechat 1.1 or newer is now required. There was code to work around issues that no longer exist in newer versions. You should upgrade to if you wish to use continue using wee-slack.
 
 -----------
 
@@ -15,6 +15,7 @@ A WeeChat native client for Slack.com. Provides supplemental features only avail
 Features
 --------
   * **New** Caches message history, making startup MUCH faster
+  * **New** Smarter redraw of dynamic buffer info (much lower CPU %)
   * **New** beta UTF-8 support
   * Doesn't use IRC gateway. Connects directly with Slack via API/Websocket
   * Multiple Teams supported! Just add multiple api tokens separated by commas
