@@ -384,9 +384,9 @@ class Channel(SlackThing):
             for user in self.members:
                 user = self.server.users.find(user)
                 if user.presence == 'away':
-                    w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color(), " ", "", 1)
+                    w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color, " ", "", 1)
                 else:
-                    w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color(), "+", "", 1)
+                    w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color, "+", "", 1)
         except:
             print "DEBUG: {} {}".format(self.identifier,self.name)
 
@@ -413,6 +413,14 @@ class Channel(SlackThing):
 
     def set_typing(self, user):
         self.typing[user] = time.time()
+        buffer_list_update_cb("", "")
+
+    def unset_typing(self, user):
+        try:
+            del self.typing[user]
+            buffer_list_update_cb("", "")
+        except:
+            pass
 
     def send_message(self, message):
         message = self.linkify_text(message)
@@ -460,12 +468,6 @@ class Channel(SlackThing):
         self.channel_buffer = None
         self.last_received = None
         self.close()
-
-    def unset_typing(self, user):
-        try:
-            del self.typing[user]
-        except:
-            pass
 
     def is_someone_typing(self):
         for user in self.typing.keys():
@@ -520,7 +522,7 @@ class Channel(SlackThing):
         time_int = int(time_float)
         if self.channel_buffer:
             if self.server.users.find(user) and user != self.server.nick:
-                name = self.server.users.find(user).colorized_name()
+                name = self.server.users.find(user).formatted_name()
             else:
                 name = user
             name = name.decode('utf-8')
@@ -537,6 +539,7 @@ class Channel(SlackThing):
         else:
             self.open(False)
         self.last_received = time
+        self.unset_typing(user)
 
     def get_history(self):
         if self.active:
@@ -564,16 +567,17 @@ class DmChannel(Channel):
 
     def rename(self):
         if current_domain_name() != self.server.domain and channels_not_on_current_server_color:
-            color = channels_not_on_current_server_color
+            force_color = w.color(channels_not_on_current_server_color)
         else:
-            color = self.server.users.find(self.name).color()
-        color = w.color(color)
+            force_color = None
+
         if self.server.users.find(self.name).presence == "active":
-            new_name = ("+{}".format(self.name))
+            new_name = self.server.users.find(self.name).formatted_name('+', force_color)
         else:
-            new_name = (" {}".format(self.name))
+            new_name = self.server.users.find(self.name).formatted_name(' ', force_color)
+
         if self.channel_buffer:
-            w.buffer_set(self.channel_buffer, "short_name", color + new_name)
+            w.buffer_set(self.channel_buffer, "short_name", new_name)
 
 
 class User(SlackThing):
@@ -583,11 +587,12 @@ class User(SlackThing):
         self.channel_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, self.name))
         self.presence = presence
         self.server = server
+        self.update_color()
         if self.presence == 'away':
-            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color(), " ", "", 0)
+            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color, " ", "", 0)
         else:
-            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color(), "+", "", 1)
-#        w.nicklist_add_nick(server.buffer, "", self.colorized_name(), "", "", "", 1)
+            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color, "+", "", 1)
+#        w.nicklist_add_nick(server.buffer, "", self.formatted_name(), "", "", "", 1)
 
     def __eq__(self, compare_str):
         if compare_str == self.name or compare_str == "@" + self.name or compare_str == self.identifier:
@@ -602,6 +607,7 @@ class User(SlackThing):
                 channel.update_nicklist()
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "prefix", "+")
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "1")
+        buffer_list_update_cb('', '')
 
     def set_inactive(self):
         self.presence = "away"
@@ -610,20 +616,24 @@ class User(SlackThing):
                 channel.update_nicklist()
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "prefix", " ")
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
+        buffer_list_update_cb('', '')
 
-    def color(self):
+    def update_color(self):
         if colorize_nicks:
-            return w.info_get('irc_nick_color_name', self.name)
+            self.color = w.info_get('irc_nick_color', self.name)
+            self.color_name = w.info_get('irc_nick_color_name', self.name)
         else:
-            return "default"
+            self.color = ""
 
-    def colorized_name(self):
+    def formatted_name(self, prepend="", force_color=None):
         if colorize_nicks:
-            color = w.info_get('irc_nick_color', self.name)
-            def_color = w.color('default')
-            return color + self.name + def_color
+            if not force_color:
+                print_color = self.color
+            else:
+                print_color = force_color
+            return print_color + prepend + self.name
         else:
-            return self.name
+            return prepend + self.name
 
     def open(self):
         t = time.time() + 1
@@ -704,7 +714,7 @@ def command_channels(current_buffer, args):
 def command_users(current_buffer, args):
     server = servers.find(current_domain_name())
     for user in server.users:
-        line = "{:<40} {} {}".format(user.colorized_name(), user.identifier, user.presence)
+        line = "{:<40} {} {}".format(user.formatted_name(), user.identifier, user.presence)
         server.buffer_prnt(line)
 
 
@@ -1016,8 +1026,6 @@ def process_message(message_json):
             text = text.replace("\t", "    ")
             name = get_user(message_json, server)
 
-            channel.unset_typing(name)
-
             text = text.encode('utf-8')
             name = name.encode('utf-8')
 
@@ -1124,6 +1132,7 @@ def typing_update_cb(data, remaining_calls):
 
 
 def buffer_list_update_cb(data, remaining_calls):
+    print 'called!'
     gray_check = False
     if len(servers) > 1:
         gray_check = True
@@ -1406,7 +1415,7 @@ if __name__ == "__main__":
 
         # attach to the weechat hooks we need
         w.hook_timer(1000, 0, 0, "typing_update_cb", "")
-        w.hook_timer(1000, 0, 0, "buffer_list_update_cb", "")
+#        w.hook_timer(1000, 0, 0, "buffer_list_update_cb", "")
         w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
         w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
         w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
