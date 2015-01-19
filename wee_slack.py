@@ -384,9 +384,9 @@ class Channel(SlackThing):
             for user in self.members:
                 user = self.server.users.find(user)
                 if user.presence == 'away':
-                    w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color, " ", "", 1)
+                    w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, " ", "", 1)
                 else:
-                    w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color, "+", "", 1)
+                    w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "+", "", 1)
         except:
             print "DEBUG: {} {}".format(self.identifier,self.name)
 
@@ -589,9 +589,9 @@ class User(SlackThing):
         self.server = server
         self.update_color()
         if self.presence == 'away':
-            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color, " ", "", 0)
+            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color_name, " ", "", 0)
         else:
-            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color, "+", "", 1)
+            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color_name, "+", "", 1)
 #        w.nicklist_add_nick(server.buffer, "", self.formatted_name(), "", "", "", 1)
 
     def __eq__(self, compare_str):
