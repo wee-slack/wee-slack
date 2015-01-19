@@ -18,7 +18,7 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.97"
+SCRIPT_VERSION = "0.97.15"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -379,12 +379,15 @@ class Channel(SlackThing):
     def update_nicklist(self):
         w.buffer_set(self.channel_buffer, "nicklist", "1")
         w.nicklist_remove_all(self.channel_buffer)
-        for user in self.members:
-            user = self.server.users.find(user)
-            if user.presence == 'away':
-                w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color(), " ", "", 1)
-            else:
-                w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color(), "+", "", 1)
+        try:
+            for user in self.members:
+                user = self.server.users.find(user)
+                if user.presence == 'away':
+                    w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color(), " ", "", 1)
+                else:
+                    w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color(), "+", "", 1)
+        except:
+            print "DEBUG: {} {}".format(self.identifier,self.name)
 
     def fullname(self):
         return "{}.{}".format(self.server.domain, self.name)
