@@ -242,11 +242,20 @@ class SlackServer(object):
                 self.connected = True
                 self.connecting = False
 
-                self.buffer_prnt('Connected to {}'.format(self.domain), backlog=True)
+                self.print_connection_info(login_data)
             return True
         else:
             w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with\n \"/set plugins.var.python.slack_extension.slack_api_token (token)\"\n\n ")
             self.connected = False
+
+    def print_connection_info(self, login_data):
+        self.buffer_prnt('Connected to Slack', backlog=True)
+        self.buffer_prnt('{:<20} {}'.format("Websocket URL", login_data["url"]), backlog=True)
+        self.buffer_prnt('{:<20} {}'.format("User name", login_data["self"]["name"]))
+        self.buffer_prnt('{:<20} {}'.format("User ID", login_data["self"]["id"]), backlog=True)
+        self.buffer_prnt('{:<20} {}'.format("Team name", login_data["team"]["name"]), backlog=True)
+        self.buffer_prnt('{:<20} {}'.format("Team domain", login_data["team"]["domain"]), backlog=True)
+        self.buffer_prnt('{:<20} {}'.format("Team id", login_data["team"]["id"]), backlog=True)
 
     def create_local_buffer(self):
         if not w.buffer_search("", self.domain):
