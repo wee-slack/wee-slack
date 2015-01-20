@@ -4,7 +4,7 @@ wee-slack
 =========
 
 **Important:**
-  Just updated with some *huge* performance improvements! Seriously, upgrade now. Weechat 1.1 or newer is now required. There was code to work around issues that no longer exist in newer versions. You should upgrade to if you wish to use continue using wee-slack.
+  Just updated with some **huge** performance improvements! Seriously, **upgrade now**. Weechat 1.1 or newer is now required. There was code to work around issues that no longer exist in newer versions. You should upgrade to if you wish to use continue using wee-slack.
 
 -----------
 
