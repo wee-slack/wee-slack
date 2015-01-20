@@ -1006,50 +1006,53 @@ def cache_message(message_json):
         message_cache[channel] = message_cache[channel][-BACKLOG_SIZE:]
 
 def process_message(message_json):
-    if "reply_to" not in message_json:
+    try:
+        if "reply_to" not in message_json:
 
-        # send these messages elsewhere
-        known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
-        if "subtype" in message_json and message_json["subtype"] in known_subtypes:
-            proc[message_json["subtype"]](message_json)
+            # send these messages elsewhere
+            known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
+            if "subtype" in message_json and message_json["subtype"] in known_subtypes:
+                proc[message_json["subtype"]](message_json)
 
-        else:
-            # move message properties down to root of json object
-            message_json = unwrap_message(message_json)
-
-            server = servers.find(message_json["myserver"])
-            channel = channels.find(message_json["channel"])
-
-            #do not process messages in unexpected channels
-            if not channel.active:
-                dbg("message came for closed channel {}".format(channel.name))
-                return
-
-            cache_message(message_json)
-
-            time = message_json['ts']
-            if "fallback" in message_json:
-                text = message_json["fallback"]
-            elif "text" in message_json:
-                text = message_json["text"]
             else:
-                text = ""
+                # move message properties down to root of json object
+                message_json = unwrap_message(message_json)
 
-            text = unfurl_refs(text)
-            if "attachments" in message_json:
-                text += u"--- {}".format(unwrap_attachments(message_json))
-            text = text.lstrip()
-            text = text.replace("\t", "    ")
-            name = get_user(message_json, server)
+                server = servers.find(message_json["myserver"])
+                channel = channels.find(message_json["channel"])
 
-            text = text.encode('utf-8')
-            name = name.encode('utf-8')
+                #do not process messages in unexpected channels
+                if not channel.active:
+                    dbg("message came for closed channel {}".format(channel.name))
+                    return
 
-            channel.buffer_prnt(name, text, time)
-    #        server.channels.find(channel).buffer_prnt(name, text, time)
-    else:
-        if message_json["reply_to"] != None:
-            cache_message(message_json)
+                cache_message(message_json)
+
+                time = message_json['ts']
+                if "fallback" in message_json:
+                    text = message_json["fallback"]
+                elif "text" in message_json:
+                    text = message_json["text"]
+                else:
+                    text = ""
+
+                text = unfurl_refs(text)
+                if "attachments" in message_json:
+                    text += u"--- {}".format(unwrap_attachments(message_json))
+                text = text.lstrip()
+                text = text.replace("\t", "    ")
+                name = get_user(message_json, server)
+
+                text = text.encode('utf-8')
+                name = name.encode('utf-8')
+
+                channel.buffer_prnt(name, text, time)
+        #        server.channels.find(channel).buffer_prnt(name, text, time)
+        else:
+            if message_json["reply_to"] != None:
+                cache_message(message_json)
+    except:
+        dbg("cannot process message {}".format(message_json))
 
 
 def unwrap_message(message_json):
@@ -1282,10 +1285,7 @@ def url_processor_cb(data, command, return_code, out, err):
                     for message in my_json["messages"]:
                         message["myserver"] = servers.find(token).domain
                         message["channel"] = servers.find(token).channels.find(channel).identifier
-                        try:
-                            process_message(message)
-                        except:
-                            dbg("cannot process message {}".format(message))
+                        process_message(message)
                 if "channel" in my_json:
                     if "members" in my_json["channel"]:
                         channels.find(my_json["channel"]["id"]).members = set(my_json["channel"]["members"])
