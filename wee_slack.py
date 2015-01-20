@@ -639,6 +639,7 @@ class User(SlackThing):
             self.color_name = w.info_get('irc_nick_color_name', self.name)
         else:
             self.color = ""
+            self.color_name = ""
 
     def formatted_name(self, prepend="", force_color=None):
         if colorize_nicks:
