@@ -1109,7 +1109,10 @@ def unfurl_refs(text):
 
 def get_user(message_json, server):
     if 'user' in message_json:
-        name = server.users.find(message_json['user']).name
+        try:
+            name = server.users.find(message_json['user']).name
+        except:
+            dbg("cannot find name {}").format(message_json['user'])
     elif 'username' in message_json:
         name = u"-{}-".format(message_json["username"])
     elif 'service_name' in message_json:
