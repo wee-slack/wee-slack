@@ -1109,10 +1109,7 @@ def unfurl_refs(text):
 
 def get_user(message_json, server):
     if 'user' in message_json:
-        try:
-            name = server.users.find(message_json['user']).name
-        except:
-            dbg("cannot find name {}".format(message_json['user']))
+        name = server.users.find(message_json['user']).name
     elif 'username' in message_json:
         name = u"-{}-".format(message_json["username"])
     elif 'service_name' in message_json:
@@ -1285,7 +1282,10 @@ def url_processor_cb(data, command, return_code, out, err):
                     for message in my_json["messages"]:
                         message["myserver"] = servers.find(token).domain
                         message["channel"] = servers.find(token).channels.find(channel).identifier
-                        process_message(message)
+                        try:
+                            process_message(message)
+                        except:
+                            dbg("cannot process message {}".format(message))
                 if "channel" in my_json:
                     if "members" in my_json["channel"]:
                         channels.find(my_json["channel"]["id"]).members = set(my_json["channel"]["members"])
