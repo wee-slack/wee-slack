@@ -1037,6 +1037,9 @@ def process_message(message_json):
 
             channel.buffer_prnt(name, text, time)
     #        server.channels.find(channel).buffer_prnt(name, text, time)
+    else:
+        if message_json["reply_to"] != None:
+            cache_message(message_json)
 
 
 def unwrap_message(message_json):
@@ -1357,7 +1360,7 @@ def config_changed_cb(data, option, value):
     colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
     slack_debug = None
     debug_mode = w.config_get_plugin("debug_mode").lower()
-    if debug_mode != '' or debug_mode != 'false':
+    if debug_mode != '' and debug_mode != 'false':
         create_slack_debug_buffer()
     return w.WEECHAT_RC_OK
 
