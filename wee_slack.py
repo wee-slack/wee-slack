@@ -242,6 +242,7 @@ class SlackServer(object):
                 self.connected = True
                 self.connecting = False
 
+                self.buffer_prnt('Connected to {}'.format(self.domain))
             return True
         else:
             w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with\n \"/set plugins.var.python.slack_extension.slack_api_token (token)\"\n\n ")
