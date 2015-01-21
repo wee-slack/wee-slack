@@ -1382,12 +1382,16 @@ def quit_notification_cb(signal, sig_type, data):
     STOP_TALKING_TO_SLACK = True
     cache_write_cb("", "")
 
+def script_unloaded():
+    global STOP_TALKING_TO_SLACK
+    STOP_TALKING_TO_SLACK = True
+
 # END Utility Methods
 
 # Main
 if __name__ == "__main__":
     if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
-                  SCRIPT_DESC, "", ""):
+                  SCRIPT_DESC, "script_unloaded", ""):
 
         WEECHAT_HOME = w.info_get("weechat_dir", "")
         CACHE_NAME = "slack.cache"
