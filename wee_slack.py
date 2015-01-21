@@ -745,8 +745,7 @@ def command_changetoken(current_buffer, args):
 
 
 def command_test(current_buffer, args):
-    if slack_buffer:
-        w.prnt(slack_buffer, "worked!")
+    w.prnt(current_buffer, "worked!")
 
 
 def command_away(current_buffer, args):
@@ -868,7 +867,7 @@ def process_team_join(message_json):
     server = servers.find(message_json["myserver"])
     item = message_json["user"]
     server.users.append(User(server, item["name"], item["id"], item["presence"]))
-    w.prnt(server.buffer, "New user joined: {}".format(item["name"]))
+    server.buffer_prnt(server.buffer, "New user joined: {}".format(item["name"]))
 
 
 def process_presence_change(message_json):
@@ -902,7 +901,7 @@ def process_channel_created(message_json):
     else:
         item = message_json["channel"]
         server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]))
-    w.prnt(server.buffer, "New channel created: {}".format(item["name"]))
+    server.buffer_prnt("New channel created: {}".format(item["name"]))
 
 
 def process_channel_left(message_json):
@@ -977,7 +976,7 @@ def process_im_created(message_json):
     else:
         item = message_json["channel"]
         server.channels.append(DmChannel(server, channel_name, item["id"], item["is_open"], item["last_read"]))
-    w.prnt(server.buffer, "New channel created: {}".format(item["name"]))
+    server.buffer_prnt("New channel created: {}".format(item["name"]))
 
 
 def process_user_typing(message_json):
