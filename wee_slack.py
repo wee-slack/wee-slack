@@ -1385,6 +1385,7 @@ def quit_notification_cb(signal, sig_type, data):
 def script_unloaded():
     global STOP_TALKING_TO_SLACK
     STOP_TALKING_TO_SLACK = True
+    return w.WEECHAT_RC_OK
 
 # END Utility Methods
 
