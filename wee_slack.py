@@ -1022,6 +1022,7 @@ def process_message(message_json):
 
                 #do not process messages in unexpected channels
                 if not channel.active:
+                    channel.open(False)
                     dbg("message came for closed channel {}".format(channel.name))
                     return
 
