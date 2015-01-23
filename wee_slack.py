@@ -51,11 +51,11 @@ def dbg(message, fout=False, main_buffer=False):
     #message = message.encode('utf-8', 'replace')
     if fout:
         file('/tmp/debug.log', 'a+').writelines(message + '\n')
-    if slack_debug is not None:
-        if not main_buffer:
-            w.prnt(slack_debug, message)
-        else:
+    if main_buffer:
             w.prnt("", message)
+    else:
+        if slack_debug is not None:
+            w.prnt(slack_debug, message)
 
 # hilarious, i know
 
@@ -783,10 +783,10 @@ def command_neveraway(current_buffer, args):
     global never_away
     if never_away:
         never_away = False
-        dbg("unset never_away")
+        dbg("unset never_away", main_buffer=True)
     else:
         never_away = True
-        dbg("set never_away")
+        dbg("set never_away", main_buffer=True)
 
 
 def command_printvar(current_buffer, args):
@@ -1013,41 +1013,40 @@ def process_message(message_json):
             if "subtype" in message_json and message_json["subtype"] in known_subtypes:
                 proc[message_json["subtype"]](message_json)
 
+            # move message properties down to root of json object
+            message_json = unwrap_message(message_json)
+
+            server = servers.find(message_json["myserver"])
+            channel = channels.find(message_json["channel"])
+
+            #do not process messages in unexpected channels
+            if not channel.active:
+                channel.open(False)
+                dbg("message came for closed channel {}".format(channel.name))
+                return
+
+            cache_message(message_json)
+
+            time = message_json['ts']
+            if "fallback" in message_json:
+                text = message_json["fallback"]
+            elif "text" in message_json:
+                text = message_json["text"]
             else:
-                # move message properties down to root of json object
-                message_json = unwrap_message(message_json)
+                text = ""
 
-                server = servers.find(message_json["myserver"])
-                channel = channels.find(message_json["channel"])
+            text = unfurl_refs(text)
+            if "attachments" in message_json:
+                text += u"--- {}".format(unwrap_attachments(message_json))
+            text = text.lstrip()
+            text = text.replace("\t", "    ")
+            name = get_user(message_json, server)
 
-                #do not process messages in unexpected channels
-                if not channel.active:
-                    channel.open(False)
-                    dbg("message came for closed channel {}".format(channel.name))
-                    return
+            text = text.encode('utf-8')
+            name = name.encode('utf-8')
 
-                cache_message(message_json)
-
-                time = message_json['ts']
-                if "fallback" in message_json:
-                    text = message_json["fallback"]
-                elif "text" in message_json:
-                    text = message_json["text"]
-                else:
-                    text = ""
-
-                text = unfurl_refs(text)
-                if "attachments" in message_json:
-                    text += u"--- {}".format(unwrap_attachments(message_json))
-                text = text.lstrip()
-                text = text.replace("\t", "    ")
-                name = get_user(message_json, server)
-
-                text = text.encode('utf-8')
-                name = name.encode('utf-8')
-
-                channel.buffer_prnt(name, text, time)
-        #        server.channels.find(channel).buffer_prnt(name, text, time)
+            channel.buffer_prnt(name, text, time)
+    #        server.channels.find(channel).buffer_prnt(name, text, time)
         else:
             if message_json["reply_to"] != None:
                 cache_message(message_json)
@@ -1381,10 +1380,12 @@ def quit_notification_cb(signal, sig_type, data):
     global STOP_TALKING_TO_SLACK
     STOP_TALKING_TO_SLACK = True
     cache_write_cb("", "")
+    return w.WEECHAT_RC_OK
 
 def script_unloaded():
     global STOP_TALKING_TO_SLACK
     STOP_TALKING_TO_SLACK = True
+    cache_write_cb("", "")
     return w.WEECHAT_RC_OK
 
 # END Utility Methods
