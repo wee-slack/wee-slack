@@ -536,7 +536,7 @@ class Channel(SlackThing):
             tags = "notify_message"
         time_int = int(time_float)
         if self.channel_buffer:
-            if self.server.users.find(user) and user != self.server.nick:
+            if self.server.users.find(user):
                 name = self.server.users.find(user).formatted_name()
             else:
                 name = user
@@ -643,7 +643,9 @@ class User(SlackThing):
 
     def formatted_name(self, prepend="", force_color=None):
         if colorize_nicks:
-            if not force_color:
+            if self.name == self.server.nick:
+                return prepend + self.name
+            elif not force_color:
                 print_color = self.color
             else:
                 print_color = force_color
@@ -725,6 +727,13 @@ def command_channels(current_buffer, args):
     for channel in server.channels:
         line = "{:<25} {} {}".format(channel.name, channel.identifier, channel.active)
         server.buffer_prnt(line)
+
+def command_nodistractions(current_buffer, args):
+    global hide_distractions
+    hide_distractions = not hide_distractions
+    if distracting_channels[0] != "":
+        for channel in distracting_channels:
+            w.buffer_set(channels.find(channel).channel_buffer, "hidden", str(int(hide_distractions)))
 
 
 def command_users(current_buffer, args):
@@ -1359,13 +1368,13 @@ def create_slack_debug_buffer():
 
 
 def config_changed_cb(data, option, value):
-    global slack_api_token, channels_always_marked_read, channels_not_on_current_server_color, colorize_nicks, slack_debug, debug_mode
+    global slack_api_token, distracting_channels, channels_not_on_current_server_color, colorize_nicks, slack_debug, debug_mode
     slack_api_token = w.config_get_plugin("slack_api_token")
 
     if slack_api_token.startswith('${sec.data'):
         slack_api_token = w.string_eval_expression(slack_api_token, {}, {}, {})
 
-    channels_always_marked_read = [x.strip() for x in w.config_get_plugin("channels_always_marked_read").split(',')]
+    distracting_channels = [x.strip() for x in w.config_get_plugin("distracting_channels").split(',')]
     channels_not_on_current_server_color = w.config_get_plugin("channels_not_on_current_server_color")
     if channels_not_on_current_server_color == "0":
         channels_not_on_current_server_color = False
@@ -1401,8 +1410,8 @@ if __name__ == "__main__":
 
         if not w.config_get_plugin('slack_api_token'):
             w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
-        if not w.config_get_plugin('channels_always_marked_read'):
-            w.config_set_plugin('channels_always_marked_read', "")
+        if not w.config_get_plugin('distracting_channels'):
+            w.config_set_plugin('distracting_channels', "")
         if not w.config_get_plugin('channels_not_on_current_server_color'):
             w.config_set_plugin('channels_not_on_current_server_color', "0")
         if not w.config_get_plugin('debug_mode'):
@@ -1432,6 +1441,7 @@ if __name__ == "__main__":
 
         #name = None
         never_away = False
+        hide_distractions = False
         hotlist = w.infolist_get("hotlist", "", "")
         main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
 
