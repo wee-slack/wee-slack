@@ -733,7 +733,10 @@ def command_nodistractions(current_buffer, args):
     hide_distractions = not hide_distractions
     if distracting_channels[0] != "":
         for channel in distracting_channels:
-            w.buffer_set(channels.find(channel).channel_buffer, "hidden", str(int(hide_distractions)))
+            try:
+                w.buffer_set(channels.find(channel).channel_buffer, "hidden", str(int(hide_distractions)))
+            except:
+                dbg("Can't hide channel {}".format(channel), main_buffer=True)
 
 
 def command_users(current_buffer, args):
@@ -1256,7 +1259,7 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
     if not STOP_TALKING_TO_SLACK:
         post_data["token"] = token
         url = 'https://{}/api/{}'.format(domain, request)
-        command = 'curl -s --data "{}" {}'.format(urllib.urlencode(post_data), url)
+        command = 'curl  -A "wee_slack {}" -s --data "{}" {}'.format(SCRIPT_VERSION, urllib.urlencode(post_data), url)
         context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
         w.hook_process(command, 20000, "url_processor_cb", context)
 
