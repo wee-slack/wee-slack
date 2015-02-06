@@ -181,7 +181,8 @@ class SlackServer(object):
         self.channels = SearchList()
         self.connecting = False
         self.connected = False
-        self.ping_counter = 0
+        self.communication_counter = 0
+        self.message_buffer = {}
         self.ping_hook = None
 
         self.identifier = None
@@ -203,19 +204,25 @@ class SlackServer(object):
         attribute = eval("self." + attribute)
         return attribute.find(name)
 
+    def get_communication_id(self):
+        if self.communication_counter > 999:
+            self.communication_counter = 0
+        self.communication_counter += 1
+        return self.communication_counter
+
     def send_to_websocket(self, data):
         try:
-            self.ws.send(data)
-            dbg("Sent {}...".format(data[:100]))
+            data["id"] = self.get_communication_id()
+            message = json.dumps(data)
+            self.message_buffer[data["id"]] = data
+            self.ws.send(message)
+            dbg("Sent {}...".format(message[:100]))
         except:
             self.connected = False
 
     def ping(self):
-        if self.ping_counter > 999:
-            self.ping_counter = 0
-        request = {"type": "ping", "id": self.ping_counter}
-        self.send_to_websocket(json.dumps(request))
-        self.ping_counter += 1
+        request = {"type": "ping"}
+        self.send_to_websocket(request)
 
     def connect_to_slack(self):
         t = time.time()
@@ -234,7 +241,7 @@ class SlackServer(object):
             if self.create_slack_websocket(login_data):
                 if self.ping_hook:
                     w.unhook(self.ping_hook)
-                    self.ping_counter = 0
+                    self.communication_counter = 0
                 self.ping_hook = w.hook_timer(1000 * 5, 0, 0, "slack_ping_cb", self.domain)
                 if len(self.users) and 0 or len(self.channels) == 0:
                     self.create_slack_mappings(login_data)
@@ -348,8 +355,6 @@ class Channel(SlackThing):
         self.topic = topic
         self.last_read = float(last_read)
         self.last_received = None
-        self.previous_prnt_name = ""
-        self.previous_prnt_message = ""
         if active:
             self.create_buffer()
             self.attach_buffer()
@@ -436,8 +441,8 @@ class Channel(SlackThing):
     def send_message(self, message):
         message = self.linkify_text(message)
         dbg(message)
-        request = {"type": "message", "channel": self.identifier, "text": message}
-        self.server.send_to_websocket(json.dumps(request))
+        request = {"type": "message", "channel": self.identifier, "text": message, "myserver": self.server.domain}
+        self.server.send_to_websocket(request)
 
     def linkify_text(self, message):
         message = message.split(' ')
@@ -468,6 +473,7 @@ class Channel(SlackThing):
         self.opening = False
 
     def close(self, update_remote=True):
+        #remove from cache so messages don't reappear when reconnecting
         if self.active:
             self.active = False
             self.detach_buffer()
@@ -476,6 +482,7 @@ class Channel(SlackThing):
             async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier})
 
     def closed(self):
+        message_cache.pop(self.identifier)
         self.channel_buffer = None
         self.last_received = None
         self.close()
@@ -542,13 +549,10 @@ class Channel(SlackThing):
                 name = user
             name = name.decode('utf-8')
             message = message.decode('UTF-8', 'replace')
-            if message != self.previous_prnt_message:
-                if message.startswith(self.previous_prnt_message):
-                    message = message[len(self.previous_prnt_message):]
-                message = HTMLParser.HTMLParser().unescape(message)
-                data = u"{}\t{}".format(name, message).encode('utf-8')
-                w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
-            self.previous_prnt_message = message
+            message = HTMLParser.HTMLParser().unescape(message)
+            data = u"{}\t{}".format(name, message).encode('utf-8')
+            w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
+
             if set_read_marker:
                 self.mark_read(False)
         else:
@@ -783,6 +787,11 @@ def command_cacheinfo(current_buffer, args):
         w.prnt("", "{} {}".format(channels.find(channel), len(message_cache[channel])))
 #        server.buffer_prnt("{} {}".format(channels.find(channel), len(message_cache[channel])))
 
+def command_flushcache(current_buffer, args):
+    global message_cache
+    message_cache = {}
+    cache_write_cb("","")
+
 def command_uncache(current_buffer, args):
     identifier = channels.find(current_buffer).identifier
     message_cache.pop(identifier)
@@ -855,7 +864,9 @@ def slack_websocket_cb(server, fd):
     except:
         return w.WEECHAT_RC_OK
     # dispatch here
-    if "type" in message_json:
+    if "reply_to" in message_json:
+        function_name = "reply"
+    elif "type" in message_json:
         function_name = message_json["type"]
     else:
         function_name = "unknown"
@@ -870,6 +881,15 @@ def slack_websocket_cb(server, fd):
     w.bar_item_update("slack_typing_notice")
     return w.WEECHAT_RC_OK
 
+def process_reply(message_json):
+    server = servers.find(message_json["myserver"])
+    identifier = message_json["reply_to"]
+    item = server.message_buffer.pop(identifier)
+    if "type" in item:
+        if item["type"] == "message":
+            item["ts"] = message_json["ts"]
+            cache_message(item, from_me=True)
+    dbg("REPLY {}".format(item))
 
 def process_pong(message_json):
     pass
@@ -1005,9 +1025,11 @@ def process_error(message_json):
 # def process_message_changed(message_json):
 #    process_message(message_json)
 
-def cache_message(message_json):
+def cache_message(message_json, from_me=False):
     global message_cache
-
+    if from_me:
+        server = channels.find(message_json["channel"]).server
+        message_json["user"] = server.users.find(server.nick).identifier
     channel = message_json["channel"]
     if channel not in message_cache:
         message_cache[channel] = []
@@ -1018,50 +1040,44 @@ def cache_message(message_json):
 
 def process_message(message_json):
     try:
-        if "reply_to" not in message_json:
+        # send these messages elsewhere
+        known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
+        if "subtype" in message_json and message_json["subtype"] in known_subtypes:
+            proc[message_json["subtype"]](message_json)
 
-            # send these messages elsewhere
-            known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
-            if "subtype" in message_json and message_json["subtype"] in known_subtypes:
-                proc[message_json["subtype"]](message_json)
+        # move message properties down to root of json object
+        message_json = unwrap_message(message_json)
 
-            # move message properties down to root of json object
-            message_json = unwrap_message(message_json)
+        server = servers.find(message_json["myserver"])
+        channel = channels.find(message_json["channel"])
 
-            server = servers.find(message_json["myserver"])
-            channel = channels.find(message_json["channel"])
+        #do not process messages in unexpected channels
+        if not channel.active:
+            channel.open(False)
+            dbg("message came for closed channel {}".format(channel.name))
+            return
 
-            #do not process messages in unexpected channels
-            if not channel.active:
-                channel.open(False)
-                dbg("message came for closed channel {}".format(channel.name))
-                return
+        cache_message(message_json)
 
-            cache_message(message_json)
-
-            time = message_json['ts']
-            if "fallback" in message_json:
-                text = message_json["fallback"]
-            elif "text" in message_json:
-                text = message_json["text"]
-            else:
-                text = ""
-
-            text = unfurl_refs(text)
-            if "attachments" in message_json:
-                text += u"--- {}".format(unwrap_attachments(message_json))
-            text = text.lstrip()
-            text = text.replace("\t", "    ")
-            name = get_user(message_json, server)
-
-            text = text.encode('utf-8')
-            name = name.encode('utf-8')
-
-            channel.buffer_prnt(name, text, time)
-    #        server.channels.find(channel).buffer_prnt(name, text, time)
+        time = message_json['ts']
+        if "fallback" in message_json:
+            text = message_json["fallback"]
+        elif "text" in message_json:
+            text = message_json["text"]
         else:
-            if message_json["reply_to"] != None:
-                cache_message(message_json)
+            text = ""
+
+        text = unfurl_refs(text)
+        if "attachments" in message_json:
+            text += u"--- {}".format(unwrap_attachments(message_json))
+        text = text.lstrip()
+        text = text.replace("\t", "    ")
+        name = get_user(message_json, server)
+
+        text = text.encode('utf-8')
+        name = name.encode('utf-8')
+
+        channel.buffer_prnt(name, text, time)
     except:
         dbg("cannot process message {}".format(message_json))
 
@@ -1218,7 +1234,7 @@ def typing_notification_cb(signal, sig_type, data):
             if channel:
                 identifier = channel.identifier
                 request = {"type": "typing", "channel": identifier}
-                channel.server.send_to_websocket(json.dumps(request))
+                channel.server.send_to_websocket(request)
                 typing_timer = now
     return w.WEECHAT_RC_OK
 
@@ -1247,7 +1263,7 @@ def slack_never_away_cb(data, remaining):
             identifier = server.channels.find("slackbot").identifier
             request = {"type": "typing", "channel": identifier}
             #request = {"type":"typing","channel":"slackbot"}
-            server.send_to_websocket(json.dumps(request))
+            server.send_to_websocket(request)
     return w.WEECHAT_RC_OK
 
 # Slack specific requests
