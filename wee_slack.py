@@ -1467,7 +1467,7 @@ if __name__ == "__main__":
         try:
             cache_file = open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'r')
             message_cache = json.loads(cache_file.read())
-        except IOError:
+        except (IOError, ValueError):
             message_cache = {}
         # End global var section
 
