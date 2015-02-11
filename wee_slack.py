@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+from functools import wraps
 import time
 import json
 import pickle
@@ -710,11 +711,32 @@ def part_command_cb(data, current_buffer, args):
         return w.WEECHAT_RC_OK
 
 
+# Wrap command_ functions that require they be performed in a slack buffer
+def slack_buffer_required(f):
+    @wraps(f)
+    def wrapper(current_buffer, *args, **kwargs):
+        server = servers.find(current_domain_name())
+        if not server:
+            w.prnt(current_buffer, "This command must be used in a slack buffer")
+            return
+        return f(current_buffer, *args, **kwargs)
+    return wrapper
+
+
+@slack_buffer_required
 def command_talk(current_buffer, args):
+    """
+    Open a chat with the specified user
+    /slack talk [user]
+    """
     servers.find(current_domain_name()).users.find(args).open()
 
 
 def command_join(current_buffer, args):
+    """
+    Join the specified channel
+    /slack join [channel]
+    """
     domain = current_domain_name()
     if domain == "":
         if len(servers) == 1:
@@ -728,11 +750,18 @@ def command_join(current_buffer, args):
     else:
         w.prnt(current_buffer, "Channel not found.")
 
+
+@slack_buffer_required
 def command_channels(current_buffer, args):
+    """
+    List all the channels for the slack instance (name, id, active)
+    /slack channels
+    """
     server = servers.find(current_domain_name())
     for channel in server.channels:
         line = "{:<25} {} {}".format(channel.name, channel.identifier, channel.active)
         server.buffer_prnt(line)
+
 
 def command_nodistractions(current_buffer, args):
     global hide_distractions
@@ -745,7 +774,12 @@ def command_nodistractions(current_buffer, args):
                 dbg("Can't hide channel {}".format(channel), main_buffer=True)
 
 
+@slack_buffer_required
 def command_users(current_buffer, args):
+    """
+    List all the users for the slack instance (name, id, away)
+    /slack users
+    """
     server = servers.find(current_domain_name())
     for user in server.users:
         line = "{:<40} {} {}".format(user.formatted_name(), user.identifier, user.presence)
@@ -753,9 +787,12 @@ def command_users(current_buffer, args):
 
 
 def command_setallreadmarkers(current_buffer, args):
-    if args:
-        for channel in channels:
-            channel.set_read_marker(args)
+    """
+    Sets the read marker for all channels
+    /slack setallreadmarkers
+    """
+    for channel in channels:
+        channel.mark_read()
 
 
 def command_changetoken(current_buffer, args):
@@ -766,17 +803,32 @@ def command_test(current_buffer, args):
     w.prnt(current_buffer, "worked!")
 
 
+@slack_buffer_required
 def command_away(current_buffer, args):
+    """
+    Sets your status as 'away'
+    /slack away
+    """
     server = servers.find(current_domain_name())
     async_slack_api_request(server.domain, server.token, 'presence.set', {"presence": "away"})
 
 
+@slack_buffer_required
 def command_back(current_buffer, args):
+    """
+    Sets your status as 'back'
+    /slack back
+    """
     server = servers.find(current_domain_name())
     async_slack_api_request(server.domain, server.token, 'presence.set', {"presence": "active"})
 
 
+@slack_buffer_required
 def command_markread(current_buffer, args):
+    """
+    Marks current channel as read
+    /slack markread
+    """
     # refactor this - one liner i think
     channel = current_buffer_name(short=True)
     domain = current_domain_name()
@@ -853,6 +905,22 @@ def command_nick(current_buffer, args):
 #    browser.select_form(nr=0)
 #    browser.form['username'] = args
 #    reply = browser.submit()
+
+
+def command_help(current_buffer, args):
+    help_cmds = { k[8:]: v.__doc__ for k, v in globals().items() if k.startswith("command_") }
+
+    if args:
+        try:
+             help_cmds = {args: help_cmds[args]}
+        except KeyError:
+            w.prnt("", "Command not found: " + args)
+            return
+
+    for cmd, helptext in help_cmds.items():
+        w.prnt('', w.color("bold") + cmd)
+        w.prnt('', (helptext or 'No help text').strip())
+        w.prnt('', '')
 
 # Websocket handling methods
 
@@ -1494,7 +1562,19 @@ if __name__ == "__main__":
         w.hook_signal('window_switch', "buffer_switch_cb", "")
         w.hook_signal('input_text_changed', "typing_notification_cb", "")
         w.hook_signal('quit', "quit_notification_cb", "")
-        w.hook_command('slack', 'Plugin to allow typing notification and sync of read markers for slack.com', 'stuff', 'stuff2', '|'.join(cmds.keys()), 'slack_command_cb', '')
+        w.hook_command(
+             # Command name and description
+            'slack', 'Plugin to allow typing notification and sync of read markers for slack.com',
+            # Usage
+            '[command] [command options]',
+            # Description of arguments
+            'Commands:\n' +
+            '\n'.join(cmds.keys()) +
+            '\nUse /slack help [command] to find out more\n',
+            # Completion
+            '',
+            # Function name
+            'slack_command_cb', '')
         w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
 #        w.hook_command('me', 'me_command_cb', '')
         w.hook_command_run('/join', 'join_command_cb', '')
