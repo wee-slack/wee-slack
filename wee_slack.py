@@ -669,10 +669,12 @@ def slack_command_cb(data, current_buffer, args):
         function_name, args = a[0], " ".join(a[1:])
     else:
         function_name, args = a[0], None
-#    try:
-    cmds[function_name](current_buffer, args)
-#    except KeyError:
-#        w.prnt("", "Command not found or exception: "+function_name)
+
+    try:
+        command = cmds[function_name](current_buffer, args)
+    except KeyError:
+        w.prnt("", "Command not found: " + function_name)
+
     return w.WEECHAT_RC_OK
 
 
