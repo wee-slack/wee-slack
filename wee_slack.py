@@ -395,17 +395,18 @@ class Channel(SlackThing):
             self.channel_buffer = None
 
     def update_nicklist(self):
-        w.buffer_set(self.channel_buffer, "nicklist", "1")
-        w.nicklist_remove_all(self.channel_buffer)
-        try:
-            for user in self.members:
-                user = self.server.users.find(user)
-                if user.presence == 'away':
-                    w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, " ", "", 1)
-                else:
-                    w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "+", "", 1)
-        except:
-            print "DEBUG: {} {}".format(self.identifier,self.name)
+        if self.channel_buffer:
+            w.buffer_set(self.channel_buffer, "nicklist", "1")
+            w.nicklist_remove_all(self.channel_buffer)
+            try:
+                for user in self.members:
+                    user = self.server.users.find(user)
+                    if user.presence == 'away':
+                        w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, " ", "", 1)
+                    else:
+                        w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "+", "", 1)
+            except:
+                print "DEBUG: {} {}".format(self.identifier,self.name)
 
     def fullname(self):
         return "{}.{}".format(self.server.domain, self.name)
