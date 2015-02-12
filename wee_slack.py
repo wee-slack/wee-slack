@@ -1572,8 +1572,8 @@ if __name__ == "__main__":
             'Commands:\n' +
             '\n'.join(cmds.keys()) +
             '\nUse /slack help [command] to find out more\n',
-            # Completion
-            '',
+            # Completions
+            '|'.join(cmds.keys()),
             # Function name
             'slack_command_cb', '')
         w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
