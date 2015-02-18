@@ -519,10 +519,9 @@ class Channel(SlackThing):
 
     def rename(self):
         if current_domain_name() != self.server.domain and channels_not_on_current_server_color:
-            color = channels_not_on_current_server_color
+            color = w.color(channels_not_on_current_server_color)
         else:
-            color = "default"
-        color = w.color(color)
+            color = ""
         if self.is_someone_typing():
             new_name = ">{}".format(self.name[1:])
         else:
