@@ -14,9 +14,10 @@ A WeeChat native client for Slack.com. Provides supplemental features only avail
 
 Features
 --------
-  * **New** Caches message history, making startup MUCH faster
-  * **New** Smarter redraw of dynamic buffer info (much lower CPU %)
-  * **New** beta UTF-8 support
+  * **New** regex style message editing (s/oldtext/newtext/)
+  * Caches message history, making startup MUCH faster
+  * Smarter redraw of dynamic buffer info (much lower CPU %)
+  * beta UTF-8 support
   * Doesn't use IRC gateway. Connects directly with Slack via API/Websocket
   * Multiple Teams supported! Just add multiple api tokens separated by commas
   * Replays history automatically during startup. (and sets read marker to the correct position in history)
