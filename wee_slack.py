@@ -19,7 +19,7 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.97.16"
+SCRIPT_VERSION = "0.97.17"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -335,9 +335,14 @@ class SlackThing(object):
 
 
 def buffer_input_cb(b, buffer, data):
-    channel = channels.find(buffer)
-    channel.send_message(data)
-    channel.buffer_prnt(channel.server.nick, data)
+    if not data.startswith('s/'):
+        channel = channels.find(buffer)
+        channel.send_message(data)
+        channel.buffer_prnt(channel.server.nick, data)
+    elif data.count('/') == 3:
+        old, new = data.split('/')[1:3]
+        channel = channels.find(buffer)
+        channel.change_previous_message(old, new)
     channel.mark_read(True)
     return w.WEECHAT_RC_ERROR
 
@@ -561,6 +566,19 @@ class Channel(SlackThing):
             self.open(False)
         self.last_received = time
         self.unset_typing(user)
+
+    def change_previous_message(self, old, new):
+        message = self.my_last_message()
+        if new == "" and old == "":
+            async_slack_api_request(self.server.domain, self.server.token, 'chat.delete', {"channel": self.identifier, "ts": message['ts']})
+        else:
+            new_message = message["text"].replace(old, new)
+            async_slack_api_request(self.server.domain, self.server.token, 'chat.update', {"channel": self.identifier, "ts": message['ts'], "text": new_message})
+
+    def my_last_message(self):
+        for message in reversed(message_cache[self.identifier]):
+            if "user" in message and "text" in message and message["user"] == self.server.users.find(self.server.nick).identifier:
+                return message
 
     def get_history(self):
         if self.active:
