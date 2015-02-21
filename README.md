@@ -114,6 +114,7 @@ Join a channel:
 
 Start a direct chat with someone:
 ```
+/query [username]
 /slack talk [username]
 ```
 
