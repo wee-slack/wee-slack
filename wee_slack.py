@@ -701,7 +701,7 @@ def me_command_cb(data, current_buffer, args):
     if channels.find(current_buffer):
         channel = channels.find(current_buffer)
         nick = channel.server.nick
-        message = "{} {}".format(nick, args)
+        message = "_{}_".format(args)
         message = message.encode('utf-8')
         buffer_input_cb("", current_buffer, message)
     return w.WEECHAT_RC_OK
@@ -1593,8 +1593,8 @@ if __name__ == "__main__":
             '|'.join(cmds.keys()),
             # Function name
             'slack_command_cb', '')
-        w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
 #        w.hook_command('me', 'me_command_cb', '')
+        w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
         w.hook_command_run('/query', 'join_command_cb', '')
         w.hook_command_run('/join', 'join_command_cb', '')
         w.hook_command_run('/part', 'part_command_cb', '')
