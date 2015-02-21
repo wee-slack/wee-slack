@@ -1596,6 +1596,7 @@ if __name__ == "__main__":
             'slack_command_cb', '')
         w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
 #        w.hook_command('me', 'me_command_cb', '')
+        w.hook_command_run('/query', 'join_command_cb', '')
         w.hook_command_run('/join', 'join_command_cb', '')
         w.hook_command_run('/part', 'part_command_cb', '')
         w.hook_command_run('/leave', 'part_command_cb', '')
