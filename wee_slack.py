@@ -554,6 +554,13 @@ class Channel(SlackThing):
             else:
                 name = user
             name = name.decode('utf-8')
+            #colorize nicks in each line
+            chat_color = w.config_string(w.config_get('weechat.color.chat'))
+            for user in self.server.users:
+                if user.name in message:
+                    message = user.name_regex.sub(
+                        r'\1\2{}\3'.format(user.formatted_name() + w.color(chat_color)),
+                        message)
             message = message.decode('UTF-8', 'replace')
             message = HTMLParser.HTMLParser().unescape(message)
             data = u"{}\t{}".format(name, message).encode('utf-8')
@@ -626,6 +633,7 @@ class User(SlackThing):
         self.presence = presence
         self.server = server
         self.update_color()
+        self.name_regex = re.compile(r"([\W]|\A)(@{0,1})" + self.name + "('s|[^'\w]|\Z)")
         if self.presence == 'away':
             self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color_name, " ", "", 0)
         else:
