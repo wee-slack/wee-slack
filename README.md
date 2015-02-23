@@ -141,6 +141,16 @@ Set yourself away/back:
 /slack back
 ```
 
+Modify previous message *Note: this is not regex, just similar syntax*:
+```
+s/old text/new text/
+```
+
+Delete previous message:
+```
+s///
+```
+
 Turn off colorized nicks:
 ```
 /set plugins.var.python.slack_extension.colorize_nicks 0
