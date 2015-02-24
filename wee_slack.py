@@ -19,7 +19,7 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.97.19"
+SCRIPT_VERSION = "0.97.20"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -950,6 +950,22 @@ def command_help(current_buffer, args):
 
 # Websocket handling methods
 
+def command_openweb(current_buffer, args):
+    trigger = w.config_get_plugin('trigger_value')
+    if trigger != "0":
+        if args is None:
+            channel = channels.find(current_buffer)
+            url = "{}/messages/{}".format(channel.server.domain, channel.name)
+            topic = w.buffer_get_string(channel.channel_buffer, "title")
+            w.buffer_set(channel.channel_buffer, "title", "{}:{}".format(trigger, url))
+            w.hook_timer(1000, 0, 1, "command_openweb", json.dumps({"topic": topic, "buffer": current_buffer}))
+        else:
+            #TODO: fix this dirty hack because i don't know the right way to send multiple args.
+            args = current_buffer
+            data = json.loads(args)
+            channel_buffer = channels.find(data["buffer"]).channel_buffer
+            w.buffer_set(channel_buffer, "title", data["topic"])
+    return w.WEECHAT_RC_OK
 
 def slack_websocket_cb(server, fd):
     try:
@@ -1533,6 +1549,8 @@ if __name__ == "__main__":
             w.config_set_plugin('debug_mode', "")
         if not w.config_get_plugin('colorize_nicks'):
             w.config_set_plugin('colorize_nicks', "1")
+        if not w.config_get_plugin('trigger_value'):
+            w.config_set_plugin('trigger_value', "0")
 
         version = w.info_get("version_number", "") or 0
         if int(version) >= 0x00040400:
