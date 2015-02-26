@@ -126,6 +126,7 @@ class SlackServer(object):
         self.ws = None
         self.ws_hook = None
         self.users = SearchList()
+        self.bots = SearchList()
         self.channels = SearchList()
         self.connecting = False
         self.connected = False
@@ -151,6 +152,9 @@ class SlackServer(object):
     def add_user(self, user):
         self.users.append(user, user.get_aliases())
         users.append(user, user.get_aliases())
+
+    def add_bot(self, bot):
+        self.bots.append(bot)
 
     def add_channel(self, channel):
         self.channels.append(channel, channel.get_aliases())
@@ -259,6 +263,9 @@ class SlackServer(object):
 
         for item in data["users"]:
             self.add_user(User(self, item["name"], item["id"], item["presence"], item["deleted"]))
+
+        for item in data["bots"]:
+            self.add_bot(Bot(self, item["name"], item["id"], item["deleted"]))
 
         for item in data["channels"]:
             if "last_read" not in item:
@@ -770,6 +777,26 @@ class User(object):
         t = time.time() + 1
         #reply = async_slack_api_request("im.open", {"channel":self.identifier,"ts":t})
         async_slack_api_request(self.server.domain, self.server.token, "im.open", {"user": self.identifier, "ts": t})
+
+class Bot(object):
+
+    def __init__(self, server, name, identifier, deleted=False):
+        self.server = server
+        self.name = name
+        self.identifier = identifier
+        self.deleted = deleted
+
+    def __eq__(self, compare_str):
+        if compare_str == self.identifier or compare_str == self.name:
+            return True
+        else:
+            return False
+
+    def __str__(self):
+        return "{}".format(self.identifier)
+
+    def __repr__(self):
+        return "{}".format(self.identifier)
 
 class Message(object):
 
@@ -1479,10 +1506,10 @@ def get_user(message_json, server):
         name = server.users.find(message_json['user']).name
     elif 'username' in message_json:
         name = u"-{}-".format(message_json["username"])
+    elif 'bot_id' in message_json:
+        name = u"{}:]".format(server.bots.find(message_json["bot_id"]).name)
     elif 'service_name' in message_json:
         name = u"-{}-".format(message_json["service_name"])
-    elif 'bot_id' in message_json:
-        name = u"-{}-".format(message_json["bot_id"])
     else:
         name = u""
     return name
