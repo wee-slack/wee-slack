@@ -31,18 +31,18 @@ SLACK_API_TRANSLATOR = {
         "join": "channels.join",
         "leave": "channels.leave",
         "mark": "channels.mark",
-        "info": "channels.info"
+        "info": "channels.info",
     },
     "im": {
         "history": "im.history",
         "leave": "im.close",
-        "mark": "im.mark"
+        "mark": "im.mark",
     },
     "group": {
         "history": "groups.history",
         "join": "channels.join",
         "leave": "groups.leave",
-        "mark": "groups.mark"
+        "mark": "groups.mark",
     }
 
 }
@@ -474,9 +474,11 @@ class Channel(SlackThing):
         self.create_buffer()
         self.active = True
         self.get_history()
-        async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name": self.name.lstrip("#")})
+        if "info" in SLACK_API_TRANSLATOR[self.type]:
+            async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name": self.name.lstrip("#")})
         if update_remote:
-            async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.name.lstrip("#")})
+            if "join" in SLACK_API_TRANSLATOR[self.type]:
+                async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.name.lstrip("#")})
         self.opening = False
 
     def close(self, update_remote=True):
