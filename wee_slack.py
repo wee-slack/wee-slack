@@ -1191,7 +1191,8 @@ def process_message(message_json):
         text = text.encode('utf-8')
         name = name.encode('utf-8')
 
-        channel.buffer_prnt(name, text, time)
+        if not message_json.get("hidden", False):
+            channel.buffer_prnt(name, text, time)
     except:
         dbg("cannot process message {}".format(message_json))
 
