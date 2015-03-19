@@ -19,7 +19,7 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.97.20"
+SCRIPT_VERSION = "0.97.21"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -536,6 +536,18 @@ class Channel(SlackThing):
         if self.channel_buffer:
             if w.buffer_get_string(self.channel_buffer, "short_name") != (color + new_name):
                 w.buffer_set(self.channel_buffer, "short_name", color + new_name)
+
+    def buffer_prnt_changed(self, user, text, time, append=""):
+        if user:
+            if self.server.users.find(user):
+                name = self.server.users.find(user).formatted_name()
+            else:
+                name = user
+            name = name.decode('utf-8')
+            modify_buffer_line(self.channel_buffer, name, text, time, append)
+        else:
+            modify_buffer_line(self.channel_buffer, None, text, time, append)
+        return False
 
     def buffer_prnt(self, user='unknown user', message='no message', time=0):
         set_read_marker = False
@@ -1152,6 +1164,32 @@ def cache_message(message_json, from_me=False):
     if len(message_cache[channel]) > BACKLOG_SIZE:
         message_cache[channel] = message_cache[channel][-BACKLOG_SIZE:]
 
+
+def modify_buffer_line(buffer, user, new_message, time, append):
+    time = int(float(time))
+    own_lines = w.hdata_pointer(w.hdata_get('buffer'), buffer, 'own_lines')
+    if own_lines:
+        line = w.hdata_pointer(w.hdata_get('lines'), own_lines, 'last_line')
+        hdata_line = w.hdata_get('line')
+        hdata_line_data = w.hdata_get('line_data')
+
+        while line:
+            data = w.hdata_pointer(hdata_line, line, 'data')
+            if data:
+                date = w.hdata_time(hdata_line_data, data, 'date')
+                prefix = w.hdata_string(hdata_line_data, data, 'prefix')
+                if user and (int(date) == int(time) and user == prefix):
+#                    w.prnt("", "found matching time date is {}, time is {} ".format(date, time))
+                    w.hdata_update(hdata_line_data, data, {"message": "{}{}".format(new_message, append)})
+                    break
+                elif not user and (int(date) == int(time)):
+                    w.hdata_update(hdata_line_data, data, {"message": "{}{}".format(new_message, append)})
+                else:
+                    pass
+            line = w.hdata_move(hdata_line, line, -1)
+    return w.WEECHAT_RC_OK
+
+
 def process_message(message_json):
     try:
         # send these messages elsewhere
@@ -1183,7 +1221,7 @@ def process_message(message_json):
 
         text = unfurl_refs(text)
         if "attachments" in message_json:
-            text += u"--- {}".format(unwrap_attachments(message_json))
+            text += u" --- {}".format(unwrap_attachments(message_json))
         text = text.lstrip()
         text = text.replace("\t", "    ")
         name = get_user(message_json, server)
@@ -1191,7 +1229,18 @@ def process_message(message_json):
         text = text.encode('utf-8')
         name = name.encode('utf-8')
 
-        channel.buffer_prnt(name, text, time)
+        if "subtype" in message_json and message_json["subtype"] == "message_changed":
+                if "edited" in message_json["message"]:
+                    append = " (edited)"
+                else:
+                    append = ''
+                channel.buffer_prnt_changed(message_json["message"]["user"], text, message_json["message"]["ts"], append)
+        elif "subtype" in message_json and message_json["subtype"] == "message_deleted":
+            append = "(deleted)"
+            text = ""
+            channel.buffer_prnt_changed(None, text, message_json["deleted_ts"], append)
+        else:
+            channel.buffer_prnt(name, text, time)
     except:
         dbg("cannot process message {}".format(message_json))
 
