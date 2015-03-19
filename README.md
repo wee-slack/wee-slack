@@ -14,6 +14,8 @@ A WeeChat native client for Slack.com. Provides supplemental features only avail
 
 Features
 --------
+  * **New** edited messages work just like the official clients, where the original message changes and has (edited) appended.
+  * **New** unfurled urls dont generate a new message, but replace the original with more info as it is received.
   * **New** regex style message editing (s/oldtext/newtext/)
   * Caches message history, making startup MUCH faster
   * Smarter redraw of dynamic buffer info (much lower CPU %)
