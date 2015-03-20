@@ -1561,7 +1561,6 @@ def config_changed_cb(data, option, value):
     if channels_not_on_current_server_color == "0":
         channels_not_on_current_server_color = False
     colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
-    slack_debug = None
     debug_mode = w.config_get_plugin("debug_mode").lower()
     if debug_mode != '' and debug_mode != 'false':
         create_slack_debug_buffer()
@@ -1610,6 +1609,7 @@ if __name__ == "__main__":
             legacy_mode = True
 
         # Global var section
+        slack_debug = None
         config_changed_cb("", "", "")
 
         cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
