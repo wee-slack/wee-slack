@@ -1245,6 +1245,8 @@ def process_message(message_json):
             channel.buffer_prnt(w.prefix("quit").rstrip(), text, time)
         elif message_json.get("subtype", "") == "channel_join":
             channel.buffer_prnt(w.prefix("join").rstrip(), text, time)
+        elif message_json.get("subtype", "") == "channel_topic":
+            channel.buffer_prnt(w.prefix("network").rstrip(), text, time)
         else:
             channel.buffer_prnt(name, text, time)
     except:
