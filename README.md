@@ -170,6 +170,11 @@ Turn off colorized nicks:
 /set plugins.var.python.slack_extension.colorize_nicks 0
 ```
 
+Set channel prefix to something other than my-slack-subdomain.slack.com (e.g. when using buffers.pl):
+```
+/set plugins.var.python.slack_extension.server_alias.my-slack-subdomain "mysub"
+```
+
 Set all read markers to a specific time:
 ```
 /slack setallreadmarkers (time in epoch)

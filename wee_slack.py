@@ -120,6 +120,7 @@ class SlackServer(object):
         self.nick = None
         self.name = None
         self.domain = None
+        self.server_alias = None
         self.login_data = None
         self.buffer = None
         self.token = token
@@ -201,6 +202,12 @@ class SlackServer(object):
             self.domain = login_data["team"]["domain"] + ".slack.com"
             dbg("connected to {}".format(self.domain))
             self.identifier = self.domain
+
+            if not w.config_get_plugin("server_alias.{}".format(login_data["team"]["domain"])):
+                self.server_alias = login_data["team"]["domain"]
+            else:
+                self.server_alias = w.config_get_plugin("server_alias.{}".format(login_data["team"]["domain"]))
+
             self.nick = login_data["self"]["name"]
             self.create_local_buffer()
 
@@ -242,7 +249,7 @@ class SlackServer(object):
 
     def create_local_buffer(self):
         if not w.buffer_search("", self.domain):
-            self.buffer = w.buffer_new(self.domain, "buffer_input_cb", "", "", "")
+            self.buffer = w.buffer_new("{}.server".format(self.server_alias), "buffer_input_cb", "", "", "")
             w.buffer_set(self.buffer, "nicklist", "1")
 
             w.nicklist_add_group(self.buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
@@ -369,11 +376,11 @@ class Channel(object):
             self.members_table[user] = self.server.users.find(user)
 
     def create_buffer(self):
-        channel_buffer = w.buffer_search("", "{}.{}".format(self.server.domain, self.name))
+        channel_buffer = w.buffer_search("", "{}.{}".format(self.server.server_alias, self.name))
         if channel_buffer:
             self.channel_buffer = channel_buffer
         else:
-            self.channel_buffer = w.buffer_new("{}.{}".format(self.server.domain, self.name), "buffer_input_cb", self.name, "", "")
+            self.channel_buffer = w.buffer_new("{}.{}".format(self.server.server_alias, self.name), "buffer_input_cb", self.name, "", "")
             if self.type == "im":
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
             else:
@@ -382,7 +389,7 @@ class Channel(object):
             buffer_list_update_next()
 
     def attach_buffer(self):
-        channel_buffer = w.buffer_search("", "{}.{}".format(self.server.domain, self.name))
+        channel_buffer = w.buffer_search("", "{}.{}".format(self.server.server_alias, self.name))
         if channel_buffer != main_weechat_buffer:
             self.channel_buffer = channel_buffer
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.server.nick)
@@ -417,7 +424,7 @@ class Channel(object):
                 dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
 
     def fullname(self):
-        return "{}.{}".format(self.server.domain, self.name)
+        return "{}.{}".format(self.server.server_alias, self.name)
 
     def has_user(self, name):
         return name in self.members
