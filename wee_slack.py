@@ -293,11 +293,13 @@ class SlackServer(object):
             if "topic" not in item:
                 item["topic"] = {}
                 item["topic"]["value"] = ""
-            self.channels.append(Channel(self, item["name"], item["id"], item["is_member"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+            if not item["is_archived"]:
+                self.channels.append(Channel(self, item["name"], item["id"], item["is_member"], item["last_read"], "#", item["members"], item["topic"]["value"]))
         for item in data["groups"]:
             if "last_read" not in item:
                 item["last_read"] = 0
-            self.channels.append(GroupChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+            if not item["is_archived"]:
+                self.channels.append(GroupChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
         for item in data["ims"]:
             if "last_read" not in item:
                 item["last_read"] = 0
