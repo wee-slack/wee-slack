@@ -19,7 +19,7 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.97.21"
+SCRIPT_VERSION = "0.97.22"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -185,6 +185,7 @@ class SlackServer(object):
         self.communication_counter = 0
         self.message_buffer = {}
         self.ping_hook = None
+        self.failed_message = None
 
         self.identifier = None
         self.connect_to_slack()
@@ -212,13 +213,14 @@ class SlackServer(object):
         return self.communication_counter
 
     def send_to_websocket(self, data):
+        data["id"] = self.get_communication_id()
+        message = json.dumps(data)
         try:
-            data["id"] = self.get_communication_id()
-            message = json.dumps(data)
             self.message_buffer[data["id"]] = data
             self.ws.send(message)
             dbg("Sent {}...".format(message[:100]))
         except:
+            self.failed_message = data
             self.connected = False
 
     def ping(self):
@@ -251,6 +253,10 @@ class SlackServer(object):
                 self.connecting = False
 
                 self.print_connection_info(login_data)
+                if self.failed_message:
+                    dbg("Resent failed message.")
+                    self.send_to_websocket(self.failed_message)
+                    self.failed_message = None
             return True
         else:
             w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with\n \"/set plugins.var.python.slack_extension.slack_api_token (token)\"\n\n ")
