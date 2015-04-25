@@ -734,7 +734,6 @@ def me_command_cb(data, current_buffer, args):
         channel = channels.find(current_buffer)
         nick = channel.server.nick
         message = "_{}_".format(args)
-        message = message.encode('utf-8')
         buffer_input_cb("", current_buffer, message)
     return w.WEECHAT_RC_OK
 
