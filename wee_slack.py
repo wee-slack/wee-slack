@@ -20,7 +20,7 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.97.22"
+SCRIPT_VERSION = "0.97.23"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
