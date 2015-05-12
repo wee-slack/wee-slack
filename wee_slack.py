@@ -9,6 +9,7 @@ import re
 import urllib
 import urlparse
 import HTMLParser
+import sys
 from websocket import create_connection
 
 # hack to make tests possible.. better way?
@@ -221,6 +222,7 @@ class SlackServer(object):
             dbg("Sent {}...".format(message[:100]))
         except:
             self.failed_message = data
+            dbg("Unexpected error: {}\nSent: {}".format(sys.exc_info()[0], self.failed_message))
             self.connected = False
 
     def ping(self):
