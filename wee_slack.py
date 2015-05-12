@@ -503,7 +503,10 @@ class Channel(SlackThing):
             async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier})
 
     def closed(self):
-        message_cache.pop(self.identifier)
+        try:
+            message_cache.pop(self.identifier)
+        except KeyError:
+            pass
         self.channel_buffer = None
         self.last_received = None
         self.close()
