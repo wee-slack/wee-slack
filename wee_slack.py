@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-
 from functools import wraps
 import time
 import json
@@ -646,10 +645,16 @@ class DmChannel(Channel):
         else:
             force_color = None
 
-        if self.server.users.find(self.name).presence == "active":
-            new_name = self.server.users.find(self.name).formatted_name('+', force_color)
+        if disable_color_nicks_in_side_buffer:
+            if self.server.users.find(self.name).presence == "active":
+                new_name = "+" + self.name
+            else:
+                new_name = self.name
         else:
-            new_name = self.server.users.find(self.name).formatted_name(' ', force_color)
+            if self.server.users.find(self.name).presence == "active":
+                new_name = self.server.users.find(self.name).formatted_name('+', force_color)
+            else:
+                new_name = self.server.users.find(self.name).formatted_name(' ', force_color)
 
         if self.channel_buffer:
             w.buffer_set(self.channel_buffer, "short_name", new_name)
@@ -1566,7 +1571,7 @@ def create_slack_debug_buffer():
 
 
 def config_changed_cb(data, option, value):
-    global slack_api_token, distracting_channels, channels_not_on_current_server_color, colorize_nicks, slack_debug, debug_mode
+    global slack_api_token, distracting_channels, channels_not_on_current_server_color, colorize_nicks, disable_color_nicks_in_side_buffer, slack_debug, debug_mode
     slack_api_token = w.config_get_plugin("slack_api_token")
 
     if slack_api_token.startswith('${sec.data'):
@@ -1577,6 +1582,7 @@ def config_changed_cb(data, option, value):
     if channels_not_on_current_server_color == "0":
         channels_not_on_current_server_color = False
     colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
+    disable_color_nicks_in_side_buffer = w.config_get_plugin('disable_color_nicks_in_side_buffer') == "1"
     debug_mode = w.config_get_plugin("debug_mode").lower()
     if debug_mode != '' and debug_mode != 'false':
         create_slack_debug_buffer()
@@ -1615,6 +1621,8 @@ if __name__ == "__main__":
             w.config_set_plugin('debug_mode', "")
         if not w.config_get_plugin('colorize_nicks'):
             w.config_set_plugin('colorize_nicks', "1")
+        if not w.config_get_plugin('disable_color_nicks_in_side_buffer'):
+            w.config_set_plugin('disable_color_nicks_in_side_buffer', "0")
         if not w.config_get_plugin('trigger_value'):
             w.config_set_plugin('trigger_value', "0")
 
