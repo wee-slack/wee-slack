@@ -158,6 +158,11 @@ Turn off colorized nicks:
 /set plugins.var.python.slack_extension.colorize_nicks 0
 ```
 
+Turn off colorized nicks in buffers.pl:
+```
+/set plugins.var.python.slack_extension.disable_color_nicks_in_side_buffer 1
+```
+
 Set all read markers to a specific time:
 ```
 /slack setallreadmarkers (time in epoch)
