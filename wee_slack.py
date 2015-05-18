@@ -1175,13 +1175,15 @@ def process_reaction_removed(message_json):
 
 def do_reaction(message_json):
     message = message_json["item"]["message"]
+    text = message["text"].encode('utf-8')
     if "reactions" in message:
         append = create_reaction_string(message["reactions"])
     else:
         append = ""
     channel = channels.find(message_json["item"]["channel"])
     user = users.find(message_json["item"]["message"]["user"])
-    channel.buffer_prnt_changed(user, message["text"], message["ts"], append)
+    text = message["text"].encode('utf-8')
+    channel.buffer_prnt_changed(user, text, message["ts"], append)
 
 def create_reaction_string(reactions):
     reaction_string = ' ['
