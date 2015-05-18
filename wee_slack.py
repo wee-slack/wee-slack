@@ -1184,9 +1184,10 @@ def do_reaction(message_json):
     channel.buffer_prnt_changed(user, message["text"], message["ts"], append)
 
 def create_reaction_string(reactions):
-    reaction_string = ' *** '
+    reaction_string = ' ['
     for r in reactions:
         reaction_string += ":{}:{} ".format(r["name"], r["count"])
+    reaction_string = reaction_string[:-1] + ']'
     return reaction_string
 
 def cache_message(message_json, from_me=False):
@@ -1257,12 +1258,16 @@ def process_message(message_json):
         else:
             text = ""
 
+
         text = unfurl_refs(text)
         if "attachments" in message_json:
             text += u" --- {}".format(unwrap_attachments(message_json))
         text = text.lstrip()
         text = text.replace("\t", "    ")
         name = get_user(message_json, server)
+
+        if "reactions" in message_json:
+            text += create_reaction_string(message_json["reactions"])
 
         text = text.encode('utf-8')
         name = name.encode('utf-8')
