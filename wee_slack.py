@@ -1167,6 +1167,28 @@ def process_error(message_json):
 # def process_message_changed(message_json):
 #    process_message(message_json)
 
+def process_reaction_added(message_json):
+    do_reaction(message_json)
+
+def process_reaction_removed(message_json):
+    do_reaction(message_json)
+
+def do_reaction(message_json):
+    message = message_json["item"]["message"]
+    if "reactions" in message:
+        append = create_reaction_string(message["reactions"])
+    else:
+        append = ""
+    channel = channels.find(message_json["item"]["channel"])
+    user = users.find(message_json["item"]["message"]["user"])
+    channel.buffer_prnt_changed(user, message["text"], message["ts"], append)
+
+def create_reaction_string(reactions):
+    reaction_string = ' *** '
+    for r in reactions:
+        reaction_string += ":{}:{} ".format(r["name"], r["count"])
+    return reaction_string
+
 def cache_message(message_json, from_me=False):
     global message_cache
     if from_me:
