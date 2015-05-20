@@ -46,6 +46,7 @@ Dependencies
 ------------
   * WeeChat 1.1+ http://weechat.org/ 
   * websocket-client https://pypi.python.org/pypi/websocket-client/
+  * curl http://curl.haxx.se/
 
 Setup
 ------
@@ -63,10 +64,19 @@ wee-slack doesn't use the Slack IRC gateway. If you currently connect via the ga
 /python reload
 ```
 
-####1. Install websocket-client lib
+####1. Install dependencies
+
+##### OSX
 ```
 pip install websocket-client
 ```
+
+##### Linux (ubuntu)
+```
+sudo apt-get install curl
+pip install websocket-client
+```
+
 
 ####2. copy wee_slack.py to ~/.weechat/python/autoload
 ```
