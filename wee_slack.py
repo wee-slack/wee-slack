@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-
 from functools import wraps
 import time
 import json
@@ -21,7 +20,7 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.97.24"
+SCRIPT_VERSION = "0.97.23"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -565,6 +564,14 @@ class Channel(SlackThing):
             modify_buffer_line(self.channel_buffer, None, text, time, append)
         return False
 
+    def colorize_nicks_in_each_line(self, message, chat_color):
+        for user in self.server.users:
+            if user.name in message:
+                message = user.name_regex.sub(
+                    r'\1\2{}\3'.format(user.formatted_name() + w.color(chat_color)),
+                    message)
+        return message
+
     def buffer_prnt(self, user='unknown user', message='no message', time=0):
         set_read_marker = False
         time_float = float(time)
@@ -587,11 +594,13 @@ class Channel(SlackThing):
             #colorize nicks in each line
             chat_color = w.config_string(w.config_get('weechat.color.chat'))
             message = message.decode('UTF-8', 'replace')
-            for user in self.server.users:
-                if user.name in message:
-                    message = user.name_regex.sub(
-                        r'\1\2{}\3'.format(user.formatted_name() + w.color(chat_color)),
-                        message)
+
+            if not disable_colorize_lines_with_nick_color:
+                user_color_name = self.server.users.find(user).color_name
+                message = w.color(user_color_name) + message
+                message = self.colorize_nicks_in_each_line(message, user_color_name)
+            else:
+                message = self.colorize_nicks_in_each_line(message, chat_color)
             message = HTMLParser.HTMLParser().unescape(message)
             data = u"{}\t{}".format(name, message).encode('utf-8')
             w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
@@ -646,10 +655,16 @@ class DmChannel(Channel):
         else:
             force_color = None
 
-        if self.server.users.find(self.name).presence == "active":
-            new_name = self.server.users.find(self.name).formatted_name('+', force_color)
+        if not disable_color_nicks_in_side_buffer:
+            if self.server.users.find(self.name).presence == "active":
+                new_name = "+" + self.name
+            else:
+                new_name = self.name
         else:
-            new_name = self.server.users.find(self.name).formatted_name(' ', force_color)
+            if self.server.users.find(self.name).presence == "active":
+                new_name = self.server.users.find(self.name).formatted_name('+', force_color)
+            else:
+                new_name = self.server.users.find(self.name).formatted_name(' ', force_color)
 
         if self.channel_buffer:
             w.buffer_set(self.channel_buffer, "short_name", new_name)
@@ -1074,7 +1089,7 @@ def process_channel_created(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]))
     server.buffer_prnt("New channel created: {}".format(item["name"]))
 
 
@@ -1101,7 +1116,7 @@ def process_channel_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]))
 
 
 def process_channel_leave(message_json):
@@ -1121,7 +1136,7 @@ def process_group_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+        server.channels.append(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]))
 
 
 def process_im_close(message_json):
@@ -1566,7 +1581,7 @@ def create_slack_debug_buffer():
 
 
 def config_changed_cb(data, option, value):
-    global slack_api_token, distracting_channels, channels_not_on_current_server_color, colorize_nicks, slack_debug, debug_mode
+    global slack_api_token, distracting_channels, channels_not_on_current_server_color, colorize_nicks, disable_color_nicks_in_side_buffer, disable_colorize_lines_with_nick_color, slack_debug, debug_mode
     slack_api_token = w.config_get_plugin("slack_api_token")
 
     if slack_api_token.startswith('${sec.data'):
@@ -1577,6 +1592,8 @@ def config_changed_cb(data, option, value):
     if channels_not_on_current_server_color == "0":
         channels_not_on_current_server_color = False
     colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
+    disable_color_nicks_in_side_buffer = w.config_get_plugin('disable_color_nicks_in_side_buffer') == "1"
+    disable_colorize_lines_with_nick_color = w.config_get_plugin('disable_colorize_lines_with_nick_color') == "1"
     debug_mode = w.config_get_plugin("debug_mode").lower()
     if debug_mode != '' and debug_mode != 'false':
         create_slack_debug_buffer()
@@ -1615,6 +1632,10 @@ if __name__ == "__main__":
             w.config_set_plugin('debug_mode', "")
         if not w.config_get_plugin('colorize_nicks'):
             w.config_set_plugin('colorize_nicks', "1")
+        if not w.config_get_plugin('disable_color_nicks_in_side_buffer'):
+            w.config_set_plugin('disable_color_nicks_in_side_buffer', "1")
+        if not w.config_get_plugin('disable_colorize_lines_with_nick_color'):
+            w.config_set_plugin('disable_colorize_lines_with_nick_color', "1")
         if not w.config_get_plugin('trigger_value'):
             w.config_set_plugin('trigger_value', "0")
 
