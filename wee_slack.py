@@ -696,23 +696,21 @@ class User(SlackThing):
 
     def update_color(self):
         if colorize_nicks:
-            self.color = w.info_get('irc_nick_color', self.name)
-            self.color_name = w.info_get('irc_nick_color_name', self.name)
+            if self.name == self.server.nick:
+                self.color_name = w.config_string(w.config_get('weechat.color.chat_nick_self'))
+            else:
+                self.color_name = w.info_get('irc_nick_color_name', self.name)
+            self.color = w.color(self.color_name)
         else:
             self.color = ""
             self.color_name = ""
 
     def formatted_name(self, prepend="", force_color=None):
         if colorize_nicks:
-            if self.name == self.server.nick:
-                return prepend + self.name
-            elif not force_color:
-                print_color = self.color
-            else:
-                print_color = force_color
-            return print_color + prepend + self.name
+            print_color = force_color or self.color
         else:
-            return prepend + self.name
+            print_color = ""
+        return print_color + prepend + self.name
 
     def open(self):
         t = time.time() + 1
