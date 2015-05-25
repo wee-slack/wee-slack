@@ -246,7 +246,7 @@ class SlackServer(object):
                 if self.ping_hook:
                     w.unhook(self.ping_hook)
                     self.communication_counter = 0
-                self.ping_hook = w.hook_timer(1000 * 500, 0, 0, "slack_ping_cb", self.domain)
+                self.ping_hook = w.hook_timer(1000 * 5, 0, 0, "slack_ping_cb", self.domain)
                 if len(self.users) and 0 or len(self.channels) == 0:
                     self.create_slack_mappings(login_data)
 
