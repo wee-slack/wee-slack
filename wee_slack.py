@@ -187,7 +187,6 @@ class SlackServer(object):
         self.communication_counter = 0
         self.message_buffer = {}
         self.ping_hook = None
-        self.failed_message = None
 
         self.identifier = None
         self.connect_to_slack()
@@ -222,8 +221,7 @@ class SlackServer(object):
             self.ws.send(message)
             dbg("Sent {}...".format(message[:100]))
         except:
-            self.failed_message = data
-            dbg("Unexpected error: {}\nSent: {}".format(sys.exc_info()[0], self.failed_message))
+            dbg("Unexpected error: {}\nSent: {}".format(sys.exc_info()[0], data))
             self.connected = False
 
     def ping(self):
@@ -248,7 +246,7 @@ class SlackServer(object):
                 if self.ping_hook:
                     w.unhook(self.ping_hook)
                     self.communication_counter = 0
-                self.ping_hook = w.hook_timer(1000 * 5, 0, 0, "slack_ping_cb", self.domain)
+                self.ping_hook = w.hook_timer(1000 * 500, 0, 0, "slack_ping_cb", self.domain)
                 if len(self.users) and 0 or len(self.channels) == 0:
                     self.create_slack_mappings(login_data)
 
@@ -256,10 +254,14 @@ class SlackServer(object):
                 self.connecting = False
 
                 self.print_connection_info(login_data)
-                if self.failed_message:
-                    dbg("Resent failed message.")
-                    self.send_to_websocket(self.failed_message)
-                    self.failed_message = None
+                if len(self.message_buffer) > 0:
+                    for message_id in self.message_buffer.keys():
+                        if self.message_buffer[message_id]["type"] != 'ping':
+                            resend = self.message_buffer.pop(message_id)
+                            dbg("Resent failed message.")
+                            self.send_to_websocket(resend)
+                        #sleep to prevent being disconnected by websocket server
+                        time.sleep(1)
             return True
         else:
             w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with\n \"/set plugins.var.python.slack_extension.slack_api_token (token)\"\n\n ")
