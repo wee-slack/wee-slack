@@ -213,11 +213,12 @@ class SlackServer(object):
         self.communication_counter += 1
         return self.communication_counter
 
-    def send_to_websocket(self, data):
+    def send_to_websocket(self, data, expect_reply=True):
         data["id"] = self.get_communication_id()
         message = json.dumps(data)
         try:
-            self.message_buffer[data["id"]] = data
+            if expect_reply:
+                self.message_buffer[data["id"]] = data
             self.ws.send(message)
             dbg("Sent {}...".format(message[:100]))
         except:
@@ -260,8 +261,10 @@ class SlackServer(object):
                             resend = self.message_buffer.pop(message_id)
                             dbg("Resent failed message.")
                             self.send_to_websocket(resend)
-                        #sleep to prevent being disconnected by websocket server
-                        time.sleep(1)
+                            #sleep to prevent being disconnected by websocket server
+                            time.sleep(1)
+                        else:
+                            self.message_buffer.pop(message_id)
             return True
         else:
             w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with\n \"/set plugins.var.python.slack_extension.slack_api_token (token)\"\n\n ")
@@ -1444,7 +1447,7 @@ def typing_notification_cb(signal, sig_type, data):
             if channel:
                 identifier = channel.identifier
                 request = {"type": "typing", "channel": identifier}
-                channel.server.send_to_websocket(request)
+                channel.server.send_to_websocket(request, expect_reply=False)
                 typing_timer = now
     return w.WEECHAT_RC_OK
 
@@ -1473,7 +1476,7 @@ def slack_never_away_cb(data, remaining):
             identifier = server.channels.find("slackbot").identifier
             request = {"type": "typing", "channel": identifier}
             #request = {"type":"typing","channel":"slackbot"}
-            server.send_to_websocket(request)
+            server.send_to_websocket(request, expect_reply=False)
     return w.WEECHAT_RC_OK
 
 # Slack specific requests
