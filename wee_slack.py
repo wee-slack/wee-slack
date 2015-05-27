@@ -1191,12 +1191,14 @@ def do_reaction(message_json):
     #text = message["text"].encode('utf-8')
     channel.buffer_prnt_changed(None, "", message_json["item"]["ts"], append)
 
-def create_reaction_string(reaction):
-    reaction_string = " [{}]".format(reaction)
-#    reaction_string = ' ['
-#    for r in reactions:
-#        reaction_string += ":{}:{} ".format(r["name"], r["count"])
-#    reaction_string = reaction_string[:-1] + ']'
+def create_reaction_string(reactions):
+    if type(reactions) != []:
+        reaction_string = " [{}]".format(reactions)
+    else:
+        reaction_string = ' ['
+        for r in reactions:
+            reaction_string += ":{}:{} ".format(r["name"], r["count"])
+        reaction_string = reaction_string[:-1] + ']'
     return reaction_string
 
 def cache_message(message_json, from_me=False):
