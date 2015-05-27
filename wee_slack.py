@@ -1192,7 +1192,7 @@ def do_reaction(message_json):
     channel.buffer_prnt_changed(None, "", message_json["item"]["ts"], append)
 
 def create_reaction_string(reactions):
-    if type(reactions) != []:
+    if isinstance(reactions, list):
         reaction_string = " [{}]".format(reactions)
     else:
         reaction_string = ' ['
