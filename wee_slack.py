@@ -1176,25 +1176,27 @@ def process_reaction_added(message_json):
     do_reaction(message_json)
 
 def process_reaction_removed(message_json):
-    do_reaction(message_json)
+    pass
+    #do_reaction(message_json)
 
 def do_reaction(message_json):
-    message = message_json["item"]["message"]
-    text = message["text"].encode('utf-8')
-    if "reactions" in message:
-        append = create_reaction_string(message["reactions"])
-    else:
-        append = ""
+    #message = message_json["item"]["message"]
+    #text = message["text"].encode('utf-8')
+    #if "reactions" in message:
+    append = create_reaction_string(message_json["reaction"])
+    #else:
+    #    append = ""
     channel = channels.find(message_json["item"]["channel"])
-    user = users.find(message_json["item"]["message"]["user"])
-    text = message["text"].encode('utf-8')
-    channel.buffer_prnt_changed(user, text, message["ts"], append)
+    #user = users.find(message_json["item"]["user"])
+    #text = message["text"].encode('utf-8')
+    channel.buffer_prnt_changed(None, "", message_json["item"]["ts"], append)
 
-def create_reaction_string(reactions):
-    reaction_string = ' ['
-    for r in reactions:
-        reaction_string += ":{}:{} ".format(r["name"], r["count"])
-    reaction_string = reaction_string[:-1] + ']'
+def create_reaction_string(reaction):
+    reaction_string = " [{}]".format(reaction)
+#    reaction_string = ' ['
+#    for r in reactions:
+#        reaction_string += ":{}:{} ".format(r["name"], r["count"])
+#    reaction_string = reaction_string[:-1] + ']'
     return reaction_string
 
 def cache_message(message_json, from_me=False):
@@ -1224,6 +1226,8 @@ def modify_buffer_line(buffer, user, new_message, time, append):
             if data:
                 date = w.hdata_time(hdata_line_data, data, 'date')
                 prefix = w.hdata_string(hdata_line_data, data, 'prefix')
+                if new_message == "":
+                    new_message = w.hdata_string(hdata_line_data, data, 'message')
                 if user and (int(date) == int(time) and user == prefix):
 #                    w.prnt("", "found matching time date is {}, time is {} ".format(date, time))
                     w.hdata_update(hdata_line_data, data, {"message": "{}{}".format(new_message, append)})
