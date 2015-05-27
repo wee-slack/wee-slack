@@ -559,16 +559,16 @@ class Channel(SlackThing):
                 w.buffer_set(self.channel_buffer, "short_name", color + new_name)
 
     def buffer_prnt_changed(self, user, text, time, append=""):
-        if user:
-            if self.server.users.find(user):
-                name = self.server.users.find(user).formatted_name()
+        if self.channel_buffer:
+            if user:
+                if self.server.users.find(user):
+                    name = self.server.users.find(user).formatted_name()
+                else:
+                    name = user
+                name = name.decode('utf-8')
+                modify_buffer_line(self.channel_buffer, name, text, time, append)
             else:
-                name = user
-            name = name.decode('utf-8')
-            modify_buffer_line(self.channel_buffer, name, text, time, append)
-        else:
-            modify_buffer_line(self.channel_buffer, None, text, time, append)
-        return False
+                modify_buffer_line(self.channel_buffer, None, text, time, append)
 
     def buffer_prnt(self, user='unknown user', message='no message', time=0):
         set_read_marker = False
