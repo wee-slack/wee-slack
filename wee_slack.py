@@ -470,7 +470,7 @@ class Channel(SlackThing):
     def linkify_text(self, message):
         message = message.split(' ')
         for item in enumerate(message):
-            if item[1].startswith('@'):
+            if item[1].startswith('@') and len(item[1]) > 1:
                 named = re.match('.*[@#](\w+)(\W*)', item[1]).groups()
                 if named[0] in ["group", "channel"]:
                     message[item[0]] = "<!{}>".format(named[0])
@@ -1115,6 +1115,11 @@ def process_channel_leave(message_json):
     channel.user_leave(message_json["user"])
 
 
+def  process_channel_archive(message_json):
+    channel = server.channels.find(message_json["channel"])
+    channel.detach_buffer()
+
+
 def process_group_left(message_json):
     server = servers.find(message_json["myserver"])
     server.channels.find(message_json["channel"]).close(False)
@@ -1127,6 +1132,11 @@ def process_group_joined(message_json):
     else:
         item = message_json["channel"]
         server.channels.append(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+
+
+def  process_group_archive(message_json):
+    channel = server.channels.find(message_json["channel"])
+    channel.detach_buffer()
 
 
 def process_im_close(message_json):
