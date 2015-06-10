@@ -401,6 +401,7 @@ class Channel(SlackThing):
             else:
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
             w.buffer_set(self.channel_buffer, "short_name", 'loading..')
+            buffer_list_update_next()
 
     def attach_buffer(self):
         channel_buffer = w.buffer_search("", "{}.{}".format(self.server.domain, self.name))
