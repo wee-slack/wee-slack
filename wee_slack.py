@@ -581,6 +581,8 @@ class Channel(SlackThing):
             tags = "notify_highlight"
         elif user != self.server.nick and self.name in self.server.users:
             tags = "notify_private,notify_message"
+        elif user in [w.prefix("join"), w.prefix("quit")]:
+            tags = "irc_smart_filter"
         else:
             tags = "notify_message"
         time_int = int(time_float)
@@ -1275,6 +1277,12 @@ def process_message(message_json):
             append = "(deleted)"
             text = ""
             channel.buffer_prnt_changed(None, text, message_json["deleted_ts"], append)
+        elif message_json.get("subtype", "") == "channel_leave":
+            channel.buffer_prnt(w.prefix("quit").rstrip(), text, time)
+        elif message_json.get("subtype", "") == "channel_join":
+            channel.buffer_prnt(w.prefix("join").rstrip(), text, time)
+        elif message_json.get("subtype", "") == "channel_topic":
+            channel.buffer_prnt(w.prefix("network").rstrip(), text, time)
         else:
             channel.buffer_prnt(name, text, time)
     except:
