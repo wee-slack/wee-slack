@@ -1049,14 +1049,18 @@ def process_team_join(message_json):
     server.users.append(User(server, item["name"], item["id"], item["presence"]))
     server.buffer_prnt(server.buffer, "New user joined: {}".format(item["name"]))
 
+def process_manual_presence_change(message_json):
+    process_presence_change(message_json)
 
 def process_presence_change(message_json):
-    buffer_name = "{}.{}".format(domain, message_json["user"])
+    server = servers.find(message_json["myserver"])
+    nick = message_json.get("user", server.nick)
+    buffer_name = "{}.{}".format(domain, nick)
     buf_ptr = w.buffer_search("", buffer_name)
     if message_json["presence"] == 'active':
-        users.find(message_json["user"]).set_active()
+        users.find(nick).set_active()
     else:
-        users.find(message_json["user"]).set_inactive()
+        users.find(nick).set_inactive()
 
 
 def process_channel_marked(message_json):
