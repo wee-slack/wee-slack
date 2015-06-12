@@ -21,7 +21,7 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.97.25"
+SCRIPT_VERSION = "0.97.26"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -401,11 +401,13 @@ class Channel(SlackThing):
             else:
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
             w.buffer_set(self.channel_buffer, "short_name", 'loading..')
+            buffer_list_update_next()
 
     def attach_buffer(self):
         channel_buffer = w.buffer_search("", "{}.{}".format(self.server.domain, self.name))
         if channel_buffer != main_weechat_buffer:
             self.channel_buffer = channel_buffer
+            w.buffer_set(self.channel_buffer, "localvar_set_nick", self.server.nick)
 #            w.buffer_set(self.channel_buffer, "highlight_words", self.server.nick)
         else:
             self.channel_buffer = None
@@ -470,7 +472,7 @@ class Channel(SlackThing):
     def linkify_text(self, message):
         message = message.split(' ')
         for item in enumerate(message):
-            if item[1].startswith('@'):
+            if item[1].startswith('@') and len(item[1]) > 1:
                 named = re.match('.*[@#](\w+)(\W*)', item[1]).groups()
                 if named[0] in ["group", "channel"]:
                     message[item[0]] = "<!{}>".format(named[0])
@@ -580,6 +582,8 @@ class Channel(SlackThing):
             tags = "notify_highlight"
         elif user != self.server.nick and self.name in self.server.users:
             tags = "notify_private,notify_message"
+        elif user in [w.prefix("join"), w.prefix("quit")]:
+            tags = "irc_smart_filter"
         else:
             tags = "notify_message"
         time_int = int(time_float)
@@ -1048,14 +1052,18 @@ def process_team_join(message_json):
     server.users.append(User(server, item["name"], item["id"], item["presence"]))
     server.buffer_prnt(server.buffer, "New user joined: {}".format(item["name"]))
 
+def process_manual_presence_change(message_json):
+    process_presence_change(message_json)
 
 def process_presence_change(message_json):
-    buffer_name = "{}.{}".format(domain, message_json["user"])
+    server = servers.find(message_json["myserver"])
+    nick = message_json.get("user", server.nick)
+    buffer_name = "{}.{}".format(domain, nick)
     buf_ptr = w.buffer_search("", buffer_name)
     if message_json["presence"] == 'active':
-        users.find(message_json["user"]).set_active()
+        users.find(nick).set_active()
     else:
-        users.find(message_json["user"]).set_inactive()
+        users.find(nick).set_inactive()
 
 
 def process_channel_marked(message_json):
@@ -1079,7 +1087,7 @@ def process_channel_created(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+        server.channels.append(Channel(server, item["name"], item["id"], False))
     server.buffer_prnt("New channel created: {}".format(item["name"]))
 
 
@@ -1115,6 +1123,11 @@ def process_channel_leave(message_json):
     channel.user_leave(message_json["user"])
 
 
+def  process_channel_archive(message_json):
+    channel = server.channels.find(message_json["channel"])
+    channel.detach_buffer()
+
+
 def process_group_left(message_json):
     server = servers.find(message_json["myserver"])
     server.channels.find(message_json["channel"]).close(False)
@@ -1127,6 +1140,11 @@ def process_group_joined(message_json):
     else:
         item = message_json["channel"]
         server.channels.append(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+
+
+def  process_group_archive(message_json):
+    channel = server.channels.find(message_json["channel"])
+    channel.detach_buffer()
 
 
 def process_im_close(message_json):
@@ -1295,6 +1313,12 @@ def process_message(message_json):
             append = "(deleted)"
             text = ""
             channel.buffer_prnt_changed(None, text, message_json["deleted_ts"], append)
+        elif message_json.get("subtype", "") == "channel_leave":
+            channel.buffer_prnt(w.prefix("quit").rstrip(), text, time)
+        elif message_json.get("subtype", "") == "channel_join":
+            channel.buffer_prnt(w.prefix("join").rstrip(), text, time)
+        elif message_json.get("subtype", "") == "channel_topic":
+            channel.buffer_prnt(w.prefix("network").rstrip(), text, time)
         else:
             channel.buffer_prnt(name, text, time)
     except:
