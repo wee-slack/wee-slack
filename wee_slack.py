@@ -1124,6 +1124,7 @@ def process_channel_leave(message_json):
 
 
 def  process_channel_archive(message_json):
+    server = servers.find(message_json["myserver"])
     channel = server.channels.find(message_json["channel"])
     channel.detach_buffer()
 
