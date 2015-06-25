@@ -1179,7 +1179,10 @@ def process_im_created(message_json):
 
 def process_user_typing(message_json):
     server = servers.find(message_json["myserver"])
-    server.channels.find(message_json["channel"]).set_typing(server.users.find(message_json["user"]).name)
+    channel = server.channels.find(message_json["channel"])
+    if channel:
+        channel.set_typing(server.users.find(message_json["user"]).name)
+
 
 # todo: does this work?
 
