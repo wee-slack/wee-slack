@@ -430,8 +430,8 @@ class Channel(SlackThing):
                         w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, " ", "", 1)
                     else:
                         w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "+", "", 1)
-            except:
-                print "DEBUG: {} {}".format(self.identifier,self.name)
+            except Exception as e:
+                print "DEBUG: {} {} {}".format(self.identifier, self.name, e)
 
     def fullname(self):
         return "{}.{}".format(self.server.domain, self.name)
