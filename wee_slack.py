@@ -297,7 +297,7 @@ class SlackServer(object):
     def create_slack_mappings(self, data):
 
         for item in data["users"]:
-            self.users.append(User(self, item["name"], item["id"], item["presence"]))
+            self.users.append(User(self, item["name"], item["id"], item["presence"], item["deleted"]))
 
         for item in data["channels"]:
             if "last_read" not in item:
@@ -424,12 +424,14 @@ class Channel(SlackThing):
             try:
                 for user in self.members:
                     user = self.server.users.find(user)
+                    if user.deleted:
+                        continue
                     if user.presence == 'away':
                         w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, " ", "", 1)
                     else:
                         w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "+", "", 1)
-            except:
-                print "DEBUG: {} {}".format(self.identifier,self.name)
+            except Exception as e:
+                print "DEBUG: {} {} {}".format(self.identifier, self.name, e)
 
     def fullname(self):
         return "{}.{}".format(self.server.domain, self.name)
@@ -666,9 +668,10 @@ class DmChannel(Channel):
 
 class User(SlackThing):
 
-    def __init__(self, server, name, identifier, presence="away"):
+    def __init__(self, server, name, identifier, presence="away", deleted=False):
         super(User, self).__init__(name, identifier)
         self.channel_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, self.name))
+        self.deleted = deleted
         self.presence = presence
         self.server = server
         self.update_color()
@@ -1124,6 +1127,7 @@ def process_channel_leave(message_json):
 
 
 def  process_channel_archive(message_json):
+    server = servers.find(message_json["myserver"])
     channel = server.channels.find(message_json["channel"])
     channel.detach_buffer()
 
@@ -1178,7 +1182,10 @@ def process_im_created(message_json):
 
 def process_user_typing(message_json):
     server = servers.find(message_json["myserver"])
-    server.channels.find(message_json["channel"]).set_typing(server.users.find(message_json["user"]).name)
+    channel = server.channels.find(message_json["channel"])
+    if channel:
+        channel.set_typing(server.users.find(message_json["user"]).name)
+
 
 # todo: does this work?
 
