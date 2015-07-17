@@ -335,7 +335,6 @@ class SlackServer(object):
             pass
             #w.prnt("", "%s\t%s" % (user, message))
 
-
 class SlackThing(object):
 
     def __init__(self, name, identifier):
@@ -377,6 +376,7 @@ class Channel(SlackThing):
         self.topic = topic
         self.last_read = float(last_read)
         self.last_received = None
+        self.messages = []
         if active:
             self.create_buffer()
             self.attach_buffer()
@@ -572,7 +572,7 @@ class Channel(SlackThing):
             else:
                 modify_buffer_line(self.channel_buffer, None, text, time, append)
 
-    def buffer_prnt(self, user='unknown user', message='no message', time=0):
+    def buffer_prnt(self, user='unknown_user', message='no message', time=0):
         set_read_marker = False
         time_float = float(time)
         if time_float != 0 and self.last_read >= time_float:
@@ -586,6 +586,8 @@ class Channel(SlackThing):
             tags = "irc_smart_filter"
         else:
             tags = "notify_message"
+        #don't write these to local log files
+        tags += ",no_log"
         time_int = int(time_float)
         if self.channel_buffer:
             if self.server.users.find(user):
@@ -612,6 +614,18 @@ class Channel(SlackThing):
         self.last_received = time
         self.unset_typing(user)
 
+    def buffer_redraw(self):
+        if self.channel_buffer:
+            w.buffer_clear(self.channel_buffer)
+            self.messages.sort()
+            for message in self.messages:
+                process_message(message.message_json, False)
+#                if "user" not in message.message_json:
+#                    self.buffer_prnt('unknown', message.message_json["text"], message.message_json["ts"])
+#                else:
+#                    self.buffer_prnt(message.message_json["user"], message.message_json["text"], message.message_json["ts"])
+                #process_message(message.message_json)
+
     def change_previous_message(self, old, new):
         message = self.my_last_message()
         if new == "" and old == "":
@@ -625,11 +639,17 @@ class Channel(SlackThing):
             if "user" in message and "text" in message and message["user"] == self.server.users.find(self.server.nick).identifier:
                 return message
 
+    def cache_message(self, message_json, from_me=False):
+        if from_me:
+            message_json["user"] = self.server.users.find(self.server.nick).identifier
+        self.messages.append(Message(message_json))
+        if len(self.messages) > BACKLOG_SIZE:
+            self.messages = self.messages[-BACKLOG_SIZE:]
+
     def get_history(self):
         if self.active:
-            if self.identifier in message_cache.keys():
-                for message in message_cache[self.identifier]:
-                    process_message(message)
+            for message in cache_get(self.identifier):
+                process_message(json.loads(message), False)
             if self.last_received != None:
                 async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "oldest": self.last_received, "count": BACKLOG_SIZE})
             else:
@@ -728,6 +748,46 @@ class User(SlackThing):
         #reply = async_slack_api_request("im.open", {"channel":self.identifier,"ts":t})
         async_slack_api_request(self.server.domain, self.server.token, "im.open", {"user": self.identifier, "ts": t})
 
+class Message(object):
+
+    def __init__(self, message_json):
+        self.message_json = message_json
+        self.ts = message_json['ts']
+        #split timestamp into time and counter
+        self.ts_time, self.ts_counter = message_json['ts'].split('.')
+
+    def add_reaction(self, reaction):
+        if "reactions" in self.message_json:
+            found = False
+            for r in self.message_json["reactions"]:
+                if r["name"] == reaction:
+                    r["count"] += 1
+                    found = True
+            if not found:
+                self.message_json["reactions"].append({u"count": 1, u"name": reaction})
+        else:
+            self.message_json["reactions"] = [{u"count": 1, u"name": reaction}]
+
+    def remove_reaction(self, reaction):
+        if "reactions" in self.message_json:
+            for r in self.message_json["reactions"]:
+                if r["name"] == reaction:
+                    r["count"] -= 1
+        else:
+            pass
+
+#    def find_or_create_reaction(self, name):
+#        for reaction in self.
+
+    def __eq__(self, other):
+        return self.ts_time == other or self.ts == other
+
+    def __repr__(self):
+        return "{} {} {} {}\n".format(self.ts_time, self.ts_counter, self.ts, self.message_json)
+
+    def __lt__(self, other):
+        return self.ts < other.ts
+
 
 def slack_command_cb(data, current_buffer, args):
     a = args.split(' ', 1)
@@ -736,10 +796,10 @@ def slack_command_cb(data, current_buffer, args):
     else:
         function_name, args = a[0], None
 
-    try:
-        command = cmds[function_name](current_buffer, args)
-    except KeyError:
-        w.prnt("", "Command not found: " + function_name)
+#    try:
+    command = cmds[function_name](current_buffer, args)
+#    except KeyError:
+#        w.prnt("", "Command not found: " + function_name)
 
     return w.WEECHAT_RC_OK
 
@@ -908,12 +968,7 @@ def command_cacheinfo(current_buffer, args):
 
 def command_flushcache(current_buffer, args):
     global message_cache
-    message_cache = {}
-    cache_write_cb("","")
-
-def command_uncache(current_buffer, args):
-    identifier = channels.find(current_buffer).identifier
-    message_cache.pop(identifier)
+    message_cache = []
     cache_write_cb("","")
 
 def command_cachenow(current_buffer, args):
@@ -1037,9 +1092,9 @@ def process_reply(message_json):
     identifier = message_json["reply_to"]
     item = server.message_buffer.pop(identifier)
     if "type" in item:
-        if item["type"] == "message":
+        if item["type"] == "message" and "channel" in item.keys():
             item["ts"] = message_json["ts"]
-            cache_message(item, from_me=True)
+            channels.find(item["channel"]).cache_message(item, from_me=True)
     dbg("REPLY {}".format(item))
 
 def process_pong(message_json):
@@ -1182,56 +1237,40 @@ def process_user_typing(message_json):
 
 # todo: does this work?
 
-
 def process_error(message_json):
     pass
     #connected = False
 
-# def process_message_changed(message_json):
-#    process_message(message_json)
-
 def process_reaction_added(message_json):
-    do_reaction(message_json)
+    channel = channels.find(message_json["item"]["channel"])
+    try:
+        message_index = channel.messages.index(message_json["item"]["ts"])
+        channel.messages[message_index].add_reaction(message_json["reaction"])
+        channel.buffer_redraw()
+    except:
+        pass
+
 
 def process_reaction_removed(message_json):
-    pass
-    #do_reaction(message_json)
-
-def do_reaction(message_json):
-    #message = message_json["item"]["message"]
-    #text = message["text"].encode('utf-8')
-    #if "reactions" in message:
-    append = create_reaction_string(message_json["reaction"])
-    #else:
-    #    append = ""
     channel = channels.find(message_json["item"]["channel"])
-    #user = users.find(message_json["item"]["user"])
-    #text = message["text"].encode('utf-8')
-    channel.buffer_prnt_changed(None, "", message_json["item"]["ts"], append)
+    message_index = channel.messages.index(message_json["item"]["ts"])
+    channel.messages[message_index].remove_reaction(message_json["reaction"])
+    channel.buffer_redraw()
 
 def create_reaction_string(reactions):
     if not isinstance(reactions, list):
         reaction_string = " [{}]".format(reactions)
     else:
         reaction_string = ' ['
+        count = 0
         for r in reactions:
-            reaction_string += ":{}:{} ".format(r["name"], r["count"])
+            if r["count"] > 0:
+                count += 1
+                reaction_string += ":{}:{} ".format(r["name"], r["count"])
         reaction_string = reaction_string[:-1] + ']'
+    if count == 0:
+        reaction_string = ''
     return reaction_string
-
-def cache_message(message_json, from_me=False):
-    global message_cache
-    if from_me:
-        server = channels.find(message_json["channel"]).server
-        message_json["user"] = server.users.find(server.nick).identifier
-    channel = message_json["channel"]
-    if channel not in message_cache:
-        message_cache[channel] = []
-    if message_json not in message_cache[channel]:
-        message_cache[channel].append(message_json)
-    if len(message_cache[channel]) > BACKLOG_SIZE:
-        message_cache[channel] = message_cache[channel][-BACKLOG_SIZE:]
-
 
 def modify_buffer_line(buffer, user, new_message, time, append):
     time = int(float(time))
@@ -1260,7 +1299,7 @@ def modify_buffer_line(buffer, user, new_message, time, append):
     return w.WEECHAT_RC_OK
 
 
-def process_message(message_json):
+def process_message(message_json, cache=True):
     try:
         # send these messages elsewhere
         known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
@@ -1279,7 +1318,8 @@ def process_message(message_json):
             dbg("message came for closed channel {}".format(channel.name))
             return
 
-        cache_message(message_json)
+        if cache:
+            channel.cache_message(message_json)
 
         time = message_json['ts']
         if "fallback" in message_json:
@@ -1526,7 +1566,7 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
 big_data = {}
 
 def url_processor_cb(data, command, return_code, out, err):
-    global big_data, message_cache
+    global big_data
     data = pickle.loads(data)
     identifier = sha.sha("{}{}".format(data, command)).hexdigest()
     if identifier not in big_data:
@@ -1566,10 +1606,38 @@ def url_processor_cb(data, command, return_code, out, err):
     return w.WEECHAT_RC_OK
 
 def cache_write_cb(data, remaining):
-    open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'w').write(json.dumps(message_cache))
+    cache_file = open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'w')
+    for channel in channels:
+        if channel.active:
+            for message in channel.messages:
+                cache_file.write("{}\n".format(json.dumps(message.message_json)))
     return w.WEECHAT_RC_OK
 
+def cache_load():
+    global message_cache
+    try:
+        cache_file = open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'r')
+        for line in cache_file:
+            message_cache.append(line)
+    except:
+        #cache file didn't exist
+        pass
 
+def cache_get(channel):
+    lines = []
+    for line in message_cache:
+        j = json.loads(line)
+        if j["channel"] == channel:
+            lines.append(line)
+    return lines
+
+        #try:
+        #    channels.find(j.channel).messages.append(j)
+        #except:
+            #channel may not exist, but could be in cache - just ignore this
+        #    pass
+
+    #message_cache = json.loads(cache_file.read())
 
 # END Slack specific requests
 
@@ -1709,11 +1777,15 @@ if __name__ == "__main__":
         hotlist = w.infolist_get("hotlist", "", "")
         main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
 
-        try:
-            cache_file = open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'r')
-            message_cache = json.loads(cache_file.read())
-        except (IOError, ValueError):
-            message_cache = {}
+        #try:
+        message_cache = []
+        print 'starting cache load'
+        cache_load()
+        print 'finished cache load'
+            #cache_file = open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'r')
+            #message_cache = json.loads(cache_file.read())
+        #except (IOError, ValueError):
+        #    message_cache = []
         # End global var section
 
         #channels = SearchList()
