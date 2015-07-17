@@ -511,10 +511,6 @@ class Channel(SlackThing):
             async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier})
 
     def closed(self):
-        try:
-            message_cache.pop(self.identifier)
-        except KeyError:
-            pass
         self.channel_buffer = None
         self.last_received = None
         self.close()
@@ -620,11 +616,6 @@ class Channel(SlackThing):
             self.messages.sort()
             for message in self.messages:
                 process_message(message.message_json, False)
-#                if "user" not in message.message_json:
-#                    self.buffer_prnt('unknown', message.message_json["text"], message.message_json["ts"])
-#                else:
-#                    self.buffer_prnt(message.message_json["user"], message.message_json["text"], message.message_json["ts"])
-                #process_message(message.message_json)
 
     def change_previous_message(self, old, new):
         message = self.my_last_message()
@@ -796,11 +787,10 @@ def slack_command_cb(data, current_buffer, args):
     else:
         function_name, args = a[0], None
 
-#    try:
-    command = cmds[function_name](current_buffer, args)
-#    except KeyError:
-#        w.prnt("", "Command not found: " + function_name)
-
+    try:
+        command = cmds[function_name](current_buffer, args)
+    except KeyError:
+        w.prnt("", "Command not found: " + function_name)
     return w.WEECHAT_RC_OK
 
 
