@@ -1737,10 +1737,6 @@ def quit_notification_cb(signal, sig_type, data):
     return w.WEECHAT_RC_OK
 
 def scrolled_cb(signal, sig_type, data):
-    print w.current_buffer()
-    print signal
-    print sig_type
-    print data
     if w.window_get_integer(data, "scrolling") == 1:
         channels.find(w.current_buffer()).set_scrolling()
     else:
