@@ -1743,6 +1743,17 @@ def config_changed_cb(data, option, value):
     return w.WEECHAT_RC_OK
 
 def quit_notification_cb(signal, sig_type, data):
+    stop_talking_to_slack()
+
+def script_unloaded():
+    stop_talking_to_slack()
+
+def stop_talking_to_slack():
+    """
+    Prevents a race condition where quitting closes buffers
+    which triggers leaving the channel because of how close
+    buffer is handled
+    """
     global STOP_TALKING_TO_SLACK
     STOP_TALKING_TO_SLACK = True
     cache_write_cb("", "")
@@ -1753,12 +1764,6 @@ def scrolled_cb(signal, sig_type, data):
         channels.find(w.current_buffer()).set_scrolling()
     else:
         channels.find(w.current_buffer()).unset_scrolling()
-    return w.WEECHAT_RC_OK
-
-def script_unloaded():
-    global STOP_TALKING_TO_SLACK
-    STOP_TALKING_TO_SLACK = True
-    cache_write_cb("", "")
     return w.WEECHAT_RC_OK
 
 # END Utility Methods
