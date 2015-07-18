@@ -351,10 +351,10 @@ class SlackThing(object):
 
 
 def buffer_input_cb(b, buffer, data):
-    if not data.startswith('s/'):
+    if not data.startswith('s/') or data.startswith('+'):
         channel = channels.find(buffer)
         channel.send_message(data)
-        channel.buffer_prnt(channel.server.nick, data)
+        #channel.buffer_prnt(channel.server.nick, data)
     elif data.count('/') == 3:
         old, new = data.split('/')[1:3]
         channel = channels.find(buffer)
@@ -1122,6 +1122,7 @@ def process_reply(message_json):
         if item["type"] == "message" and "channel" in item.keys():
             item["ts"] = message_json["ts"]
             channels.find(item["channel"]).cache_message(item, from_me=True)
+            channels.find(item["channel"]).buffer_prnt(item["user"], item["text"], item["ts"])
     dbg("REPLY {}".format(item))
 
 def process_pong(message_json):
