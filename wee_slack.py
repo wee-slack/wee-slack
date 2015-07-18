@@ -637,6 +637,20 @@ class Channel(SlackThing):
             self.buffer_redraw()
             return True
 
+    def add_reaction(self, ts, reaction):
+        if self.has_message(ts):
+            message_index = self.messages.index(ts)
+            self.messages[message_index].add_reaction(reaction)
+            self.buffer_redraw()
+            return True
+
+    def remove_reaction(self, ts, reaction):
+        if self.has_message(ts):
+            message_index = self.messages.index(ts)
+            self.messages[message_index].remove_reaction(reaction)
+            self.buffer_redraw()
+            return True
+
     def change_previous_message(self, old, new):
         message = self.my_last_message()
         if new == "" and old == "":
@@ -1256,19 +1270,11 @@ def process_error(message_json):
 
 def process_reaction_added(message_json):
     channel = channels.find(message_json["item"]["channel"])
-    try:
-        message_index = channel.messages.index(message_json["item"]["ts"])
-        channel.messages[message_index].add_reaction(message_json["reaction"])
-        channel.buffer_redraw()
-    except:
-        pass
-
+    channel.add_reaction(message_json["item"]["ts"], message_json["reaction"])
 
 def process_reaction_removed(message_json):
     channel = channels.find(message_json["item"]["channel"])
-    message_index = channel.messages.index(message_json["item"]["ts"])
-    channel.messages[message_index].remove_reaction(message_json["reaction"])
-    channel.buffer_redraw()
+    channel.remove_reaction(message_json["item"]["ts"], message_json["reaction"])
 
 def create_reaction_string(reactions):
     if not isinstance(reactions, list):
