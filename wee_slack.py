@@ -834,12 +834,26 @@ def command_channels(current_buffer, args):
 def command_nodistractions(current_buffer, args):
     global hide_distractions
     hide_distractions = not hide_distractions
-    if distracting_channels[0] != "":
+    if distracting_channels != ['']:
         for channel in distracting_channels:
             try:
-                w.buffer_set(channels.find(channel).channel_buffer, "hidden", str(int(hide_distractions)))
+                channel_buffer = channels.find(channel).channel_buffer
+                if channel_buffer:
+                    w.buffer_set(channels.find(channel).channel_buffer, "hidden", str(int(hide_distractions)))
             except:
                 dbg("Can't hide channel {}".format(channel), main_buffer=True)
+
+
+def command_distracting(current_buffer, args):
+    global distracting_channels
+    distracting_channels = [x.strip() for x in w.config_get_plugin("distracting_channels").split(',')]
+    fullname = channels.find(current_buffer).fullname()
+    if distracting_channels.count(fullname) == 0:
+        distracting_channels.append(fullname)
+    else:
+        distracting_channels.pop(distracting_channels.index(fullname))
+    new = ','.join(distracting_channels)
+    w.config_set_plugin('distracting_channels', new)
 
 
 @slack_buffer_required
@@ -861,7 +875,6 @@ def command_setallreadmarkers(current_buffer, args):
     """
     for channel in channels:
         channel.mark_read()
-
 
 def command_changetoken(current_buffer, args):
     w.config_set_plugin('slack_api_token', args)
