@@ -345,20 +345,6 @@ class SlackServer(object):
             pass
             #w.prnt("", "%s\t%s" % (user, message))
 
-class SlackThing(object):
-
-    def __init__(self, name, identifier):
-        self.name = name
-        self.identifier = identifier
-        self.channel_buffer = None
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return self.name
-
-
 def buffer_input_cb(b, buffer, data):
     if not data.startswith('s/') or data.startswith('+'):
         channel = channels.find(buffer)
@@ -372,22 +358,24 @@ def buffer_input_cb(b, buffer, data):
     return w.WEECHAT_RC_ERROR
 
 
-class Channel(SlackThing):
+class Channel(object):
     """
     Represents a single channel and is the source of truth
     for channel <> weechat buffer
     """
     def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[], topic=""):
-        super(Channel, self).__init__(name, identifier)
-        self.type = "channel"
-        self.server = server
-        self.name = prepend_name + self.name
-        self.typing = {}
+        self.name = prepend_name + name
+        self.identifier = identifier
         self.active = active
-        self.opening = False
+        self.last_read = float(last_read)
         self.members = set(members)
         self.topic = topic
-        self.last_read = float(last_read)
+
+        self.channel_buffer = None
+        self.type = "channel"
+        self.server = server
+        self.typing = {}
+        self.opening = False
         self.last_received = None
         self.messages = []
         self.scrolling = False
@@ -397,6 +385,12 @@ class Channel(SlackThing):
             self.update_nicklist()
             self.set_topic(self.topic)
             buffer_list_update_next()
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
 
     def __eq__(self, compare_str):
         if compare_str == self.fullname() or compare_str == self.name or compare_str == self.identifier or compare_str == self.name[1:] or (compare_str == self.channel_buffer and self.channel_buffer is not None):
@@ -724,12 +718,14 @@ class DmChannel(Channel):
             w.buffer_set(self.channel_buffer, "short_name", new_name)
 
 
-class User(SlackThing):
+class User(object):
 
     def __init__(self, server, name, identifier, presence="away"):
-        super(User, self).__init__(name, identifier)
-        self.channel_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, self.name))
+        self.name = name
+        self.identifier = identifier
         self.presence = presence
+
+        self.channel_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, self.name))
         self.server = server
         self.update_color()
         self.name_regex = re.compile(r"([\W]|\A)(@{0,1})" + self.name + "('s|[^'\w]|\Z)")
@@ -738,6 +734,12 @@ class User(SlackThing):
         else:
             self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color_name, "+", "", 1)
 #        w.nicklist_add_nick(server.buffer, "", self.formatted_name(), "", "", "", 1)
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
 
     def __eq__(self, compare_str):
         if compare_str == self.name or compare_str == "@" + self.name or compare_str == self.identifier:
