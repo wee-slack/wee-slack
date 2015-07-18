@@ -51,6 +51,9 @@ SLACK_API_TRANSLATOR = {
 }
 
 def dbg(message, fout=False, main_buffer=False):
+    """
+    send debug output to the slack-debug buffer and optionally write to a file.
+    """
     message = "DEBUG: {}".format(message)
     #message = message.encode('utf-8', 'replace')
     if fout:
@@ -65,7 +68,9 @@ def dbg(message, fout=False, main_buffer=False):
 
 
 class Meta(list):
-
+    """
+    A collection of SearchLists that allow multiple accounts to coexist nicely
+    """
     def __init__(self, attribute, search_list):
         self.attribute = attribute
         self.search_list = search_list
@@ -118,7 +123,9 @@ class Meta(list):
 
 
 class SearchList(list):
-
+    """
+    A normal python list with some syntactic sugar for searchability
+    """
     def find(self, name):
         items = []
         for child in self:
@@ -171,7 +178,9 @@ class SearchList(list):
 
 
 class SlackServer(object):
-
+    """
+    Root object used to represent connection and state of the connection to a slack group.
+    """
     def __init__(self, token):
         self.nick = None
         self.name = None
@@ -364,7 +373,10 @@ def buffer_input_cb(b, buffer, data):
 
 
 class Channel(SlackThing):
-
+    """
+    Represents a single channel and is the source of truth
+    for channel <> weechat buffer
+    """
     def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[], topic=""):
         super(Channel, self).__init__(name, identifier)
         self.type = "channel"
@@ -572,6 +584,9 @@ class Channel(SlackThing):
 #                modify_buffer_line(self.channel_buffer, None, text, time, append)
 
     def buffer_prnt(self, user='unknown_user', message='no message', time=0):
+        """
+        writes output (message) to a buffer (channel)
+        """
         set_read_marker = False
         time_float = float(time)
         if time_float != 0 and self.last_read >= time_float:
