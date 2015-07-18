@@ -377,6 +377,7 @@ class Channel(SlackThing):
         self.last_read = float(last_read)
         self.last_received = None
         self.messages = []
+        self.scrolling = False
         if active:
             self.create_buffer()
             self.attach_buffer()
@@ -556,17 +557,18 @@ class Channel(SlackThing):
             if w.buffer_get_string(self.channel_buffer, "short_name") != (color + new_name):
                 w.buffer_set(self.channel_buffer, "short_name", color + new_name)
 
-    def buffer_prnt_changed(self, user, text, time, append=""):
-        if self.channel_buffer:
-            if user:
-                if self.server.users.find(user):
-                    name = self.server.users.find(user).formatted_name()
-                else:
-                    name = user
-                name = name.decode('utf-8')
-                modify_buffer_line(self.channel_buffer, name, text, time, append)
-            else:
-                modify_buffer_line(self.channel_buffer, None, text, time, append)
+# deprecated in favor of redrawing the entire buffer
+#    def buffer_prnt_changed(self, user, text, time, append=""):
+#        if self.channel_buffer:
+#            if user:
+#                if self.server.users.find(user):
+#                    name = self.server.users.find(user).formatted_name()
+#                else:
+#                    name = user
+#                name = name.decode('utf-8')
+#                modify_buffer_line(self.channel_buffer, name, text, time, append)
+#            else:
+#                modify_buffer_line(self.channel_buffer, None, text, time, append)
 
     def buffer_prnt(self, user='unknown_user', message='no message', time=0):
         set_read_marker = False
@@ -611,11 +613,28 @@ class Channel(SlackThing):
         self.unset_typing(user)
 
     def buffer_redraw(self):
-        if self.channel_buffer:
+        if self.channel_buffer and not self.scrolling:
             w.buffer_clear(self.channel_buffer)
             self.messages.sort()
             for message in self.messages:
                 process_message(message.message_json, False)
+
+    def set_scrolling(self):
+        self.scrolling = True
+
+    def unset_scrolling(self):
+        self.scrolling = False
+        self.buffer_redraw()
+
+    def has_message(self, ts):
+        return self.messages.count(ts) > 0
+
+    def change_message(self, ts, text):
+        if self.has_message(ts):
+            message_index = self.messages.index(ts)
+            self.messages[message_index].change_text(text)
+            self.buffer_redraw()
+            return True
 
     def change_previous_message(self, old, new):
         message = self.my_last_message()
@@ -640,7 +659,7 @@ class Channel(SlackThing):
     def get_history(self):
         if self.active:
             for message in cache_get(self.identifier):
-                process_message(json.loads(message), False)
+                process_message(json.loads(message), True)
             if self.last_received != None:
                 async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "oldest": self.last_received, "count": BACKLOG_SIZE})
             else:
@@ -746,6 +765,9 @@ class Message(object):
         self.ts = message_json['ts']
         #split timestamp into time and counter
         self.ts_time, self.ts_counter = message_json['ts'].split('.')
+
+    def change_text(self, new_text):
+        self.message_json["text"] = new_text
 
     def add_reaction(self, reaction):
         if "reactions" in self.message_json:
@@ -950,10 +972,10 @@ def command_markread(current_buffer, args):
     if servers.find(domain).channels.find(channel):
         servers.find(domain).channels.find(channel).mark_read()
 
-def command_cacheinfo(current_buffer, args):
-    for channel in message_cache.keys():
-        c = channels.find(channel)
-        w.prnt("", "{} {}".format(channels.find(channel), len(message_cache[channel])))
+#def command_cacheinfo(current_buffer, args):
+#    for channel in message_cache.keys():
+#        c = channels.find(channel)
+#        w.prnt("", "{} {}".format(channels.find(channel), len(message_cache[channel])))
 #        server.buffer_prnt("{} {}".format(channels.find(channel), len(message_cache[channel])))
 
 def command_flushcache(current_buffer, args):
@@ -1262,31 +1284,32 @@ def create_reaction_string(reactions):
         reaction_string = ''
     return reaction_string
 
-def modify_buffer_line(buffer, user, new_message, time, append):
-    time = int(float(time))
-    own_lines = w.hdata_pointer(w.hdata_get('buffer'), buffer, 'own_lines')
-    if own_lines:
-        line = w.hdata_pointer(w.hdata_get('lines'), own_lines, 'last_line')
-        hdata_line = w.hdata_get('line')
-        hdata_line_data = w.hdata_get('line_data')
-
-        while line:
-            data = w.hdata_pointer(hdata_line, line, 'data')
-            if data:
-                date = w.hdata_time(hdata_line_data, data, 'date')
-                prefix = w.hdata_string(hdata_line_data, data, 'prefix')
-                if new_message == "":
-                    new_message = w.hdata_string(hdata_line_data, data, 'message')
-                if user and (int(date) == int(time) and user == prefix):
+# deprecated in favor of redrawing the entire buffer
+#def modify_buffer_line(buffer, user, new_message, time, append):
+#    time = int(float(time))
+#    own_lines = w.hdata_pointer(w.hdata_get('buffer'), buffer, 'own_lines')
+#    if own_lines:
+#        line = w.hdata_pointer(w.hdata_get('lines'), own_lines, 'last_line')
+#        hdata_line = w.hdata_get('line')
+#        hdata_line_data = w.hdata_get('line_data')
+#
+#        while line:
+#            data = w.hdata_pointer(hdata_line, line, 'data')
+#            if data:
+#                date = w.hdata_time(hdata_line_data, data, 'date')
+#                prefix = w.hdata_string(hdata_line_data, data, 'prefix')
+#                if new_message == "":
+#                    new_message = w.hdata_string(hdata_line_data, data, 'message')
+#                if user and (int(date) == int(time) and user == prefix):
 #                    w.prnt("", "found matching time date is {}, time is {} ".format(date, time))
-                    w.hdata_update(hdata_line_data, data, {"message": "{}{}".format(new_message, append)})
-                    break
-                elif not user and (int(date) == int(time)):
-                    w.hdata_update(hdata_line_data, data, {"message": "{}{}".format(new_message, append)})
-                else:
-                    pass
-            line = w.hdata_move(hdata_line, line, -1)
-    return w.WEECHAT_RC_OK
+#                    w.hdata_update(hdata_line_data, data, {"message": "{}{}".format(new_message, append)})
+#                    break
+#                elif not user and (int(date) == int(time)):
+#                    w.hdata_update(hdata_line_data, data, {"message": "{}{}".format(new_message, append)})
+#                else:
+#                    pass
+#            line = w.hdata_move(hdata_line, line, -1)
+#    return w.WEECHAT_RC_OK
 
 
 def process_message(message_json, cache=True):
@@ -1307,9 +1330,6 @@ def process_message(message_json, cache=True):
             channel.open(False)
             dbg("message came for closed channel {}".format(channel.name))
             return
-
-        if cache:
-            channel.cache_message(message_json)
 
         time = message_json['ts']
         if "fallback" in message_json:
@@ -1338,11 +1358,13 @@ def process_message(message_json, cache=True):
                     append = " (edited)"
                 else:
                     append = ''
-                channel.buffer_prnt_changed(message_json["message"]["user"], text, message_json["message"]["ts"], append)
+                channel.change_message(message_json["message"]["ts"], text + append)
+                cache=False
         elif "subtype" in message_json and message_json["subtype"] == "message_deleted":
             append = "(deleted)"
             text = ""
-            channel.buffer_prnt_changed(None, text, message_json["deleted_ts"], append)
+            channel.change_message(message_json["deleted_ts"], text + append)
+            cache = False
         elif message_json.get("subtype", "") == "channel_leave":
             channel.buffer_prnt(w.prefix("quit").rstrip(), text, time)
         elif message_json.get("subtype", "") == "channel_join":
@@ -1351,6 +1373,10 @@ def process_message(message_json, cache=True):
             channel.buffer_prnt(w.prefix("network").rstrip(), text, time)
         else:
             channel.buffer_prnt(name, text, time)
+
+        if cache:
+            channel.cache_message(message_json)
+
     except:
         dbg("cannot process message {}".format(message_json))
 
@@ -1710,6 +1736,17 @@ def quit_notification_cb(signal, sig_type, data):
     cache_write_cb("", "")
     return w.WEECHAT_RC_OK
 
+def scrolled_cb(signal, sig_type, data):
+    print w.current_buffer()
+    print signal
+    print sig_type
+    print data
+    if w.window_get_integer(data, "scrolling") == 1:
+        channels.find(w.current_buffer()).set_scrolling()
+    else:
+        channels.find(w.current_buffer()).unset_scrolling()
+    return w.WEECHAT_RC_OK
+
 def script_unloaded():
     global STOP_TALKING_TO_SLACK
     STOP_TALKING_TO_SLACK = True
@@ -1799,6 +1836,7 @@ if __name__ == "__main__":
         w.hook_signal('window_switch', "buffer_switch_cb", "")
         w.hook_signal('input_text_changed', "typing_notification_cb", "")
         w.hook_signal('quit', "quit_notification_cb", "")
+        w.hook_signal('window_scrolled', "scrolled_cb", "")
         w.hook_command(
              # Command name and description
             'slack', 'Plugin to allow typing notification and sync of read markers for slack.com',
