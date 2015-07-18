@@ -1815,16 +1815,9 @@ if __name__ == "__main__":
         hotlist = w.infolist_get("hotlist", "", "")
         main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
 
-        #try:
         message_cache = []
         cache_load()
-            #cache_file = open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'r')
-            #message_cache = json.loads(cache_file.read())
-        #except (IOError, ValueError):
-        #    message_cache = []
-        # End global var section
 
-        #channels = SearchList()
         servers = SearchList()
         for token in slack_api_token.split(','):
             servers.append(SlackServer(token))
