@@ -804,9 +804,6 @@ class Message(object):
         else:
             pass
 
-#    def find_or_create_reaction(self, name):
-#        for reaction in self.
-
     def __eq__(self, other):
         return self.ts_time == other or self.ts == other
 
@@ -986,12 +983,6 @@ def command_markread(current_buffer, args):
     domain = current_domain_name()
     if servers.find(domain).channels.find(channel):
         servers.find(domain).channels.find(channel).mark_read()
-
-#def command_cacheinfo(current_buffer, args):
-#    for channel in message_cache.keys():
-#        c = channels.find(channel)
-#        w.prnt("", "{} {}".format(channels.find(channel), len(message_cache[channel])))
-#        server.buffer_prnt("{} {}".format(channels.find(channel), len(message_cache[channel])))
 
 def command_flushcache(current_buffer, args):
     global message_cache
@@ -1546,8 +1537,6 @@ def typing_notification_cb(signal, sig_type, data):
     return w.WEECHAT_RC_OK
 
 # NOTE: figured i'd do this because they do
-
-
 def slack_ping_cb(data, remaining):
     servers.find(data).ping()
     return w.WEECHAT_RC_OK
