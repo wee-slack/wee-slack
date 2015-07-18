@@ -1423,6 +1423,9 @@ def unwrap_attachments(message_json):
 
 
 def unfurl_refs(text):
+    """
+    Worst code ever written. this needs work
+    """
     if text.find('<') > -1:
         newtext = []
         text = text.split(" ")
@@ -1551,13 +1554,18 @@ def typing_notification_cb(signal, sig_type, data):
                 typing_timer = now
     return w.WEECHAT_RC_OK
 
-# NOTE: figured i'd do this because they do
 def slack_ping_cb(data, remaining):
+    """
+    Periodic websocket ping to detect broken connection.
+    """
     servers.find(data).ping()
     return w.WEECHAT_RC_OK
 
 
 def slack_connection_persistence_cb(data, remaining_calls):
+    """
+    Reconnect if a connection is detected down
+    """
     for server in servers:
         if not server.connected:
             server.buffer_prnt("Disconnected from slack, trying to reconnect..")
@@ -1580,8 +1588,6 @@ def slack_never_away_cb(data, remaining):
 # Slack specific requests
 
 # NOTE: switched to async/curl because sync slowed down the UI
-
-
 def async_slack_api_request(domain, token, request, post_data, priority=False):
     if not STOP_TALKING_TO_SLACK:
         post_data["token"] = token
@@ -1658,14 +1664,6 @@ def cache_get(channel):
         if j["channel"] == channel:
             lines.append(line)
     return lines
-
-        #try:
-        #    channels.find(j.channel).messages.append(j)
-        #except:
-            #channel may not exist, but could be in cache - just ignore this
-        #    pass
-
-    #message_cache = json.loads(cache_file.read())
 
 # END Slack specific requests
 
