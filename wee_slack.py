@@ -26,6 +26,7 @@ SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
 BACKLOG_SIZE = 200
+SCROLLBACK_SIZE = 2000
 
 SLACK_API_TRANSLATOR = {
     "channel": {
@@ -653,8 +654,8 @@ class Channel(SlackThing):
         if from_me:
             message_json["user"] = self.server.users.find(self.server.nick).identifier
         self.messages.append(Message(message_json))
-        if len(self.messages) > BACKLOG_SIZE:
-            self.messages = self.messages[-BACKLOG_SIZE:]
+        if len(self.messages) > SCROLLBACK_SIZE:
+            self.messages = self.messages[-SCROLLBACK_SIZE:]
 
     def get_history(self):
         if self.active:
