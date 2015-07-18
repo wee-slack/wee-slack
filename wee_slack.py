@@ -1809,7 +1809,6 @@ if __name__ == "__main__":
         buffer_list_update = False
         previous_buffer_list_update = 0
 
-        #name = None
         never_away = False
         hide_distractions = False
         hotlist = w.infolist_get("hotlist", "", "")
