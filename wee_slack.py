@@ -722,7 +722,6 @@ class DmChannel(Channel):
 
 class User(object):
 
-<<<<<<< HEAD
     def __init__(self, server, name, identifier, presence="away", deleted=False):
         self.server = server
         self.name = name
