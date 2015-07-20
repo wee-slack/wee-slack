@@ -307,7 +307,7 @@ class SlackServer(object):
     def create_slack_mappings(self, data):
 
         for item in data["users"]:
-            self.users.append(User(self, item["name"], item["id"], item["presence"]))
+            self.users.append(User(self, item["name"], item["id"], item["presence"], item["deleted"]))
 
         for item in data["channels"]:
             if "last_read" not in item:
@@ -432,12 +432,14 @@ class Channel(object):
             try:
                 for user in self.members:
                     user = self.server.users.find(user)
+                    if user.deleted:
+                        continue
                     if user.presence == 'away':
                         w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, " ", "", 1)
                     else:
                         w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "+", "", 1)
-            except:
-                print "DEBUG: {} {}".format(self.identifier,self.name)
+            except Exception as e:
+                print "DEBUG: {} {} {}".format(self.identifier, self.name, e)
 
     def fullname(self):
         return "{}.{}".format(self.server.domain, self.name)
@@ -720,13 +722,15 @@ class DmChannel(Channel):
 
 class User(object):
 
-    def __init__(self, server, name, identifier, presence="away"):
+<<<<<<< HEAD
+    def __init__(self, server, name, identifier, presence="away", deleted=False):
+        self.server = server
         self.name = name
         self.identifier = identifier
         self.presence = presence
+        self.deleted = deleted
 
         self.channel_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, self.name))
-        self.server = server
         self.update_color()
         self.name_regex = re.compile(r"([\W]|\A)(@{0,1})" + self.name + "('s|[^'\w]|\Z)")
         if self.presence == 'away':
@@ -932,12 +936,26 @@ def command_channels(current_buffer, args):
 def command_nodistractions(current_buffer, args):
     global hide_distractions
     hide_distractions = not hide_distractions
-    if distracting_channels[0] != "":
+    if distracting_channels != ['']:
         for channel in distracting_channels:
             try:
-                w.buffer_set(channels.find(channel).channel_buffer, "hidden", str(int(hide_distractions)))
+                channel_buffer = channels.find(channel).channel_buffer
+                if channel_buffer:
+                    w.buffer_set(channels.find(channel).channel_buffer, "hidden", str(int(hide_distractions)))
             except:
                 dbg("Can't hide channel {}".format(channel), main_buffer=True)
+
+
+def command_distracting(current_buffer, args):
+    global distracting_channels
+    distracting_channels = [x.strip() for x in w.config_get_plugin("distracting_channels").split(',')]
+    fullname = channels.find(current_buffer).fullname()
+    if distracting_channels.count(fullname) == 0:
+        distracting_channels.append(fullname)
+    else:
+        distracting_channels.pop(distracting_channels.index(fullname))
+    new = ','.join(distracting_channels)
+    w.config_set_plugin('distracting_channels', new)
 
 
 @slack_buffer_required
@@ -959,7 +977,6 @@ def command_setallreadmarkers(current_buffer, args):
     """
     for channel in channels:
         channel.mark_read()
-
 
 def command_changetoken(current_buffer, args):
     w.config_set_plugin('slack_api_token', args)
@@ -1215,6 +1232,7 @@ def process_channel_leave(message_json):
 
 
 def  process_channel_archive(message_json):
+    server = servers.find(message_json["myserver"])
     channel = server.channels.find(message_json["channel"])
     channel.detach_buffer()
 
@@ -1269,7 +1287,10 @@ def process_im_created(message_json):
 
 def process_user_typing(message_json):
     server = servers.find(message_json["myserver"])
-    server.channels.find(message_json["channel"]).set_typing(server.users.find(message_json["user"]).name)
+    channel = server.channels.find(message_json["channel"])
+    if channel:
+        channel.set_typing(server.users.find(message_json["user"]).name)
+
 
 # todo: does this work?
 
@@ -1587,6 +1608,57 @@ def slack_never_away_cb(data, remaining):
             server.send_to_websocket(request, expect_reply=False)
     return w.WEECHAT_RC_OK
 
+
+def nick_completion_cb(data, completion_item, buffer, completion):
+    """
+    Adds all @-prefixed nicks to completion list
+    """
+
+    channel = channels.find(buffer)
+    for m in channel.members:
+        user = channel.server.users.find(m)
+        w.hook_completion_list_add(completion, "@" + user.name, 1, w.WEECHAT_LIST_POS_SORT)
+    return w.WEECHAT_RC_OK
+
+
+def complete_next_cb(data, buffer, command):
+    """Extract current word, if it is equal to a nick, prefix it with @ and
+    rely on nick_completion_cb adding the @-prefixed versions to the
+    completion lists, then let Weechat's internal completion do its
+    thing
+
+    """
+
+    channel = channels.find(buffer)
+    if channel is None or channel.members is None:
+        return w.WEECHAT_RC_OK
+    input = w.buffer_get_string(buffer, "input")
+    current_pos = w.buffer_get_integer(buffer, "input_pos") - 1
+    input_length = w.buffer_get_integer(buffer, "input_length")
+    word_start = 0
+    word_end = input_length
+    # If we're on a non-word, look left for something to complete
+    while current_pos >= 0 and input[current_pos] != '@' and not input[current_pos].isalnum():
+        current_pos = current_pos - 1
+    for l in range(current_pos, 0, -1):
+        if input[l] != '@' and not input[l].isalnum():
+            word_start = l + 1
+            break
+    for l in range(current_pos, input_length):
+        if not input[l].isalnum():
+            word_end = l
+            break
+    word = input[word_start:word_end]
+    for m in channel.members:
+        user = channel.server.users.find(m)
+        if user.name == word:
+            # Here, we cheat.  Insert a @ in front and rely in the @
+            # nicks being in the completion list
+            w.buffer_set(buffer, "input", input[:word_start] + "@" + input[word_start:])
+            w.buffer_set(buffer, "input_pos", str(w.buffer_get_integer(buffer, "input_pos") + 1))
+            return w.WEECHAT_RC_OK_EAT
+    return w.WEECHAT_RC_OK
+
 # Slack specific requests
 
 # NOTE: switched to async/curl because sync slowed down the UI
@@ -1859,5 +1931,8 @@ if __name__ == "__main__":
         w.hook_command_run('/join', 'join_command_cb', '')
         w.hook_command_run('/part', 'part_command_cb', '')
         w.hook_command_run('/leave', 'part_command_cb', '')
+        w.hook_command_run("/input complete_next", "complete_next_cb", "")
+        w.hook_completion("nicks", "complete @-nicks for slack",
+                          "nick_completion_cb", "")
         w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
         # END attach to the weechat hooks we need
