@@ -1501,6 +1501,8 @@ def nick_completion_cb(data, completion_item, buffer, completion):
     """
 
     channel = channels.find(buffer)
+    if channel is None or channel.members is None:
+        return w.WEECHAT_RC_OK
     for m in channel.members:
         user = channel.server.users.find(m)
         w.hook_completion_list_add(completion, "@" + user.name, 1, w.WEECHAT_LIST_POS_SORT)
