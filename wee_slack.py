@@ -1075,9 +1075,9 @@ def process_presence_change(message_json):
     server = servers.find(message_json["myserver"])
     identifier = message_json.get("user", server.nick)
     if message_json["presence"] == 'active':
-        users.find(identifier).set_active()
+        server.users.find(identifier).set_active()
     else:
-        users.find(identifier).set_inactive()
+        server.users.find(identifier).set_inactive()
 
 
 def process_channel_marked(message_json):
