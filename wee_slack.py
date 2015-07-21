@@ -1164,13 +1164,11 @@ def process_manual_presence_change(message_json):
 
 def process_presence_change(message_json):
     server = servers.find(message_json["myserver"])
-    nick = message_json.get("user", server.nick)
-    buffer_name = "{}.{}".format(domain, nick)
-    buf_ptr = w.buffer_search("", buffer_name)
+    identifier = message_json.get("user", server.nick)
     if message_json["presence"] == 'active':
-        users.find(nick).set_active()
+        users.find(identifier).set_active()
     else:
-        users.find(nick).set_inactive()
+        users.find(identifier).set_inactive()
 
 
 def process_channel_marked(message_json):
@@ -1614,6 +1612,8 @@ def nick_completion_cb(data, completion_item, buffer, completion):
     """
 
     channel = channels.find(buffer)
+    if channel is None or channel.members is None:
+        return w.WEECHAT_RC_OK
     for m in channel.members:
         user = channel.server.users.find(m)
         w.hook_completion_list_add(completion, "@" + user.name, 1, w.WEECHAT_LIST_POS_SORT)
