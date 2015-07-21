@@ -8,7 +8,6 @@ import pickle
 import sha
 import re
 import urllib
-import urlparse
 import HTMLParser
 import sys
 from websocket import create_connection
@@ -371,6 +370,7 @@ class Channel(object):
         self.members = set(members)
         self.topic = topic
 
+        self.members_table = {}
         self.channel_buffer = None
         self.type = "channel"
         self.server = server
@@ -384,6 +384,7 @@ class Channel(object):
             self.attach_buffer()
             self.update_nicklist()
             self.set_topic(self.topic)
+            self.create_members_table()
             buffer_list_update_next()
 
     def __str__(self):
@@ -397,6 +398,10 @@ class Channel(object):
             return True
         else:
             return False
+
+    def create_members_table(self):
+        for user in self.members:
+            self.members_table[user] = self.server.users.find(user)
 
     def create_buffer(self):
         channel_buffer = w.buffer_search("", "{}.{}".format(self.server.domain, self.name))
@@ -431,7 +436,7 @@ class Channel(object):
             w.nicklist_remove_all(self.channel_buffer)
             try:
                 for user in self.members:
-                    user = self.server.users.find(user)
+                    user = self.members_table[user]
                     if user.deleted:
                         continue
                     if user.presence == 'away':
@@ -439,7 +444,7 @@ class Channel(object):
                     else:
                         w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "+", "", 1)
             except Exception as e:
-                print "DEBUG: {} {} {}".format(self.identifier, self.name, e)
+                dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
 
     def fullname(self):
         return "{}.{}".format(self.server.domain, self.name)
@@ -449,11 +454,13 @@ class Channel(object):
 
     def user_join(self, name):
         self.members.add(name)
+        self.create_members_table()
         self.update_nicklist()
 
     def user_leave(self, name):
         if name in self.members:
             self.members.remove(name)
+        self.create_members_table()
         self.update_nicklist()
 
     def set_active(self):
