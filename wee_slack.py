@@ -1792,10 +1792,13 @@ def stop_talking_to_slack():
     return w.WEECHAT_RC_OK
 
 def scrolled_cb(signal, sig_type, data):
-    if w.window_get_integer(data, "scrolling") == 1:
-        channels.find(w.current_buffer()).set_scrolling()
-    else:
-        channels.find(w.current_buffer()).unset_scrolling()
+    try:
+        if w.window_get_integer(data, "scrolling") == 1:
+            channels.find(w.current_buffer()).set_scrolling()
+        else:
+            channels.find(w.current_buffer()).unset_scrolling()
+    except:
+        pass
     return w.WEECHAT_RC_OK
 
 # END Utility Methods
