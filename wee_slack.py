@@ -1683,9 +1683,11 @@ def cache_write_cb(data, remaining):
 def cache_load():
     global message_cache
     try:
-        cache_file = open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'r')
-        for line in cache_file:
-            message_cache.append(line)
+        file_name = "{}/{}".format(WEECHAT_HOME, CACHE_NAME)
+        if sum(1 for line in open('myfile.txt')) > 2:
+            cache_file = open(file_name, 'r')
+            for line in cache_file:
+                message_cache.append(line)
     except IOError:
         #cache file didn't exist
         pass
