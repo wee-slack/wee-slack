@@ -3,12 +3,8 @@
 wee-slack
 =========
 
-*Interested in helping test reactions + new message backend?, Do this:*
-
-```
-git pull
-git checkout reactions
-```
+**News:**
+ The 0.98.3 release has some big backend changes that should make startup and multi-group much faster. Please report any bugs to the Freenode IRC channel #wee-slack.
 
 A WeeChat native client for Slack.com. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, search, (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
 
@@ -16,9 +12,10 @@ A WeeChat native client for Slack.com. Provides supplemental features only avail
 
 Features
 --------
-  * **New** edited messages work just like the official clients, where the original message changes and has (edited) appended.
-  * **New** unfurled urls dont generate a new message, but replace the original with more info as it is received.
-  * **New** regex style message editing (s/oldtext/newtext/)
+  * **New** Emoji reactions!
+  * Edited messages work just like the official clients, where the original message changes and has (edited) appended.
+  * Unfurled urls dont generate a new message, but replace the original with more info as it is received.
+  * Regex style message editing (s/oldtext/newtext/)
   * Caches message history, making startup MUCH faster
   * Smarter redraw of dynamic buffer info (much lower CPU %)
   * beta UTF-8 support
