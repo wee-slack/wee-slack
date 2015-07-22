@@ -20,7 +20,7 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.98.1"
+SCRIPT_VERSION = "0.98.2"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -154,7 +154,6 @@ class SlackServer(object):
 
     def get_aliases(self):
         aliases = [self.identifier, self.token, self.buffer]
-        print aliases
         return aliases
 
     def find(self, name, attribute):
@@ -555,7 +554,7 @@ class Channel(object):
         else:
             tags = "notify_message"
         #don't write these to local log files
-        tags += ",no_log"
+        #tags += ",no_log"
         time_int = int(time_float)
         if self.channel_buffer:
             if self.server.users.find(user):
