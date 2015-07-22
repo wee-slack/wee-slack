@@ -63,101 +63,33 @@ def dbg(message, fout=False, main_buffer=False):
         if slack_debug is not None:
             w.prnt(slack_debug, message)
 
-# hilarious, i know
-
-
-class Meta(list):
-    """
-    A collection of SearchLists that allow multiple accounts to coexist nicely
-    """
-    def __init__(self, attribute, search_list):
-        self.attribute = attribute
-        self.search_list = search_list
-
-    def __str__(self):
-        string = ''
-        for each in self.search_list.get_all(self.attribute):
-            string += "{} ".format(each)
-        return string
-
-    def __repr__(self):
-        self.search_list.get_all(self.attribute)
-
-    def __getitem__(self, index):
-        things = self.get_all()
-        return things[index]
-
-    def __iter__(self):
-        things = self.get_all()
-        for channel in things:
-            yield channel
-
-    def get_all(self):
-        items = []
-        items += self.search_list.get_all(self.attribute)
-        return items
-
-    def find(self, name):
-        items = self.search_list.find_deep(name, self.attribute)
-        items = [x for x in items if x is not None]
-        if len(items) == 1:
-            return items[0]
-        elif len(items) == 0:
-            pass
-        else:
-            dbg("probably something bad happened with meta items: {}".format(items))
-            return items
-            #raise AmbiguousProblemError
-
-    def find_first(self, name):
-        items = self.find(name)
-        if items.__class__ == list:
-            return items[0]
-        else:
-            return False
-
-    def find_by_class(self, class_name):
-        items = self.search_list.find_by_class_deep(class_name, self.attribute)
-        return items
-
 
 class SearchList(list):
     """
     A normal python list with some syntactic sugar for searchability
     """
+    def __init__(self):
+        self.hashtable = {}
+        super(SearchList, self).__init__(self)
+
     def find(self, name):
-        items = []
-        for child in self:
-            if child.__class__ == self.__class__:
-                items += child.find(name)
-            else:
-                if child == name:
-                    items.append(child)
-        if len(items) == 1:
-            return items[0]
-        elif items != []:
-            return items
+        if name in self.hashtable.keys():
+            return self.hashtable[name]
+        #this is a fallback to __eq__ if the item isn't in the hashtable already
+        if self.count(name) > 0:
+            self.update_hashtable()
+            return self[self.index(name)]
 
-    def find_deep(self, name, attribute):
-        items = []
-        for child in self:
-            if child.__class__ == self.__class__:
-                if items is not None:
-                    items += child.find_deep(name, attribute)
-            elif dir(child).count('find') == 1:
-                if items is not None:
-                    items.append(child.find(name, attribute))
-        if items != []:
-            return items
+    def append(self, item, aliases=[]):
+        super(SearchList, self).append(item)
+        self.update_hashtable()
 
-    def get_all(self, attribute):
-        items = []
+    def update_hashtable(self):
         for child in self:
-            if child.__class__ == self.__class__:
-                items += child.get_all(attribute)
-            else:
-                items += (eval("child." + attribute))
-        return items
+            if "get_aliases" in dir(child):
+                for alias in child.get_aliases():
+                    if alias is not None:
+                        self.hashtable[alias] = child
 
     def find_by_class(self, class_name):
         items = []
@@ -211,6 +143,19 @@ class SlackServer(object):
 
     def __repr__(self):
         return "{}".format(self.identifier)
+
+    def add_user(self, user):
+        self.users.append(user, user.get_aliases())
+        users.append(user, user.get_aliases())
+
+    def add_channel(self, channel):
+        self.channels.append(channel, channel.get_aliases())
+        channels.append(channel, channel.get_aliases())
+
+    def get_aliases(self):
+        aliases = [self.identifier, self.token, self.buffer]
+        print aliases
+        return aliases
 
     def find(self, name, attribute):
         attribute = eval("self." + attribute)
@@ -306,7 +251,7 @@ class SlackServer(object):
     def create_slack_mappings(self, data):
 
         for item in data["users"]:
-            self.users.append(User(self, item["name"], item["id"], item["presence"], item["deleted"]))
+            self.add_user(User(self, item["name"], item["id"], item["presence"], item["deleted"]))
 
         for item in data["channels"]:
             if "last_read" not in item:
@@ -317,17 +262,17 @@ class SlackServer(object):
                 item["topic"] = {}
                 item["topic"]["value"] = ""
             if not item["is_archived"]:
-                self.channels.append(Channel(self, item["name"], item["id"], item["is_member"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+                self.add_channel(Channel(self, item["name"], item["id"], item["is_member"], item["last_read"], "#", item["members"], item["topic"]["value"]))
         for item in data["groups"]:
             if "last_read" not in item:
                 item["last_read"] = 0
             if not item["is_archived"]:
-                self.channels.append(GroupChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+                self.add_channel(GroupChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
         for item in data["ims"]:
             if "last_read" not in item:
                 item["last_read"] = 0
             name = self.users.find(item["user"]).name
-            self.channels.append(DmChannel(self, name, item["id"], item["is_open"], item["last_read"]))
+            self.add_channel(DmChannel(self, name, item["id"], item["is_open"], item["last_read"]))
 
         for item in self.channels:
             item.get_history()
@@ -398,6 +343,12 @@ class Channel(object):
             return True
         else:
             return False
+
+    def get_aliases(self):
+        aliases = [self.fullname(), self.name, self.identifier, self.name[1:], ]
+        if self.channel_buffer is not None:
+            aliases.append(self.channel_buffer)
+        return aliases
 
     def create_members_table(self):
         for user in self.members:
@@ -756,6 +707,9 @@ class User(object):
             return True
         else:
             return False
+
+    def get_aliases(self):
+        return [self.name, "@" + self.name, self.identifier]
 
     def set_active(self):
         self.presence = "active"
@@ -1163,7 +1117,7 @@ def process_pong(message_json):
 def process_team_join(message_json):
     server = servers.find(message_json["myserver"])
     item = message_json["user"]
-    server.users.append(User(server, item["name"], item["id"], item["presence"]))
+    server.add_user(User(server, item["name"], item["id"], item["presence"]))
     server.buffer_prnt(server.buffer, "New user joined: {}".format(item["name"]))
 
 def process_manual_presence_change(message_json):
@@ -1199,7 +1153,7 @@ def process_channel_created(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(Channel(server, item["name"], item["id"], False))
+        server.add_channel(Channel(server, item["name"], item["id"], False))
     server.buffer_prnt("New channel created: {}".format(item["name"]))
 
 
@@ -1226,7 +1180,7 @@ def process_channel_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+        server.add_channel(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
 
 
 def process_channel_leave(message_json):
@@ -1252,7 +1206,7 @@ def process_group_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+        server.add_channel(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
 
 
 def  process_group_archive(message_json):
@@ -1285,7 +1239,7 @@ def process_im_created(message_json):
         server.channels.find(channel_name).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(DmChannel(server, channel_name, item["id"], item["is_open"], item["last_read"]))
+        server.add_channel(DmChannel(server, channel_name, item["id"], item["is_open"], item["last_read"]))
     server.buffer_prnt("New channel created: {}".format(item["name"]))
 
 
@@ -1497,7 +1451,7 @@ def get_user(message_json, server):
 
 
 def typing_bar_item_cb(data, buffer, args):
-    typers = [x for x in channels.get_all() if x.is_someone_typing()]
+    typers = [x for x in channels if x.is_someone_typing()]
     if len(typers) > 0:
         direct_typers = []
         channel_typers = []
@@ -1531,7 +1485,6 @@ def buffer_list_update_cb(data, remaining_calls):
         gray_check = False
         if len(servers) > 1:
             gray_check = True
-        # for channel in channels.find_by_class(Channel) + channels.find_by_class(GroupChannel):
         for channel in channels:
             channel.rename()
         buffer_list_update = False
@@ -1699,6 +1652,7 @@ def url_processor_cb(data, command, return_code, out, err):
         if my_json:
             if data["request"] == 'rtm.start':
                 servers.find(data["token"]).connected_to_slack(my_json)
+                servers.update_hashtable()
 
             else:
                 if "channel" in data["post_data"]:
@@ -1848,6 +1802,9 @@ def scrolled_cb(signal, sig_type, data):
 
 # Main
 if __name__ == "__main__":
+
+
+
     if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
                   SCRIPT_DESC, "script_unloaded", ""):
 
@@ -1899,9 +1856,10 @@ if __name__ == "__main__":
 
         servers = SearchList()
         for token in slack_api_token.split(','):
-            servers.append(SlackServer(token))
-        channels = Meta('channels', servers)
-        users = Meta('users', servers)
+            server = SlackServer(token)
+            servers.append(server)
+        channels = SearchList()
+        users = SearchList()
 
         w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
         w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
