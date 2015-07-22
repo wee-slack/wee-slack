@@ -86,7 +86,7 @@ class SearchList(list):
 
     def update_hashtable(self):
         for child in self:
-            if "get_aliases" in dir(child):
+            if hasattr(child, "get_aliases"):
                 for alias in child.get_aliases():
                     if alias is not None:
                         self.hashtable[alias] = child
@@ -326,9 +326,9 @@ class Channel(object):
         if active:
             self.create_buffer()
             self.attach_buffer()
+            self.create_members_table()
             self.update_nicklist()
             self.set_topic(self.topic)
-            self.create_members_table()
             buffer_list_update_next()
 
     def __str__(self):
@@ -1686,7 +1686,7 @@ def cache_load():
         cache_file = open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'r')
         for line in cache_file:
             message_cache.append(line)
-    except:
+    except IOError:
         #cache file didn't exist
         pass
 
@@ -1804,9 +1804,6 @@ def scrolled_cb(signal, sig_type, data):
 
 # Main
 if __name__ == "__main__":
-
-
-
     if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
                   SCRIPT_DESC, "script_unloaded", ""):
 
