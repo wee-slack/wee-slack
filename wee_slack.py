@@ -8,7 +8,6 @@ import pickle
 import sha
 import re
 import urllib
-import urlparse
 import HTMLParser
 import sys
 from websocket import create_connection
@@ -21,11 +20,12 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.97.26"
+SCRIPT_VERSION = "0.98.3"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
 BACKLOG_SIZE = 200
+SCROLLBACK_SIZE = 2000
 
 SLACK_API_TRANSLATOR = {
     "channel": {
@@ -50,6 +50,9 @@ SLACK_API_TRANSLATOR = {
 }
 
 def dbg(message, fout=False, main_buffer=False):
+    """
+    send debug output to the slack-debug buffer and optionally write to a file.
+    """
     message = "DEBUG: {}".format(message)
     #message = message.encode('utf-8', 'replace')
     if fout:
@@ -60,97 +63,33 @@ def dbg(message, fout=False, main_buffer=False):
         if slack_debug is not None:
             w.prnt(slack_debug, message)
 
-# hilarious, i know
-
-
-class Meta(list):
-
-    def __init__(self, attribute, search_list):
-        self.attribute = attribute
-        self.search_list = search_list
-
-    def __str__(self):
-        string = ''
-        for each in self.search_list.get_all(self.attribute):
-            string += "{} ".format(each)
-        return string
-
-    def __repr__(self):
-        self.search_list.get_all(self.attribute)
-
-    def __getitem__(self, index):
-        things = self.get_all()
-        return things[index]
-
-    def __iter__(self):
-        things = self.get_all()
-        for channel in things:
-            yield channel
-
-    def get_all(self):
-        items = []
-        items += self.search_list.get_all(self.attribute)
-        return items
-
-    def find(self, name):
-        items = self.search_list.find_deep(name, self.attribute)
-        items = [x for x in items if x is not None]
-        if len(items) == 1:
-            return items[0]
-        elif len(items) == 0:
-            pass
-        else:
-            dbg("probably something bad happened with meta items: {}".format(items))
-            return items
-            #raise AmbiguousProblemError
-
-    def find_first(self, name):
-        items = self.find(name)
-        if items.__class__ == list:
-            return items[0]
-        else:
-            return False
-
-    def find_by_class(self, class_name):
-        items = self.search_list.find_by_class_deep(class_name, self.attribute)
-        return items
-
 
 class SearchList(list):
+    """
+    A normal python list with some syntactic sugar for searchability
+    """
+    def __init__(self):
+        self.hashtable = {}
+        super(SearchList, self).__init__(self)
 
     def find(self, name):
-        items = []
-        for child in self:
-            if child.__class__ == self.__class__:
-                items += child.find(name)
-            else:
-                if child == name:
-                    items.append(child)
-        if len(items) == 1:
-            return items[0]
-        elif items != []:
-            return items
+        if name in self.hashtable.keys():
+            return self.hashtable[name]
+        #this is a fallback to __eq__ if the item isn't in the hashtable already
+        if self.count(name) > 0:
+            self.update_hashtable()
+            return self[self.index(name)]
 
-    def find_deep(self, name, attribute):
-        items = []
-        for child in self:
-            if child.__class__ == self.__class__:
-                if items is not None:
-                    items += child.find_deep(name, attribute)
-            elif dir(child).count('find') == 1:
-                if items is not None:
-                    items.append(child.find(name, attribute))
-        if items != []:
-            return items
+    def append(self, item, aliases=[]):
+        super(SearchList, self).append(item)
+        self.update_hashtable()
 
-    def get_all(self, attribute):
-        items = []
+    def update_hashtable(self):
         for child in self:
-            if child.__class__ == self.__class__:
-                items += child.get_all(attribute)
-            else:
-                items += (eval("child." + attribute))
-        return items
+            if hasattr(child, "get_aliases"):
+                for alias in child.get_aliases():
+                    if alias is not None:
+                        self.hashtable[alias] = child
 
     def find_by_class(self, class_name):
         items = []
@@ -170,7 +109,9 @@ class SearchList(list):
 
 
 class SlackServer(object):
-
+    """
+    Root object used to represent connection and state of the connection to a slack group.
+    """
     def __init__(self, token):
         self.nick = None
         self.name = None
@@ -202,6 +143,18 @@ class SlackServer(object):
 
     def __repr__(self):
         return "{}".format(self.identifier)
+
+    def add_user(self, user):
+        self.users.append(user, user.get_aliases())
+        users.append(user, user.get_aliases())
+
+    def add_channel(self, channel):
+        self.channels.append(channel, channel.get_aliases())
+        channels.append(channel, channel.get_aliases())
+
+    def get_aliases(self):
+        aliases = [self.identifier, self.token, self.buffer]
+        return aliases
 
     def find(self, name, attribute):
         attribute = eval("self." + attribute)
@@ -297,7 +250,7 @@ class SlackServer(object):
     def create_slack_mappings(self, data):
 
         for item in data["users"]:
-            self.users.append(User(self, item["name"], item["id"], item["presence"], item["deleted"]))
+            self.add_user(User(self, item["name"], item["id"], item["presence"], item["deleted"]))
 
         for item in data["channels"]:
             if "last_read" not in item:
@@ -308,17 +261,17 @@ class SlackServer(object):
                 item["topic"] = {}
                 item["topic"]["value"] = ""
             if not item["is_archived"]:
-                self.channels.append(Channel(self, item["name"], item["id"], item["is_member"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+                self.add_channel(Channel(self, item["name"], item["id"], item["is_member"], item["last_read"], "#", item["members"], item["topic"]["value"]))
         for item in data["groups"]:
             if "last_read" not in item:
                 item["last_read"] = 0
             if not item["is_archived"]:
-                self.channels.append(GroupChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+                self.add_channel(GroupChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
         for item in data["ims"]:
             if "last_read" not in item:
                 item["last_read"] = 0
             name = self.users.find(item["user"]).name
-            self.channels.append(DmChannel(self, name, item["id"], item["is_open"], item["last_read"]))
+            self.add_channel(DmChannel(self, name, item["id"], item["is_open"], item["last_read"]))
 
         for item in self.channels:
             item.get_history()
@@ -335,26 +288,11 @@ class SlackServer(object):
             pass
             #w.prnt("", "%s\t%s" % (user, message))
 
-
-class SlackThing(object):
-
-    def __init__(self, name, identifier):
-        self.name = name
-        self.identifier = identifier
-        self.channel_buffer = None
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return self.name
-
-
 def buffer_input_cb(b, buffer, data):
-    if not data.startswith('s/'):
+    if not data.startswith('s/') or data.startswith('+'):
         channel = channels.find(buffer)
         channel.send_message(data)
-        channel.buffer_prnt(channel.server.nick, data)
+        #channel.buffer_prnt(channel.server.nick, data)
     elif data.count('/') == 3:
         old, new = data.split('/')[1:3]
         channel = channels.find(buffer)
@@ -363,32 +301,57 @@ def buffer_input_cb(b, buffer, data):
     return w.WEECHAT_RC_ERROR
 
 
-class Channel(SlackThing):
-
+class Channel(object):
+    """
+    Represents a single channel and is the source of truth
+    for channel <> weechat buffer
+    """
     def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[], topic=""):
-        super(Channel, self).__init__(name, identifier)
-        self.type = "channel"
-        self.server = server
-        self.name = prepend_name + self.name
-        self.typing = {}
+        self.name = prepend_name + name
+        self.identifier = identifier
         self.active = active
-        self.opening = False
+        self.last_read = float(last_read)
         self.members = set(members)
         self.topic = topic
-        self.last_read = float(last_read)
+
+        self.members_table = {}
+        self.channel_buffer = None
+        self.type = "channel"
+        self.server = server
+        self.typing = {}
+        self.opening = False
         self.last_received = None
+        self.messages = []
+        self.scrolling = False
         if active:
             self.create_buffer()
             self.attach_buffer()
+            self.create_members_table()
             self.update_nicklist()
             self.set_topic(self.topic)
             buffer_list_update_next()
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
 
     def __eq__(self, compare_str):
         if compare_str == self.fullname() or compare_str == self.name or compare_str == self.identifier or compare_str == self.name[1:] or (compare_str == self.channel_buffer and self.channel_buffer is not None):
             return True
         else:
             return False
+
+    def get_aliases(self):
+        aliases = [self.fullname(), self.name, self.identifier, self.name[1:], ]
+        if self.channel_buffer is not None:
+            aliases.append(self.channel_buffer)
+        return aliases
+
+    def create_members_table(self):
+        for user in self.members:
+            self.members_table[user] = self.server.users.find(user)
 
     def create_buffer(self):
         channel_buffer = w.buffer_search("", "{}.{}".format(self.server.domain, self.name))
@@ -423,7 +386,7 @@ class Channel(SlackThing):
             w.nicklist_remove_all(self.channel_buffer)
             try:
                 for user in self.members:
-                    user = self.server.users.find(user)
+                    user = self.members_table[user]
                     if user.deleted:
                         continue
                     if user.presence == 'away':
@@ -431,7 +394,7 @@ class Channel(SlackThing):
                     else:
                         w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "+", "", 1)
             except Exception as e:
-                print "DEBUG: {} {} {}".format(self.identifier, self.name, e)
+                dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
 
     def fullname(self):
         return "{}.{}".format(self.server.domain, self.name)
@@ -441,11 +404,13 @@ class Channel(SlackThing):
 
     def user_join(self, name):
         self.members.add(name)
+        self.create_members_table()
         self.update_nicklist()
 
     def user_leave(self, name):
         if name in self.members:
             self.members.remove(name)
+        self.create_members_table()
         self.update_nicklist()
 
     def set_active(self):
@@ -513,10 +478,6 @@ class Channel(SlackThing):
             async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier})
 
     def closed(self):
-        try:
-            message_cache.pop(self.identifier)
-        except KeyError:
-            pass
         self.channel_buffer = None
         self.last_received = None
         self.close()
@@ -562,19 +523,23 @@ class Channel(SlackThing):
             if w.buffer_get_string(self.channel_buffer, "short_name") != (color + new_name):
                 w.buffer_set(self.channel_buffer, "short_name", color + new_name)
 
-    def buffer_prnt_changed(self, user, text, time, append=""):
-        if user:
-            if self.server.users.find(user):
-                name = self.server.users.find(user).formatted_name()
-            else:
-                name = user
-            name = name.decode('utf-8')
-            modify_buffer_line(self.channel_buffer, name, text, time, append)
-        else:
-            modify_buffer_line(self.channel_buffer, None, text, time, append)
-        return False
+# deprecated in favor of redrawing the entire buffer
+#    def buffer_prnt_changed(self, user, text, time, append=""):
+#        if self.channel_buffer:
+#            if user:
+#                if self.server.users.find(user):
+#                    name = self.server.users.find(user).formatted_name()
+#                else:
+#                    name = user
+#                name = name.decode('utf-8')
+#                modify_buffer_line(self.channel_buffer, name, text, time, append)
+#            else:
+#                modify_buffer_line(self.channel_buffer, None, text, time, append)
 
-    def buffer_prnt(self, user='unknown user', message='no message', time=0):
+    def buffer_prnt(self, user='unknown_user', message='no message', time=0):
+        """
+        writes output (message) to a buffer (channel)
+        """
         set_read_marker = False
         time_float = float(time)
         if time_float != 0 and self.last_read >= time_float:
@@ -588,6 +553,8 @@ class Channel(SlackThing):
             tags = "irc_smart_filter"
         else:
             tags = "notify_message"
+        #don't write these to local log files
+        #tags += ",no_log"
         time_int = int(time_float)
         if self.channel_buffer:
             if self.server.users.find(user):
@@ -614,6 +581,44 @@ class Channel(SlackThing):
         self.last_received = time
         self.unset_typing(user)
 
+    def buffer_redraw(self):
+        if self.channel_buffer and not self.scrolling:
+            w.buffer_clear(self.channel_buffer)
+            self.messages.sort()
+            for message in self.messages:
+                process_message(message.message_json, False)
+
+    def set_scrolling(self):
+        self.scrolling = True
+
+    def unset_scrolling(self):
+        self.scrolling = False
+        self.buffer_redraw()
+
+    def has_message(self, ts):
+        return self.messages.count(ts) > 0
+
+    def change_message(self, ts, text):
+        if self.has_message(ts):
+            message_index = self.messages.index(ts)
+            self.messages[message_index].change_text(text)
+            self.buffer_redraw()
+            return True
+
+    def add_reaction(self, ts, reaction):
+        if self.has_message(ts):
+            message_index = self.messages.index(ts)
+            self.messages[message_index].add_reaction(reaction)
+            self.buffer_redraw()
+            return True
+
+    def remove_reaction(self, ts, reaction):
+        if self.has_message(ts):
+            message_index = self.messages.index(ts)
+            self.messages[message_index].remove_reaction(reaction)
+            self.buffer_redraw()
+            return True
+
     def change_previous_message(self, old, new):
         message = self.my_last_message()
         if new == "" and old == "":
@@ -627,11 +632,17 @@ class Channel(SlackThing):
             if "user" in message and "text" in message and message["user"] == self.server.users.find(self.server.nick).identifier:
                 return message
 
+    def cache_message(self, message_json, from_me=False):
+        if from_me:
+            message_json["user"] = self.server.users.find(self.server.nick).identifier
+        self.messages.append(Message(message_json))
+        if len(self.messages) > SCROLLBACK_SIZE:
+            self.messages = self.messages[-SCROLLBACK_SIZE:]
+
     def get_history(self):
         if self.active:
-            if self.identifier in message_cache.keys():
-                for message in message_cache[self.identifier]:
-                    process_message(message)
+            for message in cache_get(self.identifier):
+                process_message(json.loads(message), True)
             if self.last_received != None:
                 async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "oldest": self.last_received, "count": BACKLOG_SIZE})
             else:
@@ -666,14 +677,16 @@ class DmChannel(Channel):
             w.buffer_set(self.channel_buffer, "short_name", new_name)
 
 
-class User(SlackThing):
+class User(object):
 
     def __init__(self, server, name, identifier, presence="away", deleted=False):
-        super(User, self).__init__(name, identifier)
-        self.channel_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, self.name))
-        self.deleted = deleted
-        self.presence = presence
         self.server = server
+        self.name = name
+        self.identifier = identifier
+        self.presence = presence
+        self.deleted = deleted
+
+        self.channel_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, self.name))
         self.update_color()
         self.name_regex = re.compile(r"([\W]|\A)(@{0,1})" + self.name + "('s|[^'\w]|\Z)")
         if self.presence == 'away':
@@ -682,11 +695,20 @@ class User(SlackThing):
             self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color_name, "+", "", 1)
 #        w.nicklist_add_nick(server.buffer, "", self.formatted_name(), "", "", "", 1)
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
+
     def __eq__(self, compare_str):
         if compare_str == self.name or compare_str == "@" + self.name or compare_str == self.identifier:
             return True
         else:
             return False
+
+    def get_aliases(self):
+        return [self.name, "@" + self.name, self.identifier]
 
     def set_active(self):
         self.presence = "active"
@@ -731,6 +753,46 @@ class User(SlackThing):
         #reply = async_slack_api_request("im.open", {"channel":self.identifier,"ts":t})
         async_slack_api_request(self.server.domain, self.server.token, "im.open", {"user": self.identifier, "ts": t})
 
+class Message(object):
+
+    def __init__(self, message_json):
+        self.message_json = message_json
+        self.ts = message_json['ts']
+        #split timestamp into time and counter
+        self.ts_time, self.ts_counter = message_json['ts'].split('.')
+
+    def change_text(self, new_text):
+        self.message_json["text"] = new_text
+
+    def add_reaction(self, reaction):
+        if "reactions" in self.message_json:
+            found = False
+            for r in self.message_json["reactions"]:
+                if r["name"] == reaction:
+                    r["count"] += 1
+                    found = True
+            if not found:
+                self.message_json["reactions"].append({u"count": 1, u"name": reaction})
+        else:
+            self.message_json["reactions"] = [{u"count": 1, u"name": reaction}]
+
+    def remove_reaction(self, reaction):
+        if "reactions" in self.message_json:
+            for r in self.message_json["reactions"]:
+                if r["name"] == reaction:
+                    r["count"] -= 1
+        else:
+            pass
+
+    def __eq__(self, other):
+        return self.ts_time == other or self.ts == other
+
+    def __repr__(self):
+        return "{} {} {} {}\n".format(self.ts_time, self.ts_counter, self.ts, self.message_json)
+
+    def __lt__(self, other):
+        return self.ts < other.ts
+
 
 def slack_command_cb(data, current_buffer, args):
     a = args.split(' ', 1)
@@ -743,7 +805,6 @@ def slack_command_cb(data, current_buffer, args):
         command = cmds[function_name](current_buffer, args)
     except KeyError:
         w.prnt("", "Command not found: " + function_name)
-
     return w.WEECHAT_RC_OK
 
 
@@ -916,20 +977,9 @@ def command_markread(current_buffer, args):
     if servers.find(domain).channels.find(channel):
         servers.find(domain).channels.find(channel).mark_read()
 
-def command_cacheinfo(current_buffer, args):
-    for channel in message_cache.keys():
-        c = channels.find(channel)
-        w.prnt("", "{} {}".format(channels.find(channel), len(message_cache[channel])))
-#        server.buffer_prnt("{} {}".format(channels.find(channel), len(message_cache[channel])))
-
 def command_flushcache(current_buffer, args):
     global message_cache
-    message_cache = {}
-    cache_write_cb("","")
-
-def command_uncache(current_buffer, args):
-    identifier = channels.find(current_buffer).identifier
-    message_cache.pop(identifier)
+    message_cache = []
     cache_write_cb("","")
 
 def command_cachenow(current_buffer, args):
@@ -1053,9 +1103,10 @@ def process_reply(message_json):
     identifier = message_json["reply_to"]
     item = server.message_buffer.pop(identifier)
     if "type" in item:
-        if item["type"] == "message":
+        if item["type"] == "message" and "channel" in item.keys():
             item["ts"] = message_json["ts"]
-            cache_message(item, from_me=True)
+            channels.find(item["channel"]).cache_message(item, from_me=True)
+            channels.find(item["channel"]).buffer_prnt(item["user"], item["text"], item["ts"])
     dbg("REPLY {}".format(item))
 
 def process_pong(message_json):
@@ -1065,7 +1116,7 @@ def process_pong(message_json):
 def process_team_join(message_json):
     server = servers.find(message_json["myserver"])
     item = message_json["user"]
-    server.users.append(User(server, item["name"], item["id"], item["presence"]))
+    server.add_user(User(server, item["name"], item["id"], item["presence"]))
     server.buffer_prnt(server.buffer, "New user joined: {}".format(item["name"]))
 
 def process_manual_presence_change(message_json):
@@ -1101,7 +1152,7 @@ def process_channel_created(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(Channel(server, item["name"], item["id"], False))
+        server.add_channel(Channel(server, item["name"], item["id"], False))
     server.buffer_prnt("New channel created: {}".format(item["name"]))
 
 
@@ -1128,7 +1179,7 @@ def process_channel_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+        server.add_channel(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
 
 
 def process_channel_leave(message_json):
@@ -1154,7 +1205,7 @@ def process_group_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+        server.add_channel(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
 
 
 def  process_group_archive(message_json):
@@ -1187,7 +1238,7 @@ def process_im_created(message_json):
         server.channels.find(channel_name).open(False)
     else:
         item = message_json["channel"]
-        server.channels.append(DmChannel(server, channel_name, item["id"], item["is_open"], item["last_read"]))
+        server.add_channel(DmChannel(server, channel_name, item["id"], item["is_open"], item["last_read"]))
     server.buffer_prnt("New channel created: {}".format(item["name"]))
 
 
@@ -1200,54 +1251,62 @@ def process_user_typing(message_json):
 
 # todo: does this work?
 
-
 def process_error(message_json):
     pass
     #connected = False
 
-# def process_message_changed(message_json):
-#    process_message(message_json)
+def process_reaction_added(message_json):
+    channel = channels.find(message_json["item"]["channel"])
+    channel.add_reaction(message_json["item"]["ts"], message_json["reaction"])
 
-def cache_message(message_json, from_me=False):
-    global message_cache
-    if from_me:
-        server = channels.find(message_json["channel"]).server
-        message_json["user"] = server.users.find(server.nick).identifier
-    channel = message_json["channel"]
-    if channel not in message_cache:
-        message_cache[channel] = []
-    if message_json not in message_cache[channel]:
-        message_cache[channel].append(message_json)
-    if len(message_cache[channel]) > BACKLOG_SIZE:
-        message_cache[channel] = message_cache[channel][-BACKLOG_SIZE:]
+def process_reaction_removed(message_json):
+    channel = channels.find(message_json["item"]["channel"])
+    channel.remove_reaction(message_json["item"]["ts"], message_json["reaction"])
 
+def create_reaction_string(reactions):
+    if not isinstance(reactions, list):
+        reaction_string = " [{}]".format(reactions)
+    else:
+        reaction_string = ' ['
+        count = 0
+        for r in reactions:
+            if r["count"] > 0:
+                count += 1
+                reaction_string += ":{}:{} ".format(r["name"], r["count"])
+        reaction_string = reaction_string[:-1] + ']'
+    if count == 0:
+        reaction_string = ''
+    return reaction_string
 
-def modify_buffer_line(buffer, user, new_message, time, append):
-    time = int(float(time))
-    own_lines = w.hdata_pointer(w.hdata_get('buffer'), buffer, 'own_lines')
-    if own_lines:
-        line = w.hdata_pointer(w.hdata_get('lines'), own_lines, 'last_line')
-        hdata_line = w.hdata_get('line')
-        hdata_line_data = w.hdata_get('line_data')
-
-        while line:
-            data = w.hdata_pointer(hdata_line, line, 'data')
-            if data:
-                date = w.hdata_time(hdata_line_data, data, 'date')
-                prefix = w.hdata_string(hdata_line_data, data, 'prefix')
-                if user and (int(date) == int(time) and user == prefix):
+# deprecated in favor of redrawing the entire buffer
+#def modify_buffer_line(buffer, user, new_message, time, append):
+#    time = int(float(time))
+#    own_lines = w.hdata_pointer(w.hdata_get('buffer'), buffer, 'own_lines')
+#    if own_lines:
+#        line = w.hdata_pointer(w.hdata_get('lines'), own_lines, 'last_line')
+#        hdata_line = w.hdata_get('line')
+#        hdata_line_data = w.hdata_get('line_data')
+#
+#        while line:
+#            data = w.hdata_pointer(hdata_line, line, 'data')
+#            if data:
+#                date = w.hdata_time(hdata_line_data, data, 'date')
+#                prefix = w.hdata_string(hdata_line_data, data, 'prefix')
+#                if new_message == "":
+#                    new_message = w.hdata_string(hdata_line_data, data, 'message')
+#                if user and (int(date) == int(time) and user == prefix):
 #                    w.prnt("", "found matching time date is {}, time is {} ".format(date, time))
-                    w.hdata_update(hdata_line_data, data, {"message": "{}{}".format(new_message, append)})
-                    break
-                elif not user and (int(date) == int(time)):
-                    w.hdata_update(hdata_line_data, data, {"message": "{}{}".format(new_message, append)})
-                else:
-                    pass
-            line = w.hdata_move(hdata_line, line, -1)
-    return w.WEECHAT_RC_OK
+#                    w.hdata_update(hdata_line_data, data, {"message": "{}{}".format(new_message, append)})
+#                    break
+#                elif not user and (int(date) == int(time)):
+#                    w.hdata_update(hdata_line_data, data, {"message": "{}{}".format(new_message, append)})
+#                else:
+#                    pass
+#            line = w.hdata_move(hdata_line, line, -1)
+#    return w.WEECHAT_RC_OK
 
 
-def process_message(message_json):
+def process_message(message_json, cache=True):
     try:
         # send these messages elsewhere
         known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
@@ -1266,8 +1325,6 @@ def process_message(message_json):
             dbg("message came for closed channel {}".format(channel.name))
             return
 
-        cache_message(message_json)
-
         time = message_json['ts']
         if "fallback" in message_json:
             text = message_json["fallback"]
@@ -1276,12 +1333,16 @@ def process_message(message_json):
         else:
             text = ""
 
+
         text = unfurl_refs(text)
         if "attachments" in message_json:
             text += u" --- {}".format(unwrap_attachments(message_json))
         text = text.lstrip()
         text = text.replace("\t", "    ")
         name = get_user(message_json, server)
+
+        if "reactions" in message_json:
+            text += create_reaction_string(message_json["reactions"])
 
         text = text.encode('utf-8')
         name = name.encode('utf-8')
@@ -1291,11 +1352,13 @@ def process_message(message_json):
                     append = " (edited)"
                 else:
                     append = ''
-                channel.buffer_prnt_changed(message_json["message"]["user"], text, message_json["message"]["ts"], append)
+                channel.change_message(message_json["message"]["ts"], text + append)
+                cache=False
         elif "subtype" in message_json and message_json["subtype"] == "message_deleted":
             append = "(deleted)"
             text = ""
-            channel.buffer_prnt_changed(None, text, message_json["deleted_ts"], append)
+            channel.change_message(message_json["deleted_ts"], text + append)
+            cache = False
         elif message_json.get("subtype", "") == "channel_leave":
             channel.buffer_prnt(w.prefix("quit").rstrip(), text, time)
         elif message_json.get("subtype", "") == "channel_join":
@@ -1304,6 +1367,10 @@ def process_message(message_json):
             channel.buffer_prnt(w.prefix("network").rstrip(), text, time)
         else:
             channel.buffer_prnt(name, text, time)
+
+        if cache:
+            channel.cache_message(message_json)
+
     except:
         dbg("cannot process message {}".format(message_json))
 
@@ -1336,6 +1403,9 @@ def unwrap_attachments(message_json):
 
 
 def unfurl_refs(text):
+    """
+    Worst code ever written. this needs work
+    """
     if text.find('<') > -1:
         newtext = []
         text = text.split(" ")
@@ -1380,7 +1450,7 @@ def get_user(message_json, server):
 
 
 def typing_bar_item_cb(data, buffer, args):
-    typers = [x for x in channels.get_all() if x.is_someone_typing()]
+    typers = [x for x in channels if x.is_someone_typing()]
     if len(typers) > 0:
         direct_typers = []
         channel_typers = []
@@ -1414,7 +1484,6 @@ def buffer_list_update_cb(data, remaining_calls):
         gray_check = False
         if len(servers) > 1:
             gray_check = True
-        # for channel in channels.find_by_class(Channel) + channels.find_by_class(GroupChannel):
         for channel in channels:
             channel.rename()
         buffer_list_update = False
@@ -1464,15 +1533,18 @@ def typing_notification_cb(signal, sig_type, data):
                 typing_timer = now
     return w.WEECHAT_RC_OK
 
-# NOTE: figured i'd do this because they do
-
-
 def slack_ping_cb(data, remaining):
+    """
+    Periodic websocket ping to detect broken connection.
+    """
     servers.find(data).ping()
     return w.WEECHAT_RC_OK
 
 
 def slack_connection_persistence_cb(data, remaining_calls):
+    """
+    Reconnect if a connection is detected down
+    """
     for server in servers:
         if not server.connected:
             server.buffer_prnt("Disconnected from slack, trying to reconnect..")
@@ -1548,8 +1620,6 @@ def complete_next_cb(data, buffer, command):
 # Slack specific requests
 
 # NOTE: switched to async/curl because sync slowed down the UI
-
-
 def async_slack_api_request(domain, token, request, post_data, priority=False):
     if not STOP_TALKING_TO_SLACK:
         post_data["token"] = token
@@ -1562,7 +1632,7 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
 big_data = {}
 
 def url_processor_cb(data, command, return_code, out, err):
-    global big_data, message_cache
+    global big_data
     data = pickle.loads(data)
     identifier = sha.sha("{}{}".format(data, command)).hexdigest()
     if identifier not in big_data:
@@ -1581,6 +1651,7 @@ def url_processor_cb(data, command, return_code, out, err):
         if my_json:
             if data["request"] == 'rtm.start':
                 servers.find(data["token"]).connected_to_slack(my_json)
+                servers.update_hashtable()
 
             else:
                 if "channel" in data["post_data"]:
@@ -1602,10 +1673,32 @@ def url_processor_cb(data, command, return_code, out, err):
     return w.WEECHAT_RC_OK
 
 def cache_write_cb(data, remaining):
-    open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'w').write(json.dumps(message_cache))
+    cache_file = open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'w')
+    for channel in channels:
+        if channel.active:
+            for message in channel.messages:
+                cache_file.write("{}\n".format(json.dumps(message.message_json)))
     return w.WEECHAT_RC_OK
 
+def cache_load():
+    global message_cache
+    try:
+        file_name = "{}/{}".format(WEECHAT_HOME, CACHE_NAME)
+        if sum(1 for line in open('myfile.txt')) > 2:
+            cache_file = open(file_name, 'r')
+            for line in cache_file:
+                message_cache.append(line)
+    except IOError:
+        #cache file didn't exist
+        pass
 
+def cache_get(channel):
+    lines = []
+    for line in message_cache:
+        j = json.loads(line)
+        if j["channel"] == channel:
+            lines.append(line)
+    return lines
 
 # END Slack specific requests
 
@@ -1683,15 +1776,30 @@ def config_changed_cb(data, option, value):
     return w.WEECHAT_RC_OK
 
 def quit_notification_cb(signal, sig_type, data):
+    stop_talking_to_slack()
+
+def script_unloaded():
+    stop_talking_to_slack()
+
+def stop_talking_to_slack():
+    """
+    Prevents a race condition where quitting closes buffers
+    which triggers leaving the channel because of how close
+    buffer is handled
+    """
     global STOP_TALKING_TO_SLACK
     STOP_TALKING_TO_SLACK = True
     cache_write_cb("", "")
     return w.WEECHAT_RC_OK
 
-def script_unloaded():
-    global STOP_TALKING_TO_SLACK
-    STOP_TALKING_TO_SLACK = True
-    cache_write_cb("", "")
+def scrolled_cb(signal, sig_type, data):
+    try:
+        if w.window_get_integer(data, "scrolling") == 1:
+            channels.find(w.current_buffer()).set_scrolling()
+        else:
+            channels.find(w.current_buffer()).unset_scrolling()
+    except:
+        pass
     return w.WEECHAT_RC_OK
 
 # END Utility Methods
@@ -1739,25 +1847,20 @@ if __name__ == "__main__":
         buffer_list_update = False
         previous_buffer_list_update = 0
 
-        #name = None
         never_away = False
         hide_distractions = False
         hotlist = w.infolist_get("hotlist", "", "")
         main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
 
-        try:
-            cache_file = open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'r')
-            message_cache = json.loads(cache_file.read())
-        except (IOError, ValueError):
-            message_cache = {}
-        # End global var section
+        message_cache = []
+        cache_load()
 
-        #channels = SearchList()
         servers = SearchList()
         for token in slack_api_token.split(','):
-            servers.append(SlackServer(token))
-        channels = Meta('channels', servers)
-        users = Meta('users', servers)
+            server = SlackServer(token)
+            servers.append(server)
+        channels = SearchList()
+        users = SearchList()
 
         w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
         w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
@@ -1773,6 +1876,7 @@ if __name__ == "__main__":
         w.hook_signal('window_switch', "buffer_switch_cb", "")
         w.hook_signal('input_text_changed', "typing_notification_cb", "")
         w.hook_signal('quit', "quit_notification_cb", "")
+        w.hook_signal('window_scrolled', "scrolled_cb", "")
         w.hook_command(
              # Command name and description
             'slack', 'Plugin to allow typing notification and sync of read markers for slack.com',
