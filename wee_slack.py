@@ -244,7 +244,8 @@ class SlackServer(object):
             self.ws_hook = w.hook_fd(self.ws.sock._sock.fileno(), 1, 0, 0, "slack_websocket_cb", self.identifier)
             self.ws.sock.setblocking(0)
             return True
-        except:
+        except Exception as e:
+            print("websocket connection error: {}".format(e))
             return False
 
     def create_slack_mappings(self, data):
