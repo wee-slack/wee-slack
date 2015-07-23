@@ -444,11 +444,11 @@ class Channel(object):
                 if named[0] in ["group", "channel"]:
                     message[item[0]] = "<!{}>".format(named[0])
                 if self.server.users.find(named[0]):
-                    message[item[0]] = "<@{}>{}".format(self.server.users.find(named[0]).identifier, named[1])
+                    message[item[0]] = "<@{}|{}>{}".format(self.server.users.find(named[0]).identifier, named[0], named[1])
             if item[1].startswith('#') and self.server.channels.find(item[1]):
                 named = re.match('.*[@#](\w+)(\W*)', item[1]).groups()
                 if self.server.channels.find(named[0]):
-                    message[item[0]] = "<#{}>{}".format(self.server.channels.find(named[0]).identifier, named[1])
+                    message[item[0]] = "<#{}|{}>{}".format(self.server.channels.find(named[0]).identifier, named[0], named[1])
         dbg(message)
         return " ".join(message)
 
