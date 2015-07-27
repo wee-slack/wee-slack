@@ -629,9 +629,9 @@ class Channel(object):
             async_slack_api_request(self.server.domain, self.server.token, 'chat.update', {"channel": self.identifier, "ts": message['ts'], "text": new_message})
 
     def my_last_message(self):
-        for message in reversed(message_cache[self.identifier]):
-            if "user" in message and "text" in message and message["user"] == self.server.users.find(self.server.nick).identifier:
-                return message
+        for message in reversed(self.messages):
+            if "user" in message.message_json and "text" in message.message_json and message.message_json["user"] == self.server.users.find(self.server.nick).identifier:
+                return message.message_json
 
     def cache_message(self, message_json, from_me=False):
         if from_me:
