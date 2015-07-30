@@ -10,6 +10,7 @@ import re
 import urllib
 import HTMLParser
 import sys
+import traceback
 from websocket import create_connection
 
 # hack to make tests possible.. better way?
@@ -1189,7 +1190,7 @@ def process_channel_leave(message_json):
     channel.user_leave(message_json["user"])
 
 
-def  process_channel_archive(message_json):
+def process_channel_archive(message_json):
     server = servers.find(message_json["myserver"])
     channel = server.channels.find(message_json["channel"])
     channel.detach_buffer()
@@ -1334,6 +1335,7 @@ def process_message(message_json, cache=True):
         else:
             text = ""
 
+        text = text.decode('utf-8')
 
         text = unfurl_refs(text)
         if "attachments" in message_json:
@@ -1372,9 +1374,8 @@ def process_message(message_json, cache=True):
         if cache:
             channel.cache_message(message_json)
 
-    except:
-        dbg("cannot process message {}".format(message_json))
-
+    except Exception:
+        dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
 
 def unwrap_message(message_json):
     if "message" in message_json:
