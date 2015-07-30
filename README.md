@@ -75,7 +75,10 @@ pip install websocket-client
 sudo apt-get install curl
 pip install websocket-client
 ```
-
+##### FreeBSD
+```
+pkg install curl py27-websocket-client py27-six
+```
 
 ####2. copy wee_slack.py to ~/.weechat/python/autoload
 ```
