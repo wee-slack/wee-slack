@@ -1413,9 +1413,13 @@ def unfurl_refs(text):
         text = text.split(" ")
         for item in text:
             # dbg(item)
+            prefix = ""
+            suffix = ""
             start = item.find('<')
             end = item.find('>')
             if start > -1 and end > -1:
+                prefix = item[:start]
+                suffix = item[end+1:]
                 item = item[start + 1:end]
                 if item.find('|') > -1:
                     item = item.split('|')[0]
@@ -1428,7 +1432,7 @@ def unfurl_refs(text):
                 if item.startswith('#C'):
                     if channels.find(item[1:]):
                         item = "{}".format(channels.find(item[1:]).name)
-            newtext.append(item)
+            newtext.append(prefix + item + suffix)
         text = " ".join(newtext)
         return text
     else:
