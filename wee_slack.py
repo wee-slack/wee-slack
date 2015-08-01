@@ -1337,7 +1337,11 @@ def process_message(message_json, cache=True):
 
         text = text.decode('utf-8')
 
-        text = unfurl_refs(text)
+        ignore_alt_text = False
+        if w.config_get_plugin('unfurl_ignore_alt_text') != "0":
+            ignore_alt_text = True
+        text = unfurl_refs(text, ignore_alt_text=ignore_alt_text)
+
         if "attachments" in message_json:
             text += u" --- {}".format(unwrap_attachments(message_json))
         text = text.lstrip()
@@ -1404,7 +1408,7 @@ def unwrap_attachments(message_json):
     return attachment_text
 
 
-def unfurl_refs(text):
+def unfurl_refs(text, ignore_alt_text=False):
     """
     Worst code ever written. this needs work
     """
@@ -1413,12 +1417,19 @@ def unfurl_refs(text):
         text = text.split(" ")
         for item in text:
             # dbg(item)
+            prefix = ""
+            suffix = ""
             start = item.find('<')
             end = item.find('>')
             if start > -1 and end > -1:
+                prefix = item[:start]
+                suffix = item[end+1:]
                 item = item[start + 1:end]
                 if item.find('|') > -1:
-                    item = item.split('|')[0]
+                    if ignore_alt_text:
+                        item = item.split('|')[1]
+                    else:
+                        item = item.split('|')[0]
                 if item.startswith('@U'):
                     if users.find(item[1:]):
                         try:
@@ -1428,7 +1439,7 @@ def unfurl_refs(text):
                 if item.startswith('#C'):
                     if channels.find(item[1:]):
                         item = "{}".format(channels.find(item[1:]).name)
-            newtext.append(item)
+            newtext.append(prefix + item + suffix)
         text = " ".join(newtext)
         return text
     else:
@@ -1827,6 +1838,8 @@ if __name__ == "__main__":
             w.config_set_plugin('colorize_nicks', "1")
         if not w.config_get_plugin('trigger_value'):
             w.config_set_plugin('trigger_value', "0")
+        if not w.config_get_plugin('unfurl_ignore_alt_text'):
+            w.config_set_plugin('unfurl_ignore_alt_text', "0")
 
         version = w.info_get("version_number", "") or 0
         if int(version) >= 0x00040400:
