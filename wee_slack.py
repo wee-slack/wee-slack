@@ -1793,6 +1793,7 @@ def quit_notification_cb(signal, sig_type, data):
 
 def script_unloaded():
     stop_talking_to_slack()
+    return w.WEECHAT_RC_OK
 
 def stop_talking_to_slack():
     """
