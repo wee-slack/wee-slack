@@ -50,6 +50,9 @@ SLACK_API_TRANSLATOR = {
 
 }
 
+NICK_GROUP_HERE = "0|Here"
+NICK_GROUP_AWAY = "1|Away"
+
 def dbg(message, fout=False, main_buffer=False):
     """
     send debug output to the slack-debug buffer and optionally write to a file.
@@ -238,6 +241,9 @@ class SlackServer(object):
             self.buffer = w.buffer_new(self.domain, "buffer_input_cb", "", "", "")
             w.buffer_set(self.buffer, "nicklist", "1")
 
+            w.nicklist_add_group(self.buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
+            w.nicklist_add_group(self.buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
+
     def create_slack_websocket(self, data):
         web_socket_url = data['url']
         try:
@@ -386,15 +392,20 @@ class Channel(object):
         if self.channel_buffer:
             w.buffer_set(self.channel_buffer, "nicklist", "1")
             w.nicklist_remove_all(self.channel_buffer)
+
+            here = w.nicklist_add_group(self.channel_buffer,
+                                        '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
+            afk = w.nicklist_add_group(self.channel_buffer,
+                                       '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
             try:
                 for user in self.members:
                     user = self.members_table[user]
                     if user.deleted:
                         continue
                     if user.presence == 'away':
-                        w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, " ", "", 1)
+                        w.nicklist_add_nick(self.channel_buffer, afk, user.name, user.color_name, "", "", 1)
                     else:
-                        w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "+", "", 1)
+                        w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
             except Exception as e:
                 dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
 
@@ -691,10 +702,14 @@ class User(object):
         self.channel_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, self.name))
         self.update_color()
         self.name_regex = re.compile(r"([\W]|\A)(@{0,1})" + self.name + "('s|[^'\w]|\Z)")
+
+        if deleted:
+            return
         if self.presence == 'away':
-            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color_name, " ", "", 0)
+            ngroup = w.nicklist_search_group(server.buffer, "", NICK_GROUP_AWAY)
         else:
-            self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color_name, "+", "", 1)
+            ngroup = w.nicklist_search_group(server.buffer, "", NICK_GROUP_HERE)
+        self.nicklist_pointer = w.nicklist_add_nick(server.buffer, ngroup, self.name, self.color_name, "", "", 1)
 #        w.nicklist_add_nick(server.buffer, "", self.formatted_name(), "", "", "", 1)
 
     def __str__(self):
@@ -717,7 +732,6 @@ class User(object):
         for channel in self.server.channels:
             if channel.has_user(self.identifier):
                 channel.update_nicklist()
-        w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "prefix", "+")
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "1")
         buffer_list_update_next()
 
@@ -726,7 +740,6 @@ class User(object):
         for channel in self.server.channels:
             if channel.has_user(self.identifier):
                 channel.update_nicklist()
-        w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "prefix", " ")
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
         buffer_list_update_next()
 
