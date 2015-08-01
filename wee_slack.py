@@ -689,6 +689,8 @@ class DmChannel(Channel):
         if self.channel_buffer:
             w.buffer_set(self.channel_buffer, "short_name", new_name)
 
+    def update_nicklist(self):
+        pass
 
 class User(object):
 
