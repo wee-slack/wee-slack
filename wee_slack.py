@@ -836,7 +836,10 @@ def me_command_cb(data, current_buffer, args):
 def join_command_cb(data, current_buffer, args):
     if channels.find(current_buffer) or servers.find(current_buffer):
         channel = args.split()[1]
-        servers.find(current_domain_name()).channels.find(channel).open()
+        channel = servers.find(current_domain_name()).channels.find(channel)
+        channel.open()
+        w.buffer_set(channel.channel_buffer, "display", "1")
+        
         return w.WEECHAT_RC_OK_EAT
     else:
         return w.WEECHAT_RC_OK
