@@ -836,7 +836,10 @@ def me_command_cb(data, current_buffer, args):
 def join_command_cb(data, current_buffer, args):
     if channels.find(current_buffer) or servers.find(current_buffer):
         channel = args.split()[1]
-        servers.find(current_domain_name()).channels.find(channel).open()
+        channel = servers.find(current_domain_name()).channels.find(channel)
+        channel.open()
+        if w.config_get_plugin('switch_buffer_on_join') != '0':
+            w.buffer_set(channel.channel_buffer, "display", "1")
         return w.WEECHAT_RC_OK_EAT
     else:
         return w.WEECHAT_RC_OK
@@ -1854,6 +1857,8 @@ if __name__ == "__main__":
             w.config_set_plugin('trigger_value', "0")
         if not w.config_get_plugin('unfurl_ignore_alt_text'):
             w.config_set_plugin('unfurl_ignore_alt_text', "0")
+        if not w.config_get_plugin('switch_buffer_on_join'):
+            w.config_set_plugin('switch_buffer_on_join', "1")
 
         version = w.info_get("version_number", "") or 0
         if int(version) >= 0x00040400:
