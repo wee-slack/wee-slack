@@ -721,9 +721,12 @@ class User(object):
         return self.name
 
     def __eq__(self, compare_str):
-        if compare_str == self.name or compare_str == "@" + self.name or compare_str == self.identifier:
-            return True
-        else:
+        try:
+            if compare_str == self.name or compare_str == "@" + self.name or compare_str == self.identifier:
+                return True
+            else:
+                return False
+        except:
             return False
 
     def get_aliases(self):
