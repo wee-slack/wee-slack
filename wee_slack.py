@@ -1350,7 +1350,7 @@ def process_message(message_json, cache=True):
         else:
             text = ""
 
-        text = text.decode('utf-8')
+        #text = text.decode('utf-8')
 
         ignore_alt_text = False
         if w.config_get_plugin('unfurl_ignore_alt_text') != "0":
@@ -1394,6 +1394,8 @@ def process_message(message_json, cache=True):
             channel.cache_message(message_json)
 
     except Exception:
+        if channel:
+            channel.buffer_prnt('unknown', message_json['text'].encode('utf-8'))
         dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
 
 def unwrap_message(message_json):
