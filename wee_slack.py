@@ -21,7 +21,7 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.98.5"
+SCRIPT_VERSION = "0.98.6"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -1349,7 +1349,10 @@ def process_message(message_json, cache=True):
         if "fallback" in message_json:
             text = message_json["fallback"]
         elif "text" in message_json:
-            text = message_json["text"]
+            if message_json['text'] is not None:
+                text = message_json["text"]
+            else:
+                text = ""
         else:
             text = ""
 
@@ -1397,7 +1400,7 @@ def process_message(message_json, cache=True):
             channel.cache_message(message_json)
 
     except Exception:
-        if channel:
+        if channel and ("text" in message_json) and message_json['text'] != None:
             channel.buffer_prnt('unknown', message_json['text'].encode('utf-8'))
         dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
 
@@ -1432,7 +1435,7 @@ def unfurl_refs(text, ignore_alt_text=False):
     """
     Worst code ever written. this needs work
     """
-    if text.find('<') > -1:
+    if text and text.find('<') > -1:
         newtext = []
         text = text.split(" ")
         for item in text:
