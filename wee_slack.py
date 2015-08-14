@@ -780,6 +780,8 @@ class Message(object):
         self.ts_time, self.ts_counter = message_json['ts'].split('.')
 
     def change_text(self, new_text):
+        if not isinstance(new_text, unicode):
+            new_text = unicode(new_text, 'utf-8')
         self.message_json["text"] = new_text
 
     def add_reaction(self, reaction):
@@ -1400,8 +1402,8 @@ def process_message(message_json, cache=True):
             channel.cache_message(message_json)
 
     except Exception:
-        if channel and ("text" in message_json) and message_json['text'] != None:
-            channel.buffer_prnt('unknown', message_json['text'].encode('utf-8'))
+        if channel and ("text" in message_json) and message_json['text'] is not None:
+            channel.buffer_prnt('unknown', message_json['text'])
         dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
 
 def unwrap_message(message_json):
