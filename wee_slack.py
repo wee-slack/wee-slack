@@ -1371,11 +1371,11 @@ def process_message(message_json, cache=True):
         text = text.replace("\t", "    ")
         name = get_user(message_json, server)
 
-        if "reactions" in message_json:
-            text += create_reaction_string(message_json["reactions"])
-
         text = text.encode('utf-8')
         name = name.encode('utf-8')
+
+        if "reactions" in message_json:
+            text += create_reaction_string(message_json["reactions"])
 
         if "subtype" in message_json and message_json["subtype"] == "message_changed":
                 if "edited" in message_json["message"]:
