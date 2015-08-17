@@ -43,8 +43,9 @@ In Development
 
 Dependencies
 ------------
-  * WeeChat 1.1+ http://weechat.org/ 
+  * WeeChat 1.1+ http://weechat.org/
   * websocket-client https://pypi.python.org/pypi/websocket-client/
+  * emoji https://pypi.python.org/pypi/emoji/
   * curl http://curl.haxx.se/
 
 Setup
@@ -67,13 +68,13 @@ wee-slack doesn't use the Slack IRC gateway. If you currently connect via the ga
 
 ##### OSX
 ```
-pip install websocket-client
+pip install websocket-client emoji
 ```
 
 ##### Linux (ubuntu)
 ```
 sudo apt-get install curl
-pip install websocket-client
+pip install websocket-client emoji
 ```
 ##### FreeBSD
 ```

@@ -11,6 +11,7 @@ import urllib
 import HTMLParser
 import sys
 import traceback
+import emoji
 from websocket import create_connection
 
 # hack to make tests possible.. better way?
@@ -583,6 +584,10 @@ class Channel(object):
                     message = user.name_regex.sub(
                         r'\1\2{}\3'.format(user.formatted_name() + w.color(chat_color)),
                         message)
+
+            if replace_emoji:
+                message = emoji.emojize(message, use_aliases=True)
+
             message = HTMLParser.HTMLParser().unescape(message)
             data = u"{}\t{}".format(name, message).encode('utf-8')
             w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
@@ -1797,7 +1802,7 @@ def create_slack_debug_buffer():
 
 
 def config_changed_cb(data, option, value):
-    global slack_api_token, distracting_channels, channels_not_on_current_server_color, colorize_nicks, slack_debug, debug_mode
+    global slack_api_token, distracting_channels, channels_not_on_current_server_color, colorize_nicks, slack_debug, debug_mode, replace_emoji
     slack_api_token = w.config_get_plugin("slack_api_token")
 
     if slack_api_token.startswith('${sec.data'):
@@ -1808,6 +1813,7 @@ def config_changed_cb(data, option, value):
     if channels_not_on_current_server_color == "0":
         channels_not_on_current_server_color = False
     colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
+    replace_emoji = w.config_get_plugin('replace_emoji') == "1"
     debug_mode = w.config_get_plugin("debug_mode").lower()
     if debug_mode != '' and debug_mode != 'false':
         create_slack_debug_buffer()
@@ -1868,6 +1874,8 @@ if __name__ == "__main__":
             w.config_set_plugin('unfurl_ignore_alt_text', "0")
         if not w.config_get_plugin('switch_buffer_on_join'):
             w.config_set_plugin('switch_buffer_on_join', "1")
+        if not w.config_get_plugin('replace_emoji'):
+            w.config_set_plugin('replace_emoji', "0")
 
         version = w.info_get("version_number", "") or 0
         if int(version) >= 0x00040400:
