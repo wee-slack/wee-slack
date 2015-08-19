@@ -1121,6 +1121,8 @@ def slack_websocket_cb(server, fd):
     return w.WEECHAT_RC_OK
 
 def process_reply(message_json):
+    global unfurl_ignore_alt_text
+
     server = servers.find(message_json["myserver"])
     identifier = message_json["reply_to"]
     item = server.message_buffer.pop(identifier)
@@ -1128,7 +1130,9 @@ def process_reply(message_json):
         if item["type"] == "message" and "channel" in item.keys():
             item["ts"] = message_json["ts"]
             channels.find(item["channel"]).cache_message(item, from_me=True)
-            channels.find(item["channel"]).buffer_prnt(item["user"], item["text"], item["ts"])
+            text = unfurl_refs(item["text"], ignore_alt_text=unfurl_ignore_alt_text)
+
+            channels.find(item["channel"]).buffer_prnt(item["user"], text, item["ts"])
     dbg("REPLY {}".format(item))
 
 def process_pong(message_json):
@@ -1329,6 +1333,8 @@ def create_reaction_string(reactions):
 
 
 def process_message(message_json, cache=True):
+    global unfurl_ignore_alt_text
+
     try:
         # send these messages elsewhere
         known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
@@ -1360,10 +1366,7 @@ def process_message(message_json, cache=True):
 
         #text = text.decode('utf-8')
 
-        ignore_alt_text = False
-        if w.config_get_plugin('unfurl_ignore_alt_text') != "0":
-            ignore_alt_text = True
-        text = unfurl_refs(text, ignore_alt_text=ignore_alt_text)
+        text = unfurl_refs(text, ignore_alt_text=unfurl_ignore_alt_text)
 
         if "attachments" in message_json:
             text += u" --- {}".format(unwrap_attachments(message_json))
@@ -1797,7 +1800,9 @@ def create_slack_debug_buffer():
 
 
 def config_changed_cb(data, option, value):
-    global slack_api_token, distracting_channels, channels_not_on_current_server_color, colorize_nicks, slack_debug, debug_mode
+    global slack_api_token, distracting_channels, channels_not_on_current_server_color, colorize_nicks, slack_debug, debug_mode, \
+        unfurl_ignore_alt_text
+
     slack_api_token = w.config_get_plugin("slack_api_token")
 
     if slack_api_token.startswith('${sec.data'):
@@ -1811,6 +1816,11 @@ def config_changed_cb(data, option, value):
     debug_mode = w.config_get_plugin("debug_mode").lower()
     if debug_mode != '' and debug_mode != 'false':
         create_slack_debug_buffer()
+
+    unfurl_ignore_alt_text = False
+    if w.config_get_plugin('unfurl_ignore_alt_text') != "0":
+        unfurl_ignore_alt_text = True
+
     return w.WEECHAT_RC_OK
 
 def quit_notification_cb(signal, sig_type, data):
