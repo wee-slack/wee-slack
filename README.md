@@ -93,7 +93,7 @@ weechat
 
 ####4. Add your Slack API key(s)
 ```
-/set plugins.var.python.slack_extension.slack_api_token (YOUR_SLACK_TOKEN)
+/set plugins.var.python.slack_extension.slack_api_token [YOUR_SLACK_TOKEN]
 ```
 ^^ (find this at https://api.slack.com/web)
 
@@ -101,14 +101,14 @@ If you don't want to store your API token in plaintext you can use the secure fe
 
 ```
 /secure passphrase this is a super secret password
-/secure set slack_token (YOUR_SLACK_TOKEN)
+/secure set slack_token [YOUR_SLACK_TOKEN]
 /set plugins.var.python.slack_extension.slack_api_token ${sec.data.slack_token}
 ```
 
 ##### Optional: If you would like to connect to multiple groups, use the above command with multiple tokens separated by commas. (NO SPACES)
     
 ```
-/set plugins.var.python.slack_extension.slack_api_token (token1),(token2),(token3)
+/set plugins.var.python.slack_extension.slack_api_token [token1],[token2],[token3]
 ```
 
 ###5. $PROFIT$
