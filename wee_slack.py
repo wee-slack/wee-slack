@@ -1428,6 +1428,11 @@ def process_message(message_json, cache=True):
             channel.buffer_prnt(w.prefix("join").rstrip(), text, time)
         elif message_json.get("subtype", "") == "channel_topic":
             channel.buffer_prnt(w.prefix("network").rstrip(), text, time)
+        elif text.startswith("_") and text.endswith("_"):
+            text = text[1:-1]
+            if name != channel.server.nick:
+                text = name + " " + text
+            channel.buffer_prnt(w.prefix("action").rstrip(), text, time)
         else:
             channel.buffer_prnt(name, text, time)
 
