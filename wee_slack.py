@@ -957,6 +957,9 @@ def command_nodistractions(current_buffer, args):
 def command_distracting(current_buffer, args):
     global distracting_channels
     distracting_channels = [x.strip() for x in w.config_get_plugin("distracting_channels").split(',')]
+    if channels.find(current_buffer) is None:
+        w.prnt(current_buffer, "This command must be used in a channel buffer")
+        return
     fullname = channels.find(current_buffer).fullname()
     if distracting_channels.count(fullname) == 0:
         distracting_channels.append(fullname)
