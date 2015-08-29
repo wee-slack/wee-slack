@@ -37,5 +37,3 @@ def test_unfurl_refs(myservers, mychannels, myusers):
             assert slack.unfurl_refs(k["input"], ignore_alt_text=k["ignore_alt_text"]) == k["output"]
         else:
             assert slack.unfurl_refs(k["input"]) == k["output"]
-
-        
