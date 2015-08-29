@@ -1465,33 +1465,37 @@ def unwrap_attachments(message_json):
 #    attachment_text = attachment_text.encode('ascii', 'ignore')
     return attachment_text
 
+def resolve_ref(ref):
+    if ref.startswith('@U'):
+        if users.find(ref[1:]):
+            try:
+                return "@{}".format(users.find(ref[1:]).name)
+            except:
+                dbg("NAME: {}".format(ref))
+    elif ref.startswith('#C'):
+        if channels.find(ref[1:]):
+            try:
+                return "{}".format(channels.find(ref[1:]).name)
+            except:
+                dbg("CHANNEL: {}".format(ref))
+
+    # Something else, just return as-is
+    return ref
+
 def unfurl_ref(ref, ignore_alt_text=False):
     id = ref.split('|')[0]
     display_text = ref
     if ref.find('|') > -1:
         if ignore_alt_text:
-            if id.startswith('@U'):
-                if users.find(id[1:]):
-                    try:
-                        display_text = "@{}".format(users.find(id[1:]).name)
-                    except:
-                        dbg("NAME: {}".format(ref))
-            elif id.startswith('#C'):
-                if channels.find(id[1:]):
-                    try:
-                        display_text = "{}".format(channels.find(id[1:]).name)
-                    except:
-                        dbg("CHANNEL: {}".format(ref))
-            else:
-                # This is probably a URL, we don't want to ignore anything
-                # XXX: fix up nicer formatting to generate more clickable urls
-                display_text = ref
+            display_text = resolve_ref(id)
         else:
             if id.startswith("#C") or id.startswith("@U"):
                 display_text = ref.split('|')[1]
             else:
                 url, desc = ref.split('|', 1)
                 display_text = "{} ({})".format(url, desc)
+    else:
+        display_text = resolve_ref(ref)
     return display_text
 
 def unfurl_refs(text, ignore_alt_text=False):
