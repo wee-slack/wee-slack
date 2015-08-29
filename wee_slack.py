@@ -1465,56 +1465,58 @@ def unwrap_attachments(message_json):
 #    attachment_text = attachment_text.encode('ascii', 'ignore')
     return attachment_text
 
+def unfurl_ref(ref, ignore_alt_text=False):
+    id = ref.split('|')[0]
+    display_text = ref
+    if ref.find('|') > -1:
+        if ignore_alt_text:
+            if id.startswith('@U'):
+                if users.find(id[1:]):
+                    try:
+                        display_text = "@{}".format(users.find(id[1:]).name)
+                    except:
+                        dbg("NAME: {}".format(ref))
+            elif id.startswith('#C'):
+                if channels.find(id[1:]):
+                    try:
+                        display_text = "{}".format(channels.find(id[1:]).name)
+                    except:
+                        dbg("CHANNEL: {}".format(ref))
+            else:
+                # This is probably a URL, we don't want to ignore anything
+                # XXX: fix up nicer formatting to generate more clickable urls
+                display_text = ref
+        else:
+            if id.startswith("#C") or id.startswith("@U"):
+                display_text = ref.split('|')[1]
+            else:
+                url, desc = ref.split('|', 1)
+                display_text = "{} ({})".format(url, desc)
+    return display_text
 
 def unfurl_refs(text, ignore_alt_text=False):
     """
     Worst code ever written. this needs work
     """
+    print text
     if text and text.find('<') > -1:
-        newtext = []
-        chunks = text.split(" ")
-        for item in chunks:
-            dbg(item)
-            prefix = ""
-            suffix = ""
-            start = item.find('<')
-            end = item.find('>')
-            display_text = item
-
-            if start > -1 and end > -1:
-                prefix = item[:start]
-                suffix = item[end+1:]
-                item = item[start + 1:end]
-                id = item.split('|')[0]
-                if item.find('|') > -1:
-                    if ignore_alt_text:
-                        if id.startswith('@U'):
-                            if users.find(id[1:]):
-                                try:
-                                    display_text = "@{}".format(users.find(id[1:]).name)
-                                except:
-                                    dbg("NAME: {}".format(item))
-                        elif id.startswith('#C'):
-                            if channels.find(id[1:]):
-                                try:
-                                    display_text = "{}".format(channels.find(id[1:]).name)
-                                except:
-                                    dbg("CHANNEL: {}".format(item))
-                        else:
-                            # This is probably a URL, we don't want to ignore anything
-                            # XXX: fix up nicer formatting to generate more clickable urls
-                            display_text = item
-                    else:
-                        if id.startswith("#C") or id.startswith("@U"):
-                            display_text = item.split('|')[1]
-                        else:
-                            url, desc = item.split('|', 1)
-                            display_text = "{} ({})".format(url, desc)
-            newtext.append(prefix + display_text + suffix)
-        text = " ".join(newtext)
-        return text
-    else:
-        return text
+        end = 0
+        newtext = ""
+        while text.find('<') > -1:
+            # Prepend prefix
+            newtext += text[:text.find('<')]
+            text = text[text.find('<'):]
+            end = text.find('>')
+            if end == -1:
+                newtext += text
+                break
+            # Format thingabob
+            newtext += unfurl_ref(text[1:end], ignore_alt_text)
+            print "unfurl:", text[1:-1], "ZXZ", unfurl_ref(text[1:-1], ignore_alt_text)
+            text = text[end+1:]
+        newtext += text
+        return newtext
+    return text
 
 
 def get_user(message_json, server):

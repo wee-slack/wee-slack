@@ -18,6 +18,9 @@ unfurl_map = [
     { "input": "url: <https://example.com|example> suffix",
       "output": "url: https://example.com (example) suffix",
     },
+    { "input": "url: <https://example.com|example with spaces> suffix",
+      "output": "url: https://example.com (example with spaces) suffix",
+    },
     ]
     
 
