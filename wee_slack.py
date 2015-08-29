@@ -1498,7 +1498,6 @@ def unfurl_refs(text, ignore_alt_text=False):
     """
     Worst code ever written. this needs work
     """
-    print text
     if text and text.find('<') > -1:
         end = 0
         newtext = ""
@@ -1512,7 +1511,6 @@ def unfurl_refs(text, ignore_alt_text=False):
                 break
             # Format thingabob
             newtext += unfurl_ref(text[1:end], ignore_alt_text)
-            print "unfurl:", text[1:-1], "ZXZ", unfurl_ref(text[1:-1], ignore_alt_text)
             text = text[end+1:]
         newtext += text
         return newtext
