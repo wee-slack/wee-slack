@@ -1472,32 +1472,45 @@ def unfurl_refs(text, ignore_alt_text=False):
     """
     if text and text.find('<') > -1:
         newtext = []
-        text = text.split(" ")
-        for item in text:
-            # dbg(item)
+        chunks = text.split(" ")
+        for item in chunks:
+            dbg(item)
             prefix = ""
             suffix = ""
             start = item.find('<')
             end = item.find('>')
+            display_text = item
+
             if start > -1 and end > -1:
                 prefix = item[:start]
                 suffix = item[end+1:]
                 item = item[start + 1:end]
+                id = item.split('|')[0]
                 if item.find('|') > -1:
                     if ignore_alt_text:
-                        item = item.split('|')[1]
+                        if id.startswith('@U'):
+                            if users.find(id[1:]):
+                                try:
+                                    display_text = "@{}".format(users.find(id[1:]).name)
+                                except:
+                                    dbg("NAME: {}".format(item))
+                        elif id.startswith('#C'):
+                            if channels.find(id[1:]):
+                                try:
+                                    display_text = "{}".format(channels.find(id[1:]).name)
+                                except:
+                                    dbg("CHANNEL: {}".format(item))
+                        else:
+                            # This is probably a URL, we don't want to ignore anything
+                            # XXX: fix up nicer formatting to generate more clickable urls
+                            display_text = item
                     else:
-                        item = item.split('|')[0]
-                if item.startswith('@U'):
-                    if users.find(item[1:]):
-                        try:
-                            item = "@{}".format(users.find(item[1:]).name)
-                        except:
-                            dbg("NAME: {}".format(item))
-                if item.startswith('#C'):
-                    if channels.find(item[1:]):
-                        item = "{}".format(channels.find(item[1:]).name)
-            newtext.append(prefix + item + suffix)
+                        if id.startswith("#C") or id.startswith("@U"):
+                            display_text = item.split('|')[1]
+                        else:
+                            url, desc = item.split('|', 1)
+                            display_text = "{} ({})".format(url, desc)
+            newtext.append(prefix + display_text + suffix)
         text = " ".join(newtext)
         return text
     else:
