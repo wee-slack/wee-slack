@@ -569,7 +569,7 @@ class Channel(object):
             tags = "notify_highlight"
         elif user != self.server.nick and self.name in self.server.users:
             tags = "notify_private,notify_message"
-        elif user in [w.prefix("join"), w.prefix("quit")]:
+        elif user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]:
             tags = "irc_smart_filter"
         else:
             tags = "notify_message"
