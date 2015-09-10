@@ -1465,43 +1465,60 @@ def unwrap_attachments(message_json):
 #    attachment_text = attachment_text.encode('ascii', 'ignore')
     return attachment_text
 
+def resolve_ref(ref):
+    if ref.startswith('@U'):
+        if users.find(ref[1:]):
+            try:
+                return "@{}".format(users.find(ref[1:]).name)
+            except:
+                dbg("NAME: {}".format(ref))
+    elif ref.startswith('#C'):
+        if channels.find(ref[1:]):
+            try:
+                return "{}".format(channels.find(ref[1:]).name)
+            except:
+                dbg("CHANNEL: {}".format(ref))
+
+    # Something else, just return as-is
+    return ref
+
+def unfurl_ref(ref, ignore_alt_text=False):
+    id = ref.split('|')[0]
+    display_text = ref
+    if ref.find('|') > -1:
+        if ignore_alt_text:
+            display_text = resolve_ref(id)
+        else:
+            if id.startswith("#C") or id.startswith("@U"):
+                display_text = ref.split('|')[1]
+            else:
+                url, desc = ref.split('|', 1)
+                display_text = "{} ({})".format(url, desc)
+    else:
+        display_text = resolve_ref(ref)
+    return display_text
 
 def unfurl_refs(text, ignore_alt_text=False):
     """
     Worst code ever written. this needs work
     """
     if text and text.find('<') > -1:
-        newtext = []
-        text = text.split(" ")
-        for item in text:
-            # dbg(item)
-            prefix = ""
-            suffix = ""
-            start = item.find('<')
-            end = item.find('>')
-            if start > -1 and end > -1:
-                prefix = item[:start]
-                suffix = item[end+1:]
-                item = item[start + 1:end]
-                if item.find('|') > -1:
-                    if ignore_alt_text:
-                        item = item.split('|')[1]
-                    else:
-                        item = item.split('|')[0]
-                if item.startswith('@U'):
-                    if users.find(item[1:]):
-                        try:
-                            item = "@{}".format(users.find(item[1:]).name)
-                        except:
-                            dbg("NAME: {}".format(item))
-                if item.startswith('#C'):
-                    if channels.find(item[1:]):
-                        item = "{}".format(channels.find(item[1:]).name)
-            newtext.append(prefix + item + suffix)
-        text = " ".join(newtext)
-        return text
-    else:
-        return text
+        end = 0
+        newtext = ""
+        while text.find('<') > -1:
+            # Prepend prefix
+            newtext += text[:text.find('<')]
+            text = text[text.find('<'):]
+            end = text.find('>')
+            if end == -1:
+                newtext += text
+                break
+            # Format thingabob
+            newtext += unfurl_ref(text[1:end], ignore_alt_text)
+            text = text[end+1:]
+        newtext += text
+        return newtext
+    return text
 
 
 def get_user(message_json, server):
