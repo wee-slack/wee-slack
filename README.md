@@ -12,7 +12,8 @@ A WeeChat native client for Slack.com. Provides supplemental features only avail
 
 Features
 --------
-  * **New** Emoji reactions!
+  * **New** Upload to slack capabilities!
+  * Emoji reactions!
   * Edited messages work just like the official clients, where the original message changes and has (edited) appended.
   * Unfurled urls dont generate a new message, but replace the original with more info as it is received.
   * Regex style message editing (s/oldtext/newtext/)
@@ -167,6 +168,11 @@ Turn off colorized nicks:
 Set all read markers to a specific time:
 ```
 /slack setallreadmarkers (time in epoch)
+```
+
+Upload a file to the current slack buffer:
+```
+/slack upload [file_path]
 ```
 
 Debug mode:
