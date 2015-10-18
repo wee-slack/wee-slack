@@ -1707,14 +1707,13 @@ def complete_next_cb(data, buffer, command):
 
 # Slack specific requests
 
-# NOTE: switched to async/curl because sync slowed down the UI
+# NOTE: switched to async because sync slowed down the UI
 def async_slack_api_request(domain, token, request, post_data, priority=False):
     if not STOP_TALKING_TO_SLACK:
         post_data["token"] = token
         url = 'https://{}/api/{}'.format(domain, request)
-        command = 'curl  -A "wee_slack {}" -s --data "{}" {}'.format(SCRIPT_VERSION, urllib.urlencode(post_data), url)
         context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
-        w.hook_process(command, 20000, "url_processor_cb", context)
+        w.hook_process("url:{}?{}".format(url, urllib.urlencode(post_data)), 20000, "url_processor_cb", context)
 
 # funny, right?
 big_data = {}
@@ -1730,8 +1729,8 @@ def url_processor_cb(data, command, return_code, out, err):
         try:
             my_json = json.loads(big_data[identifier])
         except:
-            dbg("curl failed, doing again...")
-            dbg("curl length: {} identifier {}\n{}".format(len(big_data[identifier]), identifier, data))
+            dbg("request failed, doing again...")
+            dbg("response length: {} identifier {}\n{}".format(len(big_data[identifier]), identifier, data))
             my_json = False
 
         big_data.pop(identifier, None)
