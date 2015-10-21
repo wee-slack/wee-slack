@@ -288,6 +288,8 @@ class SlackServer(object):
             name = self.users.find(item["user"]).name
             self.add_channel(DmChannel(self, name, item["id"], item["is_open"], item["last_read"]))
         for item in data['self']['prefs']['muted_channels'].split(','):
+            if item == '':
+                continue
             self.channels.find(item).muted = True
 
         for item in self.channels:
