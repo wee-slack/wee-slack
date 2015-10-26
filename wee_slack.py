@@ -1713,8 +1713,9 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
         post_data["token"] = token
         url = 'url:https://{}/api/{}?{}'.format(domain, request, urllib.urlencode(post_data))
         context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
+        params = { 'useragent': 'wee_slack {}'.format(SCRIPT_VERSION) }
         dbg("URL: {} context: {} params: {}".format(url, context, params)
-        w.hook_process(url, 20000, "url_processor_cb", context)
+        w.hook_process_hashtable(url, params, 20000, "url_processor_cb", context)
 
 # funny, right?
 big_data = {}
