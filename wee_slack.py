@@ -1711,9 +1711,9 @@ def complete_next_cb(data, buffer, command):
 def async_slack_api_request(domain, token, request, post_data, priority=False):
     if not STOP_TALKING_TO_SLACK:
         post_data["token"] = token
-        url = 'https://{}/api/{}'.format(domain, request)
+        url = 'url:https://{}/api/{}?{}'.format(domain, request, urllib.urlencode(post_data))
         context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
-        w.hook_process("url:{}?{}".format(url, urllib.urlencode(post_data)), 20000, "url_processor_cb", context)
+        w.hook_process(url, 20000, "url_processor_cb", context)
 
 # funny, right?
 big_data = {}
