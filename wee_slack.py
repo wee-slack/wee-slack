@@ -1713,6 +1713,7 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
         post_data["token"] = token
         url = 'url:https://{}/api/{}?{}'.format(domain, request, urllib.urlencode(post_data))
         context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
+        dbg("URL: {} context: {} params: {}".format(url, context, params)
         w.hook_process(url, 20000, "url_processor_cb", context)
 
 # funny, right?
@@ -1753,9 +1754,10 @@ def url_processor_cb(data, command, return_code, out, err):
                 if "channel" in my_json:
                     if "members" in my_json["channel"]:
                         channels.find(my_json["channel"]["id"]).members = set(my_json["channel"]["members"])
-    elif return_code != -1:
-        big_data.pop(identifier, None)
-        dbg("return code: {}".format(return_code))
+    else:
+        if return_code != -1:
+            big_data.pop(identifier, None)
+        dbg("return code: {}, data: {}".format(return_code, data))
 
     return w.WEECHAT_RC_OK
 
