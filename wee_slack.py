@@ -1674,8 +1674,8 @@ def unfurl_refs(text, ignore_alt_text=False):
     input : <@U096Q7CQM|someuser> has joined the channel
     ouput : someuser has joined the channel
     """
-    # Find all string enclosed by <> and starting with an @
-    matches = re.findall(r"(<@(?:\S*)>)", text)
+    # Find all string enclosed by <> and starting with an ``@`` on a ``#``
+    matches = re.findall(r"(<[@#](?:\S*)>)", text)
     for m in matches:
         # Replace them with human readable strings
         text = text.replace(m, unfurl_ref(m[1:-1], ignore_alt_text))
