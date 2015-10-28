@@ -1678,7 +1678,7 @@ def unfurl_refs(text, ignore_alt_text=False):
     matches = re.findall(r"(<@(?:\S*)>)", text)
     for m in matches:
         # Replace them with human readable strings
-        text = text.replace(m, unfurl_ref(m[1:-1]))
+        text = text.replace(m, unfurl_ref(m[1:-1], ignore_alt_text))
     return text
 
 
