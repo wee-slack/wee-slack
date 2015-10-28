@@ -24,6 +24,9 @@ unfurl_map = [
     { "input": "url: <https://example.com|example with spaces> suffix",
       "output": "url: https://example.com (example with spaces) suffix",
     },
+    { "input": "<@U2147483697|@othernick> multiple unfurl <https://example.com|example with spaces>",
+      "output": "@othernick multiple unfurl https://example.com (example with spaces)",
+    },
     ]
 
 
