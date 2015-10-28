@@ -1674,8 +1674,12 @@ def unfurl_refs(text, ignore_alt_text=False):
     input : <@U096Q7CQM|someuser> has joined the channel
     ouput : someuser has joined the channel
     """
-    # Find all string enclosed by <> and starting with an ``@`` on a ``#``
-    matches = re.findall(r"(<[@#](?:\S*)>)", text)
+    # Find all strings enclosed by <>
+    #  - <https://example.com|example with spaces>
+    #  - <#C2147483705|#otherchannel>
+    #  - <@U2147483697|@othernick>
+    # Test patterns lives in ./_pytest/test_unfurl.py
+    matches = re.findall(r"(<[@#]?(?:[^<]*)>)", text)
     for m in matches:
         # Replace them with human readable strings
         text = text.replace(m, unfurl_ref(m[1:-1], ignore_alt_text))
