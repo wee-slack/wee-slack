@@ -1686,6 +1686,8 @@ def complete_next_cb(data, buffer, command):
     # If we're on a non-word, look left for something to complete
     while current_pos >= 0 and input[current_pos] != '@' and not input[current_pos].isalnum():
         current_pos = current_pos - 1
+    if current_pos < 0:
+        current_pos = 0
     for l in range(current_pos, 0, -1):
         if input[l] != '@' and not input[l].isalnum():
             word_start = l + 1
