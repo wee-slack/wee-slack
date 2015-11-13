@@ -290,7 +290,8 @@ class SlackServer(object):
         for item in data['self']['prefs']['muted_channels'].split(','):
             if item == '':
                 continue
-            self.channels.find(item).muted = True
+            if self.channels.find(item) is not None:
+                self.channels.find(item).muted = True
 
         for item in self.channels:
             item.get_history()
