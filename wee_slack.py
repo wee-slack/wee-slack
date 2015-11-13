@@ -591,7 +591,8 @@ class Channel(object):
             name = name.decode('utf-8')
             #colorize nicks in each line
             chat_color = w.config_string(w.config_get('weechat.color.chat'))
-            message = message.decode('UTF-8', 'replace')
+            if type(message) is not unicode:
+              message = message.decode('UTF-8', 'replace')
             for user in self.server.users:
                 if user.name in message:
                     message = user.name_regex.sub(
