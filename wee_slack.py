@@ -626,25 +626,40 @@ class Channel(object):
     def has_message(self, ts):
         return self.messages.count(ts) > 0
 
-    def change_message(self, ts, text):
+    def change_message(self, ts, text=None):
         if self.has_message(ts):
             message_index = self.messages.index(ts)
-            self.messages[message_index].change_text(text)
-            self.buffer_redraw()
+
+            if text is not None:
+                self.messages[message_index].change_text(text)
+            else:
+                text = self.messages[message_index].message_json["text"]
+
+            #render reactions if we have any
+            react = create_reaction_string(self.messages[message_index].message_json["reactions"])
+
+            #if there is only one message with this timestamp, modify it directly.
+            #we do this because time resolution in weechat is less than slack
+            int_time = int(float(ts))
+            if self.messages.count(str(int_time)) == 1:
+                modify_buffer_line(self.channel_buffer, text + react, int_time)
+            #otherwise redraw the whole buffer, which is expensive
+            else:
+                self.buffer_redraw()
             return True
 
     def add_reaction(self, ts, reaction):
         if self.has_message(ts):
             message_index = self.messages.index(ts)
             self.messages[message_index].add_reaction(reaction)
-            self.buffer_redraw()
+            self.change_message(ts)
             return True
 
     def remove_reaction(self, ts, reaction):
         if self.has_message(ts):
             message_index = self.messages.index(ts)
             self.messages[message_index].remove_reaction(reaction)
-            self.buffer_redraw()
+            self.change_message(ts)
             return True
 
     def change_previous_message(self, old, new):
@@ -1341,11 +1356,11 @@ def process_reaction_removed(message_json):
     channel.remove_reaction(message_json["item"]["ts"], message_json["reaction"])
 
 def create_reaction_string(reactions):
+    count = 0
     if not isinstance(reactions, list):
         reaction_string = " [{}]".format(reactions)
     else:
         reaction_string = ' ['
-        count = 0
         for r in reactions:
             if r["count"] > 0:
                 count += 1
@@ -1356,31 +1371,33 @@ def create_reaction_string(reactions):
     return reaction_string
 
 # deprecated in favor of redrawing the entire buffer
-#def modify_buffer_line(buffer, user, new_message, time, append):
-#    time = int(float(time))
-#    own_lines = w.hdata_pointer(w.hdata_get('buffer'), buffer, 'own_lines')
-#    if own_lines:
-#        line = w.hdata_pointer(w.hdata_get('lines'), own_lines, 'last_line')
-#        hdata_line = w.hdata_get('line')
-#        hdata_line_data = w.hdata_get('line_data')
-#
-#        while line:
-#            data = w.hdata_pointer(hdata_line, line, 'data')
-#            if data:
-#                date = w.hdata_time(hdata_line_data, data, 'date')
-#                prefix = w.hdata_string(hdata_line_data, data, 'prefix')
-#                if new_message == "":
-#                    new_message = w.hdata_string(hdata_line_data, data, 'message')
-#                if user and (int(date) == int(time) and user == prefix):
-#                    w.prnt("", "found matching time date is {}, time is {} ".format(date, time))
-#                    w.hdata_update(hdata_line_data, data, {"message": "{}{}".format(new_message, append)})
-#                    break
-#                elif not user and (int(date) == int(time)):
-#                    w.hdata_update(hdata_line_data, data, {"message": "{}{}".format(new_message, append)})
-#                else:
-#                    pass
-#            line = w.hdata_move(hdata_line, line, -1)
-#    return w.WEECHAT_RC_OK
+def modify_buffer_line(buffer, new_line, time):
+    time = int(float(time))
+    # get a pointer to this buffer's lines
+    own_lines = w.hdata_pointer(w.hdata_get('buffer'), buffer, 'own_lines')
+    if own_lines:
+        #get a pointer to the last line
+        line_pointer = w.hdata_pointer(w.hdata_get('lines'), own_lines, 'last_line')
+        #hold the structure of a line and of line data
+        struct_hdata_line = w.hdata_get('line')
+        struct_hdata_line_data = w.hdata_get('line_data')
+
+        while line_pointer:
+            #get a pointer to the data in line_pointer via layout of struct_hdata_line
+            data = w.hdata_pointer(struct_hdata_line, line_pointer, 'data')
+            if data:
+                date = w.hdata_time(struct_hdata_line_data, data, 'date')
+                prefix = w.hdata_string(struct_hdata_line_data, data, 'prefix')
+
+                if int(date) == int(time):
+                    #w.prnt("", "found matching time date is {}, time is {} ".format(date, time))
+                    w.hdata_update(struct_hdata_line_data, data, {"message": new_line})
+                    break
+                else:
+                    pass
+            #move backwards one line and try again - exit the while if you hit the end
+            line_pointer = w.hdata_move(struct_hdata_line, line_pointer, -1)
+    return w.WEECHAT_RC_OK
 
 
 def process_message(message_json, cache=True):
