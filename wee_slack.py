@@ -829,6 +829,7 @@ class Message(object):
         self.ts = message_json['ts']
         #split timestamp into time and counter
         self.ts_time, self.ts_counter = message_json['ts'].split('.')
+        self.rendered_text = ""
 
     def change_text(self, new_text):
         if not isinstance(new_text, unicode):
@@ -1500,15 +1501,14 @@ def process_message(message_json, cache=True):
         if "reactions" in message_json:
             text += create_reaction_string(message_json["reactions"])
 
-        if "subtype" in message_json and message_json["subtype"] == "message_changed":
+        if message_json.get("subtype", "") == "message_changed":
                 if "edited" in message_json["message"]:
                     append = " (edited)"
                 else:
                     append = ''
                 channel.change_message(message_json["message"]["ts"], text + append)
                 cache=False
-
-        elif "subtype" in message_json and message_json["subtype"] == "message_deleted":
+        elif message_json.get("subtype", "") == "message_deleted":
             append = "(deleted)"
             text = ""
             channel.change_message(message_json["deleted_ts"], text + append)
