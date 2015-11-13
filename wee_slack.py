@@ -621,7 +621,6 @@ class Channel(object):
 
     def unset_scrolling(self):
         self.scrolling = False
-        self.buffer_redraw()
 
     def has_message(self, ts):
         return self.messages.count(ts) > 0
