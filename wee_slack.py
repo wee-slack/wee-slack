@@ -287,6 +287,10 @@ class SlackServer(object):
                 item["last_read"] = 0
             name = self.users.find(item["user"]).name
             self.add_channel(DmChannel(self, name, item["id"], item["is_open"], item["last_read"]))
+        for item in data['self']['prefs']['muted_channels'].split(','):
+            if item == '':
+                continue
+            self.channels.find(item).muted = True
 
         for item in self.channels:
             item.get_history()
@@ -338,6 +342,7 @@ class Channel(object):
         self.last_received = None
         self.messages = []
         self.scrolling = False
+        self.muted = False
         if active:
             self.create_buffer()
             self.attach_buffer()
@@ -569,6 +574,8 @@ class Channel(object):
             tags = "notify_highlight"
         elif user != self.server.nick and self.name in self.server.users:
             tags = "notify_private,notify_message"
+        elif self.muted:
+            tags = "no_highlight,notify_none,logger_backlog_end"
         elif user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]:
             tags = "irc_smart_filter"
         else:
@@ -1167,6 +1174,19 @@ def process_reply(message_json):
 
 def process_pong(message_json):
     pass
+
+
+def process_pref_change(message_json):
+    server = servers.find(message_json["myserver"])
+    if message_json['name'] == u'muted_channels':
+        muted = message_json['value'].split(',')
+        for c in server.channels:
+            if c.identifier in muted:
+                c.muted = True
+            else:
+                c.muted = False
+    else:
+        dbg("Preference change not implemented: {}\n{}".format(message_json['name']))
 
 
 def process_team_join(message_json):
