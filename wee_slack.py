@@ -1408,6 +1408,10 @@ def modify_buffer_line(buffer, new_line, time):
 
 def render_message(message_json):
         server = servers.find(message_json["myserver"])
+
+        # move message properties down to root of json object
+        message_json = unwrap_message(message_json)
+
         if "fallback" in message_json:
             text = message_json["fallback"]
         elif "text" in message_json:
@@ -1443,8 +1447,6 @@ def process_message(message_json, cache=True):
         if "subtype" in message_json and message_json["subtype"] in known_subtypes:
             proc[message_json["subtype"]](message_json)
 
-        # move message properties down to root of json object
-        message_json = unwrap_message(message_json)
 
         server = servers.find(message_json["myserver"])
         channel = channels.find(message_json["channel"])
