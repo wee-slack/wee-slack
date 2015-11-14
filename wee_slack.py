@@ -1425,6 +1425,9 @@ def render_message(message_json):
             text += u" --- {}".format(unwrap_attachments(message_json))
         text = text.lstrip()
         text = text.replace("\t", "    ")
+
+        text = text.encode('utf-8')
+
         if "reactions" in message_json:
             text += create_reaction_string(message_json["reactions"])
 
@@ -1436,9 +1439,9 @@ def render_message(message_json):
 
 
 def process_message(message_json, cache=True):
-        global unfurl_ignore_alt_text
+    global unfurl_ignore_alt_text
 
-#    try:
+    try:
         # send these messages elsewhere
         known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
         if "subtype" in message_json and message_json["subtype"] in known_subtypes:
@@ -1458,11 +1461,12 @@ def process_message(message_json, cache=True):
 
         text = render_message(message_json)
 
+        message_json['rendered_text'] = text
+
         time = message_json['ts']
         name = get_user(message_json, server)
-
-        text = text.encode('utf-8')
         name = name.encode('utf-8')
+
 
 
         if message_json.get("subtype", "") == "message_changed" and "edited" in message_json["message"]:
@@ -1483,10 +1487,10 @@ def process_message(message_json, cache=True):
         if cache:
             channel.cache_message(message_json)
 
-#    except Exception:
-#        if channel and ("text" in message_json) and message_json['text'] is not None:
-#            channel.buffer_prnt('unknown', message_json['text'])
-#        dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
+    except Exception:
+        if channel and ("text" in message_json) and message_json['text'] is not None:
+            channel.buffer_prnt('unknown', message_json['text'])
+        dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
 
 def unwrap_message(message_json):
     if "message" in message_json:
