@@ -632,12 +632,7 @@ class Channel(object):
 
             if text is not None:
                 self.messages[message_index].change_text(text)
-            else:
-                text = render_message(self.messages[message_index].message_json)
-                #text = self.messages[message_index].message_json["text"]
-
-            #render reactions if we have any
-            #react = create_reaction_string(self.messages[message_index].message_json["reactions"])
+            text = render_message(self.messages[message_index].message_json)
 
             #if there is only one message with this timestamp, modify it directly.
             #we do this because time resolution in weechat is less than slack
@@ -1401,20 +1396,8 @@ def modify_buffer_line(buffer, new_line, time):
             line_pointer = w.hdata_move(struct_hdata_line, line_pointer, -1)
     return w.WEECHAT_RC_OK
 
-def render_message(message_json, cache=True):
-    try:
-        message_json = unwrap_message(message_json)
-
+def render_message(message_json):
         server = servers.find(message_json["myserver"])
-        channel = channels.find(message_json["channel"])
-
-        #do not process messages in unexpected channels
-        if not channel.active:
-            channel.open(False)
-            dbg("message came for closed channel {}".format(channel.name))
-            return
-
-        time = message_json['ts']
         if "fallback" in message_json:
             text = message_json["fallback"]
         elif "text" in message_json:
@@ -1425,19 +1408,12 @@ def render_message(message_json, cache=True):
         else:
             text = ""
 
-        #text = text.decode('utf-8')
-
         text = unfurl_refs(text, ignore_alt_text=unfurl_ignore_alt_text)
 
         if "attachments" in message_json:
             text += u" --- {}".format(unwrap_attachments(message_json))
         text = text.lstrip()
         text = text.replace("\t", "    ")
-        name = get_user(message_json, server)
-
-        text = text.encode('utf-8')
-        name = name.encode('utf-8')
-
         if "reactions" in message_json:
             text += create_reaction_string(message_json["reactions"])
 
@@ -1447,16 +1423,11 @@ def render_message(message_json, cache=True):
 
 
 
-    except Exception:
-        if channel and ("text" in message_json) and message_json['text'] is not None:
-            channel.buffer_prnt('unknown', message_json['text'])
-        dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
-
 
 def process_message(message_json, cache=True):
-    global unfurl_ignore_alt_text
+        global unfurl_ignore_alt_text
 
-    try:
+#    try:
         # send these messages elsewhere
         known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
         if "subtype" in message_json and message_json["subtype"] in known_subtypes:
@@ -1474,44 +1445,20 @@ def process_message(message_json, cache=True):
             dbg("message came for closed channel {}".format(channel.name))
             return
 
+        text = render_message(message_json)
+
         time = message_json['ts']
-        if "fallback" in message_json:
-            text = message_json["fallback"]
-        elif "text" in message_json:
-            if message_json['text'] is not None:
-                text = message_json["text"]
-            else:
-                text = ""
-        else:
-            text = ""
-
-        #text = text.decode('utf-8')
-
-        text = unfurl_refs(text, ignore_alt_text=unfurl_ignore_alt_text)
-
-        if "attachments" in message_json:
-            text += u" --- {}".format(unwrap_attachments(message_json))
-        text = text.lstrip()
-        text = text.replace("\t", "    ")
         name = get_user(message_json, server)
 
         text = text.encode('utf-8')
         name = name.encode('utf-8')
 
-        if "reactions" in message_json:
-            text += create_reaction_string(message_json["reactions"])
 
-        if message_json.get("subtype", "") == "message_changed":
-                if "edited" in message_json["message"]:
-                    append = " (edited)"
-                else:
-                    append = ''
-                channel.change_message(message_json["message"]["ts"], text + append)
-                cache=False
+        if message_json.get("subtype", "") == "message_changed" and "edited" in message_json["message"]:
+            channel.change_message(message_json["message"]["ts"], text + " (edited)")
+            cache=False
         elif message_json.get("subtype", "") == "message_deleted":
-            append = "(deleted)"
-            text = ""
-            channel.change_message(message_json["deleted_ts"], text + append)
+            channel.change_message(message_json["deleted_ts"], text + "(deleted)")
             cache = False
         elif message_json.get("subtype", "") == "channel_leave":
             channel.buffer_prnt(w.prefix("quit").rstrip(), text, time)
@@ -1525,10 +1472,10 @@ def process_message(message_json, cache=True):
         if cache:
             channel.cache_message(message_json)
 
-    except Exception:
-        if channel and ("text" in message_json) and message_json['text'] is not None:
-            channel.buffer_prnt('unknown', message_json['text'])
-        dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
+#    except Exception:
+#        if channel and ("text" in message_json) and message_json['text'] is not None:
+#            channel.buffer_prnt('unknown', message_json['text'])
+#        dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
 
 def unwrap_message(message_json):
     if "message" in message_json:
