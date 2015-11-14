@@ -835,7 +835,6 @@ class Message(object):
         self.ts = message_json['ts']
         #split timestamp into time and counter
         self.ts_time, self.ts_counter = message_json['ts'].split('.')
-        self.rendered_text = ""
 
     def change_text(self, new_text):
         if not isinstance(new_text, unicode):
@@ -1459,9 +1458,15 @@ def process_message(message_json, cache=True):
             dbg("message came for closed channel {}".format(channel.name))
             return
 
-        text = render_message(message_json)
 
-        message_json['rendered_text'] = text
+        if message_json.get("rendered_text", ""):
+            text = message_json["rendered_text"]
+            #w.prnt("", "used rendered version..")
+        else:
+            text = render_message(message_json)
+            message_json['rendered_text'] = text
+            #w.prnt("", "no version..")
+
 
         time = message_json['ts']
         name = get_user(message_json, server)
@@ -1830,11 +1835,12 @@ def cache_load():
     global message_cache
     try:
         file_name = "{}/{}".format(WEECHAT_HOME, CACHE_NAME)
-        if sum(1 for line in open('myfile.txt')) > 2:
-            cache_file = open(file_name, 'r')
-            for line in cache_file:
-                message_cache.append(line)
+        #if sum(1 for line in open('myfile.txt')) > 2:
+        cache_file = open(file_name, 'r')
+        for line in cache_file:
+            message_cache.append(line)
     except IOError:
+        w.prnt("", "cache file not found")
         #cache file didn't exist
         pass
 
