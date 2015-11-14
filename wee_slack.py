@@ -766,7 +766,9 @@ class User(object):
             if channel.has_user(self.identifier):
                 channel.update_nicklist()
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "1")
-        buffer_list_update_next()
+        dm_channel = self.server.channels.find(self.name)
+        if dm_channel and dm_channel.active:
+            buffer_list_update_next()
 
     def set_inactive(self):
         self.presence = "away"
@@ -774,7 +776,9 @@ class User(object):
             if channel.has_user(self.identifier):
                 channel.update_nicklist()
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
-        buffer_list_update_next()
+        dm_channel = self.server.channels.find(self.name)
+        if dm_channel and dm_channel.active:
+            buffer_list_update_next()
 
     def update_color(self):
         if colorize_nicks:
@@ -1609,6 +1613,7 @@ def buffer_list_update_cb(data, remaining_calls):
 
     now = time.time()
     if buffer_list_update and previous_buffer_list_update + 1 < now:
+        w.prnt("", "updated buffer list...")
         gray_check = False
         if len(servers) > 1:
             gray_check = True
@@ -1639,7 +1644,7 @@ def buffer_closing_cb(signal, sig_type, data):
 def buffer_switch_cb(signal, sig_type, data):
     global previous_buffer, hotlist
     # this is to see if we need to gray out things in the buffer list
-    buffer_list_update_next()
+    # buffer_list_update_next()
     if channels.find(previous_buffer):
         channels.find(previous_buffer).mark_read()
 
@@ -2011,7 +2016,7 @@ if __name__ == "__main__":
 
         # attach to the weechat hooks we need
         w.hook_timer(1000, 0, 0, "typing_update_cb", "")
-        w.hook_timer(1000, 0, 0, "buffer_list_update_cb", "")
+        w.hook_timer(3000, 0, 0, "buffer_list_update_cb", "")
         w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
         w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
         w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
