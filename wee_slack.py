@@ -1417,7 +1417,7 @@ def render_message(message_json):
         if "reactions" in message_json:
             text += create_reaction_string(message_json["reactions"])
 
-        w.prnt("", "rendered message")
+        #w.prnt("", "rendered message")
         return text
 
 
