@@ -26,7 +26,7 @@ SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
 BACKLOG_SIZE = 200
-SCROLLBACK_SIZE = 2000
+SCROLLBACK_SIZE = 500
 
 SLACK_API_TRANSLATOR = {
     "channel": {
@@ -1432,9 +1432,6 @@ def render_message(message_json):
 
         #w.prnt("", "rendered message")
         return text
-
-
-
 
 
 def process_message(message_json, cache=True):
