@@ -328,6 +328,7 @@ class Channel(object):
     """
     def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[], topic=""):
         self.name = prepend_name + name
+        self.current_short_name = prepend_name + name
         self.identifier = identifier
         self.active = active
         self.last_read = float(last_read)
@@ -384,7 +385,8 @@ class Channel(object):
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
             else:
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
-            w.buffer_set(self.channel_buffer, "short_name", 'loading..')
+            #w.buffer_set(self.channel_buffer, "short_name", 'loading..')
+            w.buffer_set(self.channel_buffer, "short_name", self.name)
             buffer_list_update_next()
 
     def attach_buffer(self):
@@ -548,7 +550,8 @@ class Channel(object):
         else:
             new_name = self.name
         if self.channel_buffer:
-            if w.buffer_get_string(self.channel_buffer, "short_name") != (color + new_name):
+            if self.current_short_name != (color + new_name):
+                self.current_short_name = color + new_name
                 w.buffer_set(self.channel_buffer, "short_name", color + new_name)
 
 # deprecated in favor of redrawing the entire buffer
@@ -715,7 +718,9 @@ class DmChannel(Channel):
             new_name = self.server.users.find(self.name).formatted_name(' ', force_color)
 
         if self.channel_buffer:
-            w.buffer_set(self.channel_buffer, "short_name", new_name)
+            if self.current_short_name != new_name:
+                self.current_short_name = new_name
+                w.buffer_set(self.channel_buffer, "short_name", new_name)
 
     def update_nicklist(self):
         pass
