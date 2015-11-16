@@ -1499,8 +1499,11 @@ def process_message_changed(message_json):
             else:
                 message_json["fallback"] = m["fallback"]
 
+    m["text"] += unwrap_attachments(message_json)
     channel = channels.find(message_json["channel"])
-    channel.change_message(m["ts"], m["text"] + " (edited)")
+    if "edited" in m:
+        m["text"] += " (edited)"
+    channel.change_message(m["ts"], m["text"])
 
 
 def process_message_deleted(message_json):
