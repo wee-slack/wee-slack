@@ -1200,6 +1200,7 @@ def process_pong(message_json):
 
 
 def process_pref_change(message_json):
+    w.prnt("", str(message_json))
     server = servers.find(message_json["_server"])
     if message_json['name'] == u'muted_channels':
         muted = message_json['value'].split(',')
@@ -1209,7 +1210,7 @@ def process_pref_change(message_json):
             else:
                 c.muted = False
     else:
-        dbg("Preference change not implemented: {}\n{}".format(message_json['name']))
+        dbg("Preference change not implemented: {}\n".format(message_json['name']))
 
 
 def process_team_join(message_json):
@@ -1263,12 +1264,15 @@ def process_channel_left(message_json):
 def process_channel_join(message_json):
     server = servers.find(message_json["_server"])
     channel = server.channels.find(message_json["channel"])
+    text = unfurl_refs(message_json["text"], ignore_alt_text=False)
+    channel.buffer_prnt(w.prefix("join").rstrip(), text, message_json["ts"])
     channel.user_join(message_json["user"])
 
 
 def process_channel_topic(message_json):
     server = servers.find(message_json["_server"])
     channel = server.channels.find(message_json["channel"])
+    channel.buffer_prnt(w.prefix("network").rstrip(), message_json["text"], message_json["ts"])
     channel.set_topic(message_json["topic"])
 
 
@@ -1284,6 +1288,8 @@ def process_channel_joined(message_json):
 def process_channel_leave(message_json):
     server = servers.find(message_json["_server"])
     channel = server.channels.find(message_json["channel"])
+    text = unfurl_refs(message_json["text"], ignore_alt_text=False)
+    channel.buffer_prnt(w.prefix("quit").rstrip(), text, message_json["ts"])
     channel.user_leave(message_json["user"])
 
 
@@ -1415,7 +1421,6 @@ def render_message(message_json, force=False):
         server = servers.find(message_json["_server"])
 
         # move message properties down to root of json object
-        message_json = unwrap_message(message_json)
 
         if "fallback" in message_json:
             text = message_json["fallback"]
@@ -1443,79 +1448,64 @@ def render_message(message_json, force=False):
         message_json["_rendered_text"] = text
         return text
 
-def unwrap_message(message_json):
-    if "message" in message_json:
-        w.prnt("", "message nested..." + str(message_json))
-        if "attachments" in message_json["message"]:
-            w.prnt("", "attachment found in strange place...")
-        if "text" in message_json["message"]:
-            if "text" in message_json:
-                message_json["text"] += message_json["message"]["text"]
-                dbg("added text!")
-            else:
-                message_json["text"] = message_json["message"]["text"]
-        if "fallback" in message_json["message"]:
-            if "fallback" in message_json:
-                message_json["fallback"] += message_json["message"]["fallback"]
-            else:
-                message_json["fallback"] = message_json["message"]["fallback"]
-    return message_json
-
-
 
 def process_message(message_json, cache=True):
 
 #    try:
-        # send these messages elsewhere
-        known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
+        # send these subtype messages elsewhere
+        known_subtypes = ["message_changed", 'message_deleted', 'channel_join', 'channel_leave', 'channel_topic']
         if "subtype" in message_json and message_json["subtype"] in known_subtypes:
             proc[message_json["subtype"]](message_json)
 
+        else:
+            server = servers.find(message_json["_server"])
+            channel = channels.find(message_json["channel"])
 
-        server = servers.find(message_json["_server"])
-        channel = channels.find(message_json["channel"])
+            #do not process messages in unexpected channels
+            if not channel.active:
+                channel.open(False)
+                dbg("message came for closed channel {}".format(channel.name))
+                return
 
-        #do not process messages in unexpected channels
-        if not channel.active:
-            channel.open(False)
-            dbg("message came for closed channel {}".format(channel.name))
-            return
-
-
-        time = message_json['ts']
-
-        #The default case is no subtype - just process the message
-        if "subtype" not in message_json:
+            time = message_json['ts']
             text = render_message(message_json)
             name = get_user(message_json, server)
             name = name.encode('utf-8')
             channel.buffer_prnt(name, text, time)
-        #There is a subtype
-        else:
-            text = render_message(message_json)
-            if message_json.get("subtype", "") == "message_changed" and "edited" in message_json["message"]:
-                text = render_message(message_json["message"])
-                channel.change_message(message_json["message"]["ts"], text + " (edited)")
-                cache=False
 
-            elif message_json.get("subtype", "") == "message_deleted":
-                channel.change_message(message_json["deleted_ts"], text + "(deleted)")
-                cache = False
-
-            elif message_json.get("subtype", "") == "channel_leave":
-                channel.buffer_prnt(w.prefix("quit").rstrip(), text, time)
-            elif message_json.get("subtype", "") == "channel_join":
-                channel.buffer_prnt(w.prefix("join").rstrip(), text, time)
-            elif message_json.get("subtype", "") == "channel_topic":
-                channel.buffer_prnt(w.prefix("network").rstrip(), text, time)
-
-        if cache:
-            channel.cache_message(message_json)
+            if cache:
+                channel.cache_message(message_json)
 
 #    except Exception:
 #        if channel and ("text" in message_json) and message_json['text'] is not None:
 #            channel.buffer_prnt('unknown', message_json['text'])
 #        dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
+
+def process_message_changed(message_json):
+    m = message_json["message"]
+    if "message" in message_json:
+        if "attachments" in m:
+            message_json["attachments"] = m["attachments"]
+        if "text" in m:
+            if "text" in message_json:
+                message_json["text"] += m["text"]
+                dbg("added text!")
+            else:
+                message_json["text"] = m["text"]
+        if "fallback" in m:
+            if "fallback" in message_json:
+                message_json["fallback"] += m["fallback"]
+            else:
+                message_json["fallback"] = m["fallback"]
+
+    channel = channels.find(message_json["channel"])
+    channel.change_message(m["ts"], m["text"] + " (edited)")
+
+
+def process_message_deleted(message_json):
+    channel = channels.find(message_json["channel"])
+    channel.change_message(message_json["deleted_ts"], "(deleted)")
+
 
 def unwrap_attachments(message_json):
     if "attachments" in message_json:
