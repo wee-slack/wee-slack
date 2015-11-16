@@ -11,6 +11,7 @@ import urllib
 import HTMLParser
 import sys
 import traceback
+import collections
 from websocket import create_connection
 
 # hack to make tests possible.. better way?
@@ -27,6 +28,8 @@ SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
 BACKLOG_SIZE = 200
 SCROLLBACK_SIZE = 500
+
+CACHE_VERSION = "3"
 
 SLACK_API_TRANSLATOR = {
     "channel": {
@@ -685,7 +688,7 @@ class Channel(object):
 
     def get_history(self):
         if self.active:
-            for message in cache_get(self.identifier):
+            for message in message_cache[self.identifier]:
                 process_message(json.loads(message), True)
             if self.last_received != None:
                 async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "oldest": self.last_received, "count": BACKLOG_SIZE})
@@ -1061,7 +1064,7 @@ def command_markread(current_buffer, args):
 
 def command_flushcache(current_buffer, args):
     global message_cache
-    message_cache = []
+    message_cache = collections.defaultdict(list)
     cache_write_cb("","")
 
 def command_cachenow(current_buffer, args):
@@ -1824,6 +1827,7 @@ def url_processor_cb(data, command, return_code, out, err):
 
 def cache_write_cb(data, remaining):
     cache_file = open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'w')
+    cache_file.write(CACHE_VERSION + "\n")
     for channel in channels:
         if channel.active:
             for message in channel.messages:
@@ -1836,20 +1840,16 @@ def cache_load():
         file_name = "{}/{}".format(WEECHAT_HOME, CACHE_NAME)
         #if sum(1 for line in open('myfile.txt')) > 2:
         cache_file = open(file_name, 'r')
-        for line in cache_file:
-            message_cache.append(line)
+        if cache_file.readline() == CACHE_VERSION + "\n":
+            dbg("Loading messages from cache.", main_buffer=True)
+            for line in cache_file:
+                j = json.loads(line)
+                message_cache[j["channel"]].append(line)
+            dbg("Completed loading messages from cache.", main_buffer=True)
     except IOError:
         w.prnt("", "cache file not found")
         #cache file didn't exist
         pass
-
-def cache_get(channel):
-    lines = []
-    for line in message_cache:
-        j = json.loads(line)
-        if j["channel"] == channel:
-            lines.append(line)
-    return lines
 
 # END Slack specific requests
 
@@ -2015,7 +2015,7 @@ if __name__ == "__main__":
         hotlist = w.infolist_get("hotlist", "", "")
         main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
 
-        message_cache = []
+        message_cache = collections.defaultdict(list)
         cache_load()
 
         servers = SearchList()
