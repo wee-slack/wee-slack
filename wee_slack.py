@@ -1360,12 +1360,18 @@ def process_error(message_json):
     #connected = False
 
 def process_reaction_added(message_json):
-    channel = channels.find(message_json["item"]["channel"])
-    channel.add_reaction(message_json["item"]["ts"], message_json["reaction"])
+    if message_json["item"].get("type") == "message":
+        channel = channels.find(message_json["item"]["channel"])
+        channel.add_reaction(message_json["item"]["ts"], message_json["reaction"])
+    else:
+        dbg("Reaction to item type not supported: " + str(message_json))
 
 def process_reaction_removed(message_json):
-    channel = channels.find(message_json["item"]["channel"])
-    channel.remove_reaction(message_json["item"]["ts"], message_json["reaction"])
+    if message_json["item"].get("type") == "message":
+        channel = channels.find(message_json["item"]["channel"])
+        channel.remove_reaction(message_json["item"]["ts"], message_json["reaction"])
+    else:
+        dbg("Reaction to item type not supported: " + str(message_json))
 
 def create_reaction_string(reactions):
     count = 0
@@ -1419,8 +1425,6 @@ def render_message(message_json, force=False):
     else:
         server = servers.find(message_json["_server"])
 
-        # move message properties down to root of json object
-
         if "fallback" in message_json:
             text = message_json["fallback"]
         elif "text" in message_json:
@@ -1431,14 +1435,12 @@ def render_message(message_json, force=False):
         else:
             text = u""
 
-        text = unfurl_refs(text, ignore_alt_text=False)
-        #text = unfurl_refs(text, ignore_alt_text=unfurl_ignore_alt_text)
+        text = unfurl_refs(text, ignore_alt_text=unfurl_ignore_alt_text)
 
         text += unwrap_attachments(message_json)
 
         text = text.lstrip()
         text = text.replace("\t", "    ")
-
         text = text.encode('utf-8')
 
         if "reactions" in message_json:
@@ -1449,8 +1451,7 @@ def render_message(message_json, force=False):
 
 
 def process_message(message_json, cache=True):
-
-#    try:
+    try:
         # send these subtype messages elsewhere
         known_subtypes = ["message_changed", 'message_deleted', 'channel_join', 'channel_leave', 'channel_topic']
         if "subtype" in message_json and message_json["subtype"] in known_subtypes:
@@ -1475,10 +1476,11 @@ def process_message(message_json, cache=True):
             if cache:
                 channel.cache_message(message_json)
 
-#    except Exception:
-#        if channel and ("text" in message_json) and message_json['text'] is not None:
-#            channel.buffer_prnt('unknown', message_json['text'])
-#        dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
+    except Exception:
+        if channel and ("text" in message_json) and message_json['text'] is not None:
+            channel.buffer_prnt('unknown', message_json['text'])
+        dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
+
 
 def process_message_changed(message_json):
     m = message_json["message"]
@@ -2025,7 +2027,7 @@ if __name__ == "__main__":
 
         # attach to the weechat hooks we need
         w.hook_timer(1000, 0, 0, "typing_update_cb", "")
-        w.hook_timer(3000, 0, 0, "buffer_list_update_cb", "")
+        w.hook_timer(1000, 0, 0, "buffer_list_update_cb", "")
         w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
         w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
         w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
