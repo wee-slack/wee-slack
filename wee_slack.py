@@ -463,7 +463,7 @@ class Channel(object):
     def send_message(self, message):
         message = self.linkify_text(message)
         dbg(message)
-        request = {"type": "message", "channel": self.identifier, "text": message, "myserver": self.server.domain}
+        request = {"type": "message", "channel": self.identifier, "text": message, "_server": self.server.domain}
         self.server.send_to_websocket(request)
 
     def linkify_text(self, message):
@@ -637,7 +637,7 @@ class Channel(object):
 
             if text is not None:
                 self.messages[message_index].change_text(text)
-            text = render_message(self.messages[message_index].message_json)
+            text = render_message(self.messages[message_index].message_json, True)
 
             #if there is only one message with this timestamp, modify it directly.
             #we do this because time resolution in weechat is less than slack
@@ -1159,7 +1159,7 @@ def slack_websocket_cb(server, fd):
         data = servers.find(server).ws.recv()
         message_json = json.loads(data)
         # this magic attaches json that helps find the right dest
-        message_json['myserver'] = server
+        message_json['_server'] = server
     except:
         return w.WEECHAT_RC_OK
     # dispatch here
@@ -1183,7 +1183,7 @@ def slack_websocket_cb(server, fd):
 def process_reply(message_json):
     global unfurl_ignore_alt_text
 
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     identifier = message_json["reply_to"]
     item = server.message_buffer.pop(identifier)
     if "type" in item:
@@ -1200,7 +1200,7 @@ def process_pong(message_json):
 
 
 def process_pref_change(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     if message_json['name'] == u'muted_channels':
         muted = message_json['value'].split(',')
         for c in server.channels:
@@ -1213,7 +1213,7 @@ def process_pref_change(message_json):
 
 
 def process_team_join(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     item = message_json["user"]
     server.add_user(User(server, item["name"], item["id"], item["presence"]))
     server.buffer_prnt(server.buffer, "New user joined: {}".format(item["name"]))
@@ -1222,7 +1222,7 @@ def process_manual_presence_change(message_json):
     process_presence_change(message_json)
 
 def process_presence_change(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     identifier = message_json.get("user", server.nick)
     if message_json["presence"] == 'active':
         server.users.find(identifier).set_active()
@@ -1245,7 +1245,7 @@ def process_group_marked(message_json):
 
 
 def process_channel_created(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     item = message_json["channel"]
     if server.channels.find(message_json["channel"]["name"]):
         server.channels.find(message_json["channel"]["name"]).open(False)
@@ -1256,24 +1256,24 @@ def process_channel_created(message_json):
 
 
 def process_channel_left(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     server.channels.find(message_json["channel"]).close(False)
 
 
 def process_channel_join(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     channel = server.channels.find(message_json["channel"])
     channel.user_join(message_json["user"])
 
 
 def process_channel_topic(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     channel = server.channels.find(message_json["channel"])
     channel.set_topic(message_json["topic"])
 
 
 def process_channel_joined(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     if server.channels.find(message_json["channel"]["name"]):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
@@ -1282,24 +1282,24 @@ def process_channel_joined(message_json):
 
 
 def process_channel_leave(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     channel = server.channels.find(message_json["channel"])
     channel.user_leave(message_json["user"])
 
 
 def process_channel_archive(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     channel = server.channels.find(message_json["channel"])
     channel.detach_buffer()
 
 
 def process_group_left(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     server.channels.find(message_json["channel"]).close(False)
 
 
 def process_group_joined(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     if server.channels.find(message_json["channel"]["name"]):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
@@ -1313,12 +1313,12 @@ def  process_group_archive(message_json):
 
 
 def process_im_close(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     server.channels.find(message_json["channel"]).close(False)
 
 
 def process_im_open(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     server.channels.find(message_json["channel"]).open(False)
 
 
@@ -1330,7 +1330,7 @@ def process_im_marked(message_json):
 
 
 def process_im_created(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     item = message_json["channel"]
     channel_name = server.users.find(item["user"]).name
     if server.channels.find(channel_name):
@@ -1342,7 +1342,7 @@ def process_im_created(message_json):
 
 
 def process_user_typing(message_json):
-    server = servers.find(message_json["myserver"])
+    server = servers.find(message_json["_server"])
     channel = server.channels.find(message_json["channel"])
     if channel:
         channel.set_typing(server.users.find(message_json["user"]).name)
@@ -1406,8 +1406,13 @@ def modify_buffer_line(buffer, new_line, time):
             line_pointer = w.hdata_move(struct_hdata_line, line_pointer, -1)
     return w.WEECHAT_RC_OK
 
-def render_message(message_json):
-        server = servers.find(message_json["myserver"])
+def render_message(message_json, force=False):
+    global unfurl_ignore_alt_text
+    #If we already have a rendered version in the object, just return that.
+    if not force and message_json.get("_rendered_text", ""):
+        return message_json["_rendered_text"]
+    else:
+        server = servers.find(message_json["_server"])
 
         # move message properties down to root of json object
         message_json = unwrap_message(message_json)
@@ -1418,14 +1423,15 @@ def render_message(message_json):
             if message_json['text'] is not None:
                 text = message_json["text"]
             else:
-                text = ""
+                text = u""
         else:
-            text = ""
+            text = u""
 
-        text = unfurl_refs(text, ignore_alt_text=unfurl_ignore_alt_text)
+        text = unfurl_refs(text, ignore_alt_text=False)
+        #text = unfurl_refs(text, ignore_alt_text=unfurl_ignore_alt_text)
 
-        if "attachments" in message_json:
-            text += u" --- {}".format(unwrap_attachments(message_json))
+        text += unwrap_attachments(message_json)
+
         text = text.lstrip()
         text = text.replace("\t", "    ")
 
@@ -1434,72 +1440,14 @@ def render_message(message_json):
         if "reactions" in message_json:
             text += create_reaction_string(message_json["reactions"])
 
-        #w.prnt("", "rendered message")
+        message_json["_rendered_text"] = text
         return text
-
-
-def process_message(message_json, cache=True):
-    global unfurl_ignore_alt_text
-
-    try:
-        # send these messages elsewhere
-        known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
-        if "subtype" in message_json and message_json["subtype"] in known_subtypes:
-            proc[message_json["subtype"]](message_json)
-
-
-        server = servers.find(message_json["myserver"])
-        channel = channels.find(message_json["channel"])
-
-        #do not process messages in unexpected channels
-        if not channel.active:
-            channel.open(False)
-            dbg("message came for closed channel {}".format(channel.name))
-            return
-
-
-        if message_json.get("rendered_text", ""):
-            text = message_json["rendered_text"]
-            #w.prnt("", "used rendered version..")
-        else:
-            text = render_message(message_json)
-            message_json['rendered_text'] = text
-            #w.prnt("", "no version..")
-
-
-        time = message_json['ts']
-        name = get_user(message_json, server)
-        name = name.encode('utf-8')
-
-
-
-        if message_json.get("subtype", "") == "message_changed" and "edited" in message_json["message"]:
-            channel.change_message(message_json["message"]["ts"], text + " (edited)")
-            cache=False
-        elif message_json.get("subtype", "") == "message_deleted":
-            channel.change_message(message_json["deleted_ts"], text + "(deleted)")
-            cache = False
-        elif message_json.get("subtype", "") == "channel_leave":
-            channel.buffer_prnt(w.prefix("quit").rstrip(), text, time)
-        elif message_json.get("subtype", "") == "channel_join":
-            channel.buffer_prnt(w.prefix("join").rstrip(), text, time)
-        elif message_json.get("subtype", "") == "channel_topic":
-            channel.buffer_prnt(w.prefix("network").rstrip(), text, time)
-        else:
-            channel.buffer_prnt(name, text, time)
-
-        if cache:
-            channel.cache_message(message_json)
-
-    except Exception:
-        if channel and ("text" in message_json) and message_json['text'] is not None:
-            channel.buffer_prnt('unknown', message_json['text'])
-        dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
 
 def unwrap_message(message_json):
     if "message" in message_json:
+        w.prnt("", "message nested..." + str(message_json))
         if "attachments" in message_json["message"]:
-            message_json["attachments"] = message_json["message"]["attachments"]
+            w.prnt("", "attachment found in strange place...")
         if "text" in message_json["message"]:
             if "text" in message_json:
                 message_json["text"] += message_json["message"]["text"]
@@ -1514,13 +1462,71 @@ def unwrap_message(message_json):
     return message_json
 
 
+
+def process_message(message_json, cache=True):
+
+#    try:
+        # send these messages elsewhere
+        known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
+        if "subtype" in message_json and message_json["subtype"] in known_subtypes:
+            proc[message_json["subtype"]](message_json)
+
+
+        server = servers.find(message_json["_server"])
+        channel = channels.find(message_json["channel"])
+
+        #do not process messages in unexpected channels
+        if not channel.active:
+            channel.open(False)
+            dbg("message came for closed channel {}".format(channel.name))
+            return
+
+
+        time = message_json['ts']
+
+        #The default case is no subtype - just process the message
+        if "subtype" not in message_json:
+            text = render_message(message_json)
+            name = get_user(message_json, server)
+            name = name.encode('utf-8')
+            channel.buffer_prnt(name, text, time)
+        #There is a subtype
+        else:
+            text = render_message(message_json)
+            if message_json.get("subtype", "") == "message_changed" and "edited" in message_json["message"]:
+                text = render_message(message_json["message"])
+                channel.change_message(message_json["message"]["ts"], text + " (edited)")
+                cache=False
+
+            elif message_json.get("subtype", "") == "message_deleted":
+                channel.change_message(message_json["deleted_ts"], text + "(deleted)")
+                cache = False
+
+            elif message_json.get("subtype", "") == "channel_leave":
+                channel.buffer_prnt(w.prefix("quit").rstrip(), text, time)
+            elif message_json.get("subtype", "") == "channel_join":
+                channel.buffer_prnt(w.prefix("join").rstrip(), text, time)
+            elif message_json.get("subtype", "") == "channel_topic":
+                channel.buffer_prnt(w.prefix("network").rstrip(), text, time)
+
+        if cache:
+            channel.cache_message(message_json)
+
+#    except Exception:
+#        if channel and ("text" in message_json) and message_json['text'] is not None:
+#            channel.buffer_prnt('unknown', message_json['text'])
+#        dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
+
 def unwrap_attachments(message_json):
-    attachment_text = ''
-    for attachment in message_json["attachments"]:
-        if "fallback" in attachment:
-            attachment_text += attachment["fallback"]
-#    attachment_text = attachment_text.encode('ascii', 'ignore')
+    if "attachments" in message_json:
+        attachment_text = u' --- '
+        for attachment in message_json["attachments"]:
+            if "fallback" in attachment:
+                attachment_text += attachment["fallback"]
+    else:
+        attachment_text = ''
     return attachment_text
+
 
 def resolve_ref(ref):
     if ref.startswith('@U'):
@@ -1550,7 +1556,7 @@ def unfurl_ref(ref, ignore_alt_text=False):
                 display_text = ref.split('|')[1]
             else:
                 url, desc = ref.split('|', 1)
-                display_text = "{} ({})".format(url, desc)
+                display_text = u"{} ({})".format(url, desc)
     else:
         display_text = resolve_ref(ref)
     return display_text
@@ -1561,7 +1567,7 @@ def unfurl_refs(text, ignore_alt_text=False):
     """
     if text and text.find('<') > -1:
         end = 0
-        newtext = ""
+        newtext = u""
         while text.find('<') > -1:
             # Prepend prefix
             newtext += text[:text.find('<')]
@@ -1809,7 +1815,7 @@ def url_processor_cb(data, command, return_code, out, err):
                 if "messages" in my_json:
                     messages = my_json["messages"].reverse()
                     for message in my_json["messages"]:
-                        message["myserver"] = servers.find(token).domain
+                        message["_server"] = servers.find(token).domain
                         message["channel"] = servers.find(token).channels.find(channel).identifier
                         process_message(message)
                 if "channel" in my_json:

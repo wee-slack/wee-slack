@@ -1,7 +1,8 @@
 import pytest
 import sys
 
-sys.path.append(str(pytest.config.rootdir))
+sys.path.append(".")
+#sys.path.append(str(pytest.config.rootdir))
 
 from wee_slack import SlackServer
 from wee_slack import Channel
