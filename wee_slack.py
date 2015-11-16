@@ -1200,7 +1200,6 @@ def process_pong(message_json):
 
 
 def process_pref_change(message_json):
-    w.prnt("", str(message_json))
     server = servers.find(message_json["_server"])
     if message_json['name'] == u'muted_channels':
         muted = message_json['value'].split(',')
@@ -1622,7 +1621,7 @@ def buffer_list_update_cb(data, remaining_calls):
 
     now = time.time()
     if buffer_list_update and previous_buffer_list_update + 1 < now:
-        w.prnt("", "updated buffer list...")
+        dbg("updated buffer list...", main_buffer=True)
         gray_check = False
         if len(servers) > 1:
             gray_check = True
