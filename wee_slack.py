@@ -4,6 +4,7 @@
 from functools import wraps
 import time
 import json
+import os
 import pickle
 import sha
 import re
@@ -124,6 +125,7 @@ class SlackServer(object):
         self.nick = None
         self.name = None
         self.domain = None
+        self.server_buffer_name = None
         self.login_data = None
         self.buffer = None
         self.token = token
@@ -205,6 +207,13 @@ class SlackServer(object):
             self.domain = login_data["team"]["domain"] + ".slack.com"
             dbg("connected to {}".format(self.domain))
             self.identifier = self.domain
+
+            alias = w.config_get_plugin("server_alias.{}".format(login_data["team"]["domain"]))
+            if alias:
+                self.server_buffer_name = alias
+            else:
+                self.server_buffer_name = self.domain
+
             self.nick = login_data["self"]["name"]
             self.create_local_buffer()
 
@@ -245,8 +254,8 @@ class SlackServer(object):
         self.buffer_prnt('{:<20} {}'.format("Team id", login_data["team"]["id"]), backlog=True)
 
     def create_local_buffer(self):
-        if not w.buffer_search("", self.domain):
-            self.buffer = w.buffer_new(self.domain, "buffer_input_cb", "", "", "")
+        if not w.buffer_search("", self.server_buffer_name):
+            self.buffer = w.buffer_new(self.server_buffer_name, "buffer_input_cb", "", "", "")
             w.buffer_set(self.buffer, "nicklist", "1")
 
     def create_slack_websocket(self, data):
@@ -376,11 +385,11 @@ class Channel(object):
             self.members_table[user] = self.server.users.find(user)
 
     def create_buffer(self):
-        channel_buffer = w.buffer_search("", "{}.{}".format(self.server.domain, self.name))
+        channel_buffer = w.buffer_search("", "{}.{}".format(self.server.server_buffer_name, self.name))
         if channel_buffer:
             self.channel_buffer = channel_buffer
         else:
-            self.channel_buffer = w.buffer_new("{}.{}".format(self.server.domain, self.name), "buffer_input_cb", self.name, "", "")
+            self.channel_buffer = w.buffer_new("{}.{}".format(self.server.server_buffer_name, self.name), "buffer_input_cb", self.name, "", "")
             if self.type == "im":
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
             else:
@@ -389,7 +398,7 @@ class Channel(object):
             buffer_list_update_next()
 
     def attach_buffer(self):
-        channel_buffer = w.buffer_search("", "{}.{}".format(self.server.domain, self.name))
+        channel_buffer = w.buffer_search("", "{}.{}".format(self.server.server_buffer_name, self.name))
         if channel_buffer != main_weechat_buffer:
             self.channel_buffer = channel_buffer
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.server.nick)
@@ -441,7 +450,7 @@ class Channel(object):
                 dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
 
     def fullname(self):
-        return "{}.{}".format(self.server.domain, self.name)
+        return "{}.{}".format(self.server.server_buffer_name, self.name)
 
     def has_user(self, name):
         return name in self.members
@@ -557,18 +566,14 @@ class Channel(object):
         async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": time})
 
     def rename(self):
-        if current_domain_name() != self.server.domain and channels_not_on_current_server_color:
-            color = w.color(channels_not_on_current_server_color)
-        else:
-            color = ""
         if self.is_someone_typing():
             new_name = ">{}".format(self.name[1:])
         else:
             new_name = self.name
         if self.channel_buffer:
-            if self.current_short_name != (color + new_name):
-                self.current_short_name = color + new_name
-                w.buffer_set(self.channel_buffer, "short_name", color + new_name)
+            if self.current_short_name != new_name:
+                self.current_short_name = new_name
+                w.buffer_set(self.channel_buffer, "short_name", new_name)
 
     def buffer_prnt(self, user='unknown_user', message='no message', time=0):
         """
@@ -710,15 +715,12 @@ class DmChannel(Channel):
         self.type = "im"
 
     def rename(self):
-        if current_domain_name() != self.server.domain and channels_not_on_current_server_color:
-            force_color = w.color(channels_not_on_current_server_color)
-        else:
-            force_color = None
+        global colorize_private_chats
 
         if self.server.users.find(self.name).presence == "active":
-            new_name = self.server.users.find(self.name).formatted_name('+', force_color)
+            new_name = self.server.users.find(self.name).formatted_name('+', colorize_private_chats)
         else:
-            new_name = self.server.users.find(self.name).formatted_name(' ', force_color)
+            new_name = self.server.users.find(self.name).formatted_name(' ', colorize_private_chats)
 
         if self.channel_buffer:
             if self.current_short_name != new_name:
@@ -799,9 +801,9 @@ class User(object):
             self.color = ""
             self.color_name = ""
 
-    def formatted_name(self, prepend="", force_color=None):
-        if colorize_nicks:
-            print_color = force_color or self.color
+    def formatted_name(self, prepend="", enable_color=True):
+        if colorize_nicks and enable_color:
+            print_color = self.color
         else:
             print_color = ""
         return print_color + prepend + self.name
@@ -927,6 +929,26 @@ def slack_buffer_required(f):
         return f(current_buffer, *args, **kwargs)
     return wrapper
 
+
+@slack_buffer_required
+def command_upload(current_buffer, args):
+    """
+    Uploads a file to the current buffer
+    /slack upload [file_path]
+    """
+    post_data = {}
+    channel = current_buffer_name(short=True)
+    domain = current_domain_name()
+    token = servers.find(domain).token
+
+    if servers.find(domain).channels.find(channel):
+        channel_identifier = servers.find(domain).channels.find(channel).identifier
+
+    if channel_identifier:
+        post_data["token"] = token
+        post_data["channels"] = channel_identifier
+        post_data["file"] = args
+        async_slack_api_upload_request(token, "files.upload", post_data)
 
 @slack_buffer_required
 def command_talk(current_buffer, args):
@@ -1139,7 +1161,7 @@ def command_openweb(current_buffer, args):
     if trigger != "0":
         if args is None:
             channel = channels.find(current_buffer)
-            url = "{}/messages/{}".format(channel.server.domain, channel.name)
+            url = "{}/messages/{}".format(channel.server.server_buffer_name, channel.name)
             topic = w.buffer_get_string(channel.channel_buffer, "title")
             w.buffer_set(channel.channel_buffer, "title", "{}:{}".format(trigger, url))
             w.hook_timer(1000, 0, 1, "command_openweb", json.dumps({"topic": topic, "buffer": current_buffer}))
@@ -1440,7 +1462,6 @@ def render_message(message_json, force=False):
 
         if "reactions" in message_json:
             text += create_reaction_string(message_json["reactions"])
-
         message_json["_rendered_text"] = text
         return text
 
@@ -1466,7 +1487,17 @@ def process_message(message_json, cache=True):
             text = render_message(message_json)
             name = get_user(message_json, server)
             name = name.encode('utf-8')
-            channel.buffer_prnt(name, text, time)
+
+            #special case with actions.
+            if text.startswith("_") and text.endswith("_"):
+                text = text[1:-1]
+                if name != channel.server.nick:
+                    text = name + " " + text
+                channel.buffer_prnt(w.prefix("action").rstrip(), text, time)
+
+            else:
+                channel.buffer_prnt(name, text, time)
+
 
             if cache:
                 channel.cache_message(message_json)
@@ -1770,6 +1801,14 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
         dbg("URL: {} context: {} params: {}".format(url, context, params))
         w.hook_process_hashtable(url, params, 20000, "url_processor_cb", context)
 
+def async_slack_api_upload_request(token, request, post_data, priority=False):
+    if not STOP_TALKING_TO_SLACK:
+        url = 'https://slack.com/api/{}'.format(request)
+        file_path = os.path.expanduser(post_data["file"])
+        command = 'curl -F file=@{} -F channels={} -F token={} {}'.format(file_path, post_data["channels"], token, url)
+        context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
+        w.hook_process(command, 20000, "url_processor_cb", context)
+
 # funny, right?
 big_data = {}
 
@@ -1898,7 +1937,7 @@ def create_slack_debug_buffer():
 
 
 def config_changed_cb(data, option, value):
-    global slack_api_token, distracting_channels, channels_not_on_current_server_color, colorize_nicks, slack_debug, debug_mode, \
+    global slack_api_token, distracting_channels, colorize_nicks, colorize_private_chats, slack_debug, debug_mode, \
         unfurl_ignore_alt_text
 
     slack_api_token = w.config_get_plugin("slack_api_token")
@@ -1907,13 +1946,11 @@ def config_changed_cb(data, option, value):
         slack_api_token = w.string_eval_expression(slack_api_token, {}, {}, {})
 
     distracting_channels = [x.strip() for x in w.config_get_plugin("distracting_channels").split(',')]
-    channels_not_on_current_server_color = w.config_get_plugin("channels_not_on_current_server_color")
-    if channels_not_on_current_server_color == "0":
-        channels_not_on_current_server_color = False
     colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
     debug_mode = w.config_get_plugin("debug_mode").lower()
     if debug_mode != '' and debug_mode != 'false':
         create_slack_debug_buffer()
+    colorize_private_chats = w.config_string_to_boolean(w.config_get_plugin("colorize_private_chats"))
 
     unfurl_ignore_alt_text = False
     if w.config_get_plugin('unfurl_ignore_alt_text') != "0":
@@ -1964,18 +2001,20 @@ if __name__ == "__main__":
             w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
         if not w.config_get_plugin('distracting_channels'):
             w.config_set_plugin('distracting_channels', "")
-        if not w.config_get_plugin('channels_not_on_current_server_color'):
-            w.config_set_plugin('channels_not_on_current_server_color', "0")
         if not w.config_get_plugin('debug_mode'):
             w.config_set_plugin('debug_mode', "")
         if not w.config_get_plugin('colorize_nicks'):
             w.config_set_plugin('colorize_nicks', "1")
+        if not w.config_get_plugin('colorize_private_chats'):
+            w.config_set_plugin('colorize_private_chats', "0")
         if not w.config_get_plugin('trigger_value'):
             w.config_set_plugin('trigger_value', "0")
         if not w.config_get_plugin('unfurl_ignore_alt_text'):
             w.config_set_plugin('unfurl_ignore_alt_text', "0")
         if not w.config_get_plugin('switch_buffer_on_join'):
             w.config_set_plugin('switch_buffer_on_join', "1")
+
+        w.config_option_unset('channels_not_on_current_server_color')
 
         version = w.info_get("version_number", "") or 0
         if int(version) >= 0x00040400:
