@@ -912,6 +912,8 @@ def me_command_cb(data, current_buffer, args):
 
 
 def join_command_cb(data, current_buffer, args):
+    user = args.split()[1]
+    servers.find(current_domain_name()).users.find(user).open()
     if channels.find(current_buffer) or servers.find(current_buffer):
         channel = args.split()[1]
         channel = servers.find(current_domain_name()).channels.find(channel)
