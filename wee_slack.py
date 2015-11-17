@@ -385,7 +385,6 @@ class Channel(object):
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
             else:
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
-            #w.buffer_set(self.channel_buffer, "short_name", 'loading..')
             w.buffer_set(self.channel_buffer, "short_name", self.name)
             buffer_list_update_next()
 
@@ -535,7 +534,7 @@ class Channel(object):
                 return True
         if len(self.typing) > 0:
             self.typing = {}
-            #buffer_list_update_next()
+            buffer_list_update_next()
         return False
 
     def get_typing_list(self):
@@ -570,19 +569,6 @@ class Channel(object):
             if self.current_short_name != (color + new_name):
                 self.current_short_name = color + new_name
                 w.buffer_set(self.channel_buffer, "short_name", color + new_name)
-
-# deprecated in favor of redrawing the entire buffer
-#    def buffer_prnt_changed(self, user, text, time, append=""):
-#        if self.channel_buffer:
-#            if user:
-#                if self.server.users.find(user):
-#                    name = self.server.users.find(user).formatted_name()
-#                else:
-#                    name = user
-#                name = name.decode('utf-8')
-#                modify_buffer_line(self.channel_buffer, name, text, time, append)
-#            else:
-#                modify_buffer_line(self.channel_buffer, None, text, time, append)
 
     def buffer_prnt(self, user='unknown_user', message='no message', time=0):
         """
@@ -1367,7 +1353,6 @@ def process_user_typing(message_json):
 
 def process_error(message_json):
     pass
-    #connected = False
 
 def process_reaction_added(message_json):
     if message_json["item"].get("type") == "message":
@@ -1666,7 +1651,6 @@ def buffer_closing_cb(signal, sig_type, data):
 def buffer_switch_cb(signal, sig_type, data):
     global previous_buffer, hotlist
     # this is to see if we need to gray out things in the buffer list
-    # buffer_list_update_next()
     if channels.find(previous_buffer):
         channels.find(previous_buffer).mark_read()
 
@@ -1844,7 +1828,6 @@ def cache_load():
     global message_cache
     try:
         file_name = "{}/{}".format(WEECHAT_HOME, CACHE_NAME)
-        #if sum(1 for line in open('myfile.txt')) > 2:
         cache_file = open(file_name, 'r')
         if cache_file.readline() == CACHE_VERSION + "\n":
             dbg("Loading messages from cache.", main_buffer=True)
@@ -1854,7 +1837,6 @@ def cache_load():
             dbg("Completed loading messages from cache.", main_buffer=True)
     except IOError:
         w.prnt("", "cache file not found")
-        #cache file didn't exist
         pass
 
 # END Slack specific requests
