@@ -22,7 +22,7 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.98.7"
+SCRIPT_VERSION = "0.99.0"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -247,9 +247,6 @@ class SlackServer(object):
         if not w.buffer_search("", self.domain):
             self.buffer = w.buffer_new(self.domain, "buffer_input_cb", "", "", "")
             w.buffer_set(self.buffer, "nicklist", "1")
-
-            w.nicklist_add_group(self.buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
-            w.nicklist_add_group(self.buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
 
     def create_slack_websocket(self, data):
         web_socket_url = data['url']
@@ -760,11 +757,11 @@ class User(object):
 
         if deleted:
             return
+        self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color_name, "", "", 1)
         if self.presence == 'away':
-            ngroup = w.nicklist_search_group(server.buffer, "", NICK_GROUP_AWAY)
-        else:
-            ngroup = w.nicklist_search_group(server.buffer, "", NICK_GROUP_HERE)
-        self.nicklist_pointer = w.nicklist_add_nick(server.buffer, ngroup, self.name, self.color_name, "", "", 1)
+            w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
+        else;
+            w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "1")
 #        w.nicklist_add_nick(server.buffer, "", self.formatted_name(), "", "", "", 1)
 
     def __str__(self):
