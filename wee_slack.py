@@ -406,15 +406,32 @@ class Channel(object):
             w.buffer_close(self.channel_buffer)
             self.channel_buffer = None
 
-    def update_nicklist(self):
+    def update_nicklist(self, user=None):
         if self.channel_buffer:
             w.buffer_set(self.channel_buffer, "nicklist", "1")
-            w.nicklist_remove_all(self.channel_buffer)
 
-            here = w.nicklist_add_group(self.channel_buffer,
-                                        '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
-            afk = w.nicklist_add_group(self.channel_buffer,
-                                       '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
+            #create nicklists for the current channel if they don't exist
+            #if they do, use the existing pointer
+            here = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_HERE)
+            if not here:
+                here = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
+            afk = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_AWAY)
+            if not afk:
+                afk = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
+
+        if user:
+            user = self.members_table[user]
+            nick = w.nicklist_search_nick(self.channel_buffer, "", user.name)
+            #since this is a change just remove it regardless of where it is
+            w.nicklist_remove_nick(self.channel_buffer, nick)
+            #now add it back in to whichever..
+            if user.presence == 'away':
+                w.nicklist_add_nick(self.channel_buffer, afk, user.name, user.color_name, "", "", 1)
+            else:
+                w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
+
+        #if we didn't get a user, build a complete list. this is expensive.
+        else:
             try:
                 for user in self.members:
                     user = self.members_table[user]
@@ -725,7 +742,7 @@ class DmChannel(Channel):
                 self.current_short_name = new_name
                 w.buffer_set(self.channel_buffer, "short_name", new_name)
 
-    def update_nicklist(self):
+    def update_nicklist(self, user=None):
         pass
 
 class User(object):
@@ -734,8 +751,8 @@ class User(object):
         self.server = server
         self.name = name
         self.identifier = identifier
-        self.presence = presence
         self.deleted = deleted
+        self.presence = presence
 
         self.channel_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, self.name))
         self.update_color()
@@ -772,7 +789,7 @@ class User(object):
         self.presence = "active"
         for channel in self.server.channels:
             if channel.has_user(self.identifier):
-                channel.update_nicklist()
+                channel.update_nicklist(self.identifier)
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "1")
         dm_channel = self.server.channels.find(self.name)
         if dm_channel and dm_channel.active:
@@ -782,7 +799,7 @@ class User(object):
         self.presence = "away"
         for channel in self.server.channels:
             if channel.has_user(self.identifier):
-                channel.update_nicklist()
+                channel.update_nicklist(self.identifier)
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
         dm_channel = self.server.channels.find(self.name)
         if dm_channel and dm_channel.active:
@@ -1629,7 +1646,6 @@ def buffer_list_update_cb(data, remaining_calls):
 
     now = time.time()
     if buffer_list_update and previous_buffer_list_update + 1 < now:
-        dbg("updated buffer list...", main_buffer=True)
         gray_check = False
         if len(servers) > 1:
             gray_check = True
