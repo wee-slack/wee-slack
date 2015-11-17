@@ -353,6 +353,7 @@ class Channel(object):
         self.last_received = None
         self.messages = []
         self.scrolling = False
+        self.last_active_user = None
         self.muted = False
         if active:
             self.create_buffer()
@@ -598,10 +599,17 @@ class Channel(object):
         #tags += ",no_log"
         time_int = int(time_float)
         if self.channel_buffer:
-            if self.server.users.find(user):
-                name = self.server.users.find(user).formatted_name()
+            prefix_same_nick = w.config_string(w.config_get('weechat.look.prefix_same_nick'))
+            if user == self.last_active_user and prefix_same_nick != "":
+                name = prefix_same_nick
             else:
-                name = user
+                if self.server.users.find(user):
+                    name = self.server.users.find(user).formatted_name()
+                    self.last_active_user = user
+                    # XXX: handle bots properly here.
+                else:
+                    name = user
+                    self.last_active_user = None
             name = name.decode('utf-8')
             #colorize nicks in each line
             chat_color = w.config_string(w.config_get('weechat.color.chat'))
