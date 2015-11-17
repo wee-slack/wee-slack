@@ -760,7 +760,7 @@ class User(object):
         self.nicklist_pointer = w.nicklist_add_nick(server.buffer, "", self.name, self.color_name, "", "", 1)
         if self.presence == 'away':
             w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
-        else;
+        else:
             w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "1")
 #        w.nicklist_add_nick(server.buffer, "", self.formatted_name(), "", "", "", 1)
 
