@@ -4,6 +4,7 @@
 from functools import wraps
 import time
 import json
+import os
 import pickle
 import sha
 import re
@@ -21,7 +22,7 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.98.5"
+SCRIPT_VERSION = "0.98.7"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -120,12 +121,14 @@ class SlackServer(object):
         self.nick = None
         self.name = None
         self.domain = None
+        self.server_buffer_name = None
         self.login_data = None
         self.buffer = None
         self.token = token
         self.ws = None
         self.ws_hook = None
         self.users = SearchList()
+        self.bots = SearchList()
         self.channels = SearchList()
         self.connecting = False
         self.connected = False
@@ -151,6 +154,9 @@ class SlackServer(object):
     def add_user(self, user):
         self.users.append(user, user.get_aliases())
         users.append(user, user.get_aliases())
+
+    def add_bot(self, bot):
+        self.bots.append(bot)
 
     def add_channel(self, channel):
         self.channels.append(channel, channel.get_aliases())
@@ -197,6 +203,13 @@ class SlackServer(object):
             self.domain = login_data["team"]["domain"] + ".slack.com"
             dbg("connected to {}".format(self.domain))
             self.identifier = self.domain
+
+            alias = w.config_get_plugin("server_alias.{}".format(login_data["team"]["domain"]))
+            if alias:
+                self.server_buffer_name = alias
+            else:
+                self.server_buffer_name = self.domain
+
             self.nick = login_data["self"]["name"]
             self.create_local_buffer()
 
@@ -237,8 +250,8 @@ class SlackServer(object):
         self.buffer_prnt('{:<20} {}'.format("Team id", login_data["team"]["id"]), backlog=True)
 
     def create_local_buffer(self):
-        if not w.buffer_search("", self.domain):
-            self.buffer = w.buffer_new(self.domain, "buffer_input_cb", "", "", "")
+        if not w.buffer_search("", self.server_buffer_name):
+            self.buffer = w.buffer_new(self.server_buffer_name, "buffer_input_cb", "", "", "")
             w.buffer_set(self.buffer, "nicklist", "1")
 
             w.nicklist_add_group(self.buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
@@ -260,6 +273,9 @@ class SlackServer(object):
         for item in data["users"]:
             self.add_user(User(self, item["name"], item["id"], item["presence"], item["deleted"]))
 
+        for item in data["bots"]:
+            self.add_bot(Bot(self, item["name"], item["id"], item["deleted"]))
+
         for item in data["channels"]:
             if "last_read" not in item:
                 item["last_read"] = 0
@@ -280,6 +296,11 @@ class SlackServer(object):
                 item["last_read"] = 0
             name = self.users.find(item["user"]).name
             self.add_channel(DmChannel(self, name, item["id"], item["is_open"], item["last_read"]))
+        for item in data['self']['prefs']['muted_channels'].split(','):
+            if item == '':
+                continue
+            if self.channels.find(item) is not None:
+                self.channels.find(item).muted = True
 
         for item in self.channels:
             item.get_history()
@@ -332,6 +353,7 @@ class Channel(object):
         self.messages = []
         self.scrolling = False
         self.last_active_user = None
+        self.muted = False
         if active:
             self.create_buffer()
             self.attach_buffer()
@@ -363,11 +385,11 @@ class Channel(object):
             self.members_table[user] = self.server.users.find(user)
 
     def create_buffer(self):
-        channel_buffer = w.buffer_search("", "{}.{}".format(self.server.domain, self.name))
+        channel_buffer = w.buffer_search("", "{}.{}".format(self.server.server_buffer_name, self.name))
         if channel_buffer:
             self.channel_buffer = channel_buffer
         else:
-            self.channel_buffer = w.buffer_new("{}.{}".format(self.server.domain, self.name), "buffer_input_cb", self.name, "", "")
+            self.channel_buffer = w.buffer_new("{}.{}".format(self.server.server_buffer_name, self.name), "buffer_input_cb", self.name, "", "")
             if self.type == "im":
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
             else:
@@ -376,7 +398,7 @@ class Channel(object):
             buffer_list_update_next()
 
     def attach_buffer(self):
-        channel_buffer = w.buffer_search("", "{}.{}".format(self.server.domain, self.name))
+        channel_buffer = w.buffer_search("", "{}.{}".format(self.server.server_buffer_name, self.name))
         if channel_buffer != main_weechat_buffer:
             self.channel_buffer = channel_buffer
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.server.nick)
@@ -411,7 +433,7 @@ class Channel(object):
                 dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
 
     def fullname(self):
-        return "{}.{}".format(self.server.domain, self.name)
+        return "{}.{}".format(self.server.server_buffer_name, self.name)
 
     def has_user(self, name):
         return name in self.members
@@ -525,17 +547,13 @@ class Channel(object):
         async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": time})
 
     def rename(self):
-        if current_domain_name() != self.server.domain and channels_not_on_current_server_color:
-            color = w.color(channels_not_on_current_server_color)
-        else:
-            color = ""
         if self.is_someone_typing():
             new_name = ">{}".format(self.name[1:])
         else:
             new_name = self.name
         if self.channel_buffer:
-            if w.buffer_get_string(self.channel_buffer, "short_name") != (color + new_name):
-                w.buffer_set(self.channel_buffer, "short_name", color + new_name)
+            if w.buffer_get_string(self.channel_buffer, "short_name") != new_name:
+                w.buffer_set(self.channel_buffer, "short_name", new_name)
 
 # deprecated in favor of redrawing the entire buffer
 #    def buffer_prnt_changed(self, user, text, time, append=""):
@@ -563,7 +581,9 @@ class Channel(object):
             tags = "notify_highlight"
         elif user != self.server.nick and self.name in self.server.users:
             tags = "notify_private,notify_message"
-        elif user in [w.prefix("join"), w.prefix("quit")]:
+        elif self.muted:
+            tags = "no_highlight,notify_none,logger_backlog_end"
+        elif user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]:
             tags = "irc_smart_filter"
         else:
             tags = "notify_message"
@@ -585,7 +605,8 @@ class Channel(object):
             name = name.decode('utf-8')
             #colorize nicks in each line
             chat_color = w.config_string(w.config_get('weechat.color.chat'))
-            message = message.decode('UTF-8', 'replace')
+            if type(message) is not unicode:
+              message = message.decode('UTF-8', 'replace')
             for user in self.server.users:
                 if user.name in message:
                     message = user.name_regex.sub(
@@ -684,15 +705,12 @@ class DmChannel(Channel):
         self.type = "im"
 
     def rename(self):
-        if current_domain_name() != self.server.domain and channels_not_on_current_server_color:
-            force_color = w.color(channels_not_on_current_server_color)
-        else:
-            force_color = None
+        global colorize_private_chats
 
         if self.server.users.find(self.name).presence == "active":
-            new_name = self.server.users.find(self.name).formatted_name('+', force_color)
+            new_name = self.server.users.find(self.name).formatted_name('+', colorize_private_chats)
         else:
-            new_name = self.server.users.find(self.name).formatted_name(' ', force_color)
+            new_name = self.server.users.find(self.name).formatted_name(' ', colorize_private_chats)
 
         if self.channel_buffer:
             w.buffer_set(self.channel_buffer, "short_name", new_name)
@@ -729,9 +747,12 @@ class User(object):
         return self.name
 
     def __eq__(self, compare_str):
-        if compare_str == self.name or compare_str == "@" + self.name or compare_str == self.identifier:
-            return True
-        else:
+        try:
+            if compare_str == self.name or compare_str == "@" + self.name or compare_str == self.identifier:
+                return True
+            else:
+                return False
+        except:
             return False
 
     def get_aliases(self):
@@ -764,9 +785,9 @@ class User(object):
             self.color = ""
             self.color_name = ""
 
-    def formatted_name(self, prepend="", force_color=None):
-        if colorize_nicks:
-            print_color = force_color or self.color
+    def formatted_name(self, prepend="", enable_color=True):
+        if colorize_nicks and enable_color:
+            print_color = self.color
         else:
             print_color = ""
         return print_color + prepend + self.name
@@ -775,6 +796,26 @@ class User(object):
         t = time.time() + 1
         #reply = async_slack_api_request("im.open", {"channel":self.identifier,"ts":t})
         async_slack_api_request(self.server.domain, self.server.token, "im.open", {"user": self.identifier, "ts": t})
+
+class Bot(object):
+
+    def __init__(self, server, name, identifier, deleted=False):
+        self.server = server
+        self.name = name
+        self.identifier = identifier
+        self.deleted = deleted
+
+    def __eq__(self, compare_str):
+        if compare_str == self.identifier or compare_str == self.name:
+            return True
+        else:
+            return False
+
+    def __str__(self):
+        return "{}".format(self.identifier)
+
+    def __repr__(self):
+        return "{}".format(self.identifier)
 
 class Message(object):
 
@@ -785,6 +826,8 @@ class Message(object):
         self.ts_time, self.ts_counter = message_json['ts'].split('.')
 
     def change_text(self, new_text):
+        if not isinstance(new_text, unicode):
+            new_text = unicode(new_text, 'utf-8')
         self.message_json["text"] = new_text
 
     def add_reaction(self, reaction):
@@ -878,6 +921,26 @@ def slack_buffer_required(f):
 
 
 @slack_buffer_required
+def command_upload(current_buffer, args):
+    """
+    Uploads a file to the current buffer
+    /slack upload [file_path]
+    """
+    post_data = {}
+    channel = current_buffer_name(short=True)
+    domain = current_domain_name()
+    token = servers.find(domain).token
+
+    if servers.find(domain).channels.find(channel):
+        channel_identifier = servers.find(domain).channels.find(channel).identifier
+
+    if channel_identifier:
+        post_data["token"] = token
+        post_data["channels"] = channel_identifier
+        post_data["file"] = args
+        async_slack_api_upload_request(token, "files.upload", post_data)
+
+@slack_buffer_required
 def command_talk(current_buffer, args):
     """
     Open a chat with the specified user
@@ -933,6 +996,9 @@ def command_nodistractions(current_buffer, args):
 def command_distracting(current_buffer, args):
     global distracting_channels
     distracting_channels = [x.strip() for x in w.config_get_plugin("distracting_channels").split(',')]
+    if channels.find(current_buffer) is None:
+        w.prnt(current_buffer, "This command must be used in a channel buffer")
+        return
     fullname = channels.find(current_buffer).fullname()
     if distracting_channels.count(fullname) == 0:
         distracting_channels.append(fullname)
@@ -1085,7 +1151,7 @@ def command_openweb(current_buffer, args):
     if trigger != "0":
         if args is None:
             channel = channels.find(current_buffer)
-            url = "{}/messages/{}".format(channel.server.domain, channel.name)
+            url = "{}/messages/{}".format(channel.server.server_buffer_name, channel.name)
             topic = w.buffer_get_string(channel.channel_buffer, "title")
             w.buffer_set(channel.channel_buffer, "title", "{}:{}".format(trigger, url))
             w.hook_timer(1000, 0, 1, "command_openweb", json.dumps({"topic": topic, "buffer": current_buffer}))
@@ -1124,6 +1190,8 @@ def slack_websocket_cb(server, fd):
     return w.WEECHAT_RC_OK
 
 def process_reply(message_json):
+    global unfurl_ignore_alt_text
+
     server = servers.find(message_json["myserver"])
     identifier = message_json["reply_to"]
     item = server.message_buffer.pop(identifier)
@@ -1131,11 +1199,26 @@ def process_reply(message_json):
         if item["type"] == "message" and "channel" in item.keys():
             item["ts"] = message_json["ts"]
             channels.find(item["channel"]).cache_message(item, from_me=True)
-            channels.find(item["channel"]).buffer_prnt(item["user"], item["text"], item["ts"])
+            text = unfurl_refs(item["text"], ignore_alt_text=unfurl_ignore_alt_text)
+
+            channels.find(item["channel"]).buffer_prnt(item["user"], text, item["ts"])
     dbg("REPLY {}".format(item))
 
 def process_pong(message_json):
     pass
+
+
+def process_pref_change(message_json):
+    server = servers.find(message_json["myserver"])
+    if message_json['name'] == u'muted_channels':
+        muted = message_json['value'].split(',')
+        for c in server.channels:
+            if c.identifier in muted:
+                c.muted = True
+            else:
+                c.muted = False
+    else:
+        dbg("Preference change not implemented: {}\n{}".format(message_json['name']))
 
 
 def process_team_join(message_json):
@@ -1332,6 +1415,8 @@ def create_reaction_string(reactions):
 
 
 def process_message(message_json, cache=True):
+    global unfurl_ignore_alt_text
+
     try:
         # send these messages elsewhere
         known_subtypes = ['channel_join', 'channel_leave', 'channel_topic']
@@ -1354,16 +1439,16 @@ def process_message(message_json, cache=True):
         if "fallback" in message_json:
             text = message_json["fallback"]
         elif "text" in message_json:
-            text = message_json["text"]
+            if message_json['text'] is not None:
+                text = message_json["text"]
+            else:
+                text = ""
         else:
             text = ""
 
-        text = text.decode('utf-8')
+        #text = text.decode('utf-8')
 
-        ignore_alt_text = False
-        if w.config_get_plugin('unfurl_ignore_alt_text') != "0":
-            ignore_alt_text = True
-        text = unfurl_refs(text, ignore_alt_text=ignore_alt_text)
+        text = unfurl_refs(text, ignore_alt_text=unfurl_ignore_alt_text)
 
         if "attachments" in message_json:
             text += u" --- {}".format(unwrap_attachments(message_json))
@@ -1371,11 +1456,11 @@ def process_message(message_json, cache=True):
         text = text.replace("\t", "    ")
         name = get_user(message_json, server)
 
-        if "reactions" in message_json:
-            text += create_reaction_string(message_json["reactions"])
-
         text = text.encode('utf-8')
         name = name.encode('utf-8')
+
+        if "reactions" in message_json:
+            text += create_reaction_string(message_json["reactions"])
 
         if "subtype" in message_json and message_json["subtype"] == "message_changed":
                 if "edited" in message_json["message"]:
@@ -1395,6 +1480,11 @@ def process_message(message_json, cache=True):
             channel.buffer_prnt(w.prefix("join").rstrip(), text, time)
         elif message_json.get("subtype", "") == "channel_topic":
             channel.buffer_prnt(w.prefix("network").rstrip(), text, time)
+        elif text.startswith("_") and text.endswith("_"):
+            text = text[1:-1]
+            if name != channel.server.nick:
+                text = name + " " + text
+            channel.buffer_prnt(w.prefix("action").rstrip(), text, time)
         else:
             channel.buffer_prnt(name, text, time)
 
@@ -1402,6 +1492,8 @@ def process_message(message_json, cache=True):
             channel.cache_message(message_json)
 
     except Exception:
+        if channel and ("text" in message_json) and message_json['text'] is not None:
+            channel.buffer_prnt('unknown', message_json['text'])
         dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
 
 def unwrap_message(message_json):
@@ -1430,43 +1522,60 @@ def unwrap_attachments(message_json):
 #    attachment_text = attachment_text.encode('ascii', 'ignore')
     return attachment_text
 
+def resolve_ref(ref):
+    if ref.startswith('@U'):
+        if users.find(ref[1:]):
+            try:
+                return "@{}".format(users.find(ref[1:]).name)
+            except:
+                dbg("NAME: {}".format(ref))
+    elif ref.startswith('#C'):
+        if channels.find(ref[1:]):
+            try:
+                return "{}".format(channels.find(ref[1:]).name)
+            except:
+                dbg("CHANNEL: {}".format(ref))
+
+    # Something else, just return as-is
+    return ref
+
+def unfurl_ref(ref, ignore_alt_text=False):
+    id = ref.split('|')[0]
+    display_text = ref
+    if ref.find('|') > -1:
+        if ignore_alt_text:
+            display_text = resolve_ref(id)
+        else:
+            if id.startswith("#C") or id.startswith("@U"):
+                display_text = ref.split('|')[1]
+            else:
+                url, desc = ref.split('|', 1)
+                display_text = "{} ({})".format(url, desc)
+    else:
+        display_text = resolve_ref(ref)
+    return display_text
 
 def unfurl_refs(text, ignore_alt_text=False):
     """
     Worst code ever written. this needs work
     """
-    if text.find('<') > -1:
-        newtext = []
-        text = text.split(" ")
-        for item in text:
-            # dbg(item)
-            prefix = ""
-            suffix = ""
-            start = item.find('<')
-            end = item.find('>')
-            if start > -1 and end > -1:
-                prefix = item[:start]
-                suffix = item[end+1:]
-                item = item[start + 1:end]
-                if item.find('|') > -1:
-                    if ignore_alt_text:
-                        item = item.split('|')[1]
-                    else:
-                        item = item.split('|')[0]
-                if item.startswith('@U'):
-                    if users.find(item[1:]):
-                        try:
-                            item = "@{}".format(users.find(item[1:]).name)
-                        except:
-                            dbg("NAME: {}".format(item))
-                if item.startswith('#C'):
-                    if channels.find(item[1:]):
-                        item = "{}".format(channels.find(item[1:]).name)
-            newtext.append(prefix + item + suffix)
-        text = " ".join(newtext)
-        return text
-    else:
-        return text
+    if text and text.find('<') > -1:
+        end = 0
+        newtext = ""
+        while text.find('<') > -1:
+            # Prepend prefix
+            newtext += text[:text.find('<')]
+            text = text[text.find('<'):]
+            end = text.find('>')
+            if end == -1:
+                newtext += text
+                break
+            # Format thingabob
+            newtext += unfurl_ref(text[1:end], ignore_alt_text)
+            text = text[end+1:]
+        newtext += text
+        return newtext
+    return text
 
 
 def get_user(message_json, server):
@@ -1474,10 +1583,10 @@ def get_user(message_json, server):
         name = server.users.find(message_json['user']).name
     elif 'username' in message_json:
         name = u"-{}-".format(message_json["username"])
+    elif 'bot_id' in message_json:
+        name = u"{}:]".format(server.bots.find(message_json["bot_id"]).name)
     elif 'service_name' in message_json:
         name = u"-{}-".format(message_json["service_name"])
-    elif 'bot_id' in message_json:
-        name = u"-{}-".format(message_json["bot_id"])
     else:
         name = u""
     return name
@@ -1634,6 +1743,8 @@ def complete_next_cb(data, buffer, command):
     # If we're on a non-word, look left for something to complete
     while current_pos >= 0 and input[current_pos] != '@' and not input[current_pos].isalnum():
         current_pos = current_pos - 1
+    if current_pos < 0:
+        current_pos = 0
     for l in range(current_pos, 0, -1):
         if input[l] != '@' and not input[l].isalnum():
             word_start = l + 1
@@ -1655,12 +1766,21 @@ def complete_next_cb(data, buffer, command):
 
 # Slack specific requests
 
-# NOTE: switched to async/curl because sync slowed down the UI
+# NOTE: switched to async because sync slowed down the UI
 def async_slack_api_request(domain, token, request, post_data, priority=False):
     if not STOP_TALKING_TO_SLACK:
         post_data["token"] = token
-        url = 'https://{}/api/{}'.format(domain, request)
-        command = 'curl  -A "wee_slack {}" -s --data "{}" {}'.format(SCRIPT_VERSION, urllib.urlencode(post_data), url)
+        url = 'url:https://{}/api/{}?{}'.format(domain, request, urllib.urlencode(post_data))
+        context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
+        params = { 'useragent': 'wee_slack {}'.format(SCRIPT_VERSION) }
+        dbg("URL: {} context: {} params: {}".format(url, context, params))
+        w.hook_process_hashtable(url, params, 20000, "url_processor_cb", context)
+
+def async_slack_api_upload_request(token, request, post_data, priority=False):
+    if not STOP_TALKING_TO_SLACK:
+        url = 'https://slack.com/api/{}'.format(request)
+        file_path = os.path.expanduser(post_data["file"])
+        command = 'curl -F file=@{} -F channels={} -F token={} {}'.format(file_path, post_data["channels"], token, url)
         context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
         w.hook_process(command, 20000, "url_processor_cb", context)
 
@@ -1678,8 +1798,8 @@ def url_processor_cb(data, command, return_code, out, err):
         try:
             my_json = json.loads(big_data[identifier])
         except:
-            dbg("curl failed, doing again...")
-            dbg("curl length: {} identifier {}\n{}".format(len(big_data[identifier]), identifier, data))
+            dbg("request failed, doing again...")
+            dbg("response length: {} identifier {}\n{}".format(len(big_data[identifier]), identifier, data))
             my_json = False
 
         big_data.pop(identifier, None)
@@ -1702,9 +1822,10 @@ def url_processor_cb(data, command, return_code, out, err):
                 if "channel" in my_json:
                     if "members" in my_json["channel"]:
                         channels.find(my_json["channel"]["id"]).members = set(my_json["channel"]["members"])
-    elif return_code != -1:
-        big_data.pop(identifier, None)
-        dbg("return code: {}".format(return_code))
+    else:
+        if return_code != -1:
+            big_data.pop(identifier, None)
+        dbg("return code: {}, data: {}".format(return_code, data))
 
     return w.WEECHAT_RC_OK
 
@@ -1795,20 +1916,25 @@ def create_slack_debug_buffer():
 
 
 def config_changed_cb(data, option, value):
-    global slack_api_token, distracting_channels, channels_not_on_current_server_color, colorize_nicks, slack_debug, debug_mode
+    global slack_api_token, distracting_channels, colorize_nicks, colorize_private_chats, slack_debug, debug_mode, \
+        unfurl_ignore_alt_text
+
     slack_api_token = w.config_get_plugin("slack_api_token")
 
     if slack_api_token.startswith('${sec.data'):
         slack_api_token = w.string_eval_expression(slack_api_token, {}, {}, {})
 
     distracting_channels = [x.strip() for x in w.config_get_plugin("distracting_channels").split(',')]
-    channels_not_on_current_server_color = w.config_get_plugin("channels_not_on_current_server_color")
-    if channels_not_on_current_server_color == "0":
-        channels_not_on_current_server_color = False
     colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
     debug_mode = w.config_get_plugin("debug_mode").lower()
     if debug_mode != '' and debug_mode != 'false':
         create_slack_debug_buffer()
+    colorize_private_chats = w.config_string_to_boolean(w.config_get_plugin("colorize_private_chats"))
+
+    unfurl_ignore_alt_text = False
+    if w.config_get_plugin('unfurl_ignore_alt_text') != "0":
+        unfurl_ignore_alt_text = True
+
     return w.WEECHAT_RC_OK
 
 def quit_notification_cb(signal, sig_type, data):
@@ -1854,18 +1980,20 @@ if __name__ == "__main__":
             w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
         if not w.config_get_plugin('distracting_channels'):
             w.config_set_plugin('distracting_channels', "")
-        if not w.config_get_plugin('channels_not_on_current_server_color'):
-            w.config_set_plugin('channels_not_on_current_server_color', "0")
         if not w.config_get_plugin('debug_mode'):
             w.config_set_plugin('debug_mode', "")
         if not w.config_get_plugin('colorize_nicks'):
             w.config_set_plugin('colorize_nicks', "1")
+        if not w.config_get_plugin('colorize_private_chats'):
+            w.config_set_plugin('colorize_private_chats', "0")
         if not w.config_get_plugin('trigger_value'):
             w.config_set_plugin('trigger_value', "0")
         if not w.config_get_plugin('unfurl_ignore_alt_text'):
             w.config_set_plugin('unfurl_ignore_alt_text', "0")
         if not w.config_get_plugin('switch_buffer_on_join'):
             w.config_set_plugin('switch_buffer_on_join', "1")
+
+        w.config_option_unset('channels_not_on_current_server_color')
 
         version = w.info_get("version_number", "") or 0
         if int(version) >= 0x00040400:

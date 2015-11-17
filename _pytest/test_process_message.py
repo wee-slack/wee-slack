@@ -33,8 +33,3 @@ def test_process_message(slack_debug, monkeypatch, myservers, mychannels, myuser
     print called
 #    assert called['buffer_prnt'] == 2
 #    assert called['buffer_prnt_changed'] == 1
-
-
-
-
-

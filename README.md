@@ -12,7 +12,8 @@ A WeeChat native client for Slack.com. Provides supplemental features only avail
 
 Features
 --------
-  * **New** Emoji reactions!
+  * **New** Upload to slack capabilities!
+  * Emoji reactions!
   * Edited messages work just like the official clients, where the original message changes and has (edited) appended.
   * Unfurled urls dont generate a new message, but replace the original with more info as it is received.
   * Regex style message editing (s/oldtext/newtext/)
@@ -45,7 +46,6 @@ Dependencies
 ------------
   * WeeChat 1.1+ http://weechat.org/ 
   * websocket-client https://pypi.python.org/pypi/websocket-client/
-  * curl http://curl.haxx.se/
 
 Setup
 ------
@@ -65,19 +65,14 @@ wee-slack doesn't use the Slack IRC gateway. If you currently connect via the ga
 
 ####1. Install dependencies
 
-##### OSX
+##### OSX and Linux
 ```
 pip install websocket-client
 ```
 
-##### Linux (ubuntu)
-```
-sudo apt-get install curl
-pip install websocket-client
-```
 ##### FreeBSD
 ```
-pkg install curl py27-websocket-client py27-six
+pkg install py27-websocket-client py27-six
 ```
 
 ####2. copy wee_slack.py to ~/.weechat/python/autoload
@@ -93,7 +88,7 @@ weechat
 
 ####4. Add your Slack API key(s)
 ```
-/set plugins.var.python.slack_extension.slack_api_token (YOUR_SLACK_TOKEN)
+/set plugins.var.python.slack_extension.slack_api_token [YOUR_SLACK_TOKEN]
 ```
 ^^ (find this at https://api.slack.com/web)
 
@@ -101,14 +96,14 @@ If you don't want to store your API token in plaintext you can use the secure fe
 
 ```
 /secure passphrase this is a super secret password
-/secure set slack_token (YOUR_SLACK_TOKEN)
+/secure set slack_token [YOUR_SLACK_TOKEN]
 /set plugins.var.python.slack_extension.slack_api_token ${sec.data.slack_token}
 ```
 
 ##### Optional: If you would like to connect to multiple groups, use the above command with multiple tokens separated by commas. (NO SPACES)
     
 ```
-/set plugins.var.python.slack_extension.slack_api_token (token1),(token2),(token3)
+/set plugins.var.python.slack_extension.slack_api_token [token1],[token2],[token3]
 ```
 
 ###5. $PROFIT$
@@ -170,9 +165,19 @@ Turn off colorized nicks:
 /set plugins.var.python.slack_extension.colorize_nicks 0
 ```
 
+Set channel prefix to something other than my-slack-subdomain.slack.com (e.g. when using buffers.pl):
+```
+/set plugins.var.python.slack_extension.server_alias.my-slack-subdomain "mysub"
+```
+
 Set all read markers to a specific time:
 ```
 /slack setallreadmarkers (time in epoch)
+```
+
+Upload a file to the current slack buffer:
+```
+/slack upload [file_path]
 ```
 
 Debug mode:
