@@ -41,6 +41,7 @@ SLACK_API_TRANSLATOR = {
     },
     "im": {
         "history": "im.history",
+        "join": "im.open",
         "leave": "im.close",
         "mark": "im.mark",
     },
@@ -340,7 +341,6 @@ class Channel(object):
         self.type = "channel"
         self.server = server
         self.typing = {}
-        self.opening = False
         self.last_received = None
         self.messages = []
         self.scrolling = False
@@ -504,7 +504,6 @@ class Channel(object):
         w.buffer_set(self.channel_buffer, "title", topic)
 
     def open(self, update_remote=True):
-        self.opening = True
         self.create_buffer()
         self.active = True
         self.get_history()
@@ -513,12 +512,13 @@ class Channel(object):
         if update_remote:
             if "join" in SLACK_API_TRANSLATOR[self.type]:
                 async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.name.lstrip("#")})
-        self.opening = False
+                async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["join"], {"user": users.find(self.name).identifier})
 
     def close(self, update_remote=True):
         #remove from cache so messages don't reappear when reconnecting
         if self.active:
             self.active = False
+            self.current_short_name = ""
             self.detach_buffer()
         if update_remote:
             t = time.time()
@@ -820,11 +820,6 @@ class User(object):
             print_color = ""
         return print_color + prepend + self.name
 
-    def open(self):
-        t = time.time() + 1
-        #reply = async_slack_api_request("im.open", {"channel":self.identifier,"ts":t})
-        async_slack_api_request(self.server.domain, self.server.token, "im.open", {"user": self.identifier, "ts": t})
-
 class Bot(object):
 
     def __init__(self, server, name, identifier, deleted=False):
@@ -913,18 +908,13 @@ def me_command_cb(data, current_buffer, args):
 
 def join_command_cb(data, current_buffer, args):
     server = servers.find(current_domain_name())
-    if channels.find(current_buffer) or servers.find(current_buffer):
-        arg = args.split()[1]
-        if server.channels.find(arg):
-            channel = server.channels.find(arg)
-        elif server.users.find(arg):
-            channel = server.users.find(arg)
+    arg = args.split()[-1]
+    channel = server.channels.find(arg)
+    if channel != None:
         channel.open()
-        if w.config_get_plugin('switch_buffer_on_join') != '0':
-            w.buffer_set(channel.channel_buffer, "display", "1")
-        return w.WEECHAT_RC_OK_EAT
-    else:
-        return w.WEECHAT_RC_OK
+    if w.config_get_plugin('switch_buffer_on_join') != '0':
+        w.buffer_set(channel.channel_buffer, "display", "1")
+    return w.WEECHAT_RC_OK_EAT
 
 
 def part_command_cb(data, current_buffer, args):
@@ -958,7 +948,7 @@ def command_talk(current_buffer, args):
     Open a chat with the specified user
     /slack talk [user]
     """
-    servers.find(current_domain_name()).users.find(args).open()
+    servers.find(current_domain_name()).channels.find(args).open()
 
 
 def command_join(current_buffer, args):
@@ -1192,7 +1182,6 @@ def slack_websocket_cb(server, fd):
         function_name = "unknown"
     try:
         proc[function_name](message_json)
-        # dbg(function_name)
     except KeyError:
         if function_name:
             dbg("Function not implemented: {}\n{}".format(function_name, message_json))
@@ -1345,7 +1334,7 @@ def process_im_close(message_json):
 
 def process_im_open(message_json):
     server = servers.find(message_json["_server"])
-    server.channels.find(message_json["channel"]).open(False)
+    server.channels.find(message_json["channel"]).open()
 
 
 def process_im_marked(message_json):
