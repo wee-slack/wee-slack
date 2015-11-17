@@ -4,6 +4,7 @@
 from functools import wraps
 import time
 import json
+import os
 import pickle
 import sha
 import re
@@ -904,6 +905,26 @@ def slack_buffer_required(f):
 
 
 @slack_buffer_required
+def command_upload(current_buffer, args):
+    """
+    Uploads a file to the current buffer
+    /slack upload [file_path]
+    """
+    post_data = {}
+    channel = current_buffer_name(short=True)
+    domain = current_domain_name()
+    token = servers.find(domain).token
+
+    if servers.find(domain).channels.find(channel):
+        channel_identifier = servers.find(domain).channels.find(channel).identifier
+
+    if channel_identifier:
+        post_data["token"] = token
+        post_data["channels"] = channel_identifier
+        post_data["file"] = args
+        async_slack_api_upload_request(token, "files.upload", post_data)
+
+@slack_buffer_required
 def command_talk(current_buffer, args):
     """
     Open a chat with the specified user
@@ -1733,6 +1754,14 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
         params = { 'useragent': 'wee_slack {}'.format(SCRIPT_VERSION) }
         dbg("URL: {} context: {} params: {}".format(url, context, params))
         w.hook_process_hashtable(url, params, 20000, "url_processor_cb", context)
+
+def async_slack_api_upload_request(token, request, post_data, priority=False):
+    if not STOP_TALKING_TO_SLACK:
+        url = 'https://slack.com/api/{}'.format(request)
+        file_path = os.path.expanduser(post_data["file"])
+        command = 'curl -F file=@{} -F channels={} -F token={} {}'.format(file_path, post_data["channels"], token, url)
+        context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
+        w.hook_process(command, 20000, "url_processor_cb", context)
 
 # funny, right?
 big_data = {}
