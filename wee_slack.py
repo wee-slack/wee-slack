@@ -295,6 +295,8 @@ class SlackServer(object):
         for item in data["ims"]:
             if "last_read" not in item:
                 item["last_read"] = 0
+            if item["unread_count"] > 0:
+                item["is_open"] = True
             name = self.users.find(item["user"]).name
             self.add_channel(DmChannel(self, name, item["id"], item["is_open"], item["last_read"]))
         for item in data['self']['prefs']['muted_channels'].split(','):
