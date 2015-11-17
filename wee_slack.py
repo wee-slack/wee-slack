@@ -912,11 +912,13 @@ def me_command_cb(data, current_buffer, args):
 
 
 def join_command_cb(data, current_buffer, args):
-    user = args.split()[1]
-    servers.find(current_domain_name()).users.find(user).open()
+    server = servers.find(current_domain_name())
     if channels.find(current_buffer) or servers.find(current_buffer):
-        channel = args.split()[1]
-        channel = servers.find(current_domain_name()).channels.find(channel)
+        arg = args.split()[1]
+        if server.channels.find(arg):
+            channel = server.channels.find(arg)
+        elif server.users.find(arg):
+            channel = server.users.find(arg)
         channel.open()
         if w.config_get_plugin('switch_buffer_on_join') != '0':
             w.buffer_set(channel.channel_buffer, "display", "1")
