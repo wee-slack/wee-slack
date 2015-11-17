@@ -1415,7 +1415,6 @@ def create_reaction_string(reactions):
         reaction_string = ''
     return reaction_string
 
-# deprecated in favor of redrawing the entire buffer
 def modify_buffer_line(buffer, new_line, time):
     time = int(float(time))
     # get a pointer to this buffer's lines
