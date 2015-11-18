@@ -222,7 +222,7 @@ class SlackServer(object):
                     w.unhook(self.ping_hook)
                     self.communication_counter = 0
                 self.ping_hook = w.hook_timer(1000 * 5, 0, 0, "slack_ping_cb", self.domain)
-                if len(self.users) and 0 or len(self.channels) == 0:
+                if len(self.users) == 0 or len(self.channels) == 0:
                     self.create_slack_mappings(login_data)
 
                 self.connected = True
@@ -1190,6 +1190,7 @@ def slack_websocket_cb(server, fd):
         # this magic attaches json that helps find the right dest
         message_json['_server'] = server
     except:
+        servers.find(server).ws.close()
         return w.WEECHAT_RC_OK
     # dispatch here
     if "reply_to" in message_json:
