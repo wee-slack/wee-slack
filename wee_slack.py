@@ -13,7 +13,7 @@ import HTMLParser
 import sys
 import traceback
 import collections
-from websocket import create_connection
+from websocket import create_connection,WebSocketConnectionClosedException
 
 # hack to make tests possible.. better way?
 try:
@@ -1189,8 +1189,11 @@ def slack_websocket_cb(server, fd):
         message_json = json.loads(data)
         # this magic attaches json that helps find the right dest
         message_json['_server'] = server
-    except:
+    except WebSocketConnectionClosedException:
         servers.find(server).ws.close()
+        return w.WEECHAT_RC_OK
+    except Exception:
+        dbg("socket issue: {}\n".format(traceback.format_exc()))
         return w.WEECHAT_RC_OK
     # dispatch here
     if "reply_to" in message_json:
