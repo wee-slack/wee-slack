@@ -25,7 +25,7 @@ unfurl_map = [
       "output": "url: https://example.com (example with spaces) suffix",
     },
     ]
-    
+
 
 def test_unfurl_refs(myservers, mychannels, myusers):
     slack.servers = myservers
@@ -34,7 +34,7 @@ def test_unfurl_refs(myservers, mychannels, myusers):
     slack.message_cache = {}
     slack.servers[0].users = myusers
     print mychannels[0].identifier
-    
+
     for k in unfurl_map:
         if "ignore_alt_text" in k:
             assert slack.unfurl_refs(k["input"], ignore_alt_text=k["ignore_alt_text"]) == k["output"]

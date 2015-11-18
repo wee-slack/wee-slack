@@ -4,7 +4,7 @@ wee-slack
 =========
 
 **News:**
- The 0.98.3+ releases have some big backend changes that should make startup and multi-group much faster. Please report any bugs to the Freenode IRC channel #wee-slack.
+ The 0.99.1+ has a number of backend changes to make things faster and better. You should use it. :) _(please report bugs in #wee-slack on freenode)_
 
 A WeeChat native client for Slack.com. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, search, (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
 

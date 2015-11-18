@@ -4,5 +4,5 @@
     "user": "U2147483697",
     "text": "Hello world",
     "ts": "1355517523.000005",
-    "myserver": "test.slack.com"
+    "_server": "test.slack.com"
 }

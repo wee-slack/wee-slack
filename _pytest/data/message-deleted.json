@@ -5,5 +5,5 @@
     "channel": "C2147483705",
     "ts": "1358878755.000001",
     "deleted_ts": "1355517519.000005",
-    "myserver": "test.slack.com"
+    "_server": "test.slack.com"
 }

@@ -15,5 +15,5 @@
       }
     },
 
-    "myserver": "test.slack.com"
+    "_server": "test.slack.com"
 }
