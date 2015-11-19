@@ -908,8 +908,10 @@ def me_command_cb(data, current_buffer, args):
 
 
 def join_command_cb(data, current_buffer, args):
-    command_talk(current_buffer, args.split()[1])
-    return w.WEECHAT_RC_OK_EAT
+    if command_talk(current_buffer, args.split()[1]):
+        return w.WEECHAT_RC_OK_EAT
+    else:
+        return w.WEECHAT_RC_OK
 
 def part_command_cb(data, current_buffer, args):
     if channels.find(current_buffer) or servers.find(current_buffer):
@@ -964,17 +966,21 @@ def command_talk(current_buffer, args):
     """
 
     server = servers.find(current_domain_name())
-    channel = server.channels.find(args)
-    if channel:
-        channel.open()
-    else:
-        user = server.users.find(args)
-        if user:
-            user.create_dm_channel()
+    if server:
+        channel = server.channels.find(args)
+        if channel:
+            channel.open()
         else:
-            server.buffer_prnt("User or channel {} not found.".format(args))
-    if w.config_get_plugin('switch_buffer_on_join') != '0':
-        w.buffer_set(channel.channel_buffer, "display", "1")
+            user = server.users.find(args)
+            if user:
+                user.create_dm_channel()
+            else:
+                server.buffer_prnt("User or channel {} not found.".format(args))
+        if w.config_get_plugin('switch_buffer_on_join') != '0':
+            w.buffer_set(channel.channel_buffer, "display", "1")
+        return True
+    else:
+        return False
 
 def command_join(current_buffer, args):
     """
