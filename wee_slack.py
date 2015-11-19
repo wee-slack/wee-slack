@@ -1875,7 +1875,7 @@ def url_processor_cb(data, command, return_code, out, err):
     else:
         if return_code != -1:
             big_data.pop(identifier, None)
-        dbg("return code: {}, data: {}".format(return_code, data))
+        dbg("return code: {}, data: {}, output: {}, error: {}".format(return_code, data, out, err))
 
     return w.WEECHAT_RC_OK
 
