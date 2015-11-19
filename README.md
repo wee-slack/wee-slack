@@ -44,7 +44,7 @@ In Development
 
 Dependencies
 ------------
-  * WeeChat 1.1+ http://weechat.org/ 
+  * WeeChat 1.3+ http://weechat.org/ 
   * websocket-client https://pypi.python.org/pypi/websocket-client/
 
 Setup
