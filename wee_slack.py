@@ -1277,15 +1277,13 @@ def process_presence_change(message_json):
 def process_channel_marked(message_json):
     channel = channels.find(message_json["channel"])
     channel.mark_read(False)
-    if not legacy_mode:
-        w.buffer_set(channel.channel_buffer, "hotlist", "-1")
+    w.buffer_set(channel.channel_buffer, "hotlist", "-1")
 
 
 def process_group_marked(message_json):
     channel = channels.find(message_json["channel"])
     channel.mark_read(False)
-    if not legacy_mode:
-        w.buffer_set(channel.channel_buffer, "hotlist", "-1")
+    w.buffer_set(channel.channel_buffer, "hotlist", "-1")
 
 
 def process_channel_created(message_json):
@@ -1374,8 +1372,7 @@ def process_im_open(message_json):
 def process_im_marked(message_json):
     channel = channels.find(message_json["channel"])
     channel.mark_read(False)
-    if not legacy_mode:
-        w.buffer_set(channel.channel_buffer, "hotlist", "-1")
+    w.buffer_set(channel.channel_buffer, "hotlist", "-1")
 
 
 def process_im_created(message_json):
@@ -2015,104 +2012,104 @@ def scrolled_cb(signal, sig_type, data):
 
 # Main
 if __name__ == "__main__":
+
     if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
                   SCRIPT_DESC, "script_unloaded", ""):
 
-        WEECHAT_HOME = w.info_get("weechat_dir", "")
-        CACHE_NAME = "slack.cache"
-        STOP_TALKING_TO_SLACK = False
-
-        if not w.config_get_plugin('slack_api_token'):
-            w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
-        if not w.config_get_plugin('distracting_channels'):
-            w.config_set_plugin('distracting_channels', "")
-        if not w.config_get_plugin('debug_mode'):
-            w.config_set_plugin('debug_mode', "")
-        if not w.config_get_plugin('colorize_nicks'):
-            w.config_set_plugin('colorize_nicks', "1")
-        if not w.config_get_plugin('colorize_private_chats'):
-            w.config_set_plugin('colorize_private_chats', "0")
-        if not w.config_get_plugin('trigger_value'):
-            w.config_set_plugin('trigger_value', "0")
-        if not w.config_get_plugin('unfurl_ignore_alt_text'):
-            w.config_set_plugin('unfurl_ignore_alt_text', "0")
-        if not w.config_get_plugin('switch_buffer_on_join'):
-            w.config_set_plugin('switch_buffer_on_join', "1")
-
-        w.config_option_unset('channels_not_on_current_server_color')
-
         version = w.info_get("version_number", "") or 0
-        if int(version) >= 0x00040400:
-            legacy_mode = False
+        if int(version) < 0x1030000:
+            w.prnt("", "\nERROR: Weechat version 1.3+ is required to use {}.\n\n".format(SCRIPT_NAME))
         else:
-            legacy_mode = True
 
-        # Global var section
-        slack_debug = None
-        config_changed_cb("", "", "")
+            WEECHAT_HOME = w.info_get("weechat_dir", "")
+            CACHE_NAME = "slack.cache"
+            STOP_TALKING_TO_SLACK = False
 
-        cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
-        proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
+            if not w.config_get_plugin('slack_api_token'):
+                w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
+            if not w.config_get_plugin('distracting_channels'):
+                w.config_set_plugin('distracting_channels', "")
+            if not w.config_get_plugin('debug_mode'):
+                w.config_set_plugin('debug_mode', "")
+            if not w.config_get_plugin('colorize_nicks'):
+                w.config_set_plugin('colorize_nicks', "1")
+            if not w.config_get_plugin('colorize_private_chats'):
+                w.config_set_plugin('colorize_private_chats', "0")
+            if not w.config_get_plugin('trigger_value'):
+                w.config_set_plugin('trigger_value', "0")
+            if not w.config_get_plugin('unfurl_ignore_alt_text'):
+                w.config_set_plugin('unfurl_ignore_alt_text', "0")
+            if not w.config_get_plugin('switch_buffer_on_join'):
+                w.config_set_plugin('switch_buffer_on_join', "1")
 
-        typing_timer = time.time()
-        domain = None
-        previous_buffer = None
-        slack_buffer = None
+            w.config_option_unset('channels_not_on_current_server_color')
 
-        buffer_list_update = False
-        previous_buffer_list_update = 0
+            # Global var section
+            slack_debug = None
+            config_changed_cb("", "", "")
 
-        never_away = False
-        hide_distractions = False
-        hotlist = w.infolist_get("hotlist", "", "")
-        main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
+            cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
+            proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
 
-        message_cache = collections.defaultdict(list)
-        cache_load()
+            typing_timer = time.time()
+            domain = None
+            previous_buffer = None
+            slack_buffer = None
 
-        servers = SearchList()
-        for token in slack_api_token.split(','):
-            server = SlackServer(token)
-            servers.append(server)
-        channels = SearchList()
-        users = SearchList()
+            buffer_list_update = False
+            previous_buffer_list_update = 0
 
-        w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
-        w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
+            never_away = False
+            hide_distractions = False
+            hotlist = w.infolist_get("hotlist", "", "")
+            main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
 
-        # attach to the weechat hooks we need
-        w.hook_timer(1000, 0, 0, "typing_update_cb", "")
-        w.hook_timer(1000, 0, 0, "buffer_list_update_cb", "")
-        w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
-        w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
-        w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
-        w.hook_signal('buffer_closing', "buffer_closing_cb", "")
-        w.hook_signal('buffer_switch', "buffer_switch_cb", "")
-        w.hook_signal('window_switch', "buffer_switch_cb", "")
-        w.hook_signal('input_text_changed', "typing_notification_cb", "")
-        w.hook_signal('quit', "quit_notification_cb", "")
-        w.hook_signal('window_scrolled', "scrolled_cb", "")
-        w.hook_command(
-             # Command name and description
-            'slack', 'Plugin to allow typing notification and sync of read markers for slack.com',
-            # Usage
-            '[command] [command options]',
-            # Description of arguments
-            'Commands:\n' +
-            '\n'.join(cmds.keys()) +
-            '\nUse /slack help [command] to find out more\n',
-            # Completions
-            '|'.join(cmds.keys()),
-            # Function name
-            'slack_command_cb', '')
-#        w.hook_command('me', 'me_command_cb', '')
-        w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
-        w.hook_command_run('/query', 'join_command_cb', '')
-        w.hook_command_run('/join', 'join_command_cb', '')
-        w.hook_command_run('/part', 'part_command_cb', '')
-        w.hook_command_run('/leave', 'part_command_cb', '')
-        w.hook_command_run("/input complete_next", "complete_next_cb", "")
-        w.hook_completion("nicks", "complete @-nicks for slack",
-                          "nick_completion_cb", "")
-        w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
-        # END attach to the weechat hooks we need
+            message_cache = collections.defaultdict(list)
+            cache_load()
+
+            servers = SearchList()
+            for token in slack_api_token.split(','):
+                server = SlackServer(token)
+                servers.append(server)
+            channels = SearchList()
+            users = SearchList()
+
+            w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
+            w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
+
+            # attach to the weechat hooks we need
+            w.hook_timer(1000, 0, 0, "typing_update_cb", "")
+            w.hook_timer(1000, 0, 0, "buffer_list_update_cb", "")
+            w.hook_timer(1000, 0, 0, "hotlist_cache_update_cb", "")
+            w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
+            w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
+            w.hook_signal('buffer_closing', "buffer_closing_cb", "")
+            w.hook_signal('buffer_switch', "buffer_switch_cb", "")
+            w.hook_signal('window_switch', "buffer_switch_cb", "")
+            w.hook_signal('input_text_changed', "typing_notification_cb", "")
+            w.hook_signal('quit', "quit_notification_cb", "")
+            w.hook_signal('window_scrolled', "scrolled_cb", "")
+            w.hook_command(
+                # Command name and description
+                'slack', 'Plugin to allow typing notification and sync of read markers for slack.com',
+                # Usage
+                '[command] [command options]',
+                # Description of arguments
+                'Commands:\n' +
+                '\n'.join(cmds.keys()) +
+                '\nUse /slack help [command] to find out more\n',
+                # Completions
+                '|'.join(cmds.keys()),
+                # Function name
+                'slack_command_cb', '')
+    #        w.hook_command('me', 'me_command_cb', '')
+            w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
+            w.hook_command_run('/query', 'join_command_cb', '')
+            w.hook_command_run('/join', 'join_command_cb', '')
+            w.hook_command_run('/part', 'part_command_cb', '')
+            w.hook_command_run('/leave', 'part_command_cb', '')
+            w.hook_command_run("/input complete_next", "complete_next_cb", "")
+            w.hook_completion("nicks", "complete @-nicks for slack",
+                            "nick_completion_cb", "")
+            w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
+            # END attach to the weechat hooks we need
