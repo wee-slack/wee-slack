@@ -958,7 +958,6 @@ def command_upload(current_buffer, args):
         post_data["file"] = args
         async_slack_api_upload_request(token, "files.upload", post_data)
 
-@slack_buffer_required
 def command_talk(current_buffer, args):
     """
     Open a chat with the specified user
