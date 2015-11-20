@@ -1217,7 +1217,10 @@ def command_topic(current_buffer, args):
             topic = args
 
         if channel:
-            async_slack_api_request(server.domain, server.token, 'channels.setTopic', {"channel": channel.identifier, "topic": topic})
+            if topic == "-delete":
+                async_slack_api_request(server.domain, server.token, 'channels.setTopic', {"channel": channel.identifier, "topic": ""})
+            else:
+                async_slack_api_request(server.domain, server.token, 'channels.setTopic', {"channel": channel.identifier, "topic": topic})
             return True
         else:
             return False
