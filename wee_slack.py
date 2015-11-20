@@ -1195,6 +1195,37 @@ def command_openweb(current_buffer, args):
             w.buffer_set(channel_buffer, "title", data["topic"])
     return w.WEECHAT_RC_OK
 
+def topic_command_cb(data, current_buffer, args):
+    if command_topic(current_buffer, args.split(None, 1)[1]):
+        return w.WEECHAT_RC_OK_EAT
+    else:
+        return w.WEECHAT_RC_OK
+
+def command_topic(current_buffer, args):
+    """
+    Change the topic of a channel
+    /slack topic [<channel>] [<topic>|-delete]
+    """
+    server = servers.find(current_domain_name())
+    if server:
+        arrrrgs = args.split(None, 1)
+        if arrrrgs[0].startswith('#'):
+            channel = server.channels.find(arrrrgs[0])
+            topic = arrrrgs[1]
+        else:
+            channel = server.channels.find(current_buffer)
+            topic = args
+
+        if channel:
+            async_slack_api_request(server.domain, server.token, 'channels.setTopic', {"channel": channel.identifier, "topic": topic})
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+
 def slack_websocket_cb(server, fd):
     try:
         data = servers.find(server).ws.recv()
@@ -2108,6 +2139,7 @@ if __name__ == "__main__":
             w.hook_command_run('/join', 'join_command_cb', '')
             w.hook_command_run('/part', 'part_command_cb', '')
             w.hook_command_run('/leave', 'part_command_cb', '')
+            w.hook_command_run('/topic', 'topic_command_cb', '')
             w.hook_command_run("/input complete_next", "complete_next_cb", "")
             w.hook_completion("nicks", "complete @-nicks for slack",
                             "nick_completion_cb", "")
