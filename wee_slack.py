@@ -476,17 +476,19 @@ class Channel(object):
         self.active = False
 
     def set_typing(self, user):
-        if w.buffer_get_integer(self.channel_buffer, "hidden") == 0:
-            self.typing[user] = time.time()
-            buffer_list_update_next()
+        if self.channel_buffer:
+            if w.buffer_get_integer(self.channel_buffer, "hidden") == 0:
+                self.typing[user] = time.time()
+                buffer_list_update_next()
 
     def unset_typing(self, user):
-        if w.buffer_get_integer(self.channel_buffer, "hidden") == 0:
-            try:
-                del self.typing[user]
-                buffer_list_update_next()
-            except:
-                pass
+        if self.channel_buffer:
+            if w.buffer_get_integer(self.channel_buffer, "hidden") == 0:
+                try:
+                    del self.typing[user]
+                    buffer_list_update_next()
+                except:
+                    pass
 
     def send_message(self, message):
         message = self.linkify_text(message)
