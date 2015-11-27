@@ -1349,7 +1349,8 @@ def process_channel_join(message_json):
 def process_channel_topic(message_json):
     server = servers.find(message_json["_server"])
     channel = server.channels.find(message_json["channel"])
-    channel.buffer_prnt(w.prefix("network").rstrip(), message_json["text"], message_json["ts"])
+    text = unfurl_refs(message_json["text"], ignore_alt_text=False)
+    channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"])
     channel.set_topic(message_json["topic"])
 
 
