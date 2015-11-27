@@ -1531,7 +1531,8 @@ def render_message(message_json, force=False):
 
         text = unfurl_refs(text, ignore_alt_text=unfurl_ignore_alt_text)
 
-        text += unwrap_attachments(message_json)
+        text_before = (len(text) > 0)
+        text += unfurl_refs(unwrap_attachments(message_json, text_before), ignore_alt_text=unfurl_ignore_alt_text)
 
         text = text.lstrip()
         text = text.replace("\t", "    ")
@@ -1602,7 +1603,8 @@ def process_message_changed(message_json):
             else:
                 message_json["fallback"] = m["fallback"]
 
-    m["text"] += unwrap_attachments(message_json)
+    text_before = (len(m['text']) > 0)
+    m["text"] += unwrap_attachments(message_json, text_before)
     channel = channels.find(message_json["channel"])
     if "edited" in m:
         m["text"] += " (edited)"
@@ -1614,14 +1616,18 @@ def process_message_deleted(message_json):
     channel.change_message(message_json["deleted_ts"], "(deleted)")
 
 
-def unwrap_attachments(message_json):
+def unwrap_attachments(message_json, text_before):
+    attachment_text = ''
     if "attachments" in message_json:
-        attachment_text = u' --- '
+        if text_before:
+            attachment_text = u' --- '
         for attachment in message_json["attachments"]:
+            t = []
+            if "from_url" in attachment and text_before is False:
+                t.append(attachment['from_url'])
             if "fallback" in attachment:
-                attachment_text += attachment["fallback"]
-    else:
-        attachment_text = ''
+                t.append(attachment["fallback"])
+            attachment_text += ": ".join(t)
     return attachment_text
 
 
