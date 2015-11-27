@@ -830,6 +830,7 @@ class Bot(object):
         self.name = name
         self.identifier = identifier
         self.deleted = deleted
+        self.update_color()
 
     def __eq__(self, compare_str):
         if compare_str == self.identifier or compare_str == self.name:
@@ -842,6 +843,21 @@ class Bot(object):
 
     def __repr__(self):
         return "{}".format(self.identifier)
+
+    def update_color(self):
+        if colorize_nicks:
+            self.color_name = w.info_get('irc_nick_color_name', self.name.encode('utf-8'))
+            self.color = w.color(self.color_name)
+        else:
+            self.color_name = ""
+            self.color = ""
+
+    def formatted_name(self, prepend="", enable_color=True):
+        if colorize_nicks and enable_color:
+            print_color = self.color
+        else:
+            print_color = ""
+        return print_color + prepend + self.name
 
 class Message(object):
 
