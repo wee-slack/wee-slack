@@ -1688,7 +1688,7 @@ def unfurl_refs(text, ignore_alt_text=False):
 
 
 def get_user(message_json, server):
-    if 'bot_id' in message_json:
+    if 'bot_id' in message_json and message_json['bot_id'] is not None:
         name = u"{} :]".format(server.bots.find(message_json["bot_id"]).formatted_name())
     elif 'user' in message_json:
         name = server.users.find(message_json['user']).name
