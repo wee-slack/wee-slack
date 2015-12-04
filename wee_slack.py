@@ -408,11 +408,15 @@ class Channel(object):
 #            w.buffer_set(self.channel_buffer, "highlight_words", self.server.nick)
         else:
             self.channel_buffer = None
+        channels.update_hashtable()
+        self.server.channels.update_hashtable()
 
     def detach_buffer(self):
         if self.channel_buffer is not None:
             w.buffer_close(self.channel_buffer)
             self.channel_buffer = None
+        channels.update_hashtable()
+        self.server.channels.update_hashtable()
 
     def update_nicklist(self, user=None):
         if self.channel_buffer:
