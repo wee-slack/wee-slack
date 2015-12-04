@@ -23,7 +23,7 @@ except:
 
 SCRIPT_NAME = "slack_extension"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "0.99.2"
+SCRIPT_VERSION = "0.99.3"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
@@ -408,11 +408,15 @@ class Channel(object):
 #            w.buffer_set(self.channel_buffer, "highlight_words", self.server.nick)
         else:
             self.channel_buffer = None
+        channels.update_hashtable()
+        self.server.channels.update_hashtable()
 
     def detach_buffer(self):
         if self.channel_buffer is not None:
             w.buffer_close(self.channel_buffer)
             self.channel_buffer = None
+        channels.update_hashtable()
+        self.server.channels.update_hashtable()
 
     def update_nicklist(self, user=None):
         if self.channel_buffer:
