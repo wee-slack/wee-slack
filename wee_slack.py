@@ -1585,6 +1585,7 @@ def process_message(message_json, cache=True):
                 channel.cache_message(message_json)
 
     except Exception:
+        channel = channels.find(message_json["channel"])
         if channel and ("text" in message_json) and message_json['text'] is not None:
             channel.buffer_prnt('unknown', message_json['text'])
         dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))

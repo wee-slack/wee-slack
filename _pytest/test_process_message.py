@@ -12,6 +12,7 @@ def test_process_message(slack_debug, monkeypatch, myservers, mychannels, myuser
     wee_slack.users = myusers
     wee_slack.message_cache = {}
     wee_slack.servers[0].users = myusers
+    wee_slack.unfurl_ignore_alt_text = False
 
     def mock_buffer_prnt(*args):
         called['buffer_prnt'] += 1
