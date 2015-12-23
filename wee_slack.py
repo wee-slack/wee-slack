@@ -1525,11 +1525,8 @@ def render_message(message_json, force=False):
 
         if "fallback" in message_json:
             text = message_json["fallback"]
-        elif "text" in message_json:
-            if message_json['text'] is not None:
-                text = message_json["text"]
-            else:
-                text = u""
+        elif message_json['text'] is not None:
+            text = message_json["text"]
         else:
             text = u""
 
