@@ -328,7 +328,7 @@ def buffer_input_cb(b, buffer, data):
     elif data.count('/') == 3:
         old, new = data.split('/')[1:3]
         channel = channels.find(buffer)
-        channel.change_previous_message(old, new)
+        channel.change_previous_message(old.decode("utf-8"), new.decode("utf-8"))
     channel.mark_read(True)
     return w.WEECHAT_RC_ERROR
 
@@ -693,7 +693,7 @@ class Channel(object):
             async_slack_api_request(self.server.domain, self.server.token, 'chat.delete', {"channel": self.identifier, "ts": message['ts']})
         else:
             new_message = message["text"].replace(old, new)
-            async_slack_api_request(self.server.domain, self.server.token, 'chat.update', {"channel": self.identifier, "ts": message['ts'], "text": new_message})
+            async_slack_api_request(self.server.domain, self.server.token, 'chat.update', {"channel": self.identifier, "ts": message['ts'], "text": new_message.encode("utf-8")})
 
     def my_last_message(self):
         for message in reversed(self.messages):
