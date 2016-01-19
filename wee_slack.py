@@ -1290,7 +1290,7 @@ def process_reply(message_json):
     server = servers.find(message_json["_server"])
     identifier = message_json["reply_to"]
     item = server.message_buffer.pop(identifier)
-    if type(item['text']) is not unicode:
+    if 'text' in item and type(item['text']) is not unicode:
         item['text'] = item['text'].decode('UTF-8', 'replace')
     if "type" in item:
         if item["type"] == "message" and "channel" in item.keys():
