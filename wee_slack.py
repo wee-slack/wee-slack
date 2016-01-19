@@ -1654,7 +1654,7 @@ def unwrap_attachments(message_json, text_before):
             if 'pretext' in attachment:
                 t.append(attachment['pretext'])
             if "title" in attachment:
-                if attachment["title_link"]:
+                if 'title_link' in attachment:
                     t.append('%s (%s)' % (attachment["title"], attachment["title_link"],))
                 else:
                     t.append(attachment["title"])
