@@ -58,6 +58,14 @@ SLACK_API_TRANSLATOR = {
 NICK_GROUP_HERE = "0|Here"
 NICK_GROUP_AWAY = "1|Away"
 
+EMOJIS = {
+    ':simple_smile:': u'\U0001F603',
+    ':wink:': u'\U0001F609',
+    ':stuck_out_tongue:': u'\U0001F61B'
+}
+# Pattern looks for ':my_emoticon:' style tags
+EMOJIS_PATTERN = re.compile(r":\w+:")
+
 def dbg(message, fout=False, main_buffer=False):
     """
     send debug output to the slack-debug buffer and optionally write to a file.
@@ -633,6 +641,9 @@ class Channel(object):
                         r'\1\2{}\3'.format(user.formatted_name() + w.color(chat_color)),
                         message)
             message = HTMLParser.HTMLParser().unescape(message)
+            if enable_emojis:
+                for match in set([s for s in re.findall(EMOJIS_PATTERN, message) if s in EMOJIS]):
+                    message = message.replace(match, u"{}".format(EMOJIS[match]))
             data = u"{}\t{}".format(name, message).encode('utf-8')
             w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
 
@@ -2030,7 +2041,7 @@ def create_slack_debug_buffer():
 
 def config_changed_cb(data, option, value):
     global slack_api_token, distracting_channels, colorize_nicks, colorize_private_chats, slack_debug, debug_mode, \
-        unfurl_ignore_alt_text
+        unfurl_ignore_alt_text, enable_emojis
 
     slack_api_token = w.config_get_plugin("slack_api_token")
 
@@ -2039,6 +2050,7 @@ def config_changed_cb(data, option, value):
 
     distracting_channels = [x.strip() for x in w.config_get_plugin("distracting_channels").split(',')]
     colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
+    enable_emojis = w.config_get_plugin('enable_emojis') != "0"
     debug_mode = w.config_get_plugin("debug_mode").lower()
     if debug_mode != '' and debug_mode != 'false':
         create_slack_debug_buffer()
@@ -2111,6 +2123,8 @@ if __name__ == "__main__":
                 w.config_set_plugin('unfurl_ignore_alt_text', "0")
             if not w.config_get_plugin('switch_buffer_on_join'):
                 w.config_set_plugin('switch_buffer_on_join', "1")
+            if not w.config_get_plugin('enable_emojis'):
+                w.config_set_plugin('enable_emojis', "1")
 
             w.config_option_unset('channels_not_on_current_server_color')
 
