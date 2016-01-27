@@ -44,7 +44,7 @@ In Development
 
 Dependencies
 ------------
-  * WeeChat 1.3+ http://weechat.org/ 
+  * WeeChat 1.3+ http://weechat.org/
   * websocket-client https://pypi.python.org/pypi/websocket-client/
 
 Setup
@@ -101,7 +101,7 @@ If you don't want to store your API token in plaintext you can use the secure fe
 ```
 
 ##### Optional: If you would like to connect to multiple groups, use the above command with multiple tokens separated by commas. (NO SPACES)
-    
+
 ```
 /set plugins.var.python.slack_extension.slack_api_token [token1],[token2],[token3]
 ```
@@ -165,6 +165,11 @@ Turn off colorized nicks:
 /set plugins.var.python.slack_extension.colorize_nicks 0
 ```
 
+Disable unicode emojis support:
+```
+/set plugins.var.python.slack_extension.enable_emojis 0
+```
+
 Set channel prefix to something other than my-slack-subdomain.slack.com (e.g. when using buffers.pl):
 ```
 /set plugins.var.python.slack_extension.server_alias.my-slack-subdomain "mysub"
@@ -202,8 +207,3 @@ Support
 --------------
 
 wee-slack is provided without any warranty whatsoever, but you are welcome to ask questions in #wee-slack on freenode.
-
-
-
-
-    
