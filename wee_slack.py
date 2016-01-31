@@ -14,6 +14,10 @@ import sys
 import traceback
 import collections
 from websocket import create_connection,WebSocketConnectionClosedException
+import ssl
+
+ssl_defaults = ssl.get_default_verify_paths()
+sslopt_ca_certs = {'ca_certs': ssl_defaults.cafile}
 
 # hack to make tests possible.. better way?
 try:
@@ -261,7 +265,7 @@ class SlackServer(object):
     def create_slack_websocket(self, data):
         web_socket_url = data['url']
         try:
-            self.ws = create_connection(web_socket_url)
+            self.ws = create_connection(web_socket_url, sslopt=sslopt_ca_certs)
             self.ws_hook = w.hook_fd(self.ws.sock._sock.fileno(), 1, 0, 0, "slack_websocket_cb", self.identifier)
             self.ws.sock.setblocking(0)
             return True
