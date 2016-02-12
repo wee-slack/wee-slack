@@ -504,11 +504,11 @@ class Channel(object):
         message = message.split(' ')
         for item in enumerate(message):
             if item[1].startswith('@') and len(item[1]) > 1:
-                named = re.match('.*[@#](\w+)(\W*)', item[1]).groups()
+                named = re.match('.*[@#]([\w.]+)(\W*)', item[1]).groups()
                 if named[0] in ["group", "channel", "here"]:
                     message[item[0]] = "<!{}>".format(named[0])
                 if self.server.users.find(named[0]):
-                    message[item[0]] = "<@{}|{}>{}".format(self.server.users.find(named[0]).identifier, named[0], named[1])
+                    message[item[0]] = "<@{}>{}".format(self.server.users.find(named[0]).identifier, named[1])
             if item[1].startswith('#') and self.server.channels.find(item[1]):
                 named = re.match('.*[@#](\w+)(\W*)', item[1]).groups()
                 if self.server.channels.find(named[0]):
