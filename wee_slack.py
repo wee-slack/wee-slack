@@ -1590,9 +1590,9 @@ def process_message(message_json, cache=True):
 
     except Exception:
         channel = channels.find(message_json["channel"])
+        dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
         if channel and ("text" in message_json) and message_json['text'] is not None:
             channel.buffer_prnt('unknown', message_json['text'])
-        dbg("cannot process message {}\n{}".format(message_json, traceback.format_exc()))
 
 
 def process_message_changed(message_json):
@@ -1675,24 +1675,18 @@ def unfurl_ref(ref, ignore_alt_text=False):
 
 def unfurl_refs(text, ignore_alt_text=False):
     """
-    Worst code ever written. this needs work
+    input : <@U096Q7CQM|someuser> has joined the channel
+    ouput : someuser has joined the channel
     """
-    if text and text.find('<') > -1:
-        end = 0
-        newtext = u""
-        while text.find('<') > -1:
-            # Prepend prefix
-            newtext += text[:text.find('<')]
-            text = text[text.find('<'):]
-            end = text.find('>')
-            if end == -1:
-                newtext += text
-                break
-            # Format thingabob
-            newtext += unfurl_ref(text[1:end], ignore_alt_text)
-            text = text[end+1:]
-        newtext += text
-        return newtext
+    # Find all strings enclosed by <>
+    #  - <https://example.com|example with spaces>
+    #  - <#C2147483705|#otherchannel>
+    #  - <@U2147483697|@othernick>
+    # Test patterns lives in ./_pytest/test_unfurl.py
+    matches = re.findall(r"(<[@#]?(?:[^<]*)>)", text)
+    for m in matches:
+        # Replace them with human readable strings
+        text = text.replace(m, unfurl_ref(m[1:-1], ignore_alt_text))
     return text
 
 
