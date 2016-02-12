@@ -291,7 +291,10 @@ class SlackServer(object):
             if "last_read" not in item:
                 item["last_read"] = 0
             if not item["is_archived"]:
-                self.add_channel(GroupChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+                if item["name"].startswith("mpdm-"):
+                    self.add_channel(MpdmChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+                else:
+                    self.add_channel(GroupChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
         for item in data["ims"]:
             if "last_read" not in item:
                 item["last_read"] = 0
@@ -727,6 +730,12 @@ class GroupChannel(Channel):
         super(GroupChannel, self).__init__(server, name, identifier, active, last_read, prepend_name, members, topic)
         self.type = "group"
 
+class MpdmChannel(Channel):
+
+    def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[], topic=""):
+        name = ",".join("-".join(name.split("-")[1:-1]).split("--"))
+        super(MpdmChannel, self).__init__(server, name, identifier, active, last_read, prepend_name, members, topic)
+        self.type = "group"
 
 class DmChannel(Channel):
 
