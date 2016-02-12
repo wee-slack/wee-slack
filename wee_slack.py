@@ -662,7 +662,7 @@ class Channel(object):
     def has_message(self, ts):
         return self.messages.count(ts) > 0
 
-    def change_message(self, ts, text=None):
+    def change_message(self, ts, text=None, suffix=''):
         if self.has_message(ts):
             message_index = self.messages.index(ts)
 
@@ -674,7 +674,7 @@ class Channel(object):
             #we do this because time resolution in weechat is less than slack
             int_time = int(float(ts))
             if self.messages.count(str(int_time)) == 1:
-                modify_buffer_line(self.channel_buffer, text, int_time)
+                modify_buffer_line(self.channel_buffer, text + suffix, int_time)
             #otherwise redraw the whole buffer, which is expensive
             else:
                 self.buffer_redraw()
@@ -1591,7 +1591,10 @@ def process_message(message_json, cache=True):
                 channel.buffer_prnt(w.prefix("action").rstrip(), text, time)
 
             else:
-                channel.buffer_prnt(name, text, time)
+                suffix = ''
+                if 'edited' in message_json:
+                    suffix = ' (edited)'
+                channel.buffer_prnt(name, text + suffix, time)
 
 
             if cache:
@@ -1625,8 +1628,9 @@ def process_message_changed(message_json):
     m["text"] += unwrap_attachments(message_json, text_before)
     channel = channels.find(message_json["channel"])
     if "edited" in m:
-        m["text"] += " (edited)"
-    channel.change_message(m["ts"], m["text"])
+        channel.change_message(m["ts"], m["text"], ' (edited)')
+    else:
+        channel.change_message(m["ts"], m["text"])
 
 
 def process_message_deleted(message_json):
