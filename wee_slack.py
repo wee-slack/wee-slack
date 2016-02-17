@@ -256,7 +256,7 @@ class SlackServer(object):
     def create_local_buffer(self):
         if not w.buffer_search("", self.server_buffer_name):
             self.buffer = w.buffer_new(self.server_buffer_name, "buffer_input_cb", "", "", "")
-            if w.config_string_to_boolean(w.config_get_plugin('server_buffer_merge')):
+            if w.config_string(w.config_get('irc.look.server_buffer')) == 'merge_with_core':
                 w.buffer_merge(self.buffer, w.buffer_search_main())
             w.buffer_set(self.buffer, "nicklist", "1")
 
@@ -2114,8 +2114,6 @@ if __name__ == "__main__":
                 w.config_set_plugin('colorize_nicks', "1")
             if not w.config_get_plugin('colorize_private_chats'):
                 w.config_set_plugin('colorize_private_chats', "0")
-            if not w.config_get_plugin('server_buffer_merge'):
-                w.config_set_plugin('server_buffer_merge', "0")
             if not w.config_get_plugin('trigger_value'):
                 w.config_set_plugin('trigger_value', "0")
             if not w.config_get_plugin('unfurl_ignore_alt_text'):
