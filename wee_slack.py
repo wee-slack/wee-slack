@@ -1575,8 +1575,12 @@ def create_reaction_string(reactions):
         for r in reactions:
             if len(r["users"]) > 0:
                 count += 1
-                users = ",".join(resolve_ref("@{}".format(user)) for user in r["users"])
-                reaction_string += ":{}:({}) ".format(r["name"], users)
+                if show_reaction_nicks:
+                    nicks = [resolve_ref("@{}".format(user)) for user in r["users"]]
+                    users = "({})".format(",".join(nicks))
+                else:
+                    users = len(r["users"])
+                reaction_string += ":{}:{} ".format(r["name"], users)
         reaction_string = reaction_string[:-1] + ']'
     if count == 0:
         reaction_string = ''
@@ -2150,7 +2154,7 @@ def create_slack_debug_buffer():
 
 def config_changed_cb(data, option, value):
     global slack_api_token, distracting_channels, colorize_nicks, colorize_private_chats, slack_debug, debug_mode, \
-        unfurl_ignore_alt_text, colorize_messages
+        unfurl_ignore_alt_text, colorize_messages, show_reaction_nicks
 
     slack_api_token = w.config_get_plugin("slack_api_token")
 
@@ -2164,6 +2168,7 @@ def config_changed_cb(data, option, value):
     if debug_mode != '' and debug_mode != 'false':
         create_slack_debug_buffer()
     colorize_private_chats = w.config_string_to_boolean(w.config_get_plugin("colorize_private_chats"))
+    show_reaction_nicks = w.config_string_to_boolean(w.config_get_plugin("show_reaction_nicks"))
 
     unfurl_ignore_alt_text = False
     if w.config_get_plugin('unfurl_ignore_alt_text') != "0":
@@ -2234,6 +2239,8 @@ if __name__ == "__main__":
                 w.config_set_plugin('unfurl_ignore_alt_text', "0")
             if not w.config_get_plugin('switch_buffer_on_join'):
                 w.config_set_plugin('switch_buffer_on_join', "1")
+            if not w.config_get_plugin('show_reaction_nicks'):
+                w.config_set_plugin('show_reaction_nicks', "0")
 
             if w.config_get_plugin('channels_not_on_current_server_color'):
                 w.config_option_unset('channels_not_on_current_server_color')
