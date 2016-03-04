@@ -938,19 +938,17 @@ class Message(object):
             found = False
             for r in self.message_json["reactions"]:
                 if r["name"] == reaction:
-                    r["count"] += 1
                     r["users"].append(user)
                     found = True
             if not found:
-                self.message_json["reactions"].append({u"count": 1, u"name": reaction, u"users": [user]})
+                self.message_json["reactions"].append({u"name": reaction, u"users": [user]})
         else:
-            self.message_json["reactions"] = [{u"count": 1, u"name": reaction, u"users": [user]}]
+            self.message_json["reactions"] = [{u"name": reaction, u"users": [user]}]
 
     def remove_reaction(self, reaction, user):
         if "reactions" in self.message_json:
             for r in self.message_json["reactions"]:
                 if r["name"] == reaction:
-                    r["count"] -= 1
                     r["users"].remove(user)
         else:
             pass
@@ -1575,7 +1573,7 @@ def create_reaction_string(reactions):
     else:
         reaction_string = ' ['
         for r in reactions:
-            if r["count"] > 0:
+            if len(r["users"]) > 0:
                 count += 1
                 users = ",".join(resolve_ref("@{}".format(user)) for user in r["users"])
                 reaction_string += ":{}:({}) ".format(r["name"], users)
