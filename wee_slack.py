@@ -32,7 +32,7 @@ SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 BACKLOG_SIZE = 200
 SCROLLBACK_SIZE = 500
 
-CACHE_VERSION = "3"
+CACHE_VERSION = "4"
 
 SLACK_API_TRANSLATOR = {
     "channel": {
@@ -711,17 +711,17 @@ class Channel(object):
                 self.buffer_redraw()
             return True
 
-    def add_reaction(self, ts, reaction):
+    def add_reaction(self, ts, reaction, user):
         if self.has_message(ts):
             message_index = self.messages.index(ts)
-            self.messages[message_index].add_reaction(reaction)
+            self.messages[message_index].add_reaction(reaction, user)
             self.change_message(ts)
             return True
 
-    def remove_reaction(self, ts, reaction):
+    def remove_reaction(self, ts, reaction, user):
         if self.has_message(ts):
             message_index = self.messages.index(ts)
-            self.messages[message_index].remove_reaction(reaction)
+            self.messages[message_index].remove_reaction(reaction, user)
             self.change_message(ts)
             return True
 
@@ -933,23 +933,25 @@ class Message(object):
             new_text = unicode(new_text, 'utf-8')
         self.message_json["text"] = new_text
 
-    def add_reaction(self, reaction):
+    def add_reaction(self, reaction, user):
         if "reactions" in self.message_json:
             found = False
             for r in self.message_json["reactions"]:
                 if r["name"] == reaction:
                     r["count"] += 1
+                    r["users"].append(user)
                     found = True
             if not found:
-                self.message_json["reactions"].append({u"count": 1, u"name": reaction})
+                self.message_json["reactions"].append({u"count": 1, u"name": reaction, u"users": [user]})
         else:
-            self.message_json["reactions"] = [{u"count": 1, u"name": reaction}]
+            self.message_json["reactions"] = [{u"count": 1, u"name": reaction, u"users": [user]}]
 
-    def remove_reaction(self, reaction):
+    def remove_reaction(self, reaction, user):
         if "reactions" in self.message_json:
             for r in self.message_json["reactions"]:
                 if r["name"] == reaction:
                     r["count"] -= 1
+                    r["users"].remove(user)
         else:
             pass
 
@@ -1555,14 +1557,14 @@ def process_error(message_json):
 def process_reaction_added(message_json):
     if message_json["item"].get("type") == "message":
         channel = channels.find(message_json["item"]["channel"])
-        channel.add_reaction(message_json["item"]["ts"], message_json["reaction"])
+        channel.add_reaction(message_json["item"]["ts"], message_json["reaction"], message_json["user"])
     else:
         dbg("Reaction to item type not supported: " + str(message_json))
 
 def process_reaction_removed(message_json):
     if message_json["item"].get("type") == "message":
         channel = channels.find(message_json["item"]["channel"])
-        channel.remove_reaction(message_json["item"]["ts"], message_json["reaction"])
+        channel.remove_reaction(message_json["item"]["ts"], message_json["reaction"], message_json["user"])
     else:
         dbg("Reaction to item type not supported: " + str(message_json))
 
@@ -1575,7 +1577,8 @@ def create_reaction_string(reactions):
         for r in reactions:
             if r["count"] > 0:
                 count += 1
-                reaction_string += ":{}:{} ".format(r["name"], r["count"])
+                users = ",".join(resolve_ref("@{}".format(user)) for user in r["users"])
+                reaction_string += ":{}:({}) ".format(r["name"], users)
         reaction_string = reaction_string[:-1] + ']'
     if count == 0:
         reaction_string = ''
