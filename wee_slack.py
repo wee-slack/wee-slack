@@ -139,6 +139,7 @@ class SlackServer(object):
         self.communication_counter = 0
         self.message_buffer = {}
         self.ping_hook = None
+        self.alias = None
 
         self.identifier = None
         self.connect_to_slack()
@@ -167,7 +168,7 @@ class SlackServer(object):
         channels.append(channel, channel.get_aliases())
 
     def get_aliases(self):
-        aliases = [self.identifier, self.token, self.buffer]
+        aliases = filter(None, [self.identifier, self.token, self.buffer, self.alias])
         return aliases
 
     def find(self, name, attribute):
@@ -211,6 +212,7 @@ class SlackServer(object):
             alias = w.config_get_plugin("server_alias.{}".format(login_data["team"]["domain"]))
             if alias:
                 self.server_buffer_name = alias
+                self.alias = alias
             else:
                 self.server_buffer_name = self.domain
 
