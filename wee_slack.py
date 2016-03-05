@@ -422,17 +422,19 @@ class Channel(object):
         self.server.channels.update_hashtable()
 
     def update_nicklist(self, user=None):
-        if self.channel_buffer:
-            w.buffer_set(self.channel_buffer, "nicklist", "1")
+        if not self.channel_buffer:
+            return
 
-            #create nicklists for the current channel if they don't exist
-            #if they do, use the existing pointer
-            here = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_HERE)
-            if not here:
-                here = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
-            afk = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_AWAY)
-            if not afk:
-                afk = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
+        w.buffer_set(self.channel_buffer, "nicklist", "1")
+
+        #create nicklists for the current channel if they don't exist
+        #if they do, use the existing pointer
+        here = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_HERE)
+        if not here:
+            here = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
+        afk = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_AWAY)
+        if not afk:
+            afk = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
 
         if user:
             user = self.members_table[user]
