@@ -160,6 +160,11 @@ Delete previous message:
 s///
 ```
 
+Add a reaction to the nth last message. The number can be omitted and defaults to the last message. The `+` can be replaced with a `-` to remove a reaction instead.
+```
+3+:smile:
+```
+
 Turn off colorized nicks:
 ```
 /set plugins.var.python.slack_extension.colorize_nicks 0
