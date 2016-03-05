@@ -324,20 +324,18 @@ class SlackServer(object):
             #w.prnt("", "%s\t%s" % (user, message))
 
 def buffer_input_cb(b, buffer, data):
+    channel = channels.find(buffer)
     reaction = re.match("(\d*)(\+|-):(.*):", data)
     if not reaction and not data.startswith('s/'):
-        channel = channels.find(buffer)
         channel.send_message(data)
         #channel.buffer_prnt(channel.server.nick, data)
     elif reaction:
-        channel = channels.find(buffer)
         if reaction.group(2) == "+":
             channel.send_add_reaction(int(reaction.group(1) or 1), reaction.group(3))
         elif reaction.group(2) == "-":
             channel.send_remove_reaction(int(reaction.group(1) or 1), reaction.group(3))
     elif data.count('/') == 3:
         old, new = data.split('/')[1:3]
-        channel = channels.find(buffer)
         channel.change_previous_message(old.decode("utf-8"), new.decode("utf-8"))
     channel.mark_read(True)
     return w.WEECHAT_RC_ERROR
