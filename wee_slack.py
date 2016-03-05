@@ -1642,14 +1642,36 @@ def unwrap_attachments(message_json, text_before):
     attachment_text = ''
     if "attachments" in message_json:
         if text_before:
-            attachment_text = u' --- '
+            attachment_text = u'\n'
         for attachment in message_json["attachments"]:
+            # Attachments should be rendered roughly like:
+            #
+            # $pretext
+            # $title ($title_link) OR $from_url
+            # $text
+            # $fields
             t = []
-            if "from_url" in attachment and text_before is False:
-                t.append(attachment['from_url'])
-            if "fallback" in attachment:
+            if 'pretext' in attachment:
+                t.append(attachment['pretext'])
+            if "title" in attachment:
+                if 'title_link' in attachment:
+                    t.append('%s (%s)' % (attachment["title"], attachment["title_link"],))
+                else:
+                    t.append(attachment["title"])
+            elif "from_url" in attachment:
+                t.append(attachment["from_url"])
+            if "text" in attachment:
+                tx = re.sub(r' *\n[\n ]+', '\n', attachment["text"])
+                t.append(tx)
+            if 'fields' in attachment:
+                for f in attachment['fields']:
+                    if f['title'] != '':
+                        t.append('%s %s' % (f['title'], f['value'],))
+                    else:
+                        t.append(f['value'])
+            if t == [] and "fallback" in attachment:
                 t.append(attachment["fallback"])
-            attachment_text += ": ".join(t)
+            attachment_text += "\n".join([x.strip() for x in t if x])
     return attachment_text
 
 
