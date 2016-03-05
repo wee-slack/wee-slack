@@ -1020,7 +1020,7 @@ def command_talk(current_buffer, args):
     server = servers.find(current_domain_name())
     if server:
         channel = server.channels.find(args)
-        if channel:
+        if not channel:
             channel.open()
         else:
             user = server.users.find(args)
