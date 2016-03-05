@@ -1444,7 +1444,8 @@ def process_im_open(message_json):
 def process_im_marked(message_json):
     channel = channels.find(message_json["channel"])
     channel.mark_read(False)
-    w.buffer_set(channel.channel_buffer, "hotlist", "-1")
+    if channel.channel_buffer is not None:
+        w.buffer_set(channel.channel_buffer, "hotlist", "-1")
 
 
 def process_im_created(message_json):
