@@ -324,14 +324,17 @@ class SlackServer(object):
             #w.prnt("", "%s\t%s" % (user, message))
 
 def buffer_input_cb(b, buffer, data):
-    reaction = re.match("(\d*)\+:(.*):", data)
+    reaction = re.match("(\d*)(\+|-):(.*):", data)
     if not reaction and not data.startswith('s/'):
         channel = channels.find(buffer)
         channel.send_message(data)
         #channel.buffer_prnt(channel.server.nick, data)
     elif reaction:
         channel = channels.find(buffer)
-        channel.send_reaction(int(reaction.group(1) or 1), reaction.group(2))
+        if reaction.group(2) == "+":
+            channel.send_add_reaction(int(reaction.group(1) or 1), reaction.group(3))
+        elif reaction.group(2) == "-":
+            channel.send_remove_reaction(int(reaction.group(1) or 1), reaction.group(3))
     elif data.count('/') == 3:
         old, new = data.split('/')[1:3]
         channel = channels.find(buffer)
@@ -698,11 +701,17 @@ class Channel(object):
             self.change_message(ts)
             return True
 
-    def send_reaction(self, msg_number, reaction):
+    def send_add_reaction(self, msg_number, reaction):
+        self.send_change_reaction("reactions.add", msg_number, reaction)
+
+    def send_remove_reaction(self, msg_number, reaction):
+        self.send_change_reaction("reactions.remove", msg_number, reaction)
+
+    def send_change_reaction(self, method, msg_number, reaction):
         if 0 < msg_number < len(self.messages):
             timestamp = self.messages[-msg_number].message_json["ts"]
             data = {"channel": self.identifier, "timestamp": timestamp, "name": reaction}
-            async_slack_api_request(self.server.domain, self.server.token, 'reactions.add', data)
+            async_slack_api_request(self.server.domain, self.server.token, method, data)
 
     def change_previous_message(self, old, new):
         message = self.my_last_message()
