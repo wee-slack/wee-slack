@@ -198,6 +198,11 @@ Set channel prefix to something other than my-slack-subdomain.slack.com (e.g. wh
 /set plugins.var.python.slack_extension.server_alias.my-slack-subdomain "mysub"
 ```
 
+Show who added each reaction. Makes reactions appear like `[:smile:(@nick1,@nick2)]` instead of `[:smile:2]`.
+```
+/set plugins.var.python.slack_extension.show_reaction_nicks on
+```
+
 Show typing notification in main bar (slack_typing_notice):
 ```
 /set weechat.bar.status.items [buffer_count],[buffer_plugin],buffer_number+:+buffer_name+{buffer_nicklist_count}+buffer_filter,[hotlist],completion,scroll,slack_typing_notice
