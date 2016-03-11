@@ -256,6 +256,8 @@ class SlackServer(object):
     def create_local_buffer(self):
         if not w.buffer_search("", self.server_buffer_name):
             self.buffer = w.buffer_new(self.server_buffer_name, "buffer_input_cb", "", "", "")
+            if w.config_string(w.config_get('irc.look.server_buffer')) == 'merge_with_core':
+                w.buffer_merge(self.buffer, w.buffer_search_main())
             w.buffer_set(self.buffer, "nicklist", "1")
 
     def create_slack_websocket(self, data):
