@@ -938,12 +938,12 @@ class Message(object):
             found = False
             for r in self.message_json["reactions"]:
                 if r["name"] == reaction:
-                    r["users"].append(user)
+                    r["users"].add(user)
                     found = True
             if not found:
-                self.message_json["reactions"].append({u"name": reaction, u"users": [user]})
+                self.message_json["reactions"].append({u"name": reaction, u"users": {user}})
         else:
-            self.message_json["reactions"] = [{u"name": reaction, u"users": [user]}]
+            self.message_json["reactions"] = [{u"name": reaction, u"users": {user}}]
 
     def remove_reaction(self, reaction, user):
         if "reactions" in self.message_json:
