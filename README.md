@@ -165,21 +165,6 @@ Add a reaction to the nth last message. The number can be omitted and defaults t
 3+:smile:
 ```
 
-Turn off colorized nicks:
-```
-/set plugins.var.python.slack_extension.colorize_nicks 0
-```
-
-Turn on colorized messages (messages match nick color):
-```
-/set plugins.var.python.slack_extension.colorize_nicks 1
-```
-
-Set channel prefix to something other than my-slack-subdomain.slack.com (e.g. when using buffers.pl):
-```
-/set plugins.var.python.slack_extension.server_alias.my-slack-subdomain "mysub"
-```
-
 Set all read markers to a specific time:
 ```
 /slack setallreadmarkers (time in epoch)
@@ -196,7 +181,22 @@ Debug mode:
 ```
 
 Optional settings
-----------------
+-----------------
+
+Turn off colorized nicks:
+```
+/set plugins.var.python.slack_extension.colorize_nicks 0
+```
+
+Turn on colorized messages (messages match nick color):
+```
+/set plugins.var.python.slack_extension.colorize_nicks 1
+```
+
+Set channel prefix to something other than my-slack-subdomain.slack.com (e.g. when using buffers.pl):
+```
+/set plugins.var.python.slack_extension.server_alias.my-slack-subdomain "mysub"
+```
 
 Show typing notification in main bar (slack_typing_notice):
 ```
