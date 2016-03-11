@@ -979,7 +979,6 @@ def msg_command_cb(data, current_buffer, args):
     aargs = args.split(None, 2)
     who = aargs[1]
 
-    dbg(who)
     command_talk(current_buffer, who)
 
     if len(aargs) > 2:
