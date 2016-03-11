@@ -984,6 +984,23 @@ def slack_buffer_required(f):
 
 
 @slack_buffer_required
+def msg_command_cb(data, current_buffer, args):
+    dbg("msg_command_cb")
+    aargs = args.split(None, 2)
+    who = aargs[1]
+
+    command_talk(current_buffer, who)
+
+    if len(aargs) > 2:
+        message = aargs[2]
+        server = servers.find(current_domain_name())
+        if server:
+            channel = server.channels.find(who)
+            channel.send_message(message)
+    return w.WEECHAT_RC_OK_EAT
+
+
+@slack_buffer_required
 def command_upload(current_buffer, args):
     """
     Uploads a file to the current buffer
@@ -1012,7 +1029,7 @@ def command_talk(current_buffer, args):
     server = servers.find(current_domain_name())
     if server:
         channel = server.channels.find(args)
-        if channel:
+        if not channel:
             channel.open()
         else:
             user = server.users.find(args)
@@ -2218,6 +2235,7 @@ if __name__ == "__main__":
             w.hook_command_run('/part', 'part_command_cb', '')
             w.hook_command_run('/leave', 'part_command_cb', '')
             w.hook_command_run('/topic', 'topic_command_cb', '')
+            w.hook_command_run('/msg', 'msg_command_cb', '')
             w.hook_command_run("/input complete_next", "complete_next_cb", "")
             w.hook_completion("nicks", "complete @-nicks for slack",
                             "nick_completion_cb", "")
