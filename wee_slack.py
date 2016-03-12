@@ -649,11 +649,16 @@ class Channel(object):
             chat_color = w.config_string(w.config_get('weechat.color.chat'))
             if type(message) is not unicode:
               message = message.decode('UTF-8', 'replace')
+            curr_color = w.color(chat_color)
+            if colorize_nicks and colorize_messages and self.server.users.find(user):
+                curr_color = self.server.users.find(user).color
+            message = curr_color + message
             for user in self.server.users:
                 if user.name in message:
                     message = user.name_regex.sub(
-                        r'\1\2{}\3'.format(user.formatted_name() + w.color(chat_color)),
+                        r'\1\2{}\3'.format(user.formatted_name() + curr_color),
                         message)
+
             message = HTMLParser.HTMLParser().unescape(message)
             data = u"{}\t{}".format(name, message).encode('utf-8')
             w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
@@ -2108,7 +2113,7 @@ def create_slack_debug_buffer():
 
 def config_changed_cb(data, option, value):
     global slack_api_token, distracting_channels, colorize_nicks, colorize_private_chats, slack_debug, debug_mode, \
-        unfurl_ignore_alt_text
+        unfurl_ignore_alt_text, colorize_messages
 
     slack_api_token = w.config_get_plugin("slack_api_token")
 
@@ -2117,6 +2122,7 @@ def config_changed_cb(data, option, value):
 
     distracting_channels = [x.strip() for x in w.config_get_plugin("distracting_channels").split(',')]
     colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
+    colorize_messages = w.config_get_plugin("colorize_messages") == "1"
     debug_mode = w.config_get_plugin("debug_mode").lower()
     if debug_mode != '' and debug_mode != 'false':
         create_slack_debug_buffer()
@@ -2181,6 +2187,8 @@ if __name__ == "__main__":
                 w.config_set_plugin('debug_mode', "")
             if not w.config_get_plugin('colorize_nicks'):
                 w.config_set_plugin('colorize_nicks', "1")
+            if not w.config_get_plugin('colorize_messages'):
+                w.config_set_plugin('colorize_messages', "0")
             if not w.config_get_plugin('colorize_private_chats'):
                 w.config_set_plugin('colorize_private_chats', "0")
             if not w.config_get_plugin('trigger_value'):
