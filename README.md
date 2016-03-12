@@ -175,6 +175,11 @@ Turn on colorized messages (messages match nick color):
 /set plugins.var.python.slack_extension.colorize_nicks 1
 ```
 
+Turn on highlighting of slack higlight words (@channel, @everyone):
+```
+/set plugins.var.python.slack_extension.slack_highlight_words 1
+```
+
 Set channel prefix to something other than my-slack-subdomain.slack.com (e.g. when using buffers.pl):
 ```
 /set plugins.var.python.slack_extension.server_alias.my-slack-subdomain "mysub"

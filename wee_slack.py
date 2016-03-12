@@ -617,6 +617,10 @@ class Channel(object):
             set_read_marker = True
         elif message.find(self.server.nick.encode('utf-8')) > -1:
             tags = "notify_highlight"
+        elif slack_highlight_words and message.find("!channel".encode('utf-8')) > -1:
+            tags = "notify_highlight"
+        elif slack_highlight_words and message.find("!everyone".encode('utf-8')) > -1:
+            tags = "notify_highlight"
         elif user != self.server.nick and self.name in self.server.users:
             tags = "notify_private,notify_message"
         elif self.muted:
@@ -2115,7 +2119,7 @@ def create_slack_debug_buffer():
 
 
 def config_changed_cb(data, option, value):
-    global slack_api_token, distracting_channels, colorize_nicks, colorize_private_chats, slack_debug, debug_mode, \
+    global slack_api_token, distracting_channels, colorize_nicks, colorize_private_chats, slack_debug, debug_mode, slack_highlight_words, \
         unfurl_ignore_alt_text, colorize_messages
 
     slack_api_token = w.config_get_plugin("slack_api_token")
@@ -2126,6 +2130,7 @@ def config_changed_cb(data, option, value):
     distracting_channels = [x.strip() for x in w.config_get_plugin("distracting_channels").split(',')]
     colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
     colorize_messages = w.config_get_plugin("colorize_messages") == "1"
+    slack_highlight_words = w.config_get_plugin("slack_highlight_words") == "1"
     debug_mode = w.config_get_plugin("debug_mode").lower()
     if debug_mode != '' and debug_mode != 'false':
         create_slack_debug_buffer()
@@ -2192,6 +2197,8 @@ if __name__ == "__main__":
                 w.config_set_plugin('colorize_nicks', "1")
             if not w.config_get_plugin('colorize_messages'):
                 w.config_set_plugin('colorize_messages', "0")
+            if not w.config_get_plugin('slack_highlight_words'):
+                w.config_set_plugin('slack_highlight_words', "0")
             if not w.config_get_plugin('colorize_private_chats'):
                 w.config_set_plugin('colorize_private_chats', "0")
             if not w.config_get_plugin('trigger_value'):
