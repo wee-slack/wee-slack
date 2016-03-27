@@ -1412,7 +1412,7 @@ def process_channel_created(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.add_channel(Channel(server, item["name"], item["id"], False))
+        server.add_channel(Channel(server, item["name"], item["id"], False, prepend_name="#"))
     server.buffer_prnt("New channel created: {}".format(item["name"]))
 
 
