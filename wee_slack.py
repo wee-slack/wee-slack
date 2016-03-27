@@ -1696,22 +1696,27 @@ def unwrap_attachments(message_json, text_before):
             # Attachments should be rendered roughly like:
             #
             # $pretext
-            # $title ($title_link) OR $from_url
-            # $text
+            # $author: (if rest of line is non-empty) $title ($title_link) OR $from_url
+            # $author: (if no $author on previous line) $text
             # $fields
             t = []
+            prepend_title_text = ''
+            if 'author_name' in attachment:
+                prepend_title_text = attachment['author_name'] + ": "
             if 'pretext' in attachment:
                 t.append(attachment['pretext'])
             if "title" in attachment:
                 if 'title_link' in attachment:
-                    t.append('%s (%s)' % (attachment["title"], attachment["title_link"],))
+                    t.append('%s%s (%s)' % (prepend_title_text, attachment["title"], attachment["title_link"],))
                 else:
-                    t.append(attachment["title"])
+                    t.append(prepend_title_text + attachment["title"])
+                prepend_title_text = ''
             elif "from_url" in attachment:
                 t.append(attachment["from_url"])
             if "text" in attachment:
                 tx = re.sub(r' *\n[\n ]+', '\n', attachment["text"])
-                t.append(tx)
+                t.append(prepend_title_text + tx)
+                prepend_title_text = ''
             if 'fields' in attachment:
                 for f in attachment['fields']:
                     if f['title'] != '':
