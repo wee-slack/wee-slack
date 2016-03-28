@@ -132,6 +132,7 @@ class SlackServer(object):
     def __init__(self, token):
         self.nick = None
         self.name = None
+        self.team = None
         self.domain = None
         self.server_buffer_name = None
         self.login_data = None
@@ -213,6 +214,7 @@ class SlackServer(object):
 
     def connected_to_slack(self, login_data):
         if login_data["ok"]:
+            self.team = login_data["team"]["domain"]
             self.domain = login_data["team"]["domain"] + ".slack.com"
             dbg("connected to {}".format(self.domain))
             self.identifier = self.domain
@@ -420,7 +422,7 @@ class Channel(object):
             else:
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.name)
-            w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.server_buffer_name)
+            w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.team)
             w.buffer_set(self.channel_buffer, "short_name", self.name)
             buffer_list_update_next()
 
