@@ -329,6 +329,8 @@ class SlackServer(object):
             tags = "no_highlight,notify_none,logger_backlog_end"
         else:
             tags = ""
+        if user == "SYSTEM":
+            user = w.config_string(w.config_get('weechat.look.prefix_network'))
         if self.buffer:
             w.prnt_date_tags(self.buffer, 0, tags, "{}\t{}".format(user, message))
         else:
@@ -1379,7 +1381,7 @@ def process_team_join(message_json):
     server = servers.find(message_json["_server"])
     item = message_json["user"]
     server.add_user(User(server, item["name"], item["id"], item["presence"]))
-    server.buffer_prnt(server.buffer, "New user joined: {}".format(item["name"]))
+    server.buffer_prnt("New user joined: {}".format(item["name"]))
 
 def process_manual_presence_change(message_json):
     process_presence_change(message_json)
@@ -1505,7 +1507,7 @@ def process_im_created(message_json):
     else:
         item = message_json["channel"]
         server.add_channel(DmChannel(server, channel_name, item["id"], item["is_open"], item["last_read"]))
-    server.buffer_prnt("New channel created: {}".format(item["name"]))
+    server.buffer_prnt("New direct message channel created: {}".format(item["name"]))
 
 
 def process_user_typing(message_json):
