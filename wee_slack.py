@@ -284,7 +284,7 @@ class SlackServer(object):
     def create_slack_mappings(self, data):
 
         for item in data["users"]:
-            self.add_user(User(self, item["name"], item["id"], item["presence"], item["deleted"]))
+            self.add_user(User(self, item["name"], item["id"], item["presence"], item["deleted"], is_bot=item.get('is_bot', False)))
 
         for item in data["bots"]:
             self.add_bot(Bot(self, item["name"], item["id"], item["deleted"]))
@@ -796,7 +796,7 @@ class DmChannel(Channel):
 
 class User(object):
 
-    def __init__(self, server, name, identifier, presence="away", deleted=False):
+    def __init__(self, server, name, identifier, presence="away", deleted=False, is_bot=False):
         self.server = server
         self.name = name
         self.identifier = identifier
@@ -806,6 +806,7 @@ class User(object):
         self.channel_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, self.name))
         self.update_color()
         self.name_regex = re.compile(r"([\W]|\A)(@{0,1})" + self.name + "('s|[^'\w]|\Z)")
+        self.is_bot = is_bot
 
         if deleted:
             return
@@ -1787,7 +1788,11 @@ def get_user(message_json, server):
     if 'bot_id' in message_json and message_json['bot_id'] is not None:
         name = u"{} :]".format(server.bots.find(message_json["bot_id"]).formatted_name())
     elif 'user' in message_json:
-        name = server.users.find(message_json['user']).name
+        u = server.users.find(message_json['user'])
+        if u.is_bot:
+            name = u"{} :]".format(u.formatted_name())
+        else:
+            name = u.name
     elif 'username' in message_json:
         name = u"-{}-".format(message_json["username"])
     elif 'service_name' in message_json:
