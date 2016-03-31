@@ -2199,7 +2199,8 @@ if __name__ == "__main__":
             if not w.config_get_plugin('switch_buffer_on_join'):
                 w.config_set_plugin('switch_buffer_on_join', "1")
 
-            w.config_option_unset('channels_not_on_current_server_color')
+            if w.config_get_plugin('channels_not_on_current_server_color'):
+                w.config_option_unset('channels_not_on_current_server_color')
 
             # Global var section
             slack_debug = None
