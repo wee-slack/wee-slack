@@ -222,7 +222,7 @@ class SlackServer(object):
                 self.server_buffer_name = alias
                 self.alias = alias
             else:
-                self.server_buffer_name = self.domain
+                self.server_buffer_name = "slack." + login_data["team"]["domain"]
 
             self.nick = login_data["self"]["name"]
             self.create_local_buffer()
