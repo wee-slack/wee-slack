@@ -421,8 +421,11 @@ class Channel(object):
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
             else:
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
+            if self.server.alias:
+                w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.alias)
+            else:
+                w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.team)
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.name)
-            w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.team)
             w.buffer_set(self.channel_buffer, "short_name", self.name)
             buffer_list_update_next()
 
