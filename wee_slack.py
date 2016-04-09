@@ -1519,6 +1519,25 @@ def process_user_typing(message_json):
         channel.set_typing(server.users.find(message_json["user"]).name)
 
 
+def process_bot_enable(message_json):
+    process_bot_integration(message_json)
+
+
+def process_bot_disable(message_json):
+    process_bot_integration(message_json)
+
+
+def process_bot_integration(message_json):
+    server = servers.find(message_json["_server"])
+    channel = server.channels.find(message_json["channel"])
+
+    time = message_json['ts']
+    text = "{} {}".format(server.users.find(message_json['user']).formatted_name(),
+                          render_message(message_json))
+    bot_name = get_user(message_json, server)
+    bot_name = bot_name.encode('utf-8')
+    channel.buffer_prnt(bot_name, text, time)
+
 # todo: does this work?
 
 def process_error(message_json):
@@ -1617,7 +1636,7 @@ def render_message(message_json, force=False):
 def process_message(message_json, cache=True):
     try:
         # send these subtype messages elsewhere
-        known_subtypes = ["message_changed", 'message_deleted', 'channel_join', 'channel_leave', 'channel_topic']
+        known_subtypes = ["message_changed", 'message_deleted', 'channel_join', 'channel_leave', 'channel_topic', 'bot_enable', 'bot_disable']
         if "subtype" in message_json and message_json["subtype"] in known_subtypes:
             proc[message_json["subtype"]](message_json)
 
