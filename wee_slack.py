@@ -340,7 +340,7 @@ class SlackServer(object):
 def buffer_input_cb(b, buffer, data):
     channel = channels.find(buffer)
     reaction = re.match("(\d*)(\+|-):(.*):", data)
-    if not reaction and not data.startswith('s/'):
+    if not reaction and not data.startswith('s/') and not data.startswith('s#'):
         channel.send_message(data)
         #channel.buffer_prnt(channel.server.nick, data)
     elif reaction:
@@ -348,11 +348,25 @@ def buffer_input_cb(b, buffer, data):
             channel.send_add_reaction(int(reaction.group(1) or 1), reaction.group(3))
         elif reaction.group(2) == "-":
             channel.send_remove_reaction(int(reaction.group(1) or 1), reaction.group(3))
-    elif data.count('/') == 3:
-        old, new = data.split('/')[1:3]
-        channel.change_previous_message(old.decode("utf-8"), new.decode("utf-8"))
+    elif data.startswith('s/'):
+        try:
+            old, new, global_replace = re.split(r'(?<!\\)/', data)[1:]
+        except ValueError:
+            pass
+        else:
+            # Replacement string in re.sub() is a string, not a regex, so get
+            # rid of escapes.
+            new = new.replace(r'\/', '/')
+            sub_count = 1 if global_replace != 'g' else 0
+            channel.change_previous_message(old.decode("utf-8"), new.decode("utf-8"), sub_count)
+    elif data.startswith('s#'):
+        if data.count('#') == 3:
+            old, new, global_replace = data.split('#')[1:]
+            sub_count = 1 if global_replace != 'g' else 0
+            channel.change_previous_message(old.decode("utf-8"), new.decode("utf-8"), sub_count)
     channel.mark_read(True)
     return w.WEECHAT_RC_ERROR
+
 
 
 class Channel(object):
@@ -729,13 +743,14 @@ class Channel(object):
             data = {"channel": self.identifier, "timestamp": timestamp, "name": reaction}
             async_slack_api_request(self.server.domain, self.server.token, method, data)
 
-    def change_previous_message(self, old, new):
+    def change_previous_message(self, old, new, sub_count=0):
         message = self.my_last_message()
         if new == "" and old == "":
             async_slack_api_request(self.server.domain, self.server.token, 'chat.delete', {"channel": self.identifier, "ts": message['ts']})
         else:
-            new_message = message["text"].replace(old, new)
-            async_slack_api_request(self.server.domain, self.server.token, 'chat.update', {"channel": self.identifier, "ts": message['ts'], "text": new_message.encode("utf-8")})
+            new_message = re.sub(old, new, message["text"], sub_count)
+            if new_message != message["text"]:
+                async_slack_api_request(self.server.domain, self.server.token, 'chat.update', {"channel": self.identifier, "ts": message['ts'], "text": new_message.encode("utf-8")})
 
     def my_last_message(self):
         for message in reversed(self.messages):
