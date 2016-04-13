@@ -1068,6 +1068,8 @@ def command_talk(current_buffer, args):
     else:
         return False
 
+
+@slack_buffer_required
 def command_join(current_buffer, args):
     """
     Join the specified channel
