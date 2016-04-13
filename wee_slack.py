@@ -1064,6 +1064,7 @@ def command_talk(current_buffer, args):
                     channel.create_buffer()
             else:
                 server.buffer_prnt("User or channel {} not found.".format(args))
+                return False
         if w.config_get_plugin('switch_buffer_on_join') != '0':
             w.buffer_set(channel.channel_buffer, "display", "1")
         return True
