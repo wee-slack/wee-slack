@@ -553,7 +553,6 @@ class Channel(object):
         if update_remote:
             if "join" in SLACK_API_TRANSLATOR[self.type]:
                 async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.name.lstrip("#")})
-                async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["join"], {"user": users.find(self.name).identifier})
 
     def close(self, update_remote=True):
         #remove from cache so messages don't reappear when reconnecting
