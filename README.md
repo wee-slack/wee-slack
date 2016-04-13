@@ -44,7 +44,7 @@ In Development
 
 Dependencies
 ------------
-  * WeeChat 1.3+ http://weechat.org/ 
+  * WeeChat 1.3+ http://weechat.org/
   * websocket-client https://pypi.python.org/pypi/websocket-client/
 
 Setup
@@ -86,6 +86,8 @@ cp wee_slack.py ~/.weechat/python/autoload
 weechat
 ```
 
+**NOTE:** If weechat is already running, the script can be loaded using ``/python load python/autoload/wee_slack.py``
+
 ####4. Add your Slack API key(s)
 ```
 /set plugins.var.python.slack_extension.slack_api_token [YOUR_SLACK_TOKEN]
@@ -101,7 +103,7 @@ If you don't want to store your API token in plaintext you can use the secure fe
 ```
 
 ##### Optional: If you would like to connect to multiple groups, use the above command with multiple tokens separated by commas. (NO SPACES)
-    
+
 ```
 /set plugins.var.python.slack_extension.slack_api_token [token1],[token2],[token3]
 ```
@@ -211,4 +213,4 @@ wee-slack is provided without any warranty whatsoever, but you are welcome to as
 
 
 
-    
+
