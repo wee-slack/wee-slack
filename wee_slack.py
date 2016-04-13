@@ -1060,6 +1060,8 @@ def command_talk(current_buffer, args):
             user = server.users.find(args)
             if user:
                 user.create_dm_channel()
+                if channel.channel_buffer is None:
+                    channel.create_buffer()
             else:
                 server.buffer_prnt("User or channel {} not found.".format(args))
         if w.config_get_plugin('switch_buffer_on_join') != '0':
