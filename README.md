@@ -86,6 +86,8 @@ cp wee_slack.py ~/.weechat/python/autoload
 weechat
 ```
 
+**NOTE:** If weechat is already running, the script can be loaded using ``/python load python/autoload/wee_slack.py``
+
 ####4. Add your Slack API key(s)
 ```
 /set plugins.var.python.slack_extension.slack_api_token [YOUR_SLACK_TOKEN]
