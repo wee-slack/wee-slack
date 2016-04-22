@@ -987,7 +987,11 @@ def me_command_cb(data, current_buffer, args):
 
 
 def join_command_cb(data, current_buffer, args):
-    if command_talk(current_buffer, args.split()[1]):
+    args = args.split()
+    if len(args) < 2:
+        w.prnt(current_buffer, "Missing channel argument")
+        return w.WEECHAT_RC_OK_EAT
+    elif command_talk(current_buffer, args[1]):
         return w.WEECHAT_RC_OK_EAT
     else:
         return w.WEECHAT_RC_OK
