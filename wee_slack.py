@@ -635,7 +635,10 @@ class Channel(object):
         if self.channel_buffer:
             prefix_same_nick = w.config_string(w.config_get('weechat.look.prefix_same_nick'))
             if user == self.last_active_user and prefix_same_nick != "":
-                name = prefix_same_nick
+                if colorize_nicks and self.server.users.find(user):
+                    name = self.server.users.find(user).color + prefix_same_nick
+                else:
+                    name = prefix_same_nick
             else:
                 nick_prefix = w.config_string(w.config_get('weechat.look.nick_prefix'))
                 nick_suffix = w.config_string(w.config_get('weechat.look.nick_suffix'))
