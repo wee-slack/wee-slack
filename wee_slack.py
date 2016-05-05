@@ -1477,6 +1477,18 @@ def process_channel_archive(message_json):
     channel.detach_buffer()
 
 
+def process_group_join(message_json):
+    process_channel_join(message_json)
+
+
+def process_group_leave(message_json):
+    process_channel_leave(message_json)
+
+
+def process_group_topic(message_json):
+    process_channel_topic(message_json)
+
+
 def process_group_left(message_json):
     server = servers.find(message_json["_server"])
     server.channels.find(message_json["channel"]).close(False)
@@ -1649,7 +1661,7 @@ def render_message(message_json, force=False):
 def process_message(message_json, cache=True):
     try:
         # send these subtype messages elsewhere
-        known_subtypes = ["message_changed", 'message_deleted', 'channel_join', 'channel_leave', 'channel_topic', 'bot_enable', 'bot_disable']
+        known_subtypes = ["message_changed", 'message_deleted', 'channel_join', 'channel_leave', 'channel_topic', 'group_join', 'group_leave', 'group_topic', 'bot_enable', 'bot_disable']
         if "subtype" in message_json and message_json["subtype"] in known_subtypes:
             proc[message_json["subtype"]](message_json)
 
