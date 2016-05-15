@@ -92,7 +92,7 @@ weechat
 ```
 /set plugins.var.python.slack_extension.slack_api_token [YOUR_SLACK_TOKEN]
 ```
-^^ (find this at https://api.slack.com/web)
+^^ (find this at https://api.slack.com/web behind the "Generate test tokens" button)
 
 If you don't want to store your API token in plaintext you can use the secure features of weechat:
 
