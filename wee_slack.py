@@ -615,11 +615,14 @@ class Channel(object):
         set_read_marker = False
         time_float = float(time)
         tags = "nick_" + user
+        hl_regex = re.compile(r'(?i)\b@?'
+                              + self.server.nick.encode('utf-8')
+                              + r':?\b')
         # XXX: we should not set log1 for robots.
         if time_float != 0 and self.last_read >= time_float:
             tags += ",no_highlight,notify_none,logger_backlog_end"
             set_read_marker = True
-        elif message.find(self.server.nick.encode('utf-8')) > -1:
+        elif hl_regex.search(message) is not None:
             tags = ",notify_highlight,log1"
         elif user != self.server.nick and self.name in self.server.users:
             tags = ",notify_private,notify_message,log1"
