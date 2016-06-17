@@ -32,7 +32,7 @@ SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 BACKLOG_SIZE = 200
 SCROLLBACK_SIZE = 500
 
-CACHE_VERSION = "3"
+CACHE_VERSION = "4"
 
 SLACK_API_TRANSLATOR = {
     "channel": {
@@ -711,17 +711,17 @@ class Channel(object):
                 self.buffer_redraw()
             return True
 
-    def add_reaction(self, ts, reaction):
+    def add_reaction(self, ts, reaction, user):
         if self.has_message(ts):
             message_index = self.messages.index(ts)
-            self.messages[message_index].add_reaction(reaction)
+            self.messages[message_index].add_reaction(reaction, user)
             self.change_message(ts)
             return True
 
-    def remove_reaction(self, ts, reaction):
+    def remove_reaction(self, ts, reaction, user):
         if self.has_message(ts):
             message_index = self.messages.index(ts)
-            self.messages[message_index].remove_reaction(reaction)
+            self.messages[message_index].remove_reaction(reaction, user)
             self.change_message(ts)
             return True
 
@@ -933,23 +933,23 @@ class Message(object):
             new_text = unicode(new_text, 'utf-8')
         self.message_json["text"] = new_text
 
-    def add_reaction(self, reaction):
+    def add_reaction(self, reaction, user):
         if "reactions" in self.message_json:
             found = False
             for r in self.message_json["reactions"]:
                 if r["name"] == reaction:
-                    r["count"] += 1
+                    r["users"].add(user)
                     found = True
             if not found:
-                self.message_json["reactions"].append({u"count": 1, u"name": reaction})
+                self.message_json["reactions"].append({u"name": reaction, u"users": {user}})
         else:
-            self.message_json["reactions"] = [{u"count": 1, u"name": reaction}]
+            self.message_json["reactions"] = [{u"name": reaction, u"users": {user}}]
 
-    def remove_reaction(self, reaction):
+    def remove_reaction(self, reaction, user):
         if "reactions" in self.message_json:
             for r in self.message_json["reactions"]:
                 if r["name"] == reaction:
-                    r["count"] -= 1
+                    r["users"].remove(user)
         else:
             pass
 
@@ -1559,14 +1559,14 @@ def process_error(message_json):
 def process_reaction_added(message_json):
     if message_json["item"].get("type") == "message":
         channel = channels.find(message_json["item"]["channel"])
-        channel.add_reaction(message_json["item"]["ts"], message_json["reaction"])
+        channel.add_reaction(message_json["item"]["ts"], message_json["reaction"], message_json["user"])
     else:
         dbg("Reaction to item type not supported: " + str(message_json))
 
 def process_reaction_removed(message_json):
     if message_json["item"].get("type") == "message":
         channel = channels.find(message_json["item"]["channel"])
-        channel.remove_reaction(message_json["item"]["ts"], message_json["reaction"])
+        channel.remove_reaction(message_json["item"]["ts"], message_json["reaction"], message_json["user"])
     else:
         dbg("Reaction to item type not supported: " + str(message_json))
 
@@ -1577,9 +1577,14 @@ def create_reaction_string(reactions):
     else:
         reaction_string = ' ['
         for r in reactions:
-            if r["count"] > 0:
+            if len(r["users"]) > 0:
                 count += 1
-                reaction_string += ":{}:{} ".format(r["name"], r["count"])
+                if show_reaction_nicks:
+                    nicks = [resolve_ref("@{}".format(user)) for user in r["users"]]
+                    users = "({})".format(",".join(nicks))
+                else:
+                    users = len(r["users"])
+                reaction_string += ":{}:{} ".format(r["name"], users)
         reaction_string = reaction_string[:-1] + ']'
     if count == 0:
         reaction_string = ''
@@ -2153,7 +2158,7 @@ def create_slack_debug_buffer():
 
 def config_changed_cb(data, option, value):
     global slack_api_token, distracting_channels, colorize_nicks, colorize_private_chats, slack_debug, debug_mode, \
-        unfurl_ignore_alt_text, colorize_messages
+        unfurl_ignore_alt_text, colorize_messages, show_reaction_nicks
 
     slack_api_token = w.config_get_plugin("slack_api_token")
 
@@ -2167,6 +2172,7 @@ def config_changed_cb(data, option, value):
     if debug_mode != '' and debug_mode != 'false':
         create_slack_debug_buffer()
     colorize_private_chats = w.config_string_to_boolean(w.config_get_plugin("colorize_private_chats"))
+    show_reaction_nicks = w.config_string_to_boolean(w.config_get_plugin("show_reaction_nicks"))
 
     unfurl_ignore_alt_text = False
     if w.config_get_plugin('unfurl_ignore_alt_text') != "0":
@@ -2237,6 +2243,8 @@ if __name__ == "__main__":
                 w.config_set_plugin('unfurl_ignore_alt_text', "0")
             if not w.config_get_plugin('switch_buffer_on_join'):
                 w.config_set_plugin('switch_buffer_on_join', "1")
+            if not w.config_get_plugin('show_reaction_nicks'):
+                w.config_set_plugin('show_reaction_nicks', "0")
 
             if w.config_get_plugin('channels_not_on_current_server_color'):
                 w.config_option_unset('channels_not_on_current_server_color')
