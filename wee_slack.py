@@ -341,6 +341,8 @@ class SlackServer(object):
 
 def buffer_input_cb(b, buffer, data):
     channel = channels.find(buffer)
+    if not channel:
+        return w.WEECHAT_RC_OK_EAT
     reaction = re.match("(\d*)(\+|-):(.*):", data)
     if not reaction and not data.startswith('s/'):
         channel.send_message(data)
