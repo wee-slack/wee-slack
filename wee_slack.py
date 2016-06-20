@@ -1029,6 +1029,35 @@ def slack_buffer_required(f):
         return f(current_buffer, *args, **kwargs)
     return wrapper
 
+def command_register(current_buffer, args):
+    CLIENT_ID="2468770254.51917335286"
+    CLIENT_SECRET="dcb7fe380a000cba0cca3169a5fe8d70" #this is not really a secret
+    if not args:
+        message = """
+#### Retrieving a Slack token via OAUTH ####
+
+1) Paste this into a browser: https://slack.com/oauth/authorize?client_id=2468770254.51917335286&scope=client
+2) Select the team you wish to access from wee-slack in your browser.
+3) Click "Authorize" in the browser **IMPORTANT: the redirect will fail, this is expected**
+4) Copy the "code" portion of the URL to your clipboard
+5) Return to weechat and run `/slack register [code]`
+6) Add the returned token per the normal wee-slack setup instructions
+
+
+"""
+        w.prnt(current_buffer, message)
+    else:
+        aargs = args.split(None, 2)
+        if len(aargs) <> 1:
+            w.prnt(current_buffer, "ERROR: invalid args to register")
+        else:
+            #w.prnt(current_buffer, "https://slack.com/api/oauth.access?client_id={}&client_secret={}&code={}".format(CLIENT_ID, CLIENT_SECRET, aargs[0]))
+            ret = urllib.urlopen("https://slack.com/api/oauth.access?client_id={}&client_secret={}&code={}".format(CLIENT_ID, CLIENT_SECRET, aargs[0])).read()
+            d = json.loads(ret)
+            if d["ok"] == True:
+                w.prnt(current_buffer, "Success! Access token is: " + d['access_token'])
+            else:
+                w.prnt(current_buffer, "Failed! Error is: " + d['error'])
 
 @slack_buffer_required
 def msg_command_cb(data, current_buffer, args):
