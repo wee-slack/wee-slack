@@ -853,6 +853,9 @@ class User(object):
         return [self.name, "@" + self.name, self.identifier]
 
     def set_active(self):
+        if self.deleted:
+            return
+
         self.presence = "active"
         for channel in self.server.channels:
             if channel.has_user(self.identifier):
@@ -863,6 +866,9 @@ class User(object):
             buffer_list_update_next()
 
     def set_inactive(self):
+        if self.deleted:
+            return
+
         self.presence = "away"
         for channel in self.server.channels:
             if channel.has_user(self.identifier):
