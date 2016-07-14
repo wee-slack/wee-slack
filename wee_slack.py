@@ -2125,6 +2125,9 @@ def cache_load():
     except IOError:
         w.prnt("", "cache file not found")
         pass
+    except ValueError:
+        w.prnt("", "Cache file is invalid.")
+        pass
 
 # END Slack specific requests
 
