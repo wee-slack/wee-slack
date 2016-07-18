@@ -1083,17 +1083,16 @@ def command_talk(current_buffer, args):
     server = servers.find(current_domain_name())
     if server:
         channel = server.channels.find(args)
-        if channel:
-            channel.open()
-        else:
+        if channel is None:
             user = server.users.find(args)
             if user:
                 user.create_dm_channel()
             else:
                 server.buffer_prnt("User or channel {} not found.".format(args))
-                return True
-        if w.config_get_plugin('switch_buffer_on_join') != '0':
-            w.buffer_set(channel.channel_buffer, "display", "1")
+        else:
+            channel.open()
+            if w.config_get_plugin('switch_buffer_on_join') != '0':
+                w.buffer_set(channel.channel_buffer, "display", "1")
         return True
     else:
         return False
@@ -2125,9 +2124,6 @@ def cache_load():
             dbg("Completed loading messages from cache.", main_buffer=True)
     except IOError:
         w.prnt("", "cache file not found")
-        pass
-    except ValueError:
-        w.prnt("", "Cache file is invalid.")
         pass
 
 # END Slack specific requests
