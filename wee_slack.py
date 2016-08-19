@@ -2109,7 +2109,6 @@ def cache_write_cb(data, remaining):
             if channel.active:
                 for message in channel.messages:
                     cache_file.write("{}\n".format(json.dumps(message.message_json)))
-        cache_file.close()
     return w.WEECHAT_RC_OK
 
 def cache_load():
@@ -2123,14 +2122,9 @@ def cache_load():
                     j = json.loads(line)
                     message_cache[j["channel"]].append(line)
                 dbg("Completed loading messages from cache.", main_buffer=True)
-        except IOError:
-            w.prnt("", "cache file not found")
-            pass
         except ValueError:
             w.prnt("", "cache file invalid")
             pass
-        finally:
-            cache_file.close()
 
 # END Slack specific requests
 
