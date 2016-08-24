@@ -8,7 +8,7 @@ wee-slack
 
 A WeeChat native client for Slack.com. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, search, (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
 
-![animated screenshot](https://dl.dropboxusercontent.com/u/566560/slack.gif)
+![animated screenshot](https://github.com/rawdigits/wee-slack/raw/master/docs/slack.gif)
 
 Features
 --------
