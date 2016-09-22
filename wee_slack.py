@@ -2308,7 +2308,7 @@ if __name__ == "__main__":
             users = SearchList()
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
-            w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
+            w.hook_timer(30000, 0, 0, "slack_connection_persistence_cb", "")
 
             # attach to the weechat hooks we need
             w.hook_timer(1000, 0, 0, "typing_update_cb", "")
