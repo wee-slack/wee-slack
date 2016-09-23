@@ -1002,6 +1002,18 @@ def me_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK
 
 
+# Wrap command_ functions that require they be performed in a slack buffer
+def slack_buffer_required(f):
+    @wraps(f)
+    def wrapper(current_buffer, *args, **kwargs):
+        server = servers.find(current_domain_name())
+        if not server:
+            return w.WEECHAT_RC_OK
+        return f(current_buffer, *args, **kwargs)
+    return wrapper
+
+
+@slack_buffer_required
 def join_command_cb(data, current_buffer, args):
     args = args.split()
     if len(args) < 2:
@@ -1012,6 +1024,7 @@ def join_command_cb(data, current_buffer, args):
     else:
         return w.WEECHAT_RC_OK
 
+@slack_buffer_required
 def part_command_cb(data, current_buffer, args):
     if channels.find(current_buffer) or servers.find(current_buffer):
         args = args.split()
@@ -1023,18 +1036,6 @@ def part_command_cb(data, current_buffer, args):
         return w.WEECHAT_RC_OK_EAT
     else:
         return w.WEECHAT_RC_OK
-
-
-# Wrap command_ functions that require they be performed in a slack buffer
-def slack_buffer_required(f):
-    @wraps(f)
-    def wrapper(current_buffer, *args, **kwargs):
-        server = servers.find(current_domain_name())
-        if not server:
-            w.prnt(current_buffer, "This command must be used in a slack buffer")
-            return
-        return f(current_buffer, *args, **kwargs)
-    return wrapper
 
 
 @slack_buffer_required
@@ -1311,6 +1312,7 @@ def command_openweb(current_buffer, args):
             w.buffer_set(channel_buffer, "title", data["topic"])
     return w.WEECHAT_RC_OK
 
+@slack_buffer_required
 def topic_command_cb(data, current_buffer, args):
     if command_topic(current_buffer, args.split(None, 1)[1]):
         return w.WEECHAT_RC_OK_EAT
