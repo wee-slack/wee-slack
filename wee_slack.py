@@ -75,7 +75,7 @@ def dbg(message, fout=False, main_buffer=False):
     if fout:
         file('/tmp/debug.log', 'a+').writelines(message + '\n')
     if main_buffer:
-            w.prnt("", message)
+            w.prnt("", "slack: " + message)
     else:
         if slack_debug is not None:
             w.prnt(slack_debug, message)
