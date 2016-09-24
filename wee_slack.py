@@ -436,7 +436,7 @@ class Channel(object):
         if channel_buffer != main_weechat_buffer:
             self.channel_buffer = channel_buffer
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.server.nick)
-#            w.buffer_set(self.channel_buffer, "highlight_words", self.server.nick)
+            w.buffer_set(self.channel_buffer, "highlight_words", self.server.nick)
         else:
             self.channel_buffer = None
         channels.update_hashtable()
@@ -631,13 +631,13 @@ class Channel(object):
         elif message.find(self.server.nick.encode('utf-8')) > -1:
             tags = ",notify_highlight,log1"
         elif user != self.server.nick and self.name in self.server.users:
-            tags = ",notify_private,notify_message,log1"
+            tags = ",notify_private,notify_message,log1,irc_privmsg"
         elif self.muted:
             tags = ",no_highlight,notify_none,logger_backlog_end"
         elif user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]:
             tags = ",irc_smart_filter"
         else:
-            tags = ",notify_message,log1"
+            tags = ",notify_message,log1,irc_privmsg"
         #don't write these to local log files
         #tags += ",no_log"
         time_int = int(time_float)
