@@ -2124,28 +2124,28 @@ def url_processor_cb(data, command, return_code, out, err):
     return w.WEECHAT_RC_OK
 
 def cache_write_cb(data, remaining):
-    cache_file = open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'w')
-    cache_file.write(CACHE_VERSION + "\n")
-    for channel in channels:
-        if channel.active:
-            for message in channel.messages:
-                cache_file.write("{}\n".format(json.dumps(message.message_json)))
+    with open("{}/{}".format(WEECHAT_HOME, CACHE_NAME), 'w') as cache_file:
+        cache_file.write(CACHE_VERSION + "\n")
+        for channel in channels:
+            if channel.active:
+                for message in channel.messages:
+                    cache_file.write("{}\n".format(json.dumps(message.message_json)))
     return w.WEECHAT_RC_OK
 
 def cache_load():
     global message_cache
-    try:
-        file_name = "{}/{}".format(WEECHAT_HOME, CACHE_NAME)
-        cache_file = open(file_name, 'r')
-        if cache_file.readline() == CACHE_VERSION + "\n":
-            dbg("Loading messages from cache.", main_buffer=True)
-            for line in cache_file:
-                j = json.loads(line)
-                message_cache[j["channel"]].append(line)
-            dbg("Completed loading messages from cache.", main_buffer=True)
-    except IOError:
-        w.prnt("", "cache file not found")
-        pass
+    file_name = "{}/{}".format(WEECHAT_HOME, CACHE_NAME)
+    with open(file_name, 'r') as cache_file:
+        try:
+            if cache_file.readline() == CACHE_VERSION + "\n":
+                dbg("Loading messages from cache.", main_buffer=True)
+                for line in cache_file:
+                    j = json.loads(line)
+                    message_cache[j["channel"]].append(line)
+                dbg("Completed loading messages from cache.", main_buffer=True)
+        except ValueError:
+            w.prnt("", "cache file invalid")
+            pass
 
 # END Slack specific requests
 
