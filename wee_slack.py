@@ -2143,6 +2143,9 @@ def cache_load():
                 j = json.loads(line)
                 message_cache[j["channel"]].append(line)
             dbg("Completed loading messages from cache.", main_buffer=True)
+    except ValueError:
+        w.prnt("", "Failed to load cache file, probably illegal JSON.. Ignoring")
+        pass
     except IOError:
         w.prnt("", "cache file not found")
         pass
