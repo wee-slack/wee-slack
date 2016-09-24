@@ -978,6 +978,16 @@ class Message(object):
     def __lt__(self, other):
         return self.ts < other.ts
 
+# Only run this function if we're in a slack buffer, else ignore
+def slack_buffer_or_ignore(f):
+    @wraps(f)
+    def wrapper(current_buffer, *args, **kwargs):
+        server = servers.find(current_domain_name())
+        if not server:
+            return w.WEECHAT_RC_OK
+        return f(current_buffer, *args, **kwargs)
+    return wrapper
+
 
 def slack_command_cb(data, current_buffer, args):
     a = args.split(' ', 1)
@@ -993,6 +1003,7 @@ def slack_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK
 
 
+@slack_buffer_or_ignore
 def me_command_cb(data, current_buffer, args):
     if channels.find(current_buffer):
         channel = channels.find(current_buffer)
@@ -1002,6 +1013,7 @@ def me_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK
 
 
+@slack_buffer_or_ignore
 def join_command_cb(data, current_buffer, args):
     args = args.split()
     if len(args) < 2:
@@ -1012,6 +1024,7 @@ def join_command_cb(data, current_buffer, args):
     else:
         return w.WEECHAT_RC_OK
 
+@slack_buffer_or_ignore
 def part_command_cb(data, current_buffer, args):
     if channels.find(current_buffer) or servers.find(current_buffer):
         args = args.split()
@@ -1032,12 +1045,13 @@ def slack_buffer_required(f):
         server = servers.find(current_domain_name())
         if not server:
             w.prnt(current_buffer, "This command must be used in a slack buffer")
-            return
+            return w.WEECHAT_RC_ERROR
         return f(current_buffer, *args, **kwargs)
     return wrapper
 
 
-@slack_buffer_required
+
+@slack_buffer_or_ignore
 def msg_command_cb(data, current_buffer, args):
     dbg("msg_command_cb")
     aargs = args.split(None, 2)
@@ -1311,6 +1325,7 @@ def command_openweb(current_buffer, args):
             w.buffer_set(channel_buffer, "title", data["topic"])
     return w.WEECHAT_RC_OK
 
+@slack_buffer_or_ignore
 def topic_command_cb(data, current_buffer, args):
     if command_topic(current_buffer, args.split(None, 1)[1]):
         return w.WEECHAT_RC_OK_EAT
