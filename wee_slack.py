@@ -1327,10 +1327,16 @@ def command_openweb(current_buffer, args):
 
 @slack_buffer_or_ignore
 def topic_command_cb(data, current_buffer, args):
-    if command_topic(current_buffer, args.split(None, 1)[1]):
+    n = len(args.split())
+    if n < 2:
+        channel = channels.find(current_buffer)
+        if channel:
+            w.prnt(current_buffer, 'Topic for {} is "{}"'.format(channel.name, channel.topic))
+        return w.WEECHAT_RC_OK_EAT
+    elif command_topic(current_buffer, args.split(None, 1)[1]):
         return w.WEECHAT_RC_OK_EAT
     else:
-        return w.WEECHAT_RC_OK
+        return w.WEECHAT_RC_ERROR
 
 def command_topic(current_buffer, args):
     """
