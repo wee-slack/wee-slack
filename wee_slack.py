@@ -253,7 +253,15 @@ class SlackServer(object):
                             self.message_buffer.pop(message_id)
             return True
         else:
-            w.prnt("", "\n!! slack.com login error: " + login_data["error"] + "\n Please check your API token with\n \"/set plugins.var.python.slack_extension.slack_api_token (token)\"\n\n ")
+            token_start = self.token[:10]
+            error = """
+!! slack.com login error: {}
+ The problematic token starts with {}
+ Please check your API token with
+ "/set plugins.var.python.slack_extension.slack_api_token (token)"
+
+""".format(login_data["error"], token_start)
+            w.prnt("", error)
             self.connected = False
 
     def print_connection_info(self, login_data):
