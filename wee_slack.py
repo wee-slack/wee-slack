@@ -1693,6 +1693,9 @@ def render_message(message_json, force=False):
 
         text = text.lstrip()
         text = text.replace("\t", "    ")
+        text = text.replace("&lt;", "<")
+        text = text.replace("&gt;", ">")
+        text = text.replace("&amp;", "&")
         text = text.encode('utf-8')
 
         if "reactions" in message_json:
