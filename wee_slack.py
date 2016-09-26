@@ -210,9 +210,9 @@ class SlackServer(object):
     def should_connect(self):
         """
         If we haven't tried to connect OR we tried and never heard back and it
-        has been 65 seconds consider the attempt dead and try again
+        has been 125 seconds consider the attempt dead and try again
         """
-        if self.connection_attempt_time == 0 or self.connection_attempt_time + 65 > int(time.time()):
+        if self.connection_attempt_time == 0 or self.connection_attempt_time + 125 > int(time.time()):
             return True
         else:
             return False
