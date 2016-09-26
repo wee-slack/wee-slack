@@ -213,14 +213,14 @@ class SlackServer(object):
         has been 65 seconds consider the attempt dead and try again
         """
         if self.connection_attempt_time == 0 or self.connection_attempt_time + 65 > int(time.time()):
-            return true
+            return True
         else:
-            return false
+            return False
 
     def connect_to_slack(self):
         t = time.time()
         #Double check that we haven't exceeded a long wait to connect and try again.
-        if self.connecting == True and should_connect():
+        if self.connecting and should_connect():
             self.connecting = False
         if not self.connecting:
             async_slack_api_request("slack.com", self.token, "rtm.start", {"ts": t})
