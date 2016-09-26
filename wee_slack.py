@@ -90,7 +90,7 @@ class SearchList(list):
         super(SearchList, self).__init__(self)
 
     def find(self, name):
-        if name in self.hashtable.keys():
+        if name in self.hashtable:
             return self.hashtable[name]
         #this is a fallback to __eq__ if the item isn't in the hashtable already
         if self.count(name) > 0:
@@ -212,7 +212,7 @@ class SlackServer(object):
         If we haven't tried to connect OR we tried and never heard back and it
         has been 125 seconds consider the attempt dead and try again
         """
-        if self.connection_attempt_time == 0 or self.connection_attempt_time + 125 > int(time.time()):
+        if self.connection_attempt_time == 0 or self.connection_attempt_time + 125 < int(time.time()):
             return True
         else:
             return False
