@@ -145,6 +145,7 @@ class SlackServer(object):
         self.channels = SearchList()
         self.connecting = False
         self.connected = False
+        self.connection_attempt_time = 0
         self.communication_counter = 0
         self.message_buffer = {}
         self.ping_hook = None
@@ -206,10 +207,24 @@ class SlackServer(object):
         request = {"type": "ping"}
         self.send_to_websocket(request)
 
+    def should_connect(self):
+        """
+        If we haven't tried to connect OR we tried and never heard back and it
+        has been 65 seconds consider the attempt dead and try again
+        """
+        if self.connection_attempt_time == 0 or self.connection_attempt_time + 65 > int(time.time()):
+            return True
+        else:
+            return False
+
     def connect_to_slack(self):
         t = time.time()
+        #Double check that we haven't exceeded a long wait to connect and try again.
+        if self.connecting and should_connect():
+            self.connecting = False
         if not self.connecting:
             async_slack_api_request("slack.com", self.token, "rtm.start", {"ts": t})
+            self.connection_attempt_time = int(time.time())
             self.connecting = True
 
     def connected_to_slack(self, login_data):
@@ -2373,7 +2388,7 @@ if __name__ == "__main__":
             users = SearchList()
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
-            w.hook_timer(30000, 0, 0, "slack_connection_persistence_cb", "")
+            w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
 
             # attach to the weechat hooks we need
             w.hook_timer(1000, 0, 0, "typing_update_cb", "")
