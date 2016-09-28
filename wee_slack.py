@@ -2419,7 +2419,7 @@ if __name__ == "__main__":
             main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
 
             message_cache = collections.defaultdict(list)
-            # cache_load()
+            cache_load()
 
             servers = SearchList()
             for token in slack_api_token.split(','):
