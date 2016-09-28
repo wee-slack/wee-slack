@@ -598,7 +598,6 @@ class Channel(object):
             self.current_short_name = ""
             self.detach_buffer()
         if update_remote:
-            # t = time.time()
             async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier})
 
     def closed(self):
@@ -623,8 +622,6 @@ class Channel(object):
         return typing
 
     def mark_read(self, update_remote=True):
-        # t = time.time()
-
         if self.channel_buffer:
             w.buffer_set(self.channel_buffer, "unread", "")
         if update_remote:
@@ -1010,10 +1007,11 @@ class Message(object):
     def __lt__(self, other):
         return self.ts < other.ts
 
-# Only run this function if we're in a slack buffer, else ignore
-
 
 def slack_buffer_or_ignore(f):
+    """
+    Only run this function if we're in a slack buffer, else ignore
+    """
     @wraps(f)
     def wrapper(current_buffer, *args, **kwargs):
         server = servers.find(current_domain_name())
@@ -2148,11 +2146,8 @@ def complete_next_cb(data, buffer, command):
             return w.WEECHAT_RC_OK_EAT
     return w.WEECHAT_RC_OK
 
+
 # Slack specific requests
-
-# NOTE: switched to async because sync slowed down the UI
-
-
 def async_slack_api_request(domain, token, request, post_data, priority=False):
     if not STOP_TALKING_TO_SLACK:
         post_data["token"] = token
@@ -2423,7 +2418,7 @@ if __name__ == "__main__":
             main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
 
             message_cache = collections.defaultdict(list)
-            cache_load()
+            # cache_load()
 
             servers = SearchList()
             for token in slack_api_token.split(','):
