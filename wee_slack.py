@@ -2203,7 +2203,7 @@ def url_processor_cb(data, command, return_code, out, err):
                     channel = data["post_data"]["channel"]
                 token = data["token"]
                 if "messages" in my_json:
-                    # messages = my_json["messages"].reverse()
+                    my_json["messages"].reverse()
                     for message in my_json["messages"]:
                         message["_server"] = servers.find(token).domain
                         message["channel"] = servers.find(token).channels.find(channel).identifier
