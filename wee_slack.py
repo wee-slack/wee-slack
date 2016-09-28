@@ -1205,7 +1205,9 @@ def command_nodistractions(current_buffer, args):
                 if channel_buffer:
                     w.buffer_set(channels.find(channel).channel_buffer, "hidden", str(int(hide_distractions)))
             except:
-                dbg("Can't hide channel {}".format(channel), main_buffer=True)
+                dbg("Can't hide channel {} .. removing..".format(channel), main_buffer=True)
+                distracting_channels.pop(distracting_channels.index(channel))
+                save_distracting_channels()
 
 
 def command_distracting(current_buffer, args):
@@ -1219,8 +1221,13 @@ def command_distracting(current_buffer, args):
         distracting_channels.append(fullname)
     else:
         distracting_channels.pop(distracting_channels.index(fullname))
+    save_distracting_channels()
+
+
+def save_distracting_channels():
     new = ','.join(distracting_channels)
     w.config_set_plugin('distracting_channels', new)
+
 
 
 @slack_buffer_required
