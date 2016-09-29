@@ -369,7 +369,7 @@ def buffer_input_cb(b, buffer, data):
     channel = channels.find(buffer)
     if not channel:
         return w.WEECHAT_RC_OK_EAT
-    reaction = re.match("(\d*)(\+|-):(.*):", data)
+    reaction = re.match("^\s*(\d*)(\+|-):(.*):\s*$", data)
     if not reaction and not data.startswith('s/'):
         channel.send_message(data)
         # channel.buffer_prnt(channel.server.nick, data)
