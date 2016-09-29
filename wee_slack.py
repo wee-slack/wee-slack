@@ -810,7 +810,7 @@ class GroupChannel(Channel):
 class MpdmChannel(Channel):
 
     def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[], topic=""):
-        name = ",".join("-".join(name.split("-")[1:-1]).split("--"))
+        name = "|".join("-".join(name.split("-")[1:-1]).split("--"))
         super(MpdmChannel, self).__init__(server, name, identifier, active, last_read, prepend_name, members, topic)
         self.type = "group"
 
@@ -1241,7 +1241,6 @@ def save_distracting_channels():
     w.config_set_plugin('distracting_channels', new)
 
 
-
 @slack_buffer_required
 def command_users(current_buffer, args):
     """
@@ -1619,7 +1618,10 @@ def process_group_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.add_channel(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+        if item["name"].startswith("mpdm-"):
+            server.add_channel(MpdmChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+        else:
+            server.add_channel(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
 
 
 def process_group_archive(message_json):
