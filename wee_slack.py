@@ -1629,6 +1629,16 @@ def process_group_archive(message_json):
     channel.detach_buffer()
 
 
+def process_mpim_close(message_json):
+    server = servers.find(message_json["_server"])
+    server.channels.find(message_json["channel"]).close(False)
+
+
+def process_mpim_open(message_json):
+    server = servers.find(message_json["_server"])
+    server.channels.find(message_json["channel"]).open()
+
+
 def process_im_close(message_json):
     server = servers.find(message_json["_server"])
     server.channels.find(message_json["channel"]).close(False)
