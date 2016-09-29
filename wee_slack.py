@@ -1636,7 +1636,7 @@ def process_mpim_close(message_json):
 
 def process_mpim_open(message_json):
     server = servers.find(message_json["_server"])
-    server.channels.find(message_json["channel"]).open()
+    server.channels.find(message_json["channel"]).open(False)
 
 
 def process_im_close(message_json):
