@@ -1922,7 +1922,7 @@ def unwrap_attachments(message_json, text_before):
 
 
 def resolve_ref(ref):
-    if ref.startswith('@U'):
+    if ref.startswith('@U') or ref.startswith('@W'):
         if users.find(ref[1:]):
             try:
                 return "@{}".format(users.find(ref[1:]).name)
