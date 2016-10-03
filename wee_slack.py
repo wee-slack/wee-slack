@@ -658,6 +658,7 @@ class Channel(object):
         set_read_marker = False
         time_float = float(time)
         tags = "nick_" + user
+        user_obj = self.server.users.find(user)
         # XXX: we should not set log1 for robots.
         if time_float != 0 and self.last_read >= time_float:
             tags += ",no_highlight,notify_none,logger_backlog_end"
@@ -678,16 +679,16 @@ class Channel(object):
         if self.channel_buffer:
             prefix_same_nick = w.config_string(w.config_get('weechat.look.prefix_same_nick'))
             if user == self.last_active_user and prefix_same_nick != "":
-                if colorize_nicks and self.server.users.find(user):
-                    name = self.server.users.find(user).color + prefix_same_nick
+                if colorize_nicks and user_obj:
+                    name = user_obj.color + prefix_same_nick
                 else:
                     name = prefix_same_nick
             else:
                 nick_prefix = w.config_string(w.config_get('weechat.look.nick_prefix'))
                 nick_suffix = w.config_string(w.config_get('weechat.look.nick_suffix'))
 
-                if self.server.users.find(user):
-                    name = self.server.users.find(user).formatted_name()
+                if user_obj:
+                    name = user_obj.formatted_name()
                     self.last_active_user = user
                     # XXX: handle bots properly here.
                 else:
@@ -700,8 +701,8 @@ class Channel(object):
             if type(message) is not unicode:
                 message = message.decode('UTF-8', 'replace')
             curr_color = w.color(chat_color)
-            if colorize_nicks and colorize_messages and self.server.users.find(user):
-                curr_color = self.server.users.find(user).color
+            if colorize_nicks and colorize_messages and user_obj:
+                curr_color = user_obj.color
             message = curr_color + message
             for user in self.server.users:
                 if user.name in message:
