@@ -880,7 +880,9 @@ class User(object):
 
     def __eq__(self, compare_str):
         try:
-            if compare_str == self.name or compare_str == "@" + self.name or compare_str == self.identifier:
+            if compare_str == self.name or compare_str == self.identifier:
+                return True
+            elif compare_str[0] == '@'  and compare_str[1:] == self.name:
                 return True
             else:
                 return False
