@@ -95,7 +95,7 @@ class SearchList(list):
         if name in self.hashtable:
             return self.hashtable[name]
         # this is a fallback to __eq__ if the item isn't in the hashtable already
-        if self.count(name) > 0:
+        if name in self:
             self.update_hashtable()
             return self[self.index(name)]
 
