@@ -674,7 +674,12 @@ class Channel(object):
                     name = prefix_same_nick
             else:
                 nick_prefix = w.config_string(w.config_get('weechat.look.nick_prefix'))
+                nick_prefix_color_name = w.config_string(w.config_get('weechat.color.chat_nick_prefix'))
+                nick_prefix_color = w.color(nick_prefix_color_name)
+
                 nick_suffix = w.config_string(w.config_get('weechat.look.nick_suffix'))
+                nick_suffix_color_name = w.config_string(w.config_get('weechat.color.chat_nick_prefix'))
+                nick_suffix_color = w.color(nick_suffix_color_name)
 
                 if self.server.users.find(user):
                     name = self.server.users.find(user).formatted_name()
@@ -683,7 +688,7 @@ class Channel(object):
                 else:
                     name = user
                     self.last_active_user = None
-                name = nick_prefix + name + nick_suffix
+                name = nick_prefix_color + nick_prefix + w.color("reset") + name + nick_suffix_color + nick_suffix + w.color("reset")
             name = name.decode('utf-8')
             # colorize nicks in each line
             chat_color = w.config_string(w.config_get('weechat.color.chat'))
