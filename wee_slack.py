@@ -1308,6 +1308,30 @@ def command_markread(current_buffer, args):
         servers.find(domain).channels.find(channel).mark_read()
 
 
+@slack_buffer_required
+def command_slash(current_buffer, args):
+    """
+    Support for custom slack commands
+    /slack slash /customcommand arg1 arg2 arg3
+    """
+    aargs = args.split(None, 1)
+
+    if len(aargs) == 0:
+        # XXX: whine
+        return
+    command = aargs[0]
+    text = aargs[1]
+
+    channel = current_buffer_name(short=True)
+    domain = current_domain_name()
+
+    if servers.find(domain).channels.find(channel):
+        channel_identifier = servers.find(domain).channels.find(channel).identifier
+
+    server = servers.find(current_domain_name())
+    async_slack_api_request(server.domain, server.token, 'chat.command', {'command': command, 'text': text, 'channel': channel_identifier})
+
+
 def command_flushcache(current_buffer, args):
     global message_cache
     message_cache = collections.defaultdict(list)
