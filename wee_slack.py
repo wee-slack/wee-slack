@@ -1320,16 +1320,13 @@ def command_slash(current_buffer, args):
     domain = current_domain_name()
 
     if args is None:
-        server.buffer_prnt("Usage: /slack slash [/someslashcommand].")
+        server.buffer_prnt("Usage: /slack slash /someslashcommand [arguments...].")
         return
 
     aargs = args.split(None, 1)
 
     command = aargs[0]
-    if 1 < len(aargs):
-        text = aargs[1]
-    else:
-        text = ""
+    text = args[1] if len(args) > 1 else ""
 
     if servers.find(domain).channels.find(channel):
         channel_identifier = servers.find(domain).channels.find(channel).identifier
