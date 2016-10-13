@@ -1326,7 +1326,7 @@ def command_slash(current_buffer, args):
     split_args = args.split(None, 1)
 
     command = split_args[0]
-    text = split_args[1] if len(args) > 0 else ""
+    text = split_args[1] if len(split_args) > 1 else ""
 
     if servers.find(domain).channels.find(channel):
         channel_identifier = servers.find(domain).channels.find(channel).identifier
