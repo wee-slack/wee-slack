@@ -12,6 +12,7 @@ A WeeChat native client for Slack.com. Provides supplemental features only avail
 
 Features
 --------
+  * **New** Slash commands (including custom ones!)
   * **New** Upload to slack capabilities!
   * Emoji reactions!
   * Edited messages work just like the official clients, where the original message changes and has (edited) appended.
@@ -32,7 +33,6 @@ Features
   * Away/back status handling
   * Expands/shows metadata for things like tweets/links
   * Displays edited messages (slack.com irc mode currently doesn't show these)
-
   * *Super fun* debug mode. See what the websocket is saying with `/slack debug`
 
 In Development
@@ -175,6 +175,11 @@ Set all read markers to a specific time:
 Upload a file to the current slack buffer:
 ```
 /slack upload [file_path]
+```
+
+Run a Slack slash command. Simply prepend `/slack slash` to what you'd type in the official clients.:
+```
+/slack slash /desiredcommand arg1 arg2 arg3
 ```
 
 Debug mode:
