@@ -2202,22 +2202,24 @@ def complete_next_cb(data, buffer, command):
 
 # Slack specific requests
 def async_slack_api_request(domain, token, request, post_data, priority=False):
+    global slack_timeout
     if not STOP_TALKING_TO_SLACK:
         post_data["token"] = token
         url = 'url:https://{}/api/{}?{}'.format(domain, request, urllib.urlencode(post_data))
         context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
         params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
         dbg("URL: {} context: {} params: {}".format(url, context, params))
-        w.hook_process_hashtable(url, params, 20000, "url_processor_cb", context)
+        w.hook_process_hashtable(url, params, slack_timeout, "url_processor_cb", context)
 
 
 def async_slack_api_upload_request(token, request, post_data, priority=False):
+    global slack_timeout
     if not STOP_TALKING_TO_SLACK:
         url = 'https://slack.com/api/{}'.format(request)
         file_path = os.path.expanduser(post_data["file"])
         command = 'curl -F file=@{} -F channels={} -F token={} {}'.format(file_path, post_data["channels"], token, url)
         context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
-        w.hook_process(command, 20000, "url_processor_cb", context)
+        w.hook_process(command, slack_timeout, "url_processor_cb", context)
 
 
 # funny, right?
@@ -2355,7 +2357,7 @@ def create_slack_debug_buffer():
 
 def config_changed_cb(data, option, value):
     global slack_api_token, distracting_channels, colorize_nicks, colorize_private_chats, slack_debug, debug_mode, \
-        unfurl_ignore_alt_text, colorize_messages, show_reaction_nicks
+        unfurl_ignore_alt_text, colorize_messages, show_reaction_nicks, slack_timeout
 
     slack_api_token = w.config_get_plugin("slack_api_token")
 
@@ -2374,6 +2376,8 @@ def config_changed_cb(data, option, value):
     unfurl_ignore_alt_text = False
     if w.config_get_plugin('unfurl_ignore_alt_text') != "0":
         unfurl_ignore_alt_text = True
+
+    slack_timeout = int(w.config_get_plugin('slack_timeout'))
 
     return w.WEECHAT_RC_OK
 
@@ -2447,6 +2451,8 @@ if __name__ == "__main__":
                 w.config_set_plugin('switch_buffer_on_join', "1")
             if not w.config_get_plugin('show_reaction_nicks'):
                 w.config_set_plugin('show_reaction_nicks', "0")
+            if not w.config_get_plugin('slack_timeout'):
+                w.config_set_plugin('slack_timeout', "20000")
 
             if w.config_get_plugin('channels_not_on_current_server_color'):
                 w.config_option_unset('channels_not_on_current_server_color')
