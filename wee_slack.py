@@ -697,7 +697,7 @@ class Channel(object):
             curr_color = w.color(chat_color)
             if colorize_nicks and colorize_messages and self.server.users.find(user):
                 curr_color = self.server.users.find(user).color
-            message = curr_color + message
+
             for user in self.server.users:
                 if user.name in message:
                     message = user.name_regex.sub(
@@ -705,8 +705,11 @@ class Channel(object):
                         message)
 
             message = HTMLParser.HTMLParser().unescape(message)
-            data = u"{}\t{}".format(name, message).encode('utf-8')
-            w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
+
+            for line in message.split("\n"):
+                line = curr_color + line
+                data = u"{}\t{}".format(name, line).encode('utf-8')
+                w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
 
             if set_read_marker:
                 self.mark_read(False)
