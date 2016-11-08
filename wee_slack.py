@@ -705,8 +705,10 @@ class Channel(object):
                         message)
 
             message = HTMLParser.HTMLParser().unescape(message)
-            data = u"{}\t{}".format(name, message).encode('utf-8')
-            w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
+
+            for line in message.split("\n"):
+                data = u"{}\t{}".format(name, line).encode('utf-8')
+                w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
 
             if set_read_marker:
                 self.mark_read(False)
