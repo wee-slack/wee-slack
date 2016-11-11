@@ -95,20 +95,30 @@ class SearchList(list):
         if name in self.hashtable:
             return self.hashtable[name]
         # this is a fallback to __eq__ if the item isn't in the hashtable already
-        if self.count(name) > 0:
+        if name in self:
             self.update_hashtable()
             return self[self.index(name)]
 
     def append(self, item, aliases=[]):
         super(SearchList, self).append(item)
-        self.update_hashtable()
+        self.update_hashtable(item)
 
-    def update_hashtable(self):
-        for child in self:
-            if hasattr(child, "get_aliases"):
-                for alias in child.get_aliases():
+    def update_hashtable(self, item=None):
+        if item is not None:
+            try:
+                for alias in item.get_aliases():
                     if alias is not None:
-                        self.hashtable[alias] = child
+                        self.hashtable[alias] = item
+            except AttributeError:
+                pass
+        else:
+            for child in self:
+                try:
+                    for alias in child.get_aliases():
+                        if alias is not None:
+                            self.hashtable[alias] = child
+                except AttributeError:
+                    pass
 
     def find_by_class(self, class_name):
         items = []
@@ -648,6 +658,7 @@ class Channel(object):
         set_read_marker = False
         time_float = float(time)
         tags = "nick_" + user
+        user_obj = self.server.users.find(user)
         # XXX: we should not set log1 for robots.
         if time_float != 0 and self.last_read >= time_float:
             tags += ",no_highlight,notify_none,logger_backlog_end"
@@ -668,8 +679,8 @@ class Channel(object):
         if self.channel_buffer:
             prefix_same_nick = w.config_string(w.config_get('weechat.look.prefix_same_nick'))
             if user == self.last_active_user and prefix_same_nick != "":
-                if colorize_nicks and self.server.users.find(user):
-                    name = self.server.users.find(user).color + prefix_same_nick
+                if colorize_nicks and user_obj:
+                    name = user_obj.color + prefix_same_nick
                 else:
                     name = prefix_same_nick
             else:
@@ -681,8 +692,8 @@ class Channel(object):
                 nick_suffix_color_name = w.config_string(w.config_get('weechat.color.chat_nick_prefix'))
                 nick_suffix_color = w.color(nick_suffix_color_name)
 
-                if self.server.users.find(user):
-                    name = self.server.users.find(user).formatted_name()
+                if user_obj:
+                    name = user_obj.formatted_name()
                     self.last_active_user = user
                     # XXX: handle bots properly here.
                 else:
@@ -695,8 +706,8 @@ class Channel(object):
             if type(message) is not unicode:
                 message = message.decode('UTF-8', 'replace')
             curr_color = w.color(chat_color)
-            if colorize_nicks and colorize_messages and self.server.users.find(user):
-                curr_color = self.server.users.find(user).color
+            if colorize_nicks and colorize_messages and user_obj:
+                curr_color = user_obj.color
             message = curr_color + message
             for user in self.server.users:
                 if user.name in message:
@@ -874,7 +885,9 @@ class User(object):
 
     def __eq__(self, compare_str):
         try:
-            if compare_str == self.name or compare_str == "@" + self.name or compare_str == self.identifier:
+            if compare_str == self.name or compare_str == self.identifier:
+                return True
+            elif compare_str[0] == '@'  and compare_str[1:] == self.name:
                 return True
             else:
                 return False
