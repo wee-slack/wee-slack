@@ -886,7 +886,7 @@ class User(object):
         try:
             if compare_str == self.name or compare_str == self.identifier:
                 return True
-            elif compare_str[0] == '@'  and compare_str[1:] == self.name:
+            elif compare_str[0] == '@' and compare_str[1:] == self.name:
                 return True
             else:
                 return False
@@ -2100,6 +2100,11 @@ def buffer_closing_cb(signal, sig_type, data):
     return w.WEECHAT_RC_OK
 
 
+def buffer_opened_cb(signal, sig_type, data):
+    channels.update_hashtable()
+    return w.WEECHAT_RC_OK
+
+
 def buffer_switch_cb(signal, sig_type, data):
     global previous_buffer, hotlist
     # this is to see if we need to gray out things in the buffer list
@@ -2503,6 +2508,7 @@ if __name__ == "__main__":
             w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
             w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
             w.hook_signal('buffer_closing', "buffer_closing_cb", "")
+            w.hook_signal('buffer_opened', "buffer_opened_cb", "")
             w.hook_signal('buffer_switch', "buffer_switch_cb", "")
             w.hook_signal('window_switch', "buffer_switch_cb", "")
             w.hook_signal('input_text_changed', "typing_notification_cb", "")
