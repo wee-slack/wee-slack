@@ -152,10 +152,16 @@ Set yourself away/back:
 /slack back
 ```
 
-Modify previous message *Note: this is not regex, just similar syntax*:
+Modify previous message:
 ```
 s/old text/new text/
 ```
+
+Replace all instances of text in previous message:
+```
+s/old text/new text/g
+```
+
 
 Delete previous message:
 ```
