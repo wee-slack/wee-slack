@@ -580,11 +580,11 @@ class Channel(object):
     def linkify_text(self, message):
         message = message.split(' ')
         for item in enumerate(message):
-            targets = re.match('.*([@#])([\w.]+\w)(\W*)', item[1])
+            targets = re.match('([@#])([\w.-]+)(\W*)', item[1])
             if targets and targets.groups()[0] == '@':
                 named = targets.groups()
                 if named[1] in ["group", "channel", "here"]:
-                    message[item[0]] = "<!{}>".format(named[1])
+                    message[item[0]] = "<!{}>{}".format(named[1], named[2])
                 if self.server.users.find(named[1]):
                     message[item[0]] = "<@{}>{}".format(self.server.users.find(named[1]).identifier, named[2])
             if targets and targets.groups()[0] == '#':
