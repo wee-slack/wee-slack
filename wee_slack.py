@@ -293,12 +293,12 @@ class SlackServer(object):
 
     def print_connection_info(self, login_data):
         self.buffer_prnt('Connected to Slack', backlog=True)
-        self.buffer_prnt('{:<20} {}'.format("Websocket URL", login_data["url"]), backlog=True)
-        self.buffer_prnt('{:<20} {}'.format("User name", login_data["self"]["name"]), backlog=True)
-        self.buffer_prnt('{:<20} {}'.format("User ID", login_data["self"]["id"]), backlog=True)
-        self.buffer_prnt('{:<20} {}'.format("Team name", login_data["team"]["name"]), backlog=True)
-        self.buffer_prnt('{:<20} {}'.format("Team domain", login_data["team"]["domain"]), backlog=True)
-        self.buffer_prnt('{:<20} {}'.format("Team id", login_data["team"]["id"]), backlog=True)
+        self.buffer_prnt('{:<20} {}'.format(u"Websocket URL", login_data["url"]), backlog=True)
+        self.buffer_prnt('{:<20} {}'.format(u"User name", login_data["self"]["name"]), backlog=True)
+        self.buffer_prnt('{:<20} {}'.format(u"User ID", login_data["self"]["id"]), backlog=True)
+        self.buffer_prnt('{:<20} {}'.format(u"Team name", login_data["team"]["name"]), backlog=True)
+        self.buffer_prnt('{:<20} {}'.format(u"Team domain", login_data["team"]["domain"]), backlog=True)
+        self.buffer_prnt('{:<20} {}'.format(u"Team id", login_data["team"]["id"]), backlog=True)
 
     def create_local_buffer(self):
         if not w.buffer_search("", self.server_buffer_name):
