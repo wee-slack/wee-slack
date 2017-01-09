@@ -2244,6 +2244,8 @@ def async_slack_api_upload_request(token, request, post_data, priority=False):
     if not STOP_TALKING_TO_SLACK:
         url = 'https://slack.com/api/{}'.format(request)
         file_path = os.path.expanduser(post_data["file"])
+        if ' ' in file_path:
+            file_path = file_path.replace(' ','\ ')
         command = 'curl -F file=@{} -F channels={} -F token={} {}'.format(file_path, post_data["channels"], token, url)
         context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
         w.hook_process(command, slack_timeout, "url_processor_cb", context)
