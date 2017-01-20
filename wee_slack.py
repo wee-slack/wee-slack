@@ -2129,7 +2129,8 @@ def buffer_switch_cb(signal, sig_type, data):
 
 
 def typing_notification_cb(signal, sig_type, data):
-    if len(w.buffer_get_string(data, "input")) > 8:
+    msg = w.buffer_get_string(data, "input")
+    if len(msg) > 8 and msg[:1] != "/":
         global typing_timer
         now = time.time()
         if typing_timer + 4 < now:
