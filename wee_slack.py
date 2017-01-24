@@ -162,6 +162,7 @@ class SlackServer(object):
         self.message_buffer = {}
         self.ping_hook = None
         self.alias = None
+        self.got_history = False
 
         self.identifier = None
         self.connect_to_slack()
@@ -357,8 +358,8 @@ class SlackServer(object):
             if self.channels.find(item) is not None:
                 self.channels.find(item).muted = True
 
-        for item in self.channels:
-            item.get_history()
+        #for item in self.channels:
+        #    item.get_history()
 
     def buffer_prnt(self, message='no message', user="SYSTEM", backlog=False):
         message = message.encode('ascii', 'ignore')
@@ -427,6 +428,7 @@ class Channel(object):
         self.scrolling = False
         self.last_active_user = None
         self.muted = False
+        self.got_history = False
         if active:
             self.create_buffer()
             self.attach_buffer()
@@ -819,6 +821,7 @@ class Channel(object):
                 async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "oldest": self.last_received, "count": BACKLOG_SIZE})
             else:
                 async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE})
+        self.got_history = True
 
 
 class GroupChannel(Channel):
@@ -2119,6 +2122,10 @@ def buffer_switch_cb(signal, sig_type, data):
     if channels.find(previous_buffer):
         channels.find(previous_buffer).mark_read()
 
+    new_channel = channels.find(data)
+    if new_channel:
+        if new_channel.got_history == False:
+            new_channel.get_history()
     # channel_name = current_buffer_name()
     previous_buffer = data
     return w.WEECHAT_RC_OK
