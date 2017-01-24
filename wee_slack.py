@@ -514,10 +514,7 @@ class Channel(object):
             # since this is a change just remove it regardless of where it is
             w.nicklist_remove_nick(self.channel_buffer, nick)
             # now add it back in to whichever..
-            if user.presence == 'away':
-                w.nicklist_add_nick(self.channel_buffer, afk, user.name, user.color_name, "", "", 1)
-            else:
-                w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
+            w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
 
         # if we didn't get a user, build a complete list. this is expensive.
         else:
@@ -526,10 +523,7 @@ class Channel(object):
                     user = self.members_table[user]
                     if user.deleted:
                         continue
-                    if user.presence == 'away':
-                        w.nicklist_add_nick(self.channel_buffer, afk, user.name, user.color_name, "", "", 1)
-                    else:
-                        w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
+                    w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
             except Exception as e:
                 dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
 
@@ -909,6 +903,7 @@ class User(object):
         return [self.name, "@" + self.name, self.identifier]
 
     def set_active(self):
+        return #temporarily noop this
         if self.deleted:
             return
 
@@ -922,6 +917,7 @@ class User(object):
             buffer_list_update_next()
 
     def set_inactive(self):
+        return #temporarily noop this
         if self.deleted:
             return
 
