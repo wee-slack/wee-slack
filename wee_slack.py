@@ -345,8 +345,8 @@ class SlackServer(object):
                     self.add_channel(GroupChannel(self, **item))
 
         for item in data["ims"]:
-            if item["unread_count"] > 0:
-                item["active"] = True
+            if item["unread_count"] > 0 or item["is_open"]:
+                item["is_open"] = True
             item['name'] = self.users.find(item["user"]).name
             self.add_channel(DmChannel(self, **item))
 
@@ -1608,7 +1608,8 @@ def process_channel_created(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.add_channel(Channel(server, item["name"], item["id"], False, prepend_name="#"))
+        item["prepend_name"] = "#"
+        server.add_channel(Channel(server, **item))
     server.buffer_prnt("New channel created: {}".format(item["name"]))
 
 
@@ -1639,7 +1640,8 @@ def process_channel_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
-        server.add_channel(Channel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+        item["prepend_name"] = "#"
+        server.add_channel(Channel(server, **item))
 
 
 def process_channel_leave(message_json):
@@ -1679,11 +1681,11 @@ def process_group_joined(message_json):
         server.channels.find(message_json["channel"]["name"]).open(False)
     else:
         item = message_json["channel"]
+        item["prepend_name"] = "#"
         if item["name"].startswith("mpdm-"):
-            server.add_channel(MpdmChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+            self.add_channel(MpdmChannel(self, **item))
         else:
-            server.add_channel(GroupChannel(server, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
-
+            self.add_channel(GroupChannel(self, **item))
 
 def process_group_archive(message_json):
     channel = server.channels.find(message_json["channel"])
@@ -1725,7 +1727,8 @@ def process_im_created(message_json):
         server.channels.find(channel_name).open(False)
     else:
         item = message_json["channel"]
-        server.add_channel(DmChannel(server, channel_name, item["id"], item["is_open"], item["last_read"]))
+        item['name'] = self.users.find(item["user"]).name
+        self.add_channel(DmChannel(self, **item))
     server.buffer_prnt("New direct message channel created: {}".format(item["name"]))
 
 
