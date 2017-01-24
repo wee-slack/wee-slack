@@ -331,6 +331,7 @@ class SlackServer(object):
             self.add_bot(Bot(self, item["name"], item["id"], item["deleted"]))
 
         for item in data["channels"]:
+            item["is_open"] = item["is_member"]
             item["prepend_name"] = "#"
             if not item["is_archived"]:
                 self.add_channel(Channel(self, **item))
@@ -413,7 +414,7 @@ class Channel(object):
         self.name = kwargs.get('prepend_name', "") + kwargs.get('name')
         self.current_short_name = kwargs.get('prepend_name', "") + kwargs.get('name')
         self.identifier = kwargs.get('id', 0)
-        self.active = kwargs.get('is_member', True)
+        self.active = kwargs.get('is_open', False)
         self.last_read = float(kwargs.get('last_read', 0))
         self.members = set(kwargs.get('members', []))
         self.topic = kwargs.get('topic', {"value": ""})["value"]
