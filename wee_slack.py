@@ -279,6 +279,9 @@ class SlackServer(object):
                             time.sleep(1)
                         else:
                             self.message_buffer.pop(message_id)
+            for chan in self.channels:
+                if chan.channel_buffer and chan.muted:
+                    w.buffer_set(chan.channel_buffer, "hotlist", "-1")
             return True
         else:
             token_start = self.token[:10]
@@ -328,35 +331,30 @@ class SlackServer(object):
             self.add_bot(Bot(self, item["name"], item["id"], item["deleted"]))
 
         for item in data["channels"]:
-            if "last_read" not in item:
-                item["last_read"] = 0
-            if "members" not in item:
-                item["members"] = []
-            if "topic" not in item:
-                item["topic"] = {}
-                item["topic"]["value"] = ""
+            item["prepend_name"] = "#"
             if not item["is_archived"]:
-                self.add_channel(Channel(self, item["name"], item["id"], item["is_member"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+                self.add_channel(Channel(self, **item))
+
         for item in data["groups"]:
-            if "last_read" not in item:
-                item["last_read"] = 0
+            item["prepend_name"] = "#"
             if not item["is_archived"]:
                 if item["name"].startswith("mpdm-"):
-                    self.add_channel(MpdmChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+                    self.add_channel(MpdmChannel(self, **item))
                 else:
-                    self.add_channel(GroupChannel(self, item["name"], item["id"], item["is_open"], item["last_read"], "#", item["members"], item["topic"]["value"]))
+                    self.add_channel(GroupChannel(self, **item))
+
         for item in data["ims"]:
-            if "last_read" not in item:
-                item["last_read"] = 0
             if item["unread_count"] > 0:
-                item["is_open"] = True
-            name = self.users.find(item["user"]).name
-            self.add_channel(DmChannel(self, name, item["id"], item["is_open"], item["last_read"]))
+                item["active"] = True
+            item['name'] = self.users.find(item["user"]).name
+            self.add_channel(DmChannel(self, **item))
+
         for item in data['self']['prefs']['muted_channels'].split(','):
             if item == '':
                 continue
-            if self.channels.find(item) is not None:
-                self.channels.find(item).muted = True
+            maybe_muted_chan = self.channels.find(item)
+            if maybe_muted_chan is not None:
+                maybe_muted_chan.muted = True
 
         #for item in self.channels:
         #    item.get_history()
@@ -409,14 +407,17 @@ class Channel(object):
     Represents a single channel and is the source of truth
     for channel <> weechat buffer
     """
-    def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[], topic=""):
-        self.name = prepend_name + name
-        self.current_short_name = prepend_name + name
-        self.identifier = identifier
-        self.active = active
-        self.last_read = float(last_read)
-        self.members = set(members)
-        self.topic = topic
+    #def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[], topic="", unread_count=0):
+    def __init__(self, server, **kwargs):
+
+        self.name = kwargs.get('prepend_name', "") + kwargs.get('name')
+        self.current_short_name = kwargs.get('prepend_name', "") + kwargs.get('name')
+        self.identifier = kwargs.get('id', 0)
+        self.active = kwargs.get('is_member', True)
+        self.last_read = float(kwargs.get('last_read', 0))
+        self.members = set(kwargs.get('members', []))
+        self.topic = kwargs.get('topic', {"value": ""})["value"]
+        self.unread_count = kwargs.get('unread_count_display', 0)
 
         self.members_table = {}
         self.channel_buffer = None
@@ -429,7 +430,8 @@ class Channel(object):
         self.last_active_user = None
         self.muted = False
         self.got_history = False
-        if active:
+        #w.prnt("", "unread: {}".format(self.unread_count))
+        if self.active:
             self.create_buffer()
             self.attach_buffer()
             self.create_members_table()
@@ -476,6 +478,8 @@ class Channel(object):
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.name)
             w.buffer_set(self.channel_buffer, "short_name", self.name)
             buffer_list_update_next()
+        if self.unread_count != 0 and not self.muted:
+            w.buffer_set(self.channel_buffer, "hotlist", "1")
 
     def attach_buffer(self):
         channel_buffer = w.buffer_search("", "{}.{}".format(self.server.server_buffer_name, self.name))
@@ -823,23 +827,25 @@ class Channel(object):
 
 class GroupChannel(Channel):
 
-    def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[], topic=""):
-        super(GroupChannel, self).__init__(server, name, identifier, active, last_read, prepend_name, members, topic)
+    def __init__(self, server, **kwargs):
+        super(GroupChannel, self).__init__(server, **kwargs)
         self.type = "group"
 
 
 class MpdmChannel(Channel):
 
-    def __init__(self, server, name, identifier, active, last_read=0, prepend_name="", members=[], topic=""):
-        name = "|".join("-".join(name.split("-")[1:-1]).split("--"))
-        super(MpdmChannel, self).__init__(server, name, identifier, active, last_read, prepend_name, members, topic)
+    def __init__(self, server, **kwargs):
+        n = kwargs.get('name')
+        name = "|".join("-".join(n.split("-")[1:-1]).split("--"))
+        kwargs["name"] = name
+        super(MpdmChannel, self).__init__(server, **kwargs)
         self.type = "group"
 
 
 class DmChannel(Channel):
 
-    def __init__(self, server, name, identifier, active, last_read=0, prepend_name=""):
-        super(DmChannel, self).__init__(server, name, identifier, active, last_read, prepend_name)
+    def __init__(self, server, **kwargs):
+        super(DmChannel, self).__init__(server, **kwargs)
         self.type = "im"
 
     def rename(self):
