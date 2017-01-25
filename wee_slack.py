@@ -910,32 +910,33 @@ class User(object):
         return [self.name, "@" + self.name, self.identifier]
 
     def set_active(self):
-        return #temporarily noop this
-        if self.deleted:
-            return
+        if not self.deleted:
+            self.presence = "active"
+            dm_channel = self.server.channels.find(self.name)
+            if dm_channel and dm_channel.active:
+                buffer_list_update_next()
 
-        self.presence = "active"
+        return #temporarily noop this
         for channel in self.server.channels:
             if channel.has_user(self.identifier):
                 channel.update_nicklist(self.identifier)
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "1")
-        dm_channel = self.server.channels.find(self.name)
-        if dm_channel and dm_channel.active:
-            buffer_list_update_next()
 
     def set_inactive(self):
+        if not self.deleted:
+            self.presence = "away"
+            dm_channel = self.server.channels.find(self.name)
+            if dm_channel and dm_channel.active:
+                buffer_list_update_next()
+
         return #temporarily noop this
         if self.deleted:
             return
 
-        self.presence = "away"
         for channel in self.server.channels:
             if channel.has_user(self.identifier):
                 channel.update_nicklist(self.identifier)
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
-        dm_channel = self.server.channels.find(self.name)
-        if dm_channel and dm_channel.active:
-            buffer_list_update_next()
 
     def update_color(self):
         if colorize_nicks:
