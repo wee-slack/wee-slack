@@ -1683,9 +1683,9 @@ def process_group_joined(message_json):
         item = message_json["channel"]
         item["prepend_name"] = "#"
         if item["name"].startswith("mpdm-"):
-            self.add_channel(MpdmChannel(self, **item))
+            server.add_channel(MpdmChannel(server, **item))
         else:
-            self.add_channel(GroupChannel(self, **item))
+            server.add_channel(GroupChannel(server, **item))
 
 def process_group_archive(message_json):
     channel = server.channels.find(message_json["channel"])
@@ -1727,8 +1727,8 @@ def process_im_created(message_json):
         server.channels.find(channel_name).open(False)
     else:
         item = message_json["channel"]
-        item['name'] = self.users.find(item["user"]).name
-        self.add_channel(DmChannel(self, **item))
+        item['name'] = server.users.find(item["user"]).name
+        server.add_channel(DmChannel(server, **item))
     server.buffer_prnt("New direct message channel created: {}".format(item["name"]))
 
 
