@@ -687,7 +687,7 @@ class Channel(object):
         if self.channel_buffer:
             prefix_same_nick = w.config_string(w.config_get('weechat.look.prefix_same_nick'))
             if user == self.last_active_user and prefix_same_nick != "":
-                if colorize_nicks and user_obj:
+                if config.colorize_nicks and user_obj:
                     name = user_obj.color + prefix_same_nick
                 else:
                     name = prefix_same_nick
@@ -937,7 +937,7 @@ class User(object):
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
 
     def update_color(self):
-        if colorize_nicks:
+        if config.colorize_nicks:
             if self.name == self.server.nick:
                 self.color_name = w.config_string(w.config_get('weechat.color.chat_nick_self'))
             else:
@@ -948,7 +948,7 @@ class User(object):
             self.color_name = ""
 
     def formatted_name(self, prepend="", enable_color=True):
-        if colorize_nicks and enable_color:
+        if config.colorize_nicks and enable_color:
             print_color = self.color
         else:
             print_color = ""
@@ -980,7 +980,7 @@ class Bot(object):
         return "{}".format(self.identifier)
 
     def update_color(self):
-        if colorize_nicks:
+        if config.colorize_nicks:
             self.color_name = w.info_get('irc_nick_color_name', self.name.encode('utf-8'))
             self.color = w.color(self.color_name)
         else:
@@ -988,7 +988,7 @@ class Bot(object):
             self.color = ""
 
     def formatted_name(self, prepend="", enable_color=True):
-        if colorize_nicks and enable_color:
+        if config.colorize_nicks and enable_color:
             print_color = self.color
         else:
             print_color = ""
@@ -1540,7 +1540,7 @@ def process_reply(message_json):
         if item["type"] == "message" and "channel" in item.keys():
             item["ts"] = message_json["ts"]
             channels.find(item["channel"]).cache_message(item, from_me=True)
-            text = unfurl_refs(item["text"], ignore_alt_text=unfurl_ignore_alt_text)
+            text = unfurl_refs(item["text"], ignore_alt_text=config.unfurl_ignore_alt_text)
 
             channels.find(item["channel"]).buffer_prnt(item["user"], text, item["ts"])
     dbg("REPLY {}".format(item))
