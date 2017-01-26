@@ -2497,7 +2497,10 @@ class PluginConfig(object):
 
     def fetch_setting(self, key):
         if hasattr(self, 'get_' + key):
-            return getattr(self, 'get_' + key)(key)
+            try:
+                return getattr(self, 'get_' + key)(key)
+            except:
+                return self.settings[key]
         else:
             # Most settings are on/off, so make get_boolean the default
             return self.get_boolean(key)
