@@ -687,7 +687,7 @@ class Channel(object):
         if self.channel_buffer:
             prefix_same_nick = w.config_string(w.config_get('weechat.look.prefix_same_nick'))
             if user == self.last_active_user and prefix_same_nick != "":
-                if colorize_nicks and user_obj:
+                if user_obj:
                     name = user_obj.color + prefix_same_nick
                 else:
                     name = prefix_same_nick
@@ -697,7 +697,7 @@ class Channel(object):
                 nick_prefix_color = w.color(nick_prefix_color_name)
 
                 nick_suffix = w.config_string(w.config_get('weechat.look.nick_suffix'))
-                nick_suffix_color_name = w.config_string(w.config_get('weechat.color.chat_nick_prefix'))
+                nick_suffix_color_name = w.config_string(w.config_get('weechat.color.chat_nick_suffix'))
                 nick_suffix_color = w.color(nick_suffix_color_name)
 
                 if user_obj:
@@ -709,19 +709,25 @@ class Channel(object):
                     self.last_active_user = None
                 name = nick_prefix_color + nick_prefix + w.color("reset") + name + nick_suffix_color + nick_suffix + w.color("reset")
             name = name.decode('utf-8')
-            # colorize nicks in each line
-            chat_color = w.config_string(w.config_get('weechat.color.chat'))
+
             if type(message) is not unicode:
                 message = message.decode('UTF-8', 'replace')
+
+            # If colorize_messages is enabled, color the entire line.
+            chat_color = w.config_string(w.config_get('weechat.color.chat'))
             curr_color = w.color(chat_color)
-            if colorize_nicks and colorize_messages and user_obj:
+            if colorize_messages and user_obj:
                 curr_color = user_obj.color
             message = curr_color + message
-            for user in self.server.users:
-                if user.name in message:
-                    message = user.name_regex.sub(
-                        r'\1\2{}\3'.format(user.formatted_name() + curr_color),
-                        message)
+
+            # If colorize_nicks is enabled, find nicks in the message and
+            # colorize them.
+            if colorize_nicks:
+                for user in self.server.users:
+                    if user.name in message:
+                        message = user.name_regex.sub(
+                            r'\1\2{}\3'.format(user.formatted_name() + curr_color),
+                            message)
 
             message = HTMLParser.HTMLParser().unescape(message)
             data = u"{}\t{}".format(name, message).encode('utf-8')
@@ -939,22 +945,17 @@ class User(object):
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
 
     def update_color(self):
-        if colorize_nicks:
-            if self.name == self.server.nick:
-                self.color_name = w.config_string(w.config_get('weechat.color.chat_nick_self'))
-            else:
-                self.color_name = w.info_get('irc_nick_color_name', self.name)
-            self.color = w.color(self.color_name)
+        if self.name == self.server.nick:
+            self.color_name = w.config_string(w.config_get('weechat.color.chat_nick_self'))
         else:
-            self.color = ""
-            self.color_name = ""
+            self.color_name = w.info_get('nick_color_name', self.name)
+        self.color = w.color(self.color_name)
 
     def formatted_name(self, prepend="", enable_color=True):
-        if colorize_nicks and enable_color:
-            print_color = self.color
+        if enable_color:
+            return self.color + prepend + self.name
         else:
-            print_color = ""
-        return print_color + prepend + self.name
+            return prepend + self.name
 
     def create_dm_channel(self):
         async_slack_api_request(self.server.domain, self.server.token, "im.open", {"user": self.identifier})
@@ -982,19 +983,14 @@ class Bot(object):
         return "{}".format(self.identifier)
 
     def update_color(self):
-        if colorize_nicks:
-            self.color_name = w.info_get('irc_nick_color_name', self.name.encode('utf-8'))
-            self.color = w.color(self.color_name)
-        else:
-            self.color_name = ""
-            self.color = ""
+        self.color_name = w.info_get('irc_nick_color_name', self.name.encode('utf-8'))
+        self.color = w.color(self.color_name)
 
     def formatted_name(self, prepend="", enable_color=True):
-        if colorize_nicks and enable_color:
-            print_color = self.color
+        if enable_color:
+            return self.color + prepend + self.name
         else:
-            print_color = ""
-        return print_color + prepend + self.name
+            return prepend + self.name
 
 
 class Message(object):
