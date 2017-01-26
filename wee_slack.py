@@ -2450,6 +2450,9 @@ class PluginConfig(object):
                 w.config_set_plugin(key, default)
         self.config_changed(None, None, None)
 
+    def __str__(self):
+        return "".join([x + "\t" + str(self.settings[x]) + "\n" for x in self.settings.keys()])
+
     def config_changed(self, data, key, value):
         for key in self.settings:
             self.settings[key] = self.fetch_setting(key)
