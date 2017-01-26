@@ -374,6 +374,19 @@ class SlackServer(object):
             pass
             # w.prnt("", "%s\t%s" % (user, message))
 
+    def set_away(self, msg):
+        async_slack_api_request(self.domain, self.token, 'presence.set', {"presence": "away"})
+        for c in self.channels:
+            if c.channel_buffer is not None:
+                w.buffer_set(c.channel_buffer, "localvar_set_away", msg)
+
+    def set_active(self):
+        async_slack_api_request(self.domain, self.token, 'presence.set', {"presence": "active"})
+        for c in self.channels:
+            if c.channel_buffer is not None:
+                w.buffer_set(c.channel_buffer, "localvar_set_away", '')
+                w.buffer_set(c.channel_buffer, "localvar_del_away", '')
+
 
 def buffer_input_cb(b, buffer, data):
     channel = channels.find(buffer)
@@ -1296,6 +1309,25 @@ def command_changetoken(current_buffer, args):
 
 def command_test(current_buffer, args):
     w.prnt(current_buffer, "worked!")
+
+
+def away_command_cb(data, current_buffer, args):
+    (all, message) = re.match("^/away(?:\s+(-all))?(?:\s+(.+))?", args).groups()
+    if all is None:
+        server = servers.find(current_domain_name())
+        if not server:
+            return w.WEECHAT_RC_OK
+        if message is None:
+            server.set_active()
+        else:
+            server.set_away(message)
+        return w.WEECHAT_RC_OK_EAT
+    for server in servers:
+        if message is None:
+            server.set_active()
+        else:
+            server.set_away(message)
+        return w.WEECHAT_RC_OK
 
 
 @slack_buffer_required
@@ -2571,6 +2603,7 @@ if __name__ == "__main__":
             w.hook_command_run('/topic', 'topic_command_cb', '')
             w.hook_command_run('/msg', 'msg_command_cb', '')
             w.hook_command_run("/input complete_next", "complete_next_cb", "")
+            w.hook_command_run('/away', 'away_command_cb', '')
             w.hook_completion("nicks", "complete @-nicks for slack",
                               "nick_completion_cb", "")
             w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
