@@ -687,7 +687,7 @@ class Channel(object):
         if self.channel_buffer:
             prefix_same_nick = w.config_string(w.config_get('weechat.look.prefix_same_nick'))
             if user == self.last_active_user and prefix_same_nick != "":
-                if colorize_nicks and user_obj:
+                if config.colorize_nicks and user_obj:
                     name = user_obj.color + prefix_same_nick
                 else:
                     name = prefix_same_nick
@@ -714,7 +714,7 @@ class Channel(object):
             if type(message) is not unicode:
                 message = message.decode('UTF-8', 'replace')
             curr_color = w.color(chat_color)
-            if colorize_nicks and colorize_messages and user_obj:
+            if config.colorize_nicks and config.colorize_messages and user_obj:
                 curr_color = user_obj.color
             message = curr_color + message
             for user in self.server.users:
@@ -850,12 +850,10 @@ class DmChannel(Channel):
         self.type = "im"
 
     def rename(self):
-        global colorize_private_chats
-
         if self.server.users.find(self.name).presence == "active":
-            new_name = self.server.users.find(self.name).formatted_name('+', colorize_private_chats)
+            new_name = self.server.users.find(self.name).formatted_name('+', config.colorize_private_chats)
         else:
-            new_name = self.server.users.find(self.name).formatted_name(' ', colorize_private_chats)
+            new_name = self.server.users.find(self.name).formatted_name(' ', config.colorize_private_chats)
 
         if self.channel_buffer:
             if self.current_short_name != new_name:
@@ -939,7 +937,7 @@ class User(object):
         w.nicklist_nick_set(self.server.buffer, self.nicklist_pointer, "visible", "0")
 
     def update_color(self):
-        if colorize_nicks:
+        if config.colorize_nicks:
             if self.name == self.server.nick:
                 self.color_name = w.config_string(w.config_get('weechat.color.chat_nick_self'))
             else:
@@ -950,7 +948,7 @@ class User(object):
             self.color_name = ""
 
     def formatted_name(self, prepend="", enable_color=True):
-        if colorize_nicks and enable_color:
+        if config.colorize_nicks and enable_color:
             print_color = self.color
         else:
             print_color = ""
@@ -982,7 +980,7 @@ class Bot(object):
         return "{}".format(self.identifier)
 
     def update_color(self):
-        if colorize_nicks:
+        if config.colorize_nicks:
             self.color_name = w.info_get('irc_nick_color_name', self.name.encode('utf-8'))
             self.color = w.color(self.color_name)
         else:
@@ -990,7 +988,7 @@ class Bot(object):
             self.color = ""
 
     def formatted_name(self, prepend="", enable_color=True):
-        if colorize_nicks and enable_color:
+        if config.colorize_nicks and enable_color:
             print_color = self.color
         else:
             print_color = ""
@@ -1202,7 +1200,7 @@ def command_talk(current_buffer, args):
                 server.buffer_prnt("User or channel {} not found.".format(args))
         else:
             channel.open()
-            if w.config_get_plugin('switch_buffer_on_join') != '0':
+            if config.switch_buffer_on_join:
                 w.buffer_set(channel.channel_buffer, "display", "1")
         return True
     else:
@@ -1243,35 +1241,32 @@ def command_channels(current_buffer, args):
 def command_nodistractions(current_buffer, args):
     global hide_distractions
     hide_distractions = not hide_distractions
-    if distracting_channels != ['']:
-        for channel in distracting_channels:
+    if config.distracting_channels != ['']:
+        for channel in config.distracting_channels:
             try:
                 channel_buffer = channels.find(channel).channel_buffer
                 if channel_buffer:
                     w.buffer_set(channels.find(channel).channel_buffer, "hidden", str(int(hide_distractions)))
             except:
                 dbg("Can't hide channel {} .. removing..".format(channel), main_buffer=True)
-                distracting_channels.pop(distracting_channels.index(channel))
+                config.distracting_channels.pop(config.distracting_channels.index(channel))
                 save_distracting_channels()
 
 
 def command_distracting(current_buffer, args):
-    global distracting_channels
-    distracting_channels = [x.strip() for x in w.config_get_plugin("distracting_channels").split(',')]
     if channels.find(current_buffer) is None:
         w.prnt(current_buffer, "This command must be used in a channel buffer")
         return
     fullname = channels.find(current_buffer).fullname()
-    if distracting_channels.count(fullname) == 0:
-        distracting_channels.append(fullname)
+    if config.distracting_channels.count(fullname) == 0:
+        config.distracting_channels.append(fullname)
     else:
-        distracting_channels.pop(distracting_channels.index(fullname))
+        config.distracting_channels.pop(config.distracting_channels.index(fullname))
     save_distracting_channels()
 
 
 def save_distracting_channels():
-    new = ','.join(distracting_channels)
-    w.config_set_plugin('distracting_channels', new)
+    w.config_set_plugin('distracting_channels', ','.join(config.distracting_channels))
 
 
 @slack_buffer_required
@@ -1447,7 +1442,7 @@ def command_help(current_buffer, args):
 
 
 def command_openweb(current_buffer, args):
-    trigger = w.config_get_plugin('trigger_value')
+    trigger = config.trigger_value
     if trigger != "0":
         if args is None:
             channel = channels.find(current_buffer)
@@ -1536,8 +1531,6 @@ def slack_websocket_cb(server, fd):
 
 
 def process_reply(message_json):
-    global unfurl_ignore_alt_text
-
     server = servers.find(message_json["_server"])
     identifier = message_json["reply_to"]
     item = server.message_buffer.pop(identifier)
@@ -1547,7 +1540,7 @@ def process_reply(message_json):
         if item["type"] == "message" and "channel" in item.keys():
             item["ts"] = message_json["ts"]
             channels.find(item["channel"]).cache_message(item, from_me=True)
-            text = unfurl_refs(item["text"], ignore_alt_text=unfurl_ignore_alt_text)
+            text = unfurl_refs(item["text"], ignore_alt_text=config.unfurl_ignore_alt_text)
 
             channels.find(item["channel"]).buffer_prnt(item["user"], text, item["ts"])
     dbg("REPLY {}".format(item))
@@ -1791,7 +1784,7 @@ def create_reaction_string(reactions):
         for r in reactions:
             if len(r["users"]) > 0:
                 count += 1
-                if show_reaction_nicks:
+                if config.show_reaction_nicks:
                     nicks = [resolve_ref("@{}".format(user)) for user in r["users"]]
                     users = "({})".format(",".join(nicks))
                 else:
@@ -1833,7 +1826,6 @@ def modify_buffer_line(buffer, new_line, time):
 
 
 def render_message(message_json, force=False):
-    global unfurl_ignore_alt_text
     # If we already have a rendered version in the object, just return that.
     if not force and message_json.get("_rendered_text", ""):
         return message_json["_rendered_text"]
@@ -1850,10 +1842,10 @@ def render_message(message_json, force=False):
         else:
             text = u""
 
-        text = unfurl_refs(text, ignore_alt_text=unfurl_ignore_alt_text)
+        text = unfurl_refs(text, ignore_alt_text=config.unfurl_ignore_alt_text)
 
         text_before = (len(text) > 0)
-        text += unfurl_refs(unwrap_attachments(message_json, text_before), ignore_alt_text=unfurl_ignore_alt_text)
+        text += unfurl_refs(unwrap_attachments(message_json, text_before), ignore_alt_text=config.unfurl_ignore_alt_text)
 
         text = text.lstrip()
         text = text.replace("\t", "    ")
@@ -2249,7 +2241,7 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
         context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
         params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
         dbg("URL: {} context: {} params: {}".format(url, context, params))
-        w.hook_process_hashtable(url, params, slack_timeout, "url_processor_cb", context)
+        w.hook_process_hashtable(url, params, config.slack_timeout, "url_processor_cb", context)
 
 
 def async_slack_api_upload_request(token, request, post_data, priority=False):
@@ -2260,7 +2252,7 @@ def async_slack_api_upload_request(token, request, post_data, priority=False):
             file_path = file_path.replace(' ','\ ')
         command = 'curl -F file=@{} -F channels={} -F token={} {}'.format(file_path, post_data["channels"], token, url)
         context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
-        w.hook_process(command, slack_timeout, "url_processor_cb", context)
+        w.hook_process(command, config.slack_timeout, "url_processor_cb", context)
 
 
 # funny, right?
@@ -2396,33 +2388,6 @@ def create_slack_debug_buffer():
         w.buffer_set(slack_debug, "notify", "0")
 
 
-def config_changed_cb(data, option, value):
-    global slack_api_token, distracting_channels, colorize_nicks, colorize_private_chats, slack_debug, debug_mode, \
-        unfurl_ignore_alt_text, colorize_messages, show_reaction_nicks, slack_timeout
-
-    slack_api_token = w.config_get_plugin("slack_api_token")
-
-    if slack_api_token.startswith('${sec.data'):
-        slack_api_token = w.string_eval_expression(slack_api_token, {}, {}, {})
-
-    distracting_channels = [x.strip() for x in w.config_get_plugin("distracting_channels").split(',')]
-    colorize_nicks = w.config_get_plugin('colorize_nicks') == "1"
-    colorize_messages = w.config_get_plugin("colorize_messages") == "1"
-    debug_mode = w.config_get_plugin("debug_mode").lower()
-    if debug_mode != '' and debug_mode != 'false':
-        create_slack_debug_buffer()
-    colorize_private_chats = w.config_string_to_boolean(w.config_get_plugin("colorize_private_chats"))
-    show_reaction_nicks = w.config_string_to_boolean(w.config_get_plugin("show_reaction_nicks"))
-
-    unfurl_ignore_alt_text = False
-    if w.config_get_plugin('unfurl_ignore_alt_text') != "0":
-        unfurl_ignore_alt_text = True
-
-    slack_timeout = int(w.config_get_plugin('slack_timeout'))
-
-    return w.WEECHAT_RC_OK
-
-
 def quit_notification_cb(signal, sig_type, data):
     stop_talking_to_slack()
 
@@ -2456,6 +2421,71 @@ def scrolled_cb(signal, sig_type, data):
 
 # END Utility Methods
 
+class PluginConfig(object):
+    # Default settings.
+    # These are in the (string) format that weechat expects; at __init__ time
+    # this value will be used to set the default for any settings not already
+    # defined, and then the real (python) values of the settings will be
+    # extracted.
+    # TODO: setting descriptions.
+    settings = {
+        'colorize_messages': 'false',
+        'colorize_nicks': 'true',
+        'colorize_private_chats': 'false',
+        'debug_mode': 'false',
+        'distracting_channels': '',
+        'show_reaction_nicks': 'false',
+        'slack_api_token': 'INSERT VALID KEY HERE!',
+        'slack_timeout': '20000',
+        'switch_buffer_on_join': 'true',
+        'trigger_value': 'false',
+        'unfurl_ignore_alt_text': 'false',
+    }
+
+    # Set missing settings to their defaults. Load non-missing settings from
+    # weechat configs.
+    def __init__(self):
+        for key,default in self.settings.iteritems():
+            if not w.config_get_plugin(key):
+                w.config_set_plugin(key, default)
+        self.config_changed(None, None, None)
+
+    def __str__(self):
+        return "".join([x + "\t" + str(self.settings[x]) + "\n" for x in self.settings.keys()])
+
+    def config_changed(self, data, key, value):
+        for key in self.settings:
+            self.settings[key] = self.fetch_setting(key)
+        if self.debug_mode:
+            create_slack_debug_buffer()
+        return w.WEECHAT_RC_OK
+
+    def fetch_setting(self, key):
+        if hasattr(self, 'get_' + key):
+            return getattr(self, 'get_' + key)(key)
+        else:
+            # Most settings are on/off, so make get_boolean the default
+            return self.get_boolean(key)
+
+    def __getattr__(self, key):
+        return self.settings[key]
+
+    def get_boolean(self, key):
+        return w.config_string_to_boolean(w.config_get_plugin(key))
+
+    def get_distracting_channels(self, key):
+        return [x.strip() for x in w.config_get_plugin(key).split(',')]
+
+    def get_slack_api_token(self, key):
+        token = w.config_get_plugin("slack_api_token")
+        if token.startswith('${sec.data'):
+            return w.string_eval_expression(token, {}, {}, {})
+        else:
+            return token
+
+    def get_slack_timeout(self, key):
+        return int(w.config_get_plugin(key))
+
 
 # Main
 if __name__ == "__main__":
@@ -2472,34 +2502,10 @@ if __name__ == "__main__":
             CACHE_NAME = "slack.cache"
             STOP_TALKING_TO_SLACK = False
 
-            if not w.config_get_plugin('slack_api_token'):
-                w.config_set_plugin('slack_api_token', "INSERT VALID KEY HERE!")
-            if not w.config_get_plugin('distracting_channels'):
-                w.config_set_plugin('distracting_channels', "")
-            if not w.config_get_plugin('debug_mode'):
-                w.config_set_plugin('debug_mode', "")
-            if not w.config_get_plugin('colorize_nicks'):
-                w.config_set_plugin('colorize_nicks', "1")
-            if not w.config_get_plugin('colorize_messages'):
-                w.config_set_plugin('colorize_messages', "0")
-            if not w.config_get_plugin('colorize_private_chats'):
-                w.config_set_plugin('colorize_private_chats', "0")
-            if not w.config_get_plugin('trigger_value'):
-                w.config_set_plugin('trigger_value', "0")
-            if not w.config_get_plugin('unfurl_ignore_alt_text'):
-                w.config_set_plugin('unfurl_ignore_alt_text', "0")
-            if not w.config_get_plugin('switch_buffer_on_join'):
-                w.config_set_plugin('switch_buffer_on_join', "1")
-            if not w.config_get_plugin('show_reaction_nicks'):
-                w.config_set_plugin('show_reaction_nicks', "0")
-            if not w.config_get_plugin('slack_timeout'):
-                w.config_set_plugin('slack_timeout', "20000")
-            if w.config_get_plugin('channels_not_on_current_server_color'):
-                w.config_option_unset('channels_not_on_current_server_color')
-
             # Global var section
             slack_debug = None
-            config_changed_cb("", "", "")
+            config = PluginConfig()
+            config_changed_cb = config.config_changed
 
             cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
             proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
@@ -2521,7 +2527,7 @@ if __name__ == "__main__":
             cache_load()
 
             servers = SearchList()
-            for token in slack_api_token.split(','):
+            for token in config.slack_api_token.split(','):
                 server = SlackServer(token)
                 servers.append(server)
             channels = SearchList()
