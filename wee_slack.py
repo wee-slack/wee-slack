@@ -280,6 +280,9 @@ class SlackServer(object):
                         else:
                             self.message_buffer.pop(message_id)
             for chan in self.channels:
+                # Set channel history back to false because we will miss messages that came
+                # while we were disconnected otherwise.
+                chan.got_history = False
                 if chan.channel_buffer and chan.muted:
                     w.buffer_set(chan.channel_buffer, "hotlist", "-1")
             return True
