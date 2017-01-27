@@ -1481,7 +1481,8 @@ def command_openweb(current_buffer, args):
     if trigger != "0":
         if args is None:
             channel = channels.find(current_buffer)
-            url = "{}/messages/{}".format(channel.server.server_buffer_name, channel.name)
+            name = re.sub('\#', '', channel.name)
+            url = "{}/messages/{}".format(channel.server.server_buffer_name, name)
             topic = w.buffer_get_string(channel.channel_buffer, "title")
             w.buffer_set(channel.channel_buffer, "title", "{}:{}".format(trigger, url))
             w.hook_timer(1000, 0, 1, "command_openweb", json.dumps({"topic": topic, "buffer": current_buffer}))
