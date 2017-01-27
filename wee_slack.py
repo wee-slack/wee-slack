@@ -680,7 +680,6 @@ class Channel(object):
         writes output (message) to a buffer (channel)
         """
         set_read_marker = False
-        w.prnt("", time)
         time_int, time_id = time.split(".", 2)
         time_int = int(time_int)
         tags = "nick_" + user
