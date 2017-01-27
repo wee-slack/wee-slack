@@ -675,16 +675,18 @@ class Channel(object):
                 self.current_short_name = new_name
                 w.buffer_set(self.channel_buffer, "short_name", new_name)
 
-    def buffer_prnt(self, user='unknown_user', message='no message', time=0):
+    def buffer_prnt(self, user='unknown_user', message='no message', time="0.0"):
         """
         writes output (message) to a buffer (channel)
         """
         set_read_marker = False
-        time_float = float(time)
+        w.prnt("", time)
+        time_int, time_id = time.split(".", 2)
+        time_int = int(time_int)
         tags = "nick_" + user
         user_obj = self.server.users.find(user)
         # XXX: we should not set log1 for robots.
-        if time_float != 0 and self.last_read >= time_float:
+        if time_int != 0 and self.last_read >= time_int:
             tags += ",no_highlight,notify_none,logger_backlog_end"
             set_read_marker = True
         elif message.find(self.server.nick.encode('utf-8')) > -1:
@@ -699,7 +701,6 @@ class Channel(object):
             tags += ",notify_message,log1,irc_privmsg"
         # don't write these to local log files
         # tags += ",no_log"
-        time_int = int(time_float)
         if self.channel_buffer:
             prefix_same_nick = w.config_string(w.config_get('weechat.look.prefix_same_nick'))
             if user == self.last_active_user and prefix_same_nick != "":
@@ -742,6 +743,8 @@ class Channel(object):
             message = HTMLParser.HTMLParser().unescape(message)
             data = u"{}\t{}".format(name, message).encode('utf-8')
             w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
+            # modify_print_time does special stuff, look at the method def
+            modify_print_time(self.channel_buffer, time_id, time_int)
 
             if set_read_marker:
                 self.mark_read(False)
@@ -749,13 +752,6 @@ class Channel(object):
             self.open(False)
         self.last_received = time
         self.unset_typing(user)
-
-    def buffer_redraw(self):
-        if self.channel_buffer and not self.scrolling:
-            w.buffer_clear(self.channel_buffer)
-            self.messages.sort()
-            for message in self.messages:
-                process_message(message.message_json, False)
 
     def set_scrolling(self):
         self.scrolling = True
@@ -774,14 +770,9 @@ class Channel(object):
                 self.messages[message_index].change_text(text)
             text = render_message(self.messages[message_index].message_json, True)
 
-            # if there is only one message with this timestamp, modify it directly.
-            # we do this because time resolution in weechat is less than slack
-            int_time = int(float(ts))
-            if self.messages.count(str(int_time)) == 1:
-                modify_buffer_line(self.channel_buffer, text + suffix, int_time)
-            # otherwise redraw the whole buffer, which is expensive
-            else:
-                self.buffer_redraw()
+            timestamp, time_id = ts.split(".", 2)
+            timestamp = int(timestamp)
+            modify_buffer_line(self.channel_buffer, text + suffix, timestamp, time_id)
             return True
 
     def add_reaction(self, ts, reaction, user):
@@ -1831,8 +1822,7 @@ def create_reaction_string(reactions):
     return reaction_string
 
 
-def modify_buffer_line(buffer, new_line, time):
-    time = int(float(time))
+def modify_buffer_line(buffer, new_line, timestamp, time_id):
     # get a pointer to this buffer's lines
     own_lines = w.hdata_pointer(w.hdata_get('buffer'), buffer, 'own_lines')
     if own_lines:
@@ -1846,17 +1836,40 @@ def modify_buffer_line(buffer, new_line, time):
             # get a pointer to the data in line_pointer via layout of struct_hdata_line
             data = w.hdata_pointer(struct_hdata_line, line_pointer, 'data')
             if data:
-                date = w.hdata_time(struct_hdata_line_data, data, 'date')
+                line_timestamp = w.hdata_time(struct_hdata_line_data, data, 'date')
+                line_time_id = w.hdata_integer(struct_hdata_line_data, data, 'date_printed')
                 # prefix = w.hdata_string(struct_hdata_line_data, data, 'prefix')
 
-                if int(date) == int(time):
-                    # w.prnt("", "found matching time date is {}, time is {} ".format(date, time))
+                if timestamp == int(line_timestamp) and int(time_id) == line_time_id:
+                    # w.prnt("", "found matching time date is {}, time is {} ".format(timestamp, line_timestamp))
                     w.hdata_update(struct_hdata_line_data, data, {"message": new_line})
                     break
                 else:
                     pass
             # move backwards one line and try again - exit the while if you hit the end
             line_pointer = w.hdata_move(struct_hdata_line, line_pointer, -1)
+    return w.WEECHAT_RC_OK
+
+
+def modify_print_time(buffer, new_id, time):
+    """
+    This overloads the time printed field to let us store the slack
+    per message unique id that comes after the "." in a slack ts
+    """
+    # get a pointer to this buffer's lines
+    own_lines = w.hdata_pointer(w.hdata_get('buffer'), buffer, 'own_lines')
+    if own_lines:
+        # get a pointer to the last line
+        line_pointer = w.hdata_pointer(w.hdata_get('lines'), own_lines, 'last_line')
+        # hold the structure of a line and of line data
+        struct_hdata_line = w.hdata_get('line')
+        struct_hdata_line_data = w.hdata_get('line_data')
+
+        # get a pointer to the data in line_pointer via layout of struct_hdata_line
+        data = w.hdata_pointer(struct_hdata_line, line_pointer, 'data')
+        if data:
+            w.hdata_update(struct_hdata_line_data, data, {"date_printed": new_id})
+
     return w.WEECHAT_RC_OK
 
 
