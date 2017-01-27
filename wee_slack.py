@@ -1576,10 +1576,11 @@ def process_reply(message_json):
     if "type" in item:
         if item["type"] == "message" and "channel" in item.keys():
             item["ts"] = message_json["ts"]
-            channels.find(item["channel"]).cache_message(item, from_me=True)
+            if config.cache_messages:
+                channels.find(item["channel"]).cache_message(item, from_me=True)
             text = unfurl_refs(item["text"], ignore_alt_text=config.unfurl_ignore_alt_text)
 
-            channels.find(item["channel"]).buffer_prnt(item["user"], text, item["ts"])
+            channels.find(item["channel"]).buffer_prnt(server.nick, text, item["ts"])
     dbg("REPLY {}".format(item))
 
 
@@ -1932,7 +1933,7 @@ def process_message(message_json, cache=True):
                     suffix = ' (edited)'
                 channel.buffer_prnt(name, text + suffix, time)
 
-            if cache:
+            if config.cache_messages and cache:
                 channel.cache_message(message_json)
 
     except Exception:
@@ -2277,7 +2278,7 @@ def async_slack_api_request(domain, token, request, post_data, priority=False):
         url = 'url:https://{}/api/{}?{}'.format(domain, request, urllib.urlencode(post_data))
         context = pickle.dumps({"request": request, "token": token, "post_data": post_data})
         params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
-        dbg("URL: {} context: {} params: {}".format(url, context, params))
+        dbg("SLACK REQUEST: {} context: {} params: {}".format(url, json.dumps(context), params))
         w.hook_process_hashtable(url, params, config.slack_timeout, "url_processor_cb", context)
 
 
