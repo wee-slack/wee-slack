@@ -38,7 +38,7 @@ def test_process_message(monkeypatch, realish_eventrouter, mock_websocket):
 
     if len(notimplemented) > 0:
         print "####################"
-        print notimplemented
+        print sorted(notimplemented)
         print "####################"
         assert False
 
