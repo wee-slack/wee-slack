@@ -1,3 +1,7 @@
 language: python
-install: 'pip install websocket-client pytest'
-script: pytest
+python:
+  - "2.7"
+install:
+  - 'pip install websocket-client pytest'
+
+script: python -m pytest
