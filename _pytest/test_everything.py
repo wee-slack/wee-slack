@@ -22,7 +22,7 @@ def test_process_message(monkeypatch, realish_eventrouter, mock_websocket):
     print datafiles
     #assert False
 
-    notimplemented = []
+    notimplemented = set()
 
     for fname in datafiles:
         try:
@@ -31,7 +31,7 @@ def test_process_message(monkeypatch, realish_eventrouter, mock_websocket):
             eventrouter.receive_ws_callback(t)
             eventrouter.handle_next()
         except ProcessNotImplemented as e:
-            notimplemented += [str(e)]
+            notimplemented.add(str(e))
         #this handles some message data not existing - need to fix
         except KeyError:
             pass
