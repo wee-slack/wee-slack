@@ -40,7 +40,7 @@ def test_process_message(monkeypatch, realish_eventrouter, mock_websocket):
         print "####################"
         print notimplemented
         print "####################"
-    assert False
+        assert False
 
 
 
