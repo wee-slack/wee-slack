@@ -1,1 +1,1 @@
-{u'event_ts': u'1485975476.876650', u'is_mpim': False, u'ts': u'1485975476.000004', 'wee_slack_metadata': {'team': 'd80c2b6c3127dbb1991917394ed219e8212a2606'}, u'type': u'group_history_changed', u'channel': u'G409GKN9M', u'latest': u'1485975476.876632'}
+{"event_ts": "1485975476.876650", "is_mpim": false, "ts": "1485975476.000004", "wee_slack_metadata": {"team": "d80c2b6c3127dbb1991917394ed219e8212a2606"}, "type": "group_history_changed", "channel": "G409GKN9M", "latest": "1485975476.876632"}

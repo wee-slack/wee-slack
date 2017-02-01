@@ -1,1 +1,1 @@
-{u'user_id': u'U407ABLLW', u'event_ts': u'1485975715.881302', u'file_id': u'F3ZLY6K5J', u'file': {u'id': u'F3ZLY6K5J'}, 'wee_slack_metadata': {'team': 'd80c2b6c3127dbb1991917394ed219e8212a2606'}, u'type': u'file_shared'}
+{"user_id": "U407ABLLW", "event_ts": "1485975715.881302", "file_id": "F3ZLY6K5J", "file": {"id": "F3ZLY6K5J"}, "wee_slack_metadata": {"team": "d80c2b6c3127dbb1991917394ed219e8212a2606"}, "type": "file_shared"}

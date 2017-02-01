@@ -1,1 +1,1 @@
-{u'mention_count': 0, u'event_ts': u'1485975690.880724', u'timestamp': u'1485975690.537094', u'has_unreads': False, 'wee_slack_metadata': {'team': 'd80c2b6c3127dbb1991917394ed219e8212a2606'}, u'type': u'update_thread_state'}
+{"mention_count": 0, "event_ts": "1485975690.880724", "timestamp": "1485975690.537094", "has_unreads": false, "wee_slack_metadata": {"team": "d80c2b6c3127dbb1991917394ed219e8212a2606"}, "type": "update_thread_state"}
