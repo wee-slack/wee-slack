@@ -591,7 +591,7 @@ class SlackChannel(object):
                 m.change_text(text)
             if suffix:
                 m.change_suffix(suffix)
-        text = m.render(force=True)
+            text = m.render(force=True)
         timestamp, time_id = ts.split(".", 2)
         timestamp = int(timestamp)
         modify_buffer_line(self.channel_buffer, text, timestamp, time_id)
