@@ -1214,6 +1214,9 @@ def process_reply(message_json, eventrouter, **kwargs):
         dbg("Unexpected reply")
 
 def process_channel_marked(message_json, eventrouter, **kwargs):
+    """
+    complete
+    """
     channel = kwargs["channel"]
     dbg(channel, True)
     channel.mark_read(False)
