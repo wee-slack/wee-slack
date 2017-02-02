@@ -1217,6 +1217,12 @@ def process_channel_marked(message_json, eventrouter, **kwargs):
     channel = kwargs["channel"]
     dbg(channel, True)
     channel.mark_read(False)
+def process_group_marked(message_json, eventrouter, **kwargs):
+    process_channel_marked(message_json, eventrouter, **kwargs)
+def process_im_marked(message_json, eventrouter, **kwargs):
+    process_channel_marked(message_json, eventrouter, **kwargs)
+def process_mpim_marked(message_json, eventrouter, **kwargs):
+    process_channel_marked(message_json, eventrouter, **kwargs)
 
 def process_channel_joined(message_json, eventrouter, **kwargs):
     item = message_json["channel"]
