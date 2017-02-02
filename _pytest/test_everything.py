@@ -26,6 +26,7 @@ def test_process_message(monkeypatch, realish_eventrouter, mock_websocket):
 
     for fname in datafiles:
         try:
+            print "####################"
             data = json.loads(open(fname, 'r').read())
             socket.add(data)
             eventrouter.receive_ws_callback(t)
