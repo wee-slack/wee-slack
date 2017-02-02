@@ -1388,6 +1388,7 @@ class PluginConfig(object):
         'trigger_value': 'false',
         'unfurl_ignore_alt_text': 'false',
         'cache_messages': 'true',
+        'record_events': 'false',
     }
 
     # Set missing settings to their defaults. Load non-missing settings from
@@ -1531,6 +1532,8 @@ if __name__ == "__main__":
             s = SlackRequest(tok, 'rtm.start', {})
             global EVENTROUTER
             EVENTROUTER = EventRouter()
+            if config.record_events:
+                EVENTROUTER.record()
             EVENTROUTER.receive(s)
             EVENTROUTER.handle_next()
             w.hook_timer(10, 0, 0, "handle_next", "")
