@@ -306,6 +306,7 @@ class WeechatController(object):
         self.eventrouter = eventrouter
         self.buffers = {}
         self.previous_buffer = ""
+        self.buffer_list_stale = False
     def iter_buffers(self):
         for b in self.buffers:
             yield (b, self.buffers[b])
@@ -341,6 +342,10 @@ class WeechatController(object):
         return self.previous_buffer
     def set_previous_buffer(self, data):
         self.previous_buffer = data
+    def check_refresh_buffer_list(self):
+        return self.buffer_list_stale and self.last_buffer_list_update + 1 < time.time()
+    def set_refresh_buffer_list(self, setting):
+        self.buffer_list_stale = setting
 
 
 ###### New Local Processors
@@ -458,19 +463,16 @@ def buffer_list_update_callback(data, somecount):
     user presence via " name" <-> "+name".
     """
     eventrouter = eval(data)
-    global buffer_list_update
+    #global buffer_list_update
 
-    buffer_list_update = True
-    now = time.time()
-    if buffer_list_update and previous_buffer_list_update + 1 < now:
-        # gray_check = False
-        # if len(servers) > 1:
-        #    gray_check = True
-        for b in eventrouter.weechat_controller.iter_buffers():
-            b[1].rename()
-            #print b
-            #eventrouter.weechat_buffers[b].rename()
-        buffer_list_update = False
+    for b in eventrouter.weechat_controller.iter_buffers():
+        b[1].refresh()
+#    buffer_list_update = True
+#    if eventrouter.weechat_controller.check_refresh_buffer_list():
+#        # gray_check = False
+#        # if len(servers) > 1:
+#        #    gray_check = True
+#        eventrouter.weechat_controller.set_refresh_buffer_list(False)
     return w.WEECHAT_RC_OK
 
 def quit_notification_callback(signal, sig_type, data):
@@ -577,10 +579,18 @@ class SlackTeam(object):
         return {v.name: k for k, v in self.users.iteritems()}
     def get_team_hash(self):
         return self.team_hash
+    def refresh(self):
+        self.rename()
     def rename(self):
         pass
     def attach_websocket(self, ws):
         self.ws = ws
+    def is_user_present(self, user_id):
+        user = self.users.get(user_id)
+        if user.presence == 'active':
+            return True
+        else:
+            return False
     def set_connected(self):
         self.connected = True
     def set_disconnected(self):
@@ -617,18 +627,30 @@ class SlackChannel(object):
         self.team = None
         self.got_history = False
         self.messages = {}
+        self.typing = {}
         self.type = 'channel'
         for key, value in kwargs.items():
             setattr(self, key, value)
         self.set_name(self.slack_name)
+        #short name relates to the localvar we change for typing indication
+        self.current_short_name = self.name
     def __repr__(self):
         return "Name:{} Identifier:{}".format(self.name, self.identifier)
     def set_name(self, slack_name):
         self.name = "#" + slack_name
+    def refresh(self):
+        return self.rename()
     def rename(self):
-        pass
-        #self.name = "?" + self.slack_name
-        #w.buffer_set(self.channel_buffer, "short_name", self.name)
+        if self.channel_buffer:
+            if self.is_someone_typing():
+                new_name = ">{}".format(self.formatted_name()[1:])
+            else:
+                new_name = self.formatted_name()
+            if self.current_short_name != new_name:
+                self.current_short_name = new_name
+                w.buffer_set(self.channel_buffer, "short_name", new_name)
+                return True
+        return False
     def formatted_name(self):
         return self.name
     def update_from_message_json(self, message_json):
@@ -664,7 +686,7 @@ class SlackChannel(object):
                 w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.alias)
             else:
                 w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.team)
-            buffer_list_update_next()
+            self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
         if self.unread_count != 0 and not self.muted:
             w.buffer_set(self.channel_buffer, "hotlist", "1")
     def destroy_buffer(self, update_remote):
@@ -714,6 +736,8 @@ class SlackChannel(object):
         timestamp = int(timestamp)
         modify_buffer_line(self.channel_buffer, text, timestamp, time_id)
         return True
+    def is_visible(self):
+        return w.buffer_get_integer(self.channel_buffer, "hidden") == 0
     def get_history(self):
         #if config.cache_messages:
         #    for message in message_cache[self.identifier]:
@@ -734,7 +758,48 @@ class SlackChannel(object):
             self.eventrouter.receive(s)
     def sorted_message_keys(self):
         return sorted(self.messages)
+    # Typing related
+    def set_typing(self, user):
+        if self.channel_buffer and self.is_visible():
+            self.typing[user] = time.time()
+            self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
+    def unset_typing(self, user):
+        if self.channel_buffer and self.is_visible():
+            u = self.typing.get(user, None)
+            if u:
+                self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
+    def is_someone_typing(self):
+        """
+        Walks through dict of typing folks in a channel and fast
+        returns if any of them is actively typing. If none are,
+        nulls the dict and returns false.
+        """
+        for user, timestamp in self.typing.iteritems():
+            if timestamp + 4 > time.time():
+                return True
+        if len(self.typing) > 0:
+            self.typing = {}
+            self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
+        return False
+    def get_typing_list(self):
+        """
+        Returns the names of everyone in the channel who is currently typing.
+        """
+        typing = []
+        for user, timestamp in self.typing.iteritems():
+            if timestamp + 4 > time.time():
+                typing.append(user)
+        return typing
 
+    def mark_read(self, update_remote=True):
+        if self.channel_buffer:
+            w.buffer_set(self.channel_buffer, "unread", "")
+        if update_remote:
+            self.last_read = time.time()
+            self.update_read_marker(self.last_read)
+
+    def update_read_marker(self, time):
+        async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": time})
 
 class SlackDMChannel(SlackChannel):
     """
@@ -756,18 +821,33 @@ class SlackDMChannel(SlackChannel):
             super(SlackDMChannel, self).create_buffer()
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
     def update_color(self):
-        if config.colorize_nicks:
+        if config.colorize_private_chats:
             self.color_name = w.info_get('irc_nick_color_name', self.name.encode('utf-8'))
             self.color = w.color(self.color_name)
         else:
             self.color = ""
             self.color_name = ""
     def formatted_name(self, prepend="", enable_color=True):
-        if config.colorize_nicks and enable_color:
+        if config.colorize_private_chats and enable_color:
             print_color = self.color
         else:
             print_color = ""
         return print_color + prepend + self.name
+
+    def refresh(self):
+        return self.rename()
+
+    def rename(self):
+        if self.channel_buffer:
+            if self.team.is_user_present(self.user):
+                new_name = "+{}".format(self.formatted_name())
+            else:
+                new_name = " {}".format(self.formatted_name())
+            if self.current_short_name != new_name:
+                self.current_short_name = new_name
+                w.buffer_set(self.channel_buffer, "short_name", new_name)
+                return True
+        return False
 
 
 class SlackGroupChannel(SlackChannel):
@@ -993,6 +1073,11 @@ def process_manual_presence_change(message_json, eventrouter, **kwargs):
 def process_presence_change(message_json, eventrouter, **kwargs):
     kwargs["user"].presence = message_json["presence"]
 
+def process_user_typing(message_json, eventrouter, **kwargs):
+    channel = kwargs["channel"]
+    team = kwargs["team"]
+    if channel:
+        channel.set_typing(team.users.get(message_json["user"]).name)
 
 def process_pong(message_json, eventrouter, **kwargs):
     pass
@@ -1587,9 +1672,6 @@ if __name__ == "__main__":
             domain = None
             previous_buffer = None
             slack_buffer = None
-
-            buffer_list_update = False
-            previous_buffer_list_update = 0
 
             never_away = False
             hide_distractions = False
