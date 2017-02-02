@@ -97,7 +97,7 @@ class EventRouter(object):
         """
         self.queue = []
         self.teams = {}
-        self.weechat_buffers = {}
+        self.weechat_controller = WeechatController(self)
         self.previous_buffer = ""
         self.reply_buffer = {}
         self.cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
@@ -151,32 +151,6 @@ class EventRouter(object):
             self.teams[team.get_team_hash()] = team
         else:
             raise InvalidType(type(team))
-
-    def register_weechat_buffer(self, buffer_ptr, channel):
-        """
-        complete
-        Adds a weechat buffer to the list of handled buffers for this EventRouter
-        """
-        if isinstance(buffer_ptr, str):
-            self.weechat_buffers[buffer_ptr] = channel
-        else:
-            raise InvalidType(type(buffer_ptr))
-
-    def unregister_weechat_buffer(self, buffer_ptr, update_remote=False, close_buffer=False):
-        """
-        complete
-        Adds a weechat buffer to the list of handled buffers for this EventRouter
-        """
-        if isinstance(buffer_ptr, str):
-            try:
-                self.weechat_buffers[buffer_ptr].destroy_buffer(update_remote)
-                if close_buffer:
-                    w.buffer_close(buffer_ptr)
-                del self.weechat_buffers[buffer_ptr]
-            except:
-                dbg("Tried to close unknown buffer")
-        else:
-            raise InvalidType(type(buffer_ptr))
 
     def receive_ws_callback(self, team_hash):
         """
@@ -324,6 +298,51 @@ def handle_next(*args):
     EVENTROUTER.handle_next()
     return w.WEECHAT_RC_OK
 
+class WeechatController(object):
+    """
+    Encapsulates our interaction with weechat
+    """
+    def __init__(self, eventrouter):
+        self.eventrouter = eventrouter
+        self.buffers = {}
+        self.previous_buffer = ""
+    def iter_buffers(self):
+        for b in self.buffers:
+            yield (b, self.buffers[b])
+    def register_buffer(self, buffer_ptr, channel):
+        """
+        complete
+        Adds a weechat buffer to the list of handled buffers for this EventRouter
+        """
+        if isinstance(buffer_ptr, str):
+            self.buffers[buffer_ptr] = channel
+        else:
+            raise InvalidType(type(buffer_ptr))
+    def unregister_buffer(self, buffer_ptr, update_remote=False, close_buffer=False):
+        """
+        complete
+        Adds a weechat buffer to the list of handled buffers for this EventRouter
+        """
+        if isinstance(buffer_ptr, str):
+            try:
+                self.buffers[buffer_ptr].destroy_buffer(update_remote)
+                if close_buffer:
+                    w.buffer_close(buffer_ptr)
+                del self.buffers[buffer_ptr]
+            except:
+                dbg("Tried to close unknown buffer")
+        else:
+            raise InvalidType(type(buffer_ptr))
+    def get_channel_from_buffer_ptr(self, buffer_ptr):
+        return self.buffers.get(buffer_ptr, None)
+    def get_all(self, buffer_ptr):
+        return self.buffers
+    def get_previous_buffer(self):
+        return self.previous_buffer
+    def set_previous_buffer(self, data):
+        self.previous_buffer = data
+
+
 ###### New Local Processors
 
 def local_process_async_slack_api_request(request, event_router):
@@ -368,7 +387,7 @@ def buffer_closing_callback(signal, sig_type, data):
     that is the only way we can do dependency injection via weechat
     callback, hence the eval.
     """
-    eval(signal).unregister_weechat_buffer(data, True, False)
+    eval(signal).weechat_controller.unregister_buffer(data, True, False)
     return w.WEECHAT_RC_OK
 
 def buffer_input_callback(signal, buffer_ptr, data):
@@ -379,7 +398,7 @@ def buffer_input_callback(signal, buffer_ptr, data):
     sending messages.
     """
     eventrouter = eval(signal)
-    channel = eventrouter.weechat_buffers[buffer_ptr]
+    channel = eventrouter.weechat_controller.get_channel_from_buffer_ptr(buffer_ptr)
     if not channel:
         return w.WEECHAT_RC_OK_EAT
 
@@ -415,18 +434,18 @@ def buffer_switch_callback(signal, sig_type, data):
     """
     eventrouter = eval(signal)
 
+    prev_buffer = eventrouter.weechat_controller.get_previous_buffer()
     # this is to see if we need to gray out things in the buffer list
-    if eventrouter.previous_buffer in eventrouter.weechat_buffers:
+    if eventrouter.weechat_controller.get_channel_from_buffer_ptr(prev_buffer):
         pass
         #channels.find(previous_buffer).mark_read()
 
-    if data in eventrouter.weechat_buffers:
-        new_channel = eventrouter.weechat_buffers[data]
-        #if new_channel:
+    new_channel = eventrouter.weechat_controller.get_channel_from_buffer_ptr(data)
+    if new_channel:
         if not new_channel.got_history:
             new_channel.get_history()
 
-        eventrouter.previous_buffer = data
+        eventrouter.weechat_controller.set_previous_buffer(data)
     return w.WEECHAT_RC_OK
 
 def buffer_list_update_callback(data, somecount):
@@ -447,9 +466,10 @@ def buffer_list_update_callback(data, somecount):
         # gray_check = False
         # if len(servers) > 1:
         #    gray_check = True
-        for b in eventrouter.weechat_buffers:
+        for b in eventrouter.weechat_controller.iter_buffers():
+            b[1].rename()
             #print b
-            eventrouter.weechat_buffers[b].rename()
+            #eventrouter.weechat_buffers[b].rename()
         buffer_list_update = False
     return w.WEECHAT_RC_OK
 
@@ -547,7 +567,7 @@ class SlackTeam(object):
     def create_buffer(self):
         if not self.server_buffer:
             self.server_buffer = w.buffer_new("{}".format(self.domain), "buffer_input_callback", "EVENTROUTER", "", "")
-            self.eventrouter.register_weechat_buffer(self.server_buffer, self)
+            self.eventrouter.weechat_controller.register_buffer(self.server_buffer, self)
             if w.config_string(w.config_get('irc.look.server_buffer')) == 'merge_with_core':
                 w.buffer_merge(self.server_buffer, w.buffer_search_main())
             w.buffer_set(self.server_buffer, "nicklist", "1")
@@ -633,7 +653,7 @@ class SlackChannel(object):
         """
         if not self.channel_buffer:
             self.channel_buffer = w.buffer_new("{}.{}".format(self.team.domain, self.name), "buffer_input_callback", "EVENTROUTER", "", "")
-            self.eventrouter.register_weechat_buffer(self.channel_buffer, self)
+            self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             if self.type == "im":
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
             else:
@@ -1127,7 +1147,7 @@ def process_im_close(message_json, eventrouter, **kwargs):
     item = message_json
     cbuf = kwargs['team'].channels[item["channel"]].channel_buffer
     print cbuf
-    eventrouter.unregister_weechat_buffer(cbuf, False, True)
+    eventrouter.weechat_controller.unregister_buffer(cbuf, False, True)
 
 def process_reaction_added(message_json, eventrouter, **kwargs):
     channel = kwargs['team'].channels[message_json["item"]["channel"]]
