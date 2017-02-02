@@ -166,7 +166,7 @@ class EventRouter(object):
                 now = time.time()
                 mtype = message_json.get('type', 'unknown')
                 f = open('{}/{}-{}.json'.format(RECORD_DIR, now, mtype), 'w')
-                f.write("{}".format(message_json))
+                f.write("{}".format(json.dumps(message_json)))
                 f.close()
             self.receive_json(json.dumps(message_json))
         except WebSocketConnectionClosedException:
