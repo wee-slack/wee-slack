@@ -8,3 +8,4 @@ script: python -m pytest
 
 notifications:
   irc: "chat.freenode.net#wee-slack-dev"
+  email: false
