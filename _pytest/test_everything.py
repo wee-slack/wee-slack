@@ -43,7 +43,7 @@ def test_process_message(monkeypatch, realish_eventrouter, mock_websocket):
         print "####################"
 
     print len(eventrouter.queue)
-    assert False
+#    assert False
 
 
 

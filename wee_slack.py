@@ -86,6 +86,15 @@ IGNORED_EVENTS = [
 class EventRouter(object):
 
     def __init__(self):
+        """
+        complete
+        Eventrouter is the central hub we use to route:
+        1) incoming websocket data
+        2) outgoing http requests and incoming replies
+        3) local requests
+        It has a recorder that, when enabled, logs most events
+        to the location specified in RECORD_DIR.
+        """
         self.queue = []
         self.teams = {}
         self.weechat_buffers = {}
@@ -101,6 +110,7 @@ class EventRouter(object):
 
     def record(self):
         """
+        complete
         Toggles the event recorder and creates a directory for data if enabled.
         """
         self.recording = not self.recording
@@ -111,6 +121,7 @@ class EventRouter(object):
 
     def record_event(self, message_json, file_name_field):
         """
+        complete
         Called each time you want to record an event.
         message_json is a json in dict form
         file_name_field is the json key whose value you want to be part of the file name
@@ -122,11 +133,19 @@ class EventRouter(object):
         f.close()
 
     def shutdown(self):
+        """
+        complete
+        This toggles shutdown mode. Shutdown mode tells us not to
+        talk to Slack anymore. Without this, typing /quit will trigger
+        a race with the buffer close callback and may result in you
+        leaving every slack channel.
+        """
         self.shutting_down = not self.shutting_down
 
     def register_team(self, team):
         """
-        Adds a team to the list of known teams for this EventRouter
+        complete
+        Adds a team to the list of known teams for this EventRouter.
         """
         if isinstance(team, SlackTeam):
             self.teams[team.get_team_hash()] = team
@@ -135,6 +154,7 @@ class EventRouter(object):
 
     def register_weechat_buffer(self, buffer_ptr, channel):
         """
+        complete
         Adds a weechat buffer to the list of handled buffers for this EventRouter
         """
         if isinstance(buffer_ptr, str):
@@ -144,6 +164,7 @@ class EventRouter(object):
 
     def unregister_weechat_buffer(self, buffer_ptr, update_remote=False, close_buffer=False):
         """
+        complete
         Adds a weechat buffer to the list of handled buffers for this EventRouter
         """
         if isinstance(buffer_ptr, str):
@@ -159,6 +180,7 @@ class EventRouter(object):
 
     def receive_ws_callback(self, team_hash):
         """
+        incomplete (reconnect)
         This is called by the global method of the same name.
         It is triggered when we have incoming data on a websocket,
         which needs to be read. Once it is read, we will ensure
@@ -171,12 +193,8 @@ class EventRouter(object):
             message_json = json.loads(data)
             metadata = WeeSlackMetadata({
                 "team": team_hash,
-                #"channels": self.teams[team_hash].channels,
-                #"users": self.teams[team_hash].users,
             }).jsonify()
-            #print self.teams[team_hash].domain
             message_json["wee_slack_metadata"] = metadata
-            #print message_json
             if self.recording:
                 self.record_event(message_json, 'type')
             self.receive_json(json.dumps(message_json))
@@ -189,13 +207,19 @@ class EventRouter(object):
             return w.WEECHAT_RC_OK
 
     def receive_httprequest_callback(self, data, command, return_code, out, err):
-        #def url_processor_cb(data, command, return_code, out, err):
+        """
+        complete
+        Receives the result of an http request we previously handed
+        off to weechat (weechat bundles libcurl). Weechat can fragment
+        replies, so it buffers them until the reply is complete.
+        It is then populated with metadata here so we can identify
+        where the request originated and route properly.
+        """
         request_metadata = pickle.loads(data)
         dbg("RECEIVED CALLBACK with request of {} id of {} and  code {} of length {}".format(request_metadata.request, request_metadata.response_id, return_code, len(out)), main_buffer=True)
         if return_code == 0:
             if request_metadata.response_id in self.reply_buffer:
                 self.reply_buffer[request_metadata.response_id] += out
-                #print self.reply_buffer[request_metadata.response_id]
             else:
                 self.reply_buffer[request_metadata.response_id] = ""
                 self.reply_buffer[request_metadata.response_id] += out
@@ -203,13 +227,12 @@ class EventRouter(object):
                 j = json.loads(self.reply_buffer[request_metadata.response_id])
                 j["wee_slack_process_method"] = request_metadata.request_normalized
                 j["wee_slack_request_metadata"] = pickle.dumps(request_metadata)
-                #print self.reply_buffer[request_metadata.response_id]
                 self.reply_buffer.pop(request_metadata.response_id)
                 if self.recording:
                     self.record_event(j, 'wee_slack_process_method')
                 self.receive_json(json.dumps(j))
             except:
-                dbg("FAILED")
+                dbg("HTTP REQUEST CALLBACK FAILED")
                 pass
         elif return_code != -1:
             self.reply_buffer.pop(request_metadata.response_id, None)
@@ -219,15 +242,30 @@ class EventRouter(object):
             self.reply_buffer[request_metadata.response_id] += out
 
     def receive_json(self, data):
+        """
+        complete
+        Receives a raw JSON string from and unmarshals it
+        as dict, then places it back on the queue for processing.
+        """
         dbg("RECEIVED JSON of len {}".format(len(data)))
         message_json = json.loads(data)
-        #print message_json.keys()
         self.queue.append(message_json)
     def receive(self, dataobj):
-        dbg("RECEIVED QUEUE", main_buffer=True)
-        #dbg(str(len(dataobj)), main_buffer=True)
+        """
+        complete
+        Receives a raw object and places it on the queue for
+        processing. Object must be known to handle_next or
+        be JSON.
+        """
+        dbg("RECEIVED FROM QUEUE", main_buffer=True)
         self.queue.append(dataobj)
     def handle_next(self):
+        """
+        complete
+        Main handler of the EventRouter. This is called repeatedly
+        via callback to drain events from the queue. It also attaches
+        useful metadata and context to events as they are processed.
+        """
         if len(self.queue) > 0:
             j = self.queue.pop(0)
             # Reply is a special case of a json reply from websocket.
@@ -278,6 +316,11 @@ class EventRouter(object):
                     raise ProcessNotImplemented(function_name)
 
 def handle_next(*args):
+    """
+    complete
+    This is just a place to call the event router globally.
+    This is a dirty hack. There must be a better way.
+    """
     EVENTROUTER.handle_next()
     return w.WEECHAT_RC_OK
 
@@ -285,6 +328,7 @@ def handle_next(*args):
 
 def local_process_async_slack_api_request(request, event_router):
     """
+    complete
     Sends an API request to Slack. You'll need to give this a well formed SlackRequest object.
     """
     if not event_router.shutting_down:
@@ -299,6 +343,7 @@ def local_process_async_slack_api_request(request, event_router):
 
 def receive_httprequest_callback(data, command, return_code, out, err):
     """
+    complete
     This is a dirty hack. There must be a better way.
     """
     #def url_processor_cb(data, command, return_code, out, err):
@@ -307,6 +352,7 @@ def receive_httprequest_callback(data, command, return_code, out, err):
 
 def receive_ws_callback(*args):
     """
+    complete
     The first arg is all we want here. It contains the team
     hash which is set when we _hook the descriptor.
     This is a dirty hack. There must be a better way.
@@ -315,10 +361,23 @@ def receive_ws_callback(*args):
     return w.WEECHAT_RC_OK
 
 def buffer_closing_callback(signal, sig_type, data):
+    """
+    complete
+    Receives a callback from weechat when a buffer is being closed.
+    We pass the eventrouter variable name in as a string, as
+    that is the only way we can do dependency injection via weechat
+    callback, hence the eval.
+    """
     eval(signal).unregister_weechat_buffer(data, True, False)
     return w.WEECHAT_RC_OK
 
 def buffer_input_callback(signal, buffer_ptr, data):
+    """
+    incomplete
+    Handles everything a user types in the input bar. In our case
+    this includes add/remove reactions, modifying messages, and
+    sending messages.
+    """
     eventrouter = eval(signal)
     channel = eventrouter.weechat_buffers[buffer_ptr]
     if not channel:
@@ -348,6 +407,12 @@ def buffer_input_callback(signal, buffer_ptr, data):
     return w.WEECHAT_RC_ERROR
 
 def buffer_switch_callback(signal, sig_type, data):
+    """
+    incomplete
+    Every time we change channels in weechat, we call this to:
+    1) set read marker 2) determine if we have already populated
+    channel history data
+    """
     eventrouter = eval(signal)
 
     # this is to see if we need to gray out things in the buffer list
@@ -365,6 +430,14 @@ def buffer_switch_callback(signal, sig_type, data):
     return w.WEECHAT_RC_OK
 
 def buffer_list_update_callback(data, somecount):
+    """
+    incomplete
+    A simple timer-based callback that will update the buffer list
+    if needed. We only do this max 1x per second, as otherwise it
+    uses a lot of cpu for minimal changes. We use buffer short names
+    to indicate typing via "#channel" <-> ">channel" and
+    user presence via " name" <-> "+name".
+    """
     eventrouter = eval(data)
     global buffer_list_update
 
@@ -389,6 +462,7 @@ def script_unloaded():
 
 def stop_talking_to_slack():
     """
+    complete
     Prevents a race condition where quitting closes buffers
     which triggers leaving the channel because of how close
     buffer is handled
@@ -401,7 +475,9 @@ def stop_talking_to_slack():
 
 class SlackRequest(object):
     """
+    complete
     Encapsulates a Slack api request. Valuable as an object that we can add to the queue and/or retry.
+    makes a SHA of the requst url and current time so we can re-tag this on the way back through.
     """
     def __init__(self, token, request, post_data={}, **kwargs):
         print '================='
@@ -429,6 +505,10 @@ class SlackRequest(object):
         return self.tries < 3
 
 class SlackTeam(object):
+    """
+    incomplete
+    Team object under which users and channels live.. Does lots.
+    """
     def __init__(self, eventrouter, token, team, nick, myidentifier, users, bots, channels):
         self.connected = False
         self.ws = None
@@ -468,9 +548,9 @@ class SlackTeam(object):
         if not self.server_buffer:
             self.server_buffer = w.buffer_new("{}".format(self.domain), "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.register_weechat_buffer(self.server_buffer, self)
-            w.buffer_set(self.server_buffer, "localvar_set_type", 'channel')
-            w.buffer_set(self.server_buffer, "localvar_set_channel", self.name)
-            w.buffer_set(self.server_buffer, "short_name", self.name)
+            if w.config_string(w.config_get('irc.look.server_buffer')) == 'merge_with_core':
+                w.buffer_merge(self.server_buffer, w.buffer_search_main())
+            w.buffer_set(self.server_buffer, "nicklist", "1")
     def get_channel_map(self):
         return {v.slack_name: k for k, v in self.channels.iteritems()}
     def get_username_map(self):
@@ -547,21 +627,26 @@ class SlackChannel(object):
     def set_related_server(self, team):
         self.team = team
     def create_buffer(self):
+        """
+        incomplete
+        Creates the weechat buffer where the channel magic happens.
+        """
         if not self.channel_buffer:
             self.channel_buffer = w.buffer_new("{}.{}".format(self.team.domain, self.name), "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.register_weechat_buffer(self.channel_buffer, self)
-
-            #dbg(self.channel_buffer, True)
-            w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
+            if self.type == "im":
+                w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
+            else:
+                w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.name)
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name())
-#            if self.server.alias:
-#                w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.alias)
-#            else:
-#                w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.team)
-#            buffer_list_update_next()
-#        if self.unread_count != 0 and not self.muted:
-#            w.buffer_set(self.channel_buffer, "hotlist", "1")
+            if self.server.alias:
+                w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.alias)
+            else:
+                w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.team)
+            buffer_list_update_next()
+        if self.unread_count != 0 and not self.muted:
+            w.buffer_set(self.channel_buffer, "hotlist", "1")
     def destroy_buffer(self, update_remote):
         if self.channel_buffer is not None:
             self.channel_buffer = None
@@ -632,6 +717,10 @@ class SlackChannel(object):
 
 
 class SlackDMChannel(SlackChannel):
+    """
+    Subclass of a normal channel for person-to-person communication, which
+    has some important differences.
+    """
     def __init__(self, eventrouter, users, **kwargs):
         dmuser = kwargs["user"]
         kwargs["name"] = users[dmuser].name
@@ -662,6 +751,9 @@ class SlackDMChannel(SlackChannel):
 
 
 class SlackGroupChannel(SlackChannel):
+    """
+    A group channel is a private discussion group.
+    """
     def __init__(self, eventrouter, **kwargs):
         super(SlackGroupChannel, self).__init__(eventrouter, **kwargs)
         self.name = "#" + kwargs['name']
@@ -685,7 +777,7 @@ class SlackMPDMChannel(SlackChannel):
 
 class SlackUser(object):
     """
-    Represends an individual slack user.
+    Represends an individual slack user. Also where you set their name formatting.
     """
     def __init__(self, **kwargs):
         # We require these two things for a vaid object,
@@ -715,10 +807,19 @@ class SlackUser(object):
         return print_color + prepend + self.name
 
 class SlackBot(SlackUser):
+    """
+    Basically the same as a user, but split out to identify and for future
+    needs
+    """
     def __init__(self, **kwargs):
         super(SlackBot, self).__init__(**kwargs)
 
 class SlackMessage(object):
+    """
+    Represents a single slack message and associated context/metadata.
+    These are modifiable and can be rerendered to change a message,
+    delete a message, add a reaction, add a thread.
+    """
     def __init__(self, message_json, team, channel):
         self.team = team
         self.channel = channel
@@ -780,6 +881,9 @@ class SlackMessage(object):
 
 
 class WeeSlackMetadata(object):
+    """
+    A simple container that we pickle/unpickle to hold data.
+    """
     def __init__(self, meta):
         self.meta = meta
     def jsonify(self):
