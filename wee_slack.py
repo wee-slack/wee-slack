@@ -338,7 +338,7 @@ class WeechatController(object):
         return self.buffers.get(buffer_ptr, None)
     def get_all(self, buffer_ptr):
         return self.buffers
-    def get_previous_buffer(self):
+    def get_previous_buffer_ptr(self):
         return self.previous_buffer
     def set_previous_buffer(self, data):
         self.previous_buffer = data
@@ -439,18 +439,18 @@ def buffer_switch_callback(signal, sig_type, data):
     """
     eventrouter = eval(signal)
 
-    prev_buffer = eventrouter.weechat_controller.get_previous_buffer()
+    prev_buffer_ptr = eventrouter.weechat_controller.get_previous_buffer_ptr()
     # this is to see if we need to gray out things in the buffer list
-    if eventrouter.weechat_controller.get_channel_from_buffer_ptr(prev_buffer):
-        pass
-        #channels.find(previous_buffer).mark_read()
+    prev = eventrouter.weechat_controller.get_channel_from_buffer_ptr(prev_buffer_ptr)
+    if prev:
+        prev.mark_read()
 
     new_channel = eventrouter.weechat_controller.get_channel_from_buffer_ptr(data)
     if new_channel:
         if not new_channel.got_history:
             new_channel.get_history()
 
-        eventrouter.weechat_controller.set_previous_buffer(data)
+    eventrouter.weechat_controller.set_previous_buffer(data)
     return w.WEECHAT_RC_OK
 
 def buffer_list_update_callback(data, somecount):
@@ -591,6 +591,8 @@ class SlackTeam(object):
             return True
         else:
             return False
+    def mark_read(self):
+        pass
     def set_connected(self):
         self.connected = True
     def set_disconnected(self):
@@ -627,6 +629,7 @@ class SlackChannel(object):
         self.team = None
         self.got_history = False
         self.messages = {}
+        self.new_messages = False
         self.typing = {}
         self.type = 'channel'
         for key, value in kwargs.items():
@@ -701,6 +704,7 @@ class SlackChannel(object):
         t, time_id = timestamp.split('.', 1)
         time_int = int(t)
         if self.channel_buffer:
+            self.new_messages = True
             #w.prnt(self.channel_buffer, "{}\t{}".format(nick, text))
             tags = ''
             data = "{}\t{}".format(nick, text)
@@ -715,6 +719,7 @@ class SlackChannel(object):
         request = {"type": "message", "channel": self.identifier, "text": message, "_team": self.team.team_hash, "user": self.team.myidentifier}
         dbg(request, True)
         self.team.send_to_websocket(request)
+        self.mark_read()
     def store_message(self, message, team, from_me=False):
         if from_me:
             message.message_json["user"] = team.myidentifier
@@ -790,16 +795,16 @@ class SlackChannel(object):
             if timestamp + 4 > time.time():
                 typing.append(user)
         return typing
-
     def mark_read(self, update_remote=True):
-        if self.channel_buffer:
-            w.buffer_set(self.channel_buffer, "unread", "")
-        if update_remote:
-            self.last_read = time.time()
-            self.update_read_marker(self.last_read)
-
-    def update_read_marker(self, time):
-        async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": time})
+        if self.new_messages:
+            if self.channel_buffer:
+                w.buffer_set(self.channel_buffer, "unread", "")
+                w.buffer_set(self.channel_buffer, "hotlist", "-1")
+            if update_remote:
+                last_read = time.time()
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": last_read}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                self.eventrouter.receive(s)
+        self.new_messages = False
 
 class SlackDMChannel(SlackChannel):
     """
@@ -1211,8 +1216,7 @@ def process_reply(message_json, eventrouter, **kwargs):
 def process_channel_marked(message_json, eventrouter, **kwargs):
     channel = kwargs["channel"]
     dbg(channel, True)
-    #channel.mark_read(False)
-    #w.buffer_set(channel.channel_buffer, "hotlist", "-1")
+    channel.mark_read(False)
 
 def process_channel_joined(message_json, eventrouter, **kwargs):
     item = message_json["channel"]
