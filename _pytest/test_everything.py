@@ -24,27 +24,25 @@ def test_process_message(monkeypatch, realish_eventrouter, mock_websocket):
 
     notimplemented = set()
 
-    for fname in sorted(datafiles):
+    for fname in datafiles:
         try:
             data = json.loads(open(fname, 'r').read())
             socket.add(data)
             eventrouter.receive_ws_callback(t)
-            #eventrouter.handle_next()
+            eventrouter.handle_next()
         except ProcessNotImplemented as e:
             notimplemented.add(str(e))
+        #this handles some message data not existing - need to fix
+        except KeyError:
+            pass
 
     if len(notimplemented) > 0:
         print "####################"
         print sorted(notimplemented)
         print "####################"
-        #assert False
 
-    for item in eventrouter.queue:
-        eventrouter.handle_next()
-
-    print eventrouter.queue
+    print len(eventrouter.queue)
     assert False
-
 
 
 
