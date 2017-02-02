@@ -100,11 +100,26 @@ class EventRouter(object):
         self.recording_path = "/tmp"
 
     def record(self):
+        """
+        Toggles the event recorder and creates a directory for data if enabled.
+        """
         self.recording = not self.recording
         if self.recording:
             import os
             if not os.path.exists(RECORD_DIR):
                 os.makedirs(RECORD_DIR)
+
+    def record_event(self, message_json, file_name_field):
+        """
+        Called each time you want to record an event.
+        message_json is a json in dict form
+        file_name_field is the json key whose value you want to be part of the file name
+        """
+        now = time.time()
+        mtype = message_json.get(file_name_field, 'unknown')
+        f = open('{}/{}-{}.json'.format(RECORD_DIR, now, mtype), 'w')
+        f.write("{}".format(json.dumps(message_json)))
+        f.close()
 
     def shutdown(self):
         self.shutting_down = not self.shutting_down
@@ -163,11 +178,7 @@ class EventRouter(object):
             message_json["wee_slack_metadata"] = metadata
             #print message_json
             if self.recording:
-                now = time.time()
-                mtype = message_json.get('type', 'unknown')
-                f = open('{}/{}-{}.json'.format(RECORD_DIR, now, mtype), 'w')
-                f.write("{}".format(json.dumps(message_json)))
-                f.close()
+                self.record_event(message_json, 'type')
             self.receive_json(json.dumps(message_json))
         except WebSocketConnectionClosedException:
             #TODO: handle reconnect here
@@ -194,6 +205,8 @@ class EventRouter(object):
                 j["wee_slack_request_metadata"] = pickle.dumps(request_metadata)
                 #print self.reply_buffer[request_metadata.response_id]
                 self.reply_buffer.pop(request_metadata.response_id)
+                if self.recording:
+                    self.record_event(j, 'wee_slack_process_method')
                 self.receive_json(json.dumps(j))
             except:
                 dbg("FAILED")
