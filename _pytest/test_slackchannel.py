@@ -17,4 +17,17 @@ def test_SlackChannel(realish_eventrouter):
     print c.formatted_name()
     print c.rename()
     print c.formatted_name()
-#    assert False
+
+    print "-------"
+    print c == "random"
+    print "-------"
+    print c == "#random"
+    print "-------"
+    print c == "weeslacktest.slack.com.#random"
+    print "-------"
+    print c == "weeslacktest.slack.com.random"
+    print "-------"
+    print c == "dandom"
+
+    print e.weechat_controller.buffers
+    assert False
