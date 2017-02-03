@@ -586,7 +586,7 @@ class SlackTeam(object):
         # Last step is to make sure my nickname is the set color
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
     def __eq__(self, compare_str):
-        if compare_str == self.token:
+        if compare_str == self.token or compare_str == self.domain or compare_str == self.team:
             return True
         else:
             return False
@@ -669,6 +669,11 @@ class SlackChannel(object):
         self.set_name(self.slack_name)
         #short name relates to the localvar we change for typing indication
         self.current_short_name = self.name
+    def __eq__(self, compare_str):
+        if compare_str == self.slack_name or compare_str == self.name or compare_str == self.full_name():
+            return True
+        else:
+            return False
     def __repr__(self):
         return "Name:{} Identifier:{}".format(self.name, self.identifier)
     def set_name(self, slack_name):
@@ -688,9 +693,13 @@ class SlackChannel(object):
         return False
     def formatted_name(self, prepend="#", **kwargs):
         return prepend + self.slack_name
+    def full_name(self):
+        return self.team.domain + "." + self.formatted_name(prepend="#")
     def update_from_message_json(self, message_json):
         for key, value in message_json.items():
             setattr(self, key, value)
+    def open(self):
+        self.create_buffer()
     def open_if_we_should(self, force=False):
         try:
             if self.is_archived:
@@ -723,13 +732,16 @@ class SlackChannel(object):
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
             w.buffer_set(self.channel_buffer, "localvar_set_channel", name)
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name())
-            if self.server.alias:
-                w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.alias)
-            else:
-                w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.team)
+            #if self.server.alias:
+            #    w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.alias)
+            #else:
+            #    w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.team)
             self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
+#        try:
         if self.unread_count != 0:
             w.buffer_set(self.channel_buffer, "hotlist", "1")
+#        except:
+#            pass
         #if self.unread_count != 0 and not self.muted:
         #    w.buffer_set(self.channel_buffer, "hotlist", "1")
     def destroy_buffer(self, update_remote):
@@ -1630,6 +1642,34 @@ def tag(tagset, user="unknown user"):
 
 ###### New/converted command_ commands
 
+def command_talk(current_buffer, args):
+    """
+    incomplete because globals hack
+    Open a chat with the specified user
+    /slack talk [user]
+    """
+    e = EVENTROUTER
+    current = w.current_buffer()
+    team = e.weechat_controller.buffers[current].team
+    dbg(team)
+    c = team.get_channel_map()
+    if args not in c:
+        u = team.get_username_map()
+        if args in u:
+            s = SlackRequest(team.token, "im.open", {"user": u[args]}, team_hash=team.team_hash)
+            EVENTROUTER.receive(s)
+            dbg("found user")
+            #refresh channel map here
+            c = team.get_channel_map()
+
+    if args in c:
+        dbg("found channel")
+        chan = team.channels[c[args]]
+        chan.open()
+        if config.switch_buffer_on_join:
+            w.buffer_set(chan.channel_buffer, "display", "1")
+        return
+
 def slack_command_cb(data, current_buffer, args):
     a = args.split(' ', 1)
     if len(a) > 1:
@@ -1637,11 +1677,32 @@ def slack_command_cb(data, current_buffer, args):
     else:
         function_name, args = a[0], None
 
-    try:
-        cmds[function_name](current_buffer, args)
-    except KeyError:
-        w.prnt("", "Command not found: " + function_name)
+#    try:
+    cmds[function_name](current_buffer, args)
+#    except KeyError:
+#        w.prnt("", "Command not found: " + function_name)
     return w.WEECHAT_RC_OK
+
+def command_nodistractions(current_buffer, args):
+    #global hide_distractions
+    #hide_distractions = not hide_distractions
+    if config.distracting_channels != ['']:
+        for channel in config.distracting_channels:
+            #try:
+            for c in EVENTROUTER.weechat_controller.buffers.itervalues():
+                if c == channel:
+                    w.buffer_set(c.channel_buffer, "hidden", str(int(hide_distractions)))
+#            if channel in EVENTROUTER.weechat_controller.buffers.values():
+#                cbuf = kwargs['team'].channels[item["channel"]].channel_buffer
+#                cbuf = EVENTROUTER.weechat_controller.buffers[channel].channel_buffer
+#                channel_buffer = channels.find(channel).channel_buffer
+#                if channel_buffer:
+#                    w.buffer_set(channels.find(channel).channel_buffer, "hidden", str(int(hide_distractions)))
+            #except:
+            #    dbg("Can't hide channel {} .. removing..".format(channel), main_buffer=True)
+#                config.distracting_channels.pop(config.distracting_channels.index(channel))
+#                save_distracting_channels()
+
 
 def command_p(current_buffer, args):
     w.prnt("", "{}".format(eval(args)))
