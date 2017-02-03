@@ -698,7 +698,17 @@ class SlackChannel(object):
     def update_from_message_json(self, message_json):
         for key, value in message_json.items():
             setattr(self, key, value)
-    def open(self):
+    def open(self, update_remote=True):
+        self.create_buffer()
+        #self.active = True
+        self.get_history()
+        if "info" in SLACK_API_TRANSLATOR[self.type]:
+            s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name": self.slack_name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+            EVENTROUTER.receive(s)
+        if update_remote:
+            if "join" in SLACK_API_TRANSLATOR[self.type]:
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.slack_name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                EVENTROUTER.receive(s)
         self.create_buffer()
     def open_if_we_should(self, force=False):
         try:
