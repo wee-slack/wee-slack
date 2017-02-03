@@ -742,8 +742,11 @@ class SlackChannel(object):
         data = "{}\t{}".format(nick, text)
         ts = SlackTS(timestamp)
         if self.channel_buffer:
-            if ts < SlackTS(self.last_read):
+            #backlog messages - we will update the read marker as we print these
+            backlog = False
+            if ts <= SlackTS(self.last_read):
                 tags = tag("backlog")
+                backlog = True
             elif self.type in ["im", "mpdm"]:
                 tags = tag("dm")
                 self.new_messages = True
@@ -753,13 +756,15 @@ class SlackChannel(object):
 
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
             modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
+            if backlog:
+                self.mark_read(ts, update_remote=False, force=True)
     def send_message(self, message):
         #team = self.eventrouter.teams[self.team]
         message = linkify_text(message, self.team, self)
         dbg(message)
         request = {"type": "message", "channel": self.identifier, "text": message, "_team": self.team.team_hash, "user": self.team.myidentifier}
         self.team.send_to_websocket(request)
-        self.mark_read()
+        self.mark_read(force=True)
     def store_message(self, message, team, from_me=False):
         if from_me:
             message.message_json["user"] = team.myidentifier
@@ -834,17 +839,15 @@ class SlackChannel(object):
             if timestamp + 4 > time.time():
                 typing.append(user)
         return typing
-    def mark_read(self, ts=None, update_remote=True):
+    def mark_read(self, ts=None, update_remote=True, force=False):
         if not ts:
             ts = SlackTS()
-        if self.new_messages:
-            self.last_read = ts
+        if self.new_messages or force:
             if self.channel_buffer:
                 w.buffer_set(self.channel_buffer, "unread", "")
                 w.buffer_set(self.channel_buffer, "hotlist", "-1")
             if update_remote:
-                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": self.last_read}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
-                print s.request
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": ts}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
         self.new_messages = False
 
@@ -1308,7 +1311,7 @@ def process_channel_marked(message_json, eventrouter, **kwargs):
     """
     channel = kwargs["channel"]
     ts = kwargs["ts"]
-    channel.mark_read(False, ts)
+    channel.mark_read(ts=ts, update_remote=False)
 def process_group_marked(message_json, eventrouter, **kwargs):
     process_channel_marked(message_json, eventrouter, **kwargs)
 def process_im_marked(message_json, eventrouter, **kwargs):
