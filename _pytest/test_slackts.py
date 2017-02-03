@@ -2,18 +2,23 @@ from wee_slack import SlackTS
 
 
 def test_slackts():
-    a = SlackTS("1234.0")
-    print a
-    b = SlackTS("1234.002")
-    print b
-    print type(a.major)
-    print type(a.minor)
-    print type(b.major)
-    print type(b.minor)
-    print a.minor
-    assert a < b
-    c = SlackTS()
-    assert c > b
+    base = SlackTS("1485976156.000017")
 
-    print str(SlackTS())
-    #assert False
+    b = SlackTS("1485976156.000016")
+    c = SlackTS("1485976156.000018")
+
+    d = SlackTS("1485976155.000017")
+    e = SlackTS("1485976157.000017")
+
+    assert base > b
+    assert base < c
+
+    assert base > d
+    assert base < e
+
+    c = SlackTS()
+    assert c > base
+
+    assert base == "1485976156.000017"
+    assert base > "1485976156.000016"
+    assert base < "1485976156.000018"

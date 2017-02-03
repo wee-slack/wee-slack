@@ -42,3 +42,7 @@ def test_process_message(monkeypatch, realish_eventrouter, mock_websocket):
     e.receive_ws_callback(t)
     e.handle_next()
 
+
+    #assert e.teams[t].channels['C407ABS94'].messages.keys()[0] == '1485976151.00016'
+    #assert False
+

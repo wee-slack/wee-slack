@@ -604,7 +604,7 @@ class SlackTeam(object):
                 w.buffer_merge(self.server_buffer, w.buffer_search_main())
             w.buffer_set(self.server_buffer, "nicklist", "1")
     def buffer_prnt(self, data):
-        w.prnt_date_tags(self.server_buffer, int(time.time()), tag("backlog"), data)
+        w.prnt_date_tags(self.server_buffer, SlackTS().major, tag("backlog"), data)
     def get_channel_map(self):
         return {v.slack_name: k for k, v in self.channels.iteritems()}
     def get_username_map(self):
@@ -739,29 +739,20 @@ class SlackChannel(object):
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             EVENTROUTER.receive(s)
     def buffer_prnt(self, nick, text, timestamp, **kwargs):
+        data = "{}\t{}".format(nick, text)
         ts = SlackTS(timestamp)
         if self.channel_buffer:
-            print type(ts)
-            print ts
-            print type(self.last_read)
-            print self.last_read
             if ts < SlackTS(self.last_read):
-                dbg("{} {}".format(ts, self.last_read), True)
                 tags = tag("backlog")
             elif self.type in ["im", "mpdm"]:
                 tags = tag("dm")
+                self.new_messages = True
             else:
                 tags = tag("default")
-            #otype = kwargs.get('output_type', 'default')
-            #tags = tag(otype)
-
-            #if otype != 'backlog':
-            #    self.new_messages = True
-            #w.prnt(self.channel_buffer, "{}\t{}".format(nick, text))
-            data = "{}\t{}".format(nick, text)
+                self.new_messages = True
 
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
-            modify_print_time(self.channel_buffer, ts.minor, ts.major)
+            modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
     def send_message(self, message):
         #team = self.eventrouter.teams[self.team]
         message = linkify_text(message, self.team, self)
@@ -772,13 +763,14 @@ class SlackChannel(object):
     def store_message(self, message, team, from_me=False):
         if from_me:
             message.message_json["user"] = team.myidentifier
-        self.messages[message.ts] = message
+        self.messages[SlackTS(message.ts)] = message
         if len(self.messages.keys()) > SCROLLBACK_SIZE:
             mk = self.messages.keys()
             mk.sort()
             for k in mk[:SCROLLBACK_SIZE]:
                 del self.messages[k]
     def change_message(self, ts, text=None, suffix=None):
+        ts = SlackTS(ts)
         if ts in self.messages:
             m = self.messages[ts]
             if text:
@@ -786,9 +778,7 @@ class SlackChannel(object):
             if suffix:
                 m.change_suffix(suffix)
             text = m.render(force=True)
-        timestamp, time_id = ts.split(".", 2)
-        timestamp = int(timestamp)
-        modify_buffer_line(self.channel_buffer, text, timestamp, time_id)
+        modify_buffer_line(self.channel_buffer, text, ts.major, ts.minor)
         return True
     def is_visible(self):
         return w.buffer_get_integer(self.channel_buffer, "hidden") == 0
@@ -853,8 +843,8 @@ class SlackChannel(object):
                 w.buffer_set(self.channel_buffer, "unread", "")
                 w.buffer_set(self.channel_buffer, "hotlist", "-1")
             if update_remote:
-                last_read = ts
-                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": last_read}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": self.last_read}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                print s.request
                 self.eventrouter.receive(s)
         self.new_messages = False
 
@@ -931,6 +921,8 @@ class SlackMPDMChannel(SlackChannel):
     def set_name(self, n):
         self.name = "|".join("-".join(n.split("-")[1:-1]).split("--"))
         self.type = "group"
+    def rename(self):
+        pass
 
 class SlackUser(object):
     """
@@ -983,7 +975,7 @@ class SlackMessage(object):
         self.message_json = message_json
         self.sender = self.get_sender()
         self.suffix = ''
-        self.ts = message_json['ts']
+        self.ts = SlackTS(message_json['ts'])
     def render(self, force=False):
         return render(self.message_json, self.team, self.channel, force) + self.suffix
     def change_text(self, new_text):
@@ -1048,31 +1040,40 @@ class WeeSlackMetadata(object):
 
 class SlackTS(object):
     def __init__(self, ts=None):
-        try:
-            if ts:
-                self.major, self.minor = [int(x) for x in ts.split('.', 1)]
-            else:
-                self.major = int(time.time())
-                self.minor = 0
-        except:
-            print ts
-            raise
+        if ts:
+            self.major, self.minor = [int(x) for x in ts.split('.', 1)]
+        else:
+            self.major = int(time.time())
+            self.minor = 0
     def __cmp__(self, other):
-        if self.major < other.major:
-            return -1
-        elif self.major > other.major:
-            return 1
-        elif self.major == other.major:
-            if self.minor < other.minor:
+        if isinstance(other, SlackTS):
+            if self.major < other.major:
                 return -1
-            elif self.minor > other.minor:
+            elif self.major > other.major:
                 return 1
-            else:
+            elif self.major == other.major:
+                if self.minor < other.minor:
+                    return -1
+                elif self.minor > other.minor:
+                    return 1
+                else:
+                    return 0
+        else:
+            s = self.__str__()
+            if s < other:
+                return -1
+            elif s > other:
+                return 1
+            elif s == other:
                 return 0
     def __repr__(self):
-        return "{}.{}".format(self.major, self.minor)
+        return str("{0}.{1:06d}".format(self.major, self.minor))
     def split(self, *args, **kwargs):
         return [self.major, self.minor]
+    def majorstr(self):
+        return str(self.major)
+    def minorstr(self):
+        return str(self.minor)
 
 ###### New handlers
 
@@ -1201,7 +1202,6 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
 
     else:
         message = SlackMessage(message_json, team, channel)
-        #message = Message(message_json, server=team, channel=channel)
         text = message.render()
         #print text
 
@@ -1281,7 +1281,7 @@ def process_reply(message_json, eventrouter, **kwargs):
         original_message_json = team.ws_replies[identifier]
         del team.ws_replies[identifier]
         if "ts" in message_json:
-            original_message_json["ts"] = SlackTS(message_json["ts"])
+            original_message_json["ts"] = message_json["ts"]
         else:
             dbg("no reply ts {}".format(message_json))
 
@@ -1300,7 +1300,7 @@ def process_reply(message_json, eventrouter, **kwargs):
         process_message(m.message_json, eventrouter, channel=channel, team=team)
         dbg("REPLY {}".format(message_json))
     except KeyError:
-        dbg("Unexpected reply")
+        dbg("Unexpected reply {}".format(message_json))
 
 def process_channel_marked(message_json, eventrouter, **kwargs):
     """
