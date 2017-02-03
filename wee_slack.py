@@ -219,7 +219,7 @@ class EventRouter(object):
         where the request originated and route properly.
         """
         request_metadata = self.retrieve_context(data)
-        dbg("RECEIVED CALLBACK with request of {} id of {} and  code {} of length {}".format(request_metadata.request, request_metadata.response_id, return_code, len(out)), main_buffer=True)
+        dbg("RECEIVED CALLBACK with request of {} id of {} and  code {} of length {}".format(request_metadata.request, request_metadata.response_id, return_code, len(out)))
         if return_code == 0:
             if request_metadata.response_id in self.reply_buffer:
                 self.reply_buffer[request_metadata.response_id] += out
@@ -237,7 +237,6 @@ class EventRouter(object):
                 self.delete_context(data)
             except:
                 dbg("HTTP REQUEST CALLBACK FAILED", True)
-                dbg(data, True)
                 pass
         elif return_code != -1:
             self.reply_buffer.pop(request_metadata.response_id, None)
@@ -262,7 +261,7 @@ class EventRouter(object):
         processing. Object must be known to handle_next or
         be JSON.
         """
-        dbg("RECEIVED FROM QUEUE", main_buffer=True)
+        dbg("RECEIVED FROM QUEUE")
         self.queue.append(dataobj)
     def handle_next(self):
         """
@@ -326,7 +325,10 @@ def handle_next(*args):
     This is just a place to call the event router globally.
     This is a dirty hack. There must be a better way.
     """
-    EVENTROUTER.handle_next()
+    try:
+        EVENTROUTER.handle_next()
+    except:
+        pass
     return w.WEECHAT_RC_OK
 
 class WeechatController(object):
@@ -753,7 +755,6 @@ class SlackChannel(object):
         dbg(message)
         print self.team
         request = {"type": "message", "channel": self.identifier, "text": message, "_team": self.team.team_hash, "user": self.team.myidentifier}
-        dbg(request, True)
         self.team.send_to_websocket(request)
         self.mark_read()
     def store_message(self, message, team, from_me=False):
@@ -972,10 +973,10 @@ class SlackMessage(object):
         return render(self.message_json, self.team, self.channel, force) + self.suffix
     def change_text(self, new_text):
         self.message_json["text"] = new_text
-        dbg(self.message_json, True)
+        dbg(self.message_json)
     def change_suffix(self, new_suffix):
         self.suffix = new_suffix
-        dbg(self.message_json, True)
+        dbg(self.message_json)
     def get_sender(self, utf8=True):
         name = u""
         if 'bot_id' in self.message_json and self.message_json['bot_id'] is not None:
@@ -1236,7 +1237,7 @@ def process_reply(message_json, eventrouter, **kwargs):
         channel = team.channels[c]
         m = SlackMessage(original_message_json, team, channel)
     #    m = Message(message_json, server=server)
-        dbg(m, True)
+        #dbg(m, True)
 
         #if "type" in message_json:
         #    if message_json["type"] == "message" and "channel" in message_json.keys():
@@ -1254,7 +1255,6 @@ def process_channel_marked(message_json, eventrouter, **kwargs):
     complete
     """
     channel = kwargs["channel"]
-    dbg(channel, True)
     channel.mark_read(False)
 def process_group_marked(message_json, eventrouter, **kwargs):
     process_channel_marked(message_json, eventrouter, **kwargs)
