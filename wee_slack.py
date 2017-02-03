@@ -535,11 +535,8 @@ class SlackRequest(object):
     makes a SHA of the requst url and current time so we can re-tag this on the way back through.
     """
     def __init__(self, token, request, post_data={}, **kwargs):
-        print '================='
         for key, value in kwargs.items():
             setattr(self, key, value)
-            print "{} {}".format(key, value)
-        print '================='
         self.tries = 0
         self.domain = 'api.slack.com'
         self.request = request
@@ -606,6 +603,8 @@ class SlackTeam(object):
             if w.config_string(w.config_get('irc.look.server_buffer')) == 'merge_with_core':
                 w.buffer_merge(self.server_buffer, w.buffer_search_main())
             w.buffer_set(self.server_buffer, "nicklist", "1")
+    def buffer_prnt(self, data):
+        w.prnt_date_tags(self.server_buffer, int(time.time()), tag("backlog"), data)
     def get_channel_map(self):
         return {v.slack_name: k for k, v in self.channels.iteritems()}
     def get_username_map(self):
@@ -647,7 +646,6 @@ class SlackTeam(object):
             dbg("Unexpected error: {}\nSent: {}".format(sys.exc_info()[0], data))
             self.connected = False
 
-
 class SlackChannel(object):
     """
     Represents an individual slack channel.
@@ -655,9 +653,13 @@ class SlackChannel(object):
     def __init__(self, eventrouter, **kwargs):
         # We require these two things for a vaid object,
         # the rest we can just learn from slack
+        for key, value in kwargs.items():
+            setattr(self, key, value)
         self.eventrouter = eventrouter
         self.slack_name = kwargs["name"]
         self.identifier = kwargs["id"]
+        self.last_read = SlackTS(kwargs.get("last_read", SlackTS()))
+        #print self.last_read
         self.channel_buffer = None
         self.team = None
         self.got_history = False
@@ -665,8 +667,6 @@ class SlackChannel(object):
         self.new_messages = False
         self.typing = {}
         self.type = 'channel'
-        for key, value in kwargs.items():
-            setattr(self, key, value)
         self.set_name(self.slack_name)
         #short name relates to the localvar we change for typing indication
         self.current_short_name = self.name
@@ -738,22 +738,34 @@ class SlackChannel(object):
         if update_remote and not self.eventrouter.shutting_down:
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             EVENTROUTER.receive(s)
-    def buffer_prnt(self, nick, text, timestamp, *args):
-        t, time_id = timestamp.split('.', 1)
-        time_int = int(t)
+    def buffer_prnt(self, nick, text, timestamp, **kwargs):
+        ts = SlackTS(timestamp)
         if self.channel_buffer:
-            self.new_messages = True
+            print type(ts)
+            print ts
+            print type(self.last_read)
+            print self.last_read
+            if ts < SlackTS(self.last_read):
+                dbg("{} {}".format(ts, self.last_read), True)
+                tags = tag("backlog")
+            elif self.type in ["im", "mpdm"]:
+                tags = tag("dm")
+            else:
+                tags = tag("default")
+            #otype = kwargs.get('output_type', 'default')
+            #tags = tag(otype)
+
+            #if otype != 'backlog':
+            #    self.new_messages = True
             #w.prnt(self.channel_buffer, "{}\t{}".format(nick, text))
-            tags = ''
             data = "{}\t{}".format(nick, text)
-            w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
-            modify_print_time(self.channel_buffer, time_id, time_int)
-        #dbg("should buffer print {} {}".format(nick, text), True)
+
+            w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
+            modify_print_time(self.channel_buffer, ts.minor, ts.major)
     def send_message(self, message):
         #team = self.eventrouter.teams[self.team]
         message = linkify_text(message, self.team, self)
         dbg(message)
-        print self.team
         request = {"type": "message", "channel": self.identifier, "text": message, "_team": self.team.team_hash, "user": self.team.myidentifier}
         self.team.send_to_websocket(request)
         self.mark_read()
@@ -832,13 +844,16 @@ class SlackChannel(object):
             if timestamp + 4 > time.time():
                 typing.append(user)
         return typing
-    def mark_read(self, update_remote=True):
+    def mark_read(self, ts=None, update_remote=True):
+        if not ts:
+            ts = SlackTS()
         if self.new_messages:
+            self.last_read = ts
             if self.channel_buffer:
                 w.buffer_set(self.channel_buffer, "unread", "")
                 w.buffer_set(self.channel_buffer, "hotlist", "-1")
             if update_remote:
-                last_read = time.time()
+                last_read = ts
                 s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": last_read}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
         self.new_messages = False
@@ -1031,6 +1046,34 @@ class WeeSlackMetadata(object):
     def jsonify(self):
         return self.meta
 
+class SlackTS(object):
+    def __init__(self, ts=None):
+        try:
+            if ts:
+                self.major, self.minor = [int(x) for x in ts.split('.', 1)]
+            else:
+                self.major = int(time.time())
+                self.minor = 0
+        except:
+            print ts
+            raise
+    def __cmp__(self, other):
+        if self.major < other.major:
+            return -1
+        elif self.major > other.major:
+            return 1
+        elif self.major == other.major:
+            if self.minor < other.minor:
+                return -1
+            elif self.minor > other.minor:
+                return 1
+            else:
+                return 0
+    def __repr__(self):
+        return "{}.{}".format(self.major, self.minor)
+    def split(self, *args, **kwargs):
+        return [self.major, self.minor]
+
 ###### New handlers
 
 def handle_rtmstart(login_data, eventrouter):
@@ -1086,6 +1129,14 @@ def handle_rtmstart(login_data, eventrouter):
             dbg("websocket connection error: {}".format(e))
             return False
 
+        t.buffer_prnt('Connected to Slack')
+        t.buffer_prnt('{:<20} {}'.format(u"Websocket URL", login_data["url"]))
+        t.buffer_prnt('{:<20} {}'.format(u"User name", login_data["self"]["name"]))
+        t.buffer_prnt('{:<20} {}'.format(u"User ID", login_data["self"]["id"]))
+        t.buffer_prnt('{:<20} {}'.format(u"Team name", login_data["team"]["name"]))
+        t.buffer_prnt('{:<20} {}'.format(u"Team domain", login_data["team"]["domain"]))
+        t.buffer_prnt('{:<20} {}'.format(u"Team id", login_data["team"]["id"]))
+
         dbg("connected to {}".format(t.domain))
 
     #self.identifier = self.domain
@@ -1103,6 +1154,7 @@ def handle_history(message_json, eventrouter, **kwargs):
     request_metadata = pickle.loads(message_json["wee_slack_request_metadata"])
     kwargs['team'] = eventrouter.teams[request_metadata.team_hash]
     kwargs['channel'] = kwargs['team'].channels[request_metadata.channel_identifier]
+    kwargs['output_type'] = "backlog"
     for message in reversed(message_json["messages"]):
         process_message(message, eventrouter, **kwargs)
 
@@ -1158,13 +1210,13 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
             text = text[1:-1]
             if message.sender != channel.server.nick:
                 text = message.sender + " " + text
-            channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts)
+            channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, **kwargs)
 
         else:
             suffix = ''
             if 'edited' in message_json:
                 suffix = ' (edited)'
-            channel.buffer_prnt(message.sender, text + suffix, message.ts)
+            channel.buffer_prnt(message.sender, text + suffix, message.ts, **kwargs)
 
         if store:
             channel.store_message(message, team)
@@ -1229,7 +1281,7 @@ def process_reply(message_json, eventrouter, **kwargs):
         original_message_json = team.ws_replies[identifier]
         del team.ws_replies[identifier]
         if "ts" in message_json:
-            original_message_json["ts"] = message_json["ts"]
+            original_message_json["ts"] = SlackTS(message_json["ts"])
         else:
             dbg("no reply ts {}".format(message_json))
 
@@ -1255,7 +1307,8 @@ def process_channel_marked(message_json, eventrouter, **kwargs):
     complete
     """
     channel = kwargs["channel"]
-    channel.mark_read(False)
+    ts = kwargs["ts"]
+    channel.mark_read(False, ts)
 def process_group_marked(message_json, eventrouter, **kwargs):
     process_channel_marked(message_json, eventrouter, **kwargs)
 def process_im_marked(message_json, eventrouter, **kwargs):
@@ -1280,7 +1333,6 @@ def process_im_open(message_json, eventrouter, **kwargs):
 def process_im_close(message_json, eventrouter, **kwargs):
     item = message_json
     cbuf = kwargs['team'].channels[item["channel"]].channel_buffer
-    print cbuf
     eventrouter.weechat_controller.unregister_buffer(cbuf, False, True)
 
 def process_reaction_added(message_json, eventrouter, **kwargs):
@@ -1351,9 +1403,9 @@ def linkify_text(message, team, channel):
     message = message.split(' ')
     for item in enumerate(message):
         targets = re.match('.*([@#])([\w.-]+[\w. -])(\W*)', item[1])
-        print targets
+        #print targets
         if targets and targets.groups()[0] == '@':
-            print targets.groups()
+            #print targets.groups()
             named = targets.groups()
             if named[1] in ["group", "channel", "here"]:
                 message[item[0]] = "<!{}>".format(named[1])
@@ -1546,6 +1598,26 @@ def modify_print_time(buffer, new_id, time):
             w.hdata_update(struct_hdata_line_data, data, {"date_printed": new_id})
 
     return w.WEECHAT_RC_OK
+
+def tag(tagset, user="unknown user"):
+    default_tag = "nick_" + user
+    tagsets = {
+        #when replaying something old
+        "backlog": "no_highlight,notify_none,logger_backlog_end",
+        #when posting messages to a muted channel
+        "muted": "no_highlight,notify_none,logger_backlog_end",
+        #when my nick is in the message
+        "highlightme": "notify_highlight,log1",
+        #when receiving a direct message
+        "dm": "notify_private,notify_message,log1,irc_privmsg",
+        #when this is a join/leave, attach for smart filter ala:
+        #if user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]
+        "joinleave": "irc_smart_filter",
+        #catchall ?
+        "default": "notify_message,log1,irc_privmsg",
+    }
+    return default_tag + "," + tagsets[tagset]
+
 
 ###### New/converted command_ commands
 
