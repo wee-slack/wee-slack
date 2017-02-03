@@ -1,4 +1,3 @@
-import pickle
 import json
 import pytest
 import sys
@@ -29,9 +28,9 @@ def mock_websocket():
 @pytest.fixture
 def realish_eventrouter():
     e = EventRouter()
-    pickled_data = pickle.dumps(SlackRequest('xoxoxoxox', "rtm.start", {"meh": "blah"}))
+    context = e.store_context(SlackRequest('xoxoxoxox', "rtm.start", {"meh": "blah"}))
     rtmstartdata = open('_pytest/data/http/rtm.start.json', 'r').read()
-    e.receive_httprequest_callback(pickled_data, 1, 0, rtmstartdata, 4)
+    e.receive_httprequest_callback(context, 1, 0, rtmstartdata, 4)
     e.handle_next()
     return e
 

@@ -1,5 +1,4 @@
 import pytest
-import pickle
 from wee_slack import EventRouter, ProcessNotImplemented, SlackRequest
 
 def test_EventRouter(mock_weechat):
@@ -35,22 +34,33 @@ def test_EventRouter(mock_weechat):
 def test_EventRouterReceivedata(mock_weechat):
 
     e = EventRouter()
-    pickled_data = pickle.dumps(SlackRequest('xoxoxoxox', "rtm.startold", {"meh": "blah"}))
-    e.receive_httprequest_callback(pickled_data, 1, -1, ' {"JSON": "MEH", ', 4)
+    context = e.store_context(SlackRequest('xoxoxoxox', "rtm.startold", {"meh": "blah"}))
+    print context
+    e.receive_httprequest_callback(context, 1, -1, ' {"JSON": "MEH", ', 4)
     #print len(e.reply_buffer)
-    e.receive_httprequest_callback(pickled_data, 1, -1, ' "JSON2": "MEH", ', 4)
+    context = e.store_context(SlackRequest('xoxoxoxox', "rtm.startold", {"meh": "blah"}))
+    print context
+    e.receive_httprequest_callback(context, 1, -1, ' "JSON2": "MEH", ', 4)
     #print len(e.reply_buffer)
-    e.receive_httprequest_callback(pickled_data, 1, 0, ' "JSON3": "MEH"}', 4)
+    context = e.store_context(SlackRequest('xoxoxoxox', "rtm.startold", {"meh": "blah"}))
+    print context
+    e.receive_httprequest_callback(context, 1, 0, ' "JSON3": "MEH"}', 4)
     #print len(e.reply_buffer)
     try:
+        e.handle_next()
+        e.handle_next()
+        e.handle_next()
         e.handle_next()
     except:
         pass
 
-    pickled_data = pickle.dumps(SlackRequest('xoxoxoxox', "rtm.start", {"meh": "blah"}))
+    print e.context
+    #assert False
+
+    context = e.store_context(SlackRequest('xoxoxoxox', "rtm.start", {"meh": "blah"}))
     rtmstartdata = open('_pytest/data/http/rtm.start.json', 'r').read()
-    e.receive_httprequest_callback(pickled_data, 1, 0, rtmstartdata[:5000], 4)
-    e.receive_httprequest_callback(pickled_data, 1, 0, rtmstartdata[5000:], 4)
+    e.receive_httprequest_callback(context, 1, -1, rtmstartdata[:5000], 4)
+    e.receive_httprequest_callback(context, 1, 0, rtmstartdata[5000:], 4)
     e.handle_next()
 
     #print len(e.reply_buffer)

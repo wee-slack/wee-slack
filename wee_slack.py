@@ -11,7 +11,8 @@ import sys
 import traceback
 import collections
 import ssl
-#import random
+import random
+import string
 
 from websocket import create_connection, WebSocketConnectionClosedException
 
@@ -97,6 +98,7 @@ class EventRouter(object):
         """
         self.queue = []
         self.teams = {}
+        self.context = {}
         self.weechat_controller = WeechatController(self)
         self.previous_buffer = ""
         self.reply_buffer = {}
@@ -131,6 +133,33 @@ class EventRouter(object):
         f = open('{}/{}-{}.json'.format(RECORD_DIR, now, mtype), 'w')
         f.write("{}".format(json.dumps(message_json)))
         f.close()
+
+    def store_context(self, data):
+        """
+        A place to store data and vars needed by callback returns. We need this because
+        weechat's "callback_data" has a limited size and weechat will crash if you exceed
+        this size.
+        """
+        identifier = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(40))
+        self.context[identifier] = data
+        return identifier
+
+    def retrieve_context(self, identifier):
+        """
+        A place to retrieve data and vars needed by callback returns. We need this because
+        weechat's "callback_data" has a limited size and weechat will crash if you exceed
+        this size.
+        """
+        data = self.context.get(identifier, None)
+        if data:
+            return data
+
+    def delete_context(self, identifier):
+        """
+        Requests can span multiple requests, so we may need to delete this as a last step
+        """
+        if identifier in self.context:
+            del self.context[identifier]
 
     def shutdown(self):
         """
@@ -189,7 +218,7 @@ class EventRouter(object):
         It is then populated with metadata here so we can identify
         where the request originated and route properly.
         """
-        request_metadata = pickle.loads(data)
+        request_metadata = self.retrieve_context(data)
         dbg("RECEIVED CALLBACK with request of {} id of {} and  code {} of length {}".format(request_metadata.request, request_metadata.response_id, return_code, len(out)), main_buffer=True)
         if return_code == 0:
             if request_metadata.response_id in self.reply_buffer:
@@ -205,8 +234,10 @@ class EventRouter(object):
                 if self.recording:
                     self.record_event(j, 'wee_slack_process_method')
                 self.receive_json(json.dumps(j))
+                self.delete_context(data)
             except:
-                dbg("HTTP REQUEST CALLBACK FAILED")
+                dbg("HTTP REQUEST CALLBACK FAILED", True)
+                dbg(data, True)
                 pass
         elif return_code != -1:
             self.reply_buffer.pop(request_metadata.response_id, None)
@@ -305,7 +336,7 @@ class WeechatController(object):
     def __init__(self, eventrouter):
         self.eventrouter = eventrouter
         self.buffers = {}
-        self.previous_buffer = ""
+        self.previous_buffer = None
         self.buffer_list_stale = False
     def iter_buffers(self):
         for b in self.buffers:
@@ -354,13 +385,13 @@ def local_process_async_slack_api_request(request, event_router):
     """
     complete
     Sends an API request to Slack. You'll need to give this a well formed SlackRequest object.
+    DEBUGGING!!! The context here cannot be very large. Weechat will crash.
     """
     if not event_router.shutting_down:
         weechat_request = 'url:{}'.format(request.request_string())
-        print weechat_request
         params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
         request.tried()
-        context = pickle.dumps(request)
+        context = event_router.store_context(request)
         w.hook_process_hashtable(weechat_request, params, config.slack_timeout, "receive_httprequest_callback", context)
 
 ###### New Callbacks
@@ -660,6 +691,11 @@ class SlackChannel(object):
         for key, value in message_json.items():
             setattr(self, key, value)
     def open_if_we_should(self, force=False):
+        try:
+            if self.is_archived:
+                return
+        except:
+            pass
         if force:
             self.create_buffer()
         else:
@@ -1661,6 +1697,34 @@ class PluginConfig(object):
         return int(w.config_get_plugin(key))
 
 
+# to Trace execution, add `setup_trace()` to startup
+# and  to a function and sys.settrace(trace_calls)  to a function
+def setup_trace():
+    global f
+    now = time.time()
+    f = open('{}/{}-trace.json'.format(RECORD_DIR, now), 'w')
+
+def trace_calls(frame, event, arg):
+    global f
+    if event != 'call':
+        return
+    co = frame.f_code
+    func_name = co.co_name
+    if func_name == 'write':
+        # Ignore write() calls from print statements
+        return
+    func_line_no = frame.f_lineno
+    func_filename = co.co_filename
+    caller = frame.f_back
+    caller_line_no = caller.f_lineno
+    caller_filename = caller.f_code.co_filename
+    print >> f, 'Call to %s on line %s of %s from line %s of %s' % \
+        (func_name, func_line_no, func_filename,
+         caller_line_no, caller_filename)
+    f.flush()
+    return
+
+
 # Main
 if __name__ == "__main__":
 
@@ -1671,6 +1735,8 @@ if __name__ == "__main__":
         if int(version) < 0x1030000:
             w.prnt("", "\nERROR: Weechat version 1.3+ is required to use {}.\n\n".format(SCRIPT_NAME))
         else:
+
+            #setup_trace()
 
             WEECHAT_HOME = w.info_get("weechat_dir", "")
             CACHE_NAME = "slack.cache"
