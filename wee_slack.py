@@ -459,8 +459,7 @@ def buffer_input_callback(signal, buffer_ptr, data):
 #            channel.change_previous_message(old.decode("utf-8"), new.decode("utf-8"), flags)
     else:
         channel.send_message(data)
-        # channel.buffer_prnt(channel.server.nick, data)
-#    channel.mark_read(True)
+        channel.mark_read(update_remote=True, force=True)
     return w.WEECHAT_RC_ERROR
 
 def buffer_switch_callback(signal, sig_type, data):
@@ -687,8 +686,8 @@ class SlackChannel(object):
                 w.buffer_set(self.channel_buffer, "short_name", new_name)
                 return True
         return False
-    def formatted_name(self):
-        return self.name
+    def formatted_name(self, prepend="#", **kwargs):
+        return prepend + self.slack_name
     def update_from_message_json(self, message_json):
         for key, value in message_json.items():
             setattr(self, key, value)
@@ -711,25 +710,28 @@ class SlackChannel(object):
         self.team = team
     def create_buffer(self):
         """
-        incomplete
+        incomplete (muted doesn't work)
         Creates the weechat buffer where the channel magic happens.
         """
         if not self.channel_buffer:
-            self.channel_buffer = w.buffer_new("{}.{}".format(self.team.domain, self.name), "buffer_input_callback", "EVENTROUTER", "", "")
+            name = self.formatted_name(basic=True)
+            self.channel_buffer = w.buffer_new("{}.{}".format(self.team.domain, name), "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             if self.type == "im":
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
             else:
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
-            w.buffer_set(self.channel_buffer, "localvar_set_channel", self.name)
+            w.buffer_set(self.channel_buffer, "localvar_set_channel", name)
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name())
             if self.server.alias:
                 w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.alias)
             else:
                 w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.team)
             self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
-        if self.unread_count != 0 and not self.muted:
+        if self.unread_count != 0:
             w.buffer_set(self.channel_buffer, "hotlist", "1")
+        #if self.unread_count != 0 and not self.muted:
+        #    w.buffer_set(self.channel_buffer, "hotlist", "1")
     def destroy_buffer(self, update_remote):
         if self.channel_buffer is not None:
             self.channel_buffer = None
@@ -863,7 +865,6 @@ class SlackDMChannel(SlackChannel):
         self.type = 'im'
         self.update_color()
         self.set_name(self.slack_name)
-        #self.name = self.formatted_name(" ")
     def set_name(self, slack_name):
         self.name = slack_name
     def create_buffer(self):
@@ -877,8 +878,8 @@ class SlackDMChannel(SlackChannel):
         else:
             self.color = ""
             self.color_name = ""
-    def formatted_name(self, prepend="", enable_color=True):
-        if config.colorize_private_chats and enable_color:
+    def formatted_name(self, prepend="", enable_color=True, basic=False):
+        if config.colorize_private_chats and enable_color and not basic:
             print_color = self.color
         else:
             print_color = ""
@@ -911,6 +912,8 @@ class SlackGroupChannel(SlackChannel):
         self.set_name(self.slack_name)
     def set_name(self, slack_name):
         self.name = "#" + slack_name
+    def formatted_name(self, prepend="#", enable_color=True, basic=False):
+        return prepend + self.slack_name
 
 class SlackMPDMChannel(SlackChannel):
     """
@@ -921,9 +924,11 @@ class SlackMPDMChannel(SlackChannel):
         super(SlackMPDMChannel, self).__init__(eventrouter, **kwargs)
         n = kwargs.get('name')
         self.set_name(n)
+        self.type = "group"
     def set_name(self, n):
         self.name = "|".join("-".join(n.split("-")[1:-1]).split("--"))
-        self.type = "group"
+    def formatted_name(self, **kwargs):
+        return self.name
     def rename(self):
         pass
 
@@ -1301,6 +1306,7 @@ def process_reply(message_json, eventrouter, **kwargs):
 
         #        channels.find(message_json["channel"]).buffer_prnt(server.nick, m.render(), m.ts)
         process_message(m.message_json, eventrouter, channel=channel, team=team)
+        channel.mark_read(update_remote=True, force=True)
         dbg("REPLY {}".format(message_json))
     except KeyError:
         dbg("Unexpected reply {}".format(message_json))
