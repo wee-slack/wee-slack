@@ -682,7 +682,7 @@ class SlackChannel(object):
         return self.rename()
     def rename(self):
         if self.channel_buffer:
-            new_name = self.formatted_name(typing=self.is_someone_typing())
+            new_name = self.formatted_name(typing=self.is_someone_typing(), style="sidebar")
             if self.current_short_name != new_name:
                 self.current_short_name = new_name
                 w.buffer_set(self.channel_buffer, "short_name", new_name)
@@ -695,6 +695,7 @@ class SlackChannel(object):
             prepend = ">"
         select = {
             "default": prepend + self.slack_name,
+            "sidebar": prepend + self.slack_name,
             "base": self.slack_name,
             "long_default": "{}.{}{}".format(self.team.domain, prepend, self.slack_name),
             "long_base": "{}.{}".format(self.team.domain, self.slack_name),
@@ -738,25 +739,27 @@ class SlackChannel(object):
         Creates the weechat buffer where the channel magic happens.
         """
         if not self.channel_buffer:
-            name = self.formatted_name(basic=True)
-            self.channel_buffer = w.buffer_new("{}.{}".format(self.team.domain, name), "buffer_input_callback", "EVENTROUTER", "", "")
+            self.channel_buffer = w.buffer_new(self.formatted_name(style="long_default"), "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             if self.type == "im":
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
             else:
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
-            w.buffer_set(self.channel_buffer, "localvar_set_channel", name)
-            w.buffer_set(self.channel_buffer, "short_name", self.formatted_name())
+            w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
+            w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
             #if self.server.alias:
             #    w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.alias)
             #else:
             #    w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.team)
             self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
-#        try:
-#        if self.unread_count != 0:
-#            w.buffer_set(self.channel_buffer, "hotlist", "1")
-#        except:
-#            pass
+        try:
+            if self.unread_count != 0:
+                w.buffer_set(self.channel_buffer, "hotlist", "1")
+            else:
+                print "no unread in {}".format(self.name)
+        except:
+            print "no unread count"
+            pass
         #if self.unread_count != 0 and not self.muted:
         #    w.buffer_set(self.channel_buffer, "hotlist", "1")
     def destroy_buffer(self, update_remote):
@@ -915,15 +918,16 @@ class SlackDMChannel(SlackChannel):
         else:
             prepend = "+"
         select = {
-            "default": prepend + self.slack_name,
+            "default": self.slack_name,
+            "sidebar": prepend + self.slack_name,
             "base": self.slack_name,
-            "long_default": "{}.{}{}".format(self.team.domain, prepend, self.slack_name),
+            "long_default": "{}.{}".format(self.team.domain, self.slack_name),
             "long_base": "{}.{}".format(self.team.domain, self.slack_name),
         }
         return print_color + select[style]
     def rename(self):
         if self.channel_buffer:
-            new_name = self.formatted_name(present=self.team.is_user_present(self.user), enable_color=config.colorize_private_chats)
+            new_name = self.formatted_name(style="sidebar", present=self.team.is_user_present(self.user), enable_color=config.colorize_private_chats)
             if self.current_short_name != new_name:
                 self.current_short_name = new_name
                 w.buffer_set(self.channel_buffer, "short_name", new_name)
@@ -959,8 +963,23 @@ class SlackMPDMChannel(SlackChannel):
         self.type = "group"
     def set_name(self, n):
         self.name = "|".join("-".join(n.split("-")[1:-1]).split("--"))
-    def formatted_name(self, **kwargs):
-        return self.name
+    def formatted_name(self, style="default", typing=False, **kwargs):
+        adjusted_name = "|".join("-".join(self.slack_name.split("-")[1:-1]).split("--"))
+        if not typing:
+            prepend = " "
+        else:
+            prepend = ">"
+        select = {
+            "default": adjusted_name,
+            "sidebar": prepend + adjusted_name,
+            "base": adjusted_name,
+            "long_default": "{}.{}".format(self.team.domain, adjusted_name),
+            "long_base": "{}.{}".format(self.team.domain, adjusted_name),
+        }
+        return select[style]
+
+#    def formatted_name(self, **kwargs):
+#        return self.name
     def rename(self):
         pass
 
@@ -1250,12 +1269,14 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
             text = text[1:-1]
             if message.sender != channel.server.nick:
                 text = message.sender + " " + text
+            channel.unread_count += 1
             channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, **kwargs)
 
         else:
             suffix = ''
             if 'edited' in message_json:
                 suffix = ' (edited)'
+            channel.unread_count += 1
             channel.buffer_prnt(message.sender, text + suffix, message.ts, **kwargs)
 
         if store:
