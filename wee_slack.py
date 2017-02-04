@@ -1689,6 +1689,16 @@ def tag(tagset, user="unknown user"):
 
 ###### New/converted command_ commands
 
+def join_command_cb(data, current_buffer, args):
+    args = args.split()
+    if len(args) < 2:
+        w.prnt(current_buffer, "Missing channel argument")
+        return w.WEECHAT_RC_OK_EAT
+    elif command_talk(current_buffer, args[1]):
+        return w.WEECHAT_RC_OK_EAT
+    else:
+        return w.WEECHAT_RC_OK
+
 def command_talk(current_buffer, args):
     """
     incomplete because globals hack
