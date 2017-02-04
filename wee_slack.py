@@ -609,7 +609,7 @@ class SlackTeam(object):
     def get_channel_map(self):
         return {v.slack_name: k for k, v in self.channels.iteritems()}
     def get_username_map(self):
-        return {v.name: k for k, v in self.users.iteritems()}
+        return {v.slack_name: k for k, v in self.users.iteritems()}
     def get_team_hash(self):
         return self.team_hash
     def refresh(self):
@@ -711,11 +711,11 @@ class SlackChannel(object):
         #self.active = True
         self.get_history()
         if "info" in SLACK_API_TRANSLATOR[self.type]:
-            s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name": self.slack_name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+            s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
         if update_remote:
             if "join" in SLACK_API_TRANSLATOR[self.type]:
-                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.slack_name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
         self.create_buffer()
     def check_should_open(self, force=False):
@@ -926,6 +926,18 @@ class SlackDMChannel(SlackChannel):
             "long_base": "{}.{}".format(self.team.domain, self.slack_name),
         }
         return print_color + select[style]
+    def open(self, update_remote=True):
+        self.create_buffer()
+        #self.active = True
+        self.get_history()
+        if "info" in SLACK_API_TRANSLATOR[self.type]:
+            s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+            self.eventrouter.receive(s)
+        if update_remote:
+            if "join" in SLACK_API_TRANSLATOR[self.type]:
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"user": self.user}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                self.eventrouter.receive(s)
+        self.create_buffer()
     def rename(self):
         if self.channel_buffer:
             new_name = self.formatted_name(style="sidebar", present=self.team.is_user_present(self.user), enable_color=config.colorize_private_chats)
@@ -992,6 +1004,7 @@ class SlackUser(object):
         # We require these two things for a vaid object,
         # the rest we can just learn from slack
         self.identifier = kwargs["id"]
+        self.slack_name = kwargs["name"]
         self.name = kwargs["name"]
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -1033,6 +1046,7 @@ class SlackMessage(object):
         self.team = team
         self.channel = channel
         self.message_json = message_json
+        self.submessages = None
         self.sender = self.get_sender()
         self.suffix = ''
         self.ts = SlackTS(message_json['ts'])
