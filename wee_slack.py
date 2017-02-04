@@ -1911,7 +1911,7 @@ class PluginConfig(object):
 
     def migrate(self):
         """
-        This is to migrate from slack_extension to slack
+        This is to migrate the extension name from slack_extension to slack
         """
         if not w.config_get_plugin("migrated"):
             for k in self.settings.keys():
