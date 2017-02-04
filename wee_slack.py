@@ -1125,6 +1125,8 @@ class SlackTS(object):
                 return 1
             elif s == other:
                 return 0
+    def __hash__(self):
+        return hash("{}.{}".format(self.major, self.minor))
     def __repr__(self):
         return str("{0}.{1:06d}".format(self.major, self.minor))
     def split(self, *args, **kwargs):
@@ -1287,6 +1289,7 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
             dbg("NORMAL REPLY {}".format(message_json))
     except:
         channel.buffer_prnt("WEE-SLACK-ERROR", json.dumps(message_json).encode('utf-8'), message_json["ts"], **kwargs)
+        traceback.print_exc()
 
 def subprocess_thread_message(message_json, eventrouter, channel, team):
     dbg("REPLIEDDDD: " + str(message_json))
@@ -1945,6 +1948,8 @@ if __name__ == "__main__":
             w.prnt("", "\nERROR: Weechat version 1.3+ is required to use {}.\n\n".format(SCRIPT_NAME))
         else:
 
+            global EVENTROUTER
+            EVENTROUTER = EventRouter()
             #setup_trace()
 
             WEECHAT_HOME = w.info_get("weechat_dir", "")
@@ -2022,13 +2027,12 @@ if __name__ == "__main__":
                               "nick_completion_cb", "")
             #w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
 
-            tok = config.slack_api_token.split(',')[0]
-            s = SlackRequest(tok, 'rtm.start', {})
-            global EVENTROUTER
-            EVENTROUTER = EventRouter()
+            tokens = config.slack_api_token.split(',')
+            for t in tokens:
+                s = SlackRequest(t, 'rtm.start', {})
+                EVENTROUTER.receive(s)
             if config.record_events:
                 EVENTROUTER.record()
-            EVENTROUTER.receive(s)
             EVENTROUTER.handle_next()
             w.hook_timer(10, 0, 0, "handle_next", "")
             # END attach to the weechat hooks we need
