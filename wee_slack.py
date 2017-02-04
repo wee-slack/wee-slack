@@ -757,10 +757,9 @@ class SlackChannel(object):
             if self.unread_count != 0:
                 w.buffer_set(self.channel_buffer, "hotlist", "1")
             else:
-                print "no unread in {}".format(self.name)
+                dbg("no unread in {}".format(self.name))
         except:
-            print "no unread count"
-            pass
+            dbg("exception no unread count")
         #if self.unread_count != 0 and not self.muted:
         #    w.buffer_set(self.channel_buffer, "hotlist", "1")
     def destroy_buffer(self, update_remote):
