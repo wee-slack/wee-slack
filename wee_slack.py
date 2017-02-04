@@ -1744,7 +1744,7 @@ def command_talk(current_buffer, args):
         chan.open()
         if config.switch_buffer_on_join:
             w.buffer_set(chan.channel_buffer, "display", "1")
-        return
+        return True
 
 def slack_command_cb(data, current_buffer, args):
     a = args.split(' ', 1)
