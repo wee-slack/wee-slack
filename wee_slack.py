@@ -671,7 +671,7 @@ class SlackChannel(object):
         #short name relates to the localvar we change for typing indication
         self.current_short_name = self.name
     def __eq__(self, compare_str):
-        if compare_str == self.slack_name or compare_str == self.name or compare_str == self.formatted_name(style="long_default"):
+        if compare_str == self.slack_name or compare_str == self.formatted_name() or compare_str == self.formatted_name(style="long_default"):
             return True
         else:
             return False
@@ -1239,52 +1239,54 @@ def process_pong(message_json, eventrouter, **kwargs):
 def process_message(message_json, eventrouter, store=True, **kwargs):
     channel = kwargs["channel"]
     team = kwargs["team"]
-    #try:
-    # send these subtype messages elsewhere
-    known_subtypes = [
-        #'thread_message',
-        #'message_replied',
-        'message_changed',
-        'message_deleted',
-        #'channel_join',
-        #'channel_leave',
-        #'channel_topic',
-        #'group_join',
-        #'group_leave',
-    ]
-    if "thread_ts" in message_json and "reply_count" not in message_json:
-        message_json["subtype"] = "thread_message"
-    subtype = message_json.get("subtype", None)
-    if subtype and subtype in known_subtypes:
-        f = eval('subprocess_' + subtype)
-        f(message_json, eventrouter, channel, team)
-
-    else:
-        message = SlackMessage(message_json, team, channel)
-        text = message.render()
-        #print text
-
-        # special case with actions.
-        if text.startswith("_") and text.endswith("_"):
-            text = text[1:-1]
-            if message.sender != channel.server.nick:
-                text = message.sender + " " + text
-            channel.unread_count += 1
-            channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, **kwargs)
+    try:
+        # send these subtype messages elsewhere
+        known_subtypes = [
+            #'thread_message',
+            #'message_replied',
+            'message_changed',
+            'message_deleted',
+            #'channel_join',
+            #'channel_leave',
+            #'channel_topic',
+            #'group_join',
+            #'group_leave',
+        ]
+        if "thread_ts" in message_json and "reply_count" not in message_json:
+            message_json["subtype"] = "thread_message"
+        subtype = message_json.get("subtype", None)
+        if subtype and subtype in known_subtypes:
+            f = eval('subprocess_' + subtype)
+            f(message_json, eventrouter, channel, team)
 
         else:
-            suffix = ''
-            if 'edited' in message_json:
-                suffix = ' (edited)'
-            try:
-                channel.unread_count += 1
-            except:
-                channel.unread_count = 1
-            channel.buffer_prnt(message.sender, text + suffix, message.ts, **kwargs)
+            message = SlackMessage(message_json, team, channel)
+            text = message.render()
+            #print text
 
-        if store:
-            channel.store_message(message, team)
-        dbg("NORMAL REPLY {}".format(message_json))
+            # special case with actions.
+            if text.startswith("_") and text.endswith("_"):
+                text = text[1:-1]
+                if message.sender != channel.team.nick:
+                    text = message.sender + " " + text
+                channel.unread_count += 1
+                channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, **kwargs)
+
+            else:
+                suffix = ''
+                if 'edited' in message_json:
+                    suffix = ' (edited)'
+                try:
+                    channel.unread_count += 1
+                except:
+                    channel.unread_count = 1
+                channel.buffer_prnt(message.sender, text + suffix, message.ts, **kwargs)
+
+            if store:
+                channel.store_message(message, team)
+            dbg("NORMAL REPLY {}".format(message_json))
+    except:
+        channel.buffer_prnt("WEE-SLACK-ERROR", json.dumps(message_json).encode('utf-8'), message_json["ts"], **kwargs)
 
 def subprocess_thread_message(message_json, eventrouter, channel, team):
     dbg("REPLIEDDDD: " + str(message_json))
@@ -1739,21 +1741,30 @@ def slack_command_cb(data, current_buffer, args):
 #        w.prnt("", "Command not found: " + function_name)
     return w.WEECHAT_RC_OK
 
+def command_distracting(current_buffer, args):
+    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
+    if channel:
+        fullname = channel.formatted_name(style="long_default")
+    if config.distracting_channels.count(fullname) == 0:
+        config.distracting_channels.append(fullname)
+    else:
+        config.distracting_channels.pop(config.distracting_channels.index(fullname))
+    save_distracting_channels()
+
+def save_distracting_channels():
+    w.config_set_plugin('distracting_channels', ','.join(config.distracting_channels))
+
 def command_nodistractions(current_buffer, args):
-    #global hide_distractions
-    #hide_distractions = not hide_distractions
+    global hide_distractions
+    hide_distractions = not hide_distractions
     if config.distracting_channels != ['']:
         for channel in config.distracting_channels:
+            dbg('hiding channel {}'.format(channel))
             #try:
             for c in EVENTROUTER.weechat_controller.buffers.itervalues():
                 if c == channel:
+                    dbg('found channel {} to hide'.format(channel))
                     w.buffer_set(c.channel_buffer, "hidden", str(int(hide_distractions)))
-#            if channel in EVENTROUTER.weechat_controller.buffers.values():
-#                cbuf = kwargs['team'].channels[item["channel"]].channel_buffer
-#                cbuf = EVENTROUTER.weechat_controller.buffers[channel].channel_buffer
-#                channel_buffer = channels.find(channel).channel_buffer
-#                if channel_buffer:
-#                    w.buffer_set(channels.find(channel).channel_buffer, "hidden", str(int(hide_distractions)))
             #except:
             #    dbg("Can't hide channel {} .. removing..".format(channel), main_buffer=True)
 #                config.distracting_channels.pop(config.distracting_channels.index(channel))
