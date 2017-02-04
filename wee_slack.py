@@ -511,6 +511,39 @@ def buffer_list_update_callback(data, somecount):
 def quit_notification_callback(signal, sig_type, data):
     stop_talking_to_slack()
 
+def typing_update_cb(data, remaining_calls):
+    w.bar_item_update("slack_typing_notice")
+    return w.WEECHAT_RC_OK
+
+def typing_bar_item_cb(data, current_buffer, args):
+    """
+    Privides a bar item indicating who is typing in the current channel AND
+    why is typing a DM to you globally.
+    """
+    typers = []
+    current_buffer = w.current_buffer()
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
+
+    # first look for people typing in this channel
+    if current_channel:
+        if current_channel.is_someone_typing():
+            typers += current_channel.get_typing_list()
+
+    # here is where we notify you that someone is typing in DM
+    # regardless of which buffer you are in currently
+    for t in EVENTROUTER.teams.values():
+        for channel in t.channels.values():
+            if channel.type == "im":
+                if channel.is_someone_typing():
+                    typers.append("D/" + channel.slack_name)
+                pass
+
+    typing = ", ".join(typers)
+    if typing != "":
+        typing = w.color('yellow') + "typing: " + typing
+
+    return typing
+
 def script_unloaded():
     stop_talking_to_slack()
     return w.WEECHAT_RC_OK
@@ -871,6 +904,8 @@ class SlackChannel(object):
         for user, timestamp in self.typing.iteritems():
             if timestamp + 4 > time.time():
                 typing.append(user)
+            else:
+                del self.typing[user]
         return typing
     def mark_read(self, ts=None, update_remote=True, force=False):
         if not ts:
@@ -1249,6 +1284,7 @@ def process_user_typing(message_json, eventrouter, **kwargs):
     team = kwargs["team"]
     if channel:
         channel.set_typing(team.users.get(message_json["user"]).name)
+        w.bar_item_update("slack_typing_notice")
 
 def process_pong(message_json, eventrouter, **kwargs):
     pass
@@ -2016,7 +2052,9 @@ if __name__ == "__main__":
             #w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
 
             # attach to the weechat hooks we need
-            #w.hook_timer(1000, 0, 0, "typing_update_cb", "")
+            w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
+            w.hook_timer(1000, 0, 0, "typing_update_cb", "")
+
             w.hook_timer(1000, 0, 0, "buffer_list_update_callback", "EVENTROUTER")
             w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
             w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
@@ -2054,7 +2092,6 @@ if __name__ == "__main__":
             w.hook_command_run('/away', 'away_command_cb', '')
             w.hook_completion("nicks", "complete @-nicks for slack",
                               "nick_completion_cb", "")
-            #w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
 
             tokens = config.slack_api_token.split(',')
             for t in tokens:
