@@ -526,8 +526,12 @@ def typing_bar_item_cb(data, current_buffer, args):
 
     # first look for people typing in this channel
     if current_channel:
-        if current_channel.is_someone_typing():
-            typers += current_channel.get_typing_list()
+        # this try is mostly becuase server buffers don't implement is_someone_typing
+        try:
+            if current_channel.is_someone_typing():
+                typers += current_channel.get_typing_list()
+        except:
+            pass
 
     # here is where we notify you that someone is typing in DM
     # regardless of which buffer you are in currently
