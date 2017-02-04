@@ -561,21 +561,22 @@ class SlackTeam(object):
     incomplete
     Team object under which users and channels live.. Does lots.
     """
-    def __init__(self, eventrouter, token, team, nick, myidentifier, users, bots, channels):
+    def __init__(self, eventrouter, token, subdomain, nick, myidentifier, users, bots, channels):
         self.state = "disconnected"
         self.ws = None
         self.ws_counter = 0
         self.ws_replies = {}
         self.eventrouter = eventrouter
         self.token = token
-        self.team = team
-        self.domain = team + ".slack.com"
+        self.team = self
+        self.subdomain = subdomain
+        self.domain = subdomain + ".slack.com"
         self.nick = nick
         self.myidentifier = myidentifier
         self.channels = channels
         self.users = users
         self.bots = bots
-        self.team_hash = str(sha.sha("{}{}".format(self.nick, self.team)).hexdigest())
+        self.team_hash = str(sha.sha("{}{}".format(self.nick, self.subdomain)).hexdigest())
         self.name = self.domain
         self.server_buffer = None
         self.got_history = True
@@ -587,7 +588,7 @@ class SlackTeam(object):
         # Last step is to make sure my nickname is the set color
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
     def __eq__(self, compare_str):
-        if compare_str == self.token or compare_str == self.domain or compare_str == self.team:
+        if compare_str == self.token or compare_str == self.domain or compare_str == self.subdomain:
             return True
         else:
             return False
