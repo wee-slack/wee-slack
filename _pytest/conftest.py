@@ -69,7 +69,6 @@ class FakeWeechat():
         return "testuser"
     def buffer_new(*args):
         return "0x8a8a8a8b"
-
     def __getattr__(self, name):
         def method(*args):
             pass

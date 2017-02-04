@@ -22,7 +22,7 @@ try:
 except:
     pass
 
-SCRIPT_NAME = "slack_extension"
+SCRIPT_NAME = "slack"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
 SCRIPT_VERSION = "1.99"
 SCRIPT_LICENSE = "MIT"
@@ -1864,6 +1864,7 @@ class PluginConfig(object):
     # Set missing settings to their defaults. Load non-missing settings from
     # weechat configs.
     def __init__(self):
+        self.migrate()
         for key, default in self.settings.iteritems():
             if not w.config_get_plugin(key):
                 w.config_set_plugin(key, default)
@@ -1907,6 +1908,19 @@ class PluginConfig(object):
 
     def get_slack_timeout(self, key):
         return int(w.config_get_plugin(key))
+
+    def migrate(self):
+        """
+        This is to migrate from slack_extension to slack
+        """
+        if not w.config_get_plugin("migrated"):
+            for k in self.settings.keys():
+                if not w.config_is_set_plugin(k):
+                    p = w.config_get("plugins.var.python.slack_extension.{}".format(k))
+                    data = w.config_string(p)
+                    if data != "":
+                        w.config_set_plugin(k, data)
+            w.config_set_plugin("migrated", "true")
 
 
 # to Trace execution, add `setup_trace()` to startup
