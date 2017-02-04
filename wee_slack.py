@@ -548,6 +548,69 @@ def typing_bar_item_cb(data, current_buffer, args):
 
     return typing
 
+def nick_completion_cb(data, completion_item, current_buffer, completion):
+    """
+    Adds all @-prefixed nicks to completion list
+    """
+
+    current_buffer = w.current_buffer()
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
+
+    if current_channel is None or current_channel.members is None:
+        return w.WEECHAT_RC_OK
+    for m in current_channel.members:
+        u = current_channel.team.users.get(m, None)
+        if u:
+            w.hook_completion_list_add(completion, "@" + u.slack_name, 1, w.WEECHAT_LIST_POS_SORT)
+    return w.WEECHAT_RC_OK
+
+
+def complete_next_cb(data, current_buffer, command):
+    """Extract current word, if it is equal to a nick, prefix it with @ and
+    rely on nick_completion_cb adding the @-prefixed versions to the
+    completion lists, then let Weechat's internal completion do its
+    thing
+
+    """
+
+    current_buffer = w.current_buffer()
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
+
+    #channel = channels.find(current_buffer)
+    if current_channel is None or current_channel.members is None:
+        return w.WEECHAT_RC_OK
+
+    line_input = w.buffer_get_string(current_buffer, "input")
+    current_pos = w.buffer_get_integer(current_buffer, "input_pos") - 1
+    input_length = w.buffer_get_integer(current_buffer, "input_length")
+
+    word_start = 0
+    word_end = input_length
+    # If we're on a non-word, look left for something to complete
+    while current_pos >= 0 and line_input[current_pos] != '@' and not line_input[current_pos].isalnum():
+        current_pos = current_pos - 1
+    if current_pos < 0:
+        current_pos = 0
+    for l in range(current_pos, 0, -1):
+        if line_input[l] != '@' and not line_input[l].isalnum():
+            word_start = l + 1
+            break
+    for l in range(current_pos, input_length):
+        if not line_input[l].isalnum():
+            word_end = l
+            break
+    word = line_input[word_start:word_end]
+
+    for m in current_channel.members:
+        u = current_channel.team.users.get(m, None)
+        if u and u.slack_name == word:
+            # Here, we cheat.  Insert a @ in front and rely in the @
+            # nicks being in the completion list
+            w.buffer_set(current_buffer, "input", line_input[:word_start] + "@" + line_input[word_start:])
+            w.buffer_set(current_buffer, "input_pos", str(w.buffer_get_integer(current_buffer, "input_pos") + 1))
+            return w.WEECHAT_RC_OK_EAT
+    return w.WEECHAT_RC_OK
+
 def script_unloaded():
     stop_talking_to_slack()
     return w.WEECHAT_RC_OK
@@ -2102,8 +2165,7 @@ if __name__ == "__main__":
             w.hook_command_run('/label', 'label_command_cb', '')
             w.hook_command_run("/input complete_next", "complete_next_cb", "")
             w.hook_command_run('/away', 'away_command_cb', '')
-            w.hook_completion("nicks", "complete @-nicks for slack",
-                              "nick_completion_cb", "")
+            w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
 
             tokens = config.slack_api_token.split(',')
             for t in tokens:
