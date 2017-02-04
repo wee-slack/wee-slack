@@ -30,4 +30,4 @@ def test_SlackChannel(realish_eventrouter):
     print c == "dandom"
 
     print e.weechat_controller.buffers
-    assert False
+    #assert False

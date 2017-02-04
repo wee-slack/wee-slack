@@ -65,6 +65,7 @@ SLACK_API_TRANSLATOR = {
 
 }
 
+
 NICK_GROUP_HERE = "0|Here"
 NICK_GROUP_AWAY = "1|Away"
 
@@ -561,7 +562,7 @@ class SlackTeam(object):
     Team object under which users and channels live.. Does lots.
     """
     def __init__(self, eventrouter, token, team, nick, myidentifier, users, bots, channels):
-        self.connected = False
+        self.state = "disconnected"
         self.ws = None
         self.ws_counter = 0
         self.ws_replies = {}
@@ -581,7 +582,7 @@ class SlackTeam(object):
         self.create_buffer()
         for c in self.channels.keys():
             channels[c].set_related_server(self)
-            channels[c].open_if_we_should()
+            channels[c].check_should_open()
         #    self.channel_set_related_server(c)
         # Last step is to make sure my nickname is the set color
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
@@ -660,7 +661,7 @@ class SlackChannel(object):
         self.last_read = SlackTS(kwargs.get("last_read", SlackTS()))
         #print self.last_read
         self.channel_buffer = None
-        self.team = None
+        self.team = kwargs.get('team', None)
         self.got_history = False
         self.messages = {}
         self.new_messages = False
@@ -710,13 +711,13 @@ class SlackChannel(object):
         self.get_history()
         if "info" in SLACK_API_TRANSLATOR[self.type]:
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name": self.slack_name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
-            EVENTROUTER.receive(s)
+            self.eventrouter.receive(s)
         if update_remote:
             if "join" in SLACK_API_TRANSLATOR[self.type]:
                 s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.slack_name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
-                EVENTROUTER.receive(s)
+                self.eventrouter.receive(s)
         self.create_buffer()
-    def open_if_we_should(self, force=False):
+    def check_should_open(self, force=False):
         try:
             if self.is_archived:
                 return
@@ -769,7 +770,7 @@ class SlackChannel(object):
         #if update_remote and not eventrouter.shutting_down:
         if update_remote and not self.eventrouter.shutting_down:
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
-            EVENTROUTER.receive(s)
+            self.eventrouter.receive(s)
     def buffer_prnt(self, nick, text, timestamp, **kwargs):
         data = "{}\t{}".format(nick, text)
         ts = SlackTS(timestamp)
@@ -824,7 +825,7 @@ class SlackChannel(object):
         #    for message in message_cache[self.identifier]:
         #        process_message(json.loads(message), True)
         s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
-        EVENTROUTER.receive(s)
+        self.eventrouter.receive(s)
         #async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE})
         self.got_history = True
     def send_add_reaction(self, msg_number, reaction):
@@ -1276,7 +1277,10 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
             suffix = ''
             if 'edited' in message_json:
                 suffix = ' (edited)'
-            channel.unread_count += 1
+            try:
+                channel.unread_count += 1
+            except:
+                channel.unread_count = 1
             channel.buffer_prnt(message.sender, text + suffix, message.ts, **kwargs)
 
         if store:
@@ -1381,16 +1385,18 @@ def process_mpim_marked(message_json, eventrouter, **kwargs):
 def process_channel_joined(message_json, eventrouter, **kwargs):
     item = message_json["channel"]
     kwargs['team'].channels[item["id"]].update_from_message_json(item)
-    kwargs['team'].channels[item["id"]].open_if_we_should()
+    kwargs['team'].channels[item["id"]].open()
 
 def process_channel_created(message_json, eventrouter, **kwargs):
     item = message_json["channel"]
     c = SlackChannel(eventrouter, team=kwargs["team"], **item)
     kwargs['team'].channels[item["id"]] = c
+    #print eventrouter.teams['d80c2b6c3127dbb1991917394ed219e8212a2606'].channels['C3ZM2GMGU'].team.domain
+    #raise
 
 def process_im_open(message_json, eventrouter, **kwargs):
     item = message_json
-    kwargs['team'].channels[item["channel"]].open_if_we_should(True)
+    kwargs['team'].channels[item["channel"]].check_should_open(True)
 
 def process_im_close(message_json, eventrouter, **kwargs):
     item = message_json
