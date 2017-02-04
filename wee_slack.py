@@ -615,7 +615,7 @@ class SlackTeam(object):
         self.bots = bots
         self.team_hash = str(sha.sha("{}{}".format(self.nick, self.subdomain)).hexdigest())
         self.name = self.domain
-        self.server_buffer = None
+        self.channel_buffer = None
         self.got_history = True
         self.create_buffer()
         for c in self.channels.keys():
@@ -635,14 +635,16 @@ class SlackTeam(object):
 #    def connect_request_generate(self):
 #        return SlackRequest(self.token, 'rtm.start', {})
     def create_buffer(self):
-        if not self.server_buffer:
-            self.server_buffer = w.buffer_new("{}".format(self.domain), "buffer_input_callback", "EVENTROUTER", "", "")
-            self.eventrouter.weechat_controller.register_buffer(self.server_buffer, self)
-            if w.config_string(w.config_get('irc.look.server_buffer')) == 'merge_with_core':
-                w.buffer_merge(self.server_buffer, w.buffer_search_main())
-            w.buffer_set(self.server_buffer, "nicklist", "1")
+        if not self.channel_buffer:
+            self.channel_buffer = w.buffer_new("{}".format(self.domain), "buffer_input_callback", "EVENTROUTER", "", "")
+            self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
+            if w.config_string(w.config_get('irc.look.channel_buffer')) == 'merge_with_core':
+                w.buffer_merge(self.channel_buffer, w.buffer_search_main())
+            w.buffer_set(self.channel_buffer, "nicklist", "1")
+    def formatted_name(self, **kwargs):
+        return self.domain
     def buffer_prnt(self, data):
-        w.prnt_date_tags(self.server_buffer, SlackTS().major, tag("backlog"), data)
+        w.prnt_date_tags(self.channel_buffer, SlackTS().major, tag("backlog"), data)
     def get_channel_map(self):
         return {v.slack_name: k for k, v in self.channels.iteritems()}
     def get_username_map(self):
@@ -793,11 +795,17 @@ class SlackChannel(object):
             self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
         try:
             if self.unread_count != 0:
-                w.buffer_set(self.channel_buffer, "hotlist", "1")
+                for c in range(1, self.unread_count):
+                    if self.type == "im":
+                        w.buffer_set(self.channel_buffer, "hotlist", "2")
+                    else:
+                        w.buffer_set(self.channel_buffer, "hotlist", "1")
             else:
-                dbg("no unread in {}".format(self.name))
+                pass
+                #dbg("no unread in {}".format(self.name))
         except:
-            dbg("exception no unread count")
+            pass
+            #dbg("exception no unread count")
         #if self.unread_count != 0 and not self.muted:
         #    w.buffer_set(self.channel_buffer, "hotlist", "1")
     def destroy_buffer(self, update_remote):
