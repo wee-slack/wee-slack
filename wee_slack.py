@@ -1602,7 +1602,6 @@ def subprocess_message_replied(message_json, eventrouter, channel, team):
     #print ("REPLIED: " + str(message_json))
 
 def subprocess_message_changed(message_json, eventrouter, channel, team):
-    print "CHANGED!!"
     m = message_json.get("message", None)
     if m:
         new_message = m
