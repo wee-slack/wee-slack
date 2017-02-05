@@ -684,7 +684,7 @@ class SlackTeam(object):
         self.channel_buffer = None
         self.got_history = True
         self.create_buffer()
-        self.muted_channels = [x for x in kwargs.get('muted_channels', []).split(',')]
+        self.muted_channels = {x for x in kwargs.get('muted_channels', []).split(',')}
         for c in self.channels.keys():
             channels[c].set_related_server(self)
             channels[c].check_should_open()
@@ -2028,6 +2028,19 @@ def command_talk(current_buffer, args):
         if config.switch_buffer_on_join:
             w.buffer_set(chan.channel_buffer, "display", "1")
         return True
+
+def command_tmpmute(current_buffer, args):
+    current = w.current_buffer()
+    channel_id = EVENTROUTER.weechat_controller.buffers[current].identifier
+    team = EVENTROUTER.weechat_controller.buffers[current].team
+    if channel_id not in team.muted_channels:
+        team.muted_channels.add(channel_id)
+    else:
+        team.muted_channels.discard(channel_id)
+
+def command_showmuted(current_buffer, args):
+    current = w.current_buffer()
+    w.prnt(EVENTROUTER.weechat_controller.buffers[current].team.channel_buffer, str(EVENTROUTER.weechat_controller.buffers[current].team.muted_channels))
 
 def thread_command_callback(data, current_buffer, args):
     current = w.current_buffer()
