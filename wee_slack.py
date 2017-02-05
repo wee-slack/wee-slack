@@ -2352,7 +2352,7 @@ if __name__ == "__main__":
             w.hook_signal('window_switch', "buffer_switch_callback", "EVENTROUTER")
             #w.hook_signal('input_text_changed', "typing_notification_cb", "")
             w.hook_signal('quit', "quit_notification_cb", "")
-            w.hook_signal('window_scrolled', "scrolled_cb", "")
+            #w.hook_signal('window_scrolled', "scrolled_cb", "")
             cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
             w.hook_command(
                 # Command name and description
