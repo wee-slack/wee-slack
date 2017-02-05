@@ -902,6 +902,9 @@ class SlackChannel(object):
                 tags = tag("default")
                 self.new_messages = True
 
+            if config.unhide_buffers_with_activity and not self.is_visible():
+                w.buffer_set(self.channel_buffer, "hidden", "0")
+
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
             modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
             if backlog:
@@ -2176,6 +2179,7 @@ class PluginConfig(object):
         'cache_messages': 'true',
         'record_events': 'false',
         'thread_suffix_color': 'lightcyan',
+        'unhide_buffers_with_activity': 'false',
     }
 
     # Set missing settings to their defaults. Load non-missing settings from
