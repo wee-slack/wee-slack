@@ -531,7 +531,7 @@ def typing_bar_item_cb(data, current_buffer, args):
     if current_channel:
         # this try is mostly becuase server buffers don't implement is_someone_typing
         try:
-            if current_channel.is_someone_typing():
+            if current_channel.type != 'im' and current_channel.is_someone_typing():
                 typers += current_channel.get_typing_list()
         except:
             pass
@@ -750,6 +750,7 @@ class SlackTeam(object):
             self.ws.send(message)
             dbg("Sent {}...".format(message[:100]))
         except:
+            print "WS ERROR"
             dbg("Unexpected error: {}\nSent: {}".format(sys.exc_info()[0], data))
             self.connected = False
 
@@ -2067,7 +2068,7 @@ def slack_command_cb(data, current_buffer, args):
         function_name, args = a[0], None
 
 #    try:
-    cmds[function_name](current_buffer, args)
+    EVENTROUTER.cmds[function_name](current_buffer, args)
 #    except KeyError:
 #        w.prnt("", "Command not found: " + function_name)
     return w.WEECHAT_RC_OK
