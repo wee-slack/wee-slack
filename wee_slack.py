@@ -1562,7 +1562,7 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
         traceback.print_exc()
 
 def subprocess_thread_message(message_json, eventrouter, channel, team):
-    print ("THREADED: " + str(message_json))
+    #print ("THREADED: " + str(message_json))
     parent_ts = message_json.get('thread_ts', None)
     if parent_ts:
         #parent_ts = SlackTS(parent_ts)
@@ -1598,7 +1598,8 @@ def subprocess_thread_message(message_json, eventrouter, channel, team):
     #channel.become_thread(message_json["item"]["ts"], message_json)
 
 def subprocess_message_replied(message_json, eventrouter, channel, team):
-    print ("REPLIED: " + str(message_json))
+    pass
+    #print ("REPLIED: " + str(message_json))
 
 def subprocess_message_changed(message_json, eventrouter, channel, team):
     print "CHANGED!!"
