@@ -9,7 +9,7 @@ import re
 import urllib
 import sys
 import traceback
-import collections
+#import collections
 import ssl
 import random
 import string
@@ -2146,6 +2146,42 @@ def create_slack_debug_buffer():
         slack_debug = w.buffer_new("slack-debug", "", "", "closed_slack_debug_buffer_cb", "")
         w.buffer_set(slack_debug, "notify", "0")
 
+def setup_hooks():
+    cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
+    w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
+    w.hook_timer(1000, 0, 0, "typing_update_cb", "")
+    w.hook_timer(1000, 0, 0, "buffer_list_update_callback", "EVENTROUTER")
+    w.hook_signal('buffer_closing', "buffer_closing_callback", "EVENTROUTER")
+    w.hook_signal('buffer_switch', "buffer_switch_callback", "EVENTROUTER")
+    w.hook_signal('window_switch', "buffer_switch_callback", "EVENTROUTER")
+    w.hook_signal('quit', "quit_notification_cb", "")
+    w.hook_command(
+        # Command name and description
+        'slack', 'Plugin to allow typing notification and sync of read markers for slack.com',
+        # Usage
+        '[command] [command options]',
+        # Description of arguments
+        'Commands:\n' +
+        '\n'.join(cmds.keys()) +
+        '\nUse /slack help [command] to find out more\n',
+        # Completions
+        '|'.join(cmds.keys()),
+        # Function name
+        'slack_command_cb', '')
+    w.hook_command('me', 'me_command_cb', '')
+    w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
+    w.hook_command_run('/query', 'join_command_cb', '')
+    w.hook_command_run('/join', 'join_command_cb', '')
+    w.hook_command_run('/part', 'part_command_cb', '')
+    w.hook_command_run('/leave', 'part_command_cb', '')
+    w.hook_command_run('/topic', 'topic_command_cb', '')
+    w.hook_command_run('/thread', 'thread_command_callback', '')
+    w.hook_command_run('/msg', 'msg_command_cb', '')
+    w.hook_command_run('/label', 'label_command_cb', '')
+    w.hook_command_run("/input complete_next", "complete_next_cb", "")
+    w.hook_command_run('/away', 'away_command_cb', '')
+    w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
+
 
 ##### END NEW
 
@@ -2305,81 +2341,42 @@ if __name__ == "__main__":
             EVENTROUTER = EventRouter()
             #setup_trace()
 
-            WEECHAT_HOME = w.info_get("weechat_dir", "")
-            CACHE_NAME = "slack.cache"
-            STOP_TALKING_TO_SLACK = False
+            #WEECHAT_HOME = w.info_get("weechat_dir", "")
+            #CACHE_NAME = "slack.cache"
+            #STOP_TALKING_TO_SLACK = False
 
             # Global var section
             slack_debug = None
             config = PluginConfig()
             config_changed_cb = config.config_changed
 
-            typing_timer = time.time()
-            domain = None
-            previous_buffer = None
-            slack_buffer = None
+            #typing_timer = time.time()
+            #domain = None
+            #previous_buffer = None
+            #slack_buffer = None
 
-            never_away = False
-            hide_distractions = False
-            hotlist = w.infolist_get("hotlist", "", "")
-            main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
+            #never_away = False
+            #hide_distractions = False
+            #hotlist = w.infolist_get("hotlist", "", "")
+            #main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
 
-            message_cache = collections.defaultdict(list)
-            if config.cache_messages:
-                cache_load()
-
-            #servers = SearchList()
-            #for token in config.slack_api_token.split(','):
-            #    server = SlackServer(token)
-            #    servers.append(server)
-            #channels = SearchList()
-            #users = SearchList()
-            #threads = SearchList()
+            #message_cache = collections.defaultdict(list)
+            #if config.cache_messages:
+            #    cache_load()
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
-            #w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
+
+            setup_hooks()
 
             # attach to the weechat hooks we need
-            w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
-            w.hook_timer(1000, 0, 0, "typing_update_cb", "")
 
-            w.hook_timer(1000, 0, 0, "buffer_list_update_callback", "EVENTROUTER")
-            w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
+            # Hooks to fix/implement
+            #w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
             #w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
-            w.hook_signal('buffer_closing', "buffer_closing_callback", "EVENTROUTER")
             #w.hook_signal('buffer_opened', "buffer_opened_cb", "")
-            w.hook_signal('buffer_switch', "buffer_switch_callback", "EVENTROUTER")
-            w.hook_signal('window_switch', "buffer_switch_callback", "EVENTROUTER")
             #w.hook_signal('input_text_changed', "typing_notification_cb", "")
-            w.hook_signal('quit', "quit_notification_cb", "")
             #w.hook_signal('window_scrolled', "scrolled_cb", "")
-            cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
-            w.hook_command(
-                # Command name and description
-                'slack', 'Plugin to allow typing notification and sync of read markers for slack.com',
-                # Usage
-                '[command] [command options]',
-                # Description of arguments
-                'Commands:\n' +
-                '\n'.join(cmds.keys()) +
-                '\nUse /slack help [command] to find out more\n',
-                # Completions
-                '|'.join(cmds.keys()),
-                # Function name
-                'slack_command_cb', '')
-            w.hook_command('me', 'me_command_cb', '')
-            w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
-            w.hook_command_run('/query', 'join_command_cb', '')
-            w.hook_command_run('/join', 'join_command_cb', '')
-            w.hook_command_run('/part', 'part_command_cb', '')
-            w.hook_command_run('/leave', 'part_command_cb', '')
-            w.hook_command_run('/topic', 'topic_command_cb', '')
-            w.hook_command_run('/thread', 'thread_command_callback', '')
-            w.hook_command_run('/msg', 'msg_command_cb', '')
-            w.hook_command_run('/label', 'label_command_cb', '')
-            w.hook_command_run("/input complete_next", "complete_next_cb", "")
-            w.hook_command_run('/away', 'away_command_cb', '')
-            w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
+            #w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
 
             tokens = config.slack_api_token.split(',')
             for t in tokens:
