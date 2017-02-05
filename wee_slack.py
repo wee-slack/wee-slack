@@ -2083,6 +2083,12 @@ def command_nodistractions(current_buffer, args):
 #                config.distracting_channels.pop(config.distracting_channels.index(channel))
 #                save_distracting_channels()
 
+def label_command_cb(data, current_buffer, args):
+    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    if channel and channel.type == 'thread':
+        aargs = args.split(None, 2)
+        new_name = " +" + aargs[1]
+        w.buffer_set(channel.channel_buffer, "short_name", new_name)
 
 def command_p(current_buffer, args):
     w.prnt("", "{}".format(eval(args)))
