@@ -1298,7 +1298,7 @@ class SlackMessage(object):
         return hash(self.ts)
     def render(self, force=False):
         if len(self.submessages) > 0:
-            return "{} {} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix, "[Thread: {}]".format(self.ts))
+            return "{} {} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix, "{}[ Thread: {} Replies: {} ]".format(w.color(config.thread_suffix_color), self.ts, len(self.submessages)))
         return "{} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix)
     def change_text(self, new_text):
         self.message_json["text"] = new_text
@@ -2175,6 +2175,7 @@ class PluginConfig(object):
         'unfurl_ignore_alt_text': 'false',
         'cache_messages': 'true',
         'record_events': 'false',
+        'thread_suffix_color': 'lightcyan',
     }
 
     # Set missing settings to their defaults. Load non-missing settings from
@@ -2221,6 +2222,9 @@ class PluginConfig(object):
             return w.string_eval_expression(token, {}, {}, {})
         else:
             return token
+
+    def get_thread_suffix_color(self, key):
+        return w.config_get_plugin("thread_suffix_color")
 
     def get_slack_timeout(self, key):
         return int(w.config_get_plugin(key))
