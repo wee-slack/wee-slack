@@ -78,9 +78,9 @@ if hasattr(ssl, "get_default_verify_paths") and callable(ssl.get_default_verify_
 ##### BEGIN NEW
 
 IGNORED_EVENTS = [
-    "reconnect_url",
     "hello",
     "pref_change",
+    #"reconnect_url",
 ]
 
 ###### New central Event router
@@ -181,6 +181,12 @@ class EventRouter(object):
             self.teams[team.get_team_hash()] = team
         else:
             raise InvalidType(type(team))
+
+    def reconnect_if_disconnected(self):
+        for team_id, team in self.teams.iteritems():
+            if not team.connected:
+                team.reconnect()
+                print team
 
     def receive_ws_callback(self, team_hash):
         """
@@ -419,6 +425,10 @@ def receive_ws_callback(*args):
     This is a dirty hack. There must be a better way.
     """
     EVENTROUTER.receive_ws_callback(args[0])
+    return w.WEECHAT_RC_OK
+
+def reconnect_callback(*args):
+    EVENTROUTER.reconnect_if_disconnected()
     return w.WEECHAT_RC_OK
 
 def buffer_closing_callback(signal, sig_type, data):
@@ -665,7 +675,6 @@ class SlackTeam(object):
     Team object under which users and channels live.. Does lots.
     """
     def __init__(self, eventrouter, token, subdomain, nick, myidentifier, users, bots, channels, **kwargs):
-        self.state = "disconnected"
         self.ws = None
         self.ws_counter = 0
         self.ws_replies = {}
@@ -683,6 +692,7 @@ class SlackTeam(object):
         self.name = self.domain
         self.channel_buffer = None
         self.got_history = True
+        self.ws_reconnect_url = None
         self.create_buffer()
         self.muted_channels = {x for x in kwargs.get('muted_channels', []).split(',')}
         for c in self.channels.keys():
@@ -732,10 +742,24 @@ class SlackTeam(object):
             return False
     def mark_read(self):
         pass
+    def reconnect(self):
+        if not self.connected and self.ws_reconnect_url:
+            try:
+                ws = create_connection(self.ws_reconnect_url, sslopt=sslopt_ca_certs)
+                w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
+                ws.sock.setblocking(0)
+                self.attach_websocket(ws)
+                self.set_connected()
+            except Exception as e:
+                dbg("websocket connection error: {}".format(e))
+                self.set_reconnect_url(None)
+                return False
     def set_connected(self):
         self.connected = True
     def set_disconnected(self):
         self.connected = False
+    def set_reconnect_url(self, url):
+        self.ws_reconnect_url = url
     def next_ws_transaction_id(self):
         if self.ws_counter > 999:
             self.ws_counter = 0
@@ -752,7 +776,7 @@ class SlackTeam(object):
         except:
             print "WS ERROR"
             dbg("Unexpected error: {}\nSent: {}".format(sys.exc_info()[0], data))
-            self.connected = False
+            self.set_connected()
 
 class SlackChannel(object):
     """
@@ -1497,6 +1521,9 @@ def handle_history(message_json, eventrouter, **kwargs):
 
 ###### New/converted process_ and subprocess_ methods
 
+def process_reconnect_url(message_json, eventrouter, **kwargs):
+    kwargs['team'].set_reconnect_url(message_json['url'])
+
 def process_manual_presence_change(message_json, eventrouter, **kwargs):
     process_presence_change(message_json, eventrouter, **kwargs)
 
@@ -2149,13 +2176,18 @@ def create_slack_debug_buffer():
 
 def setup_hooks():
     cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
+
     w.bar_item_new('slack_typing_notice', 'typing_bar_item_cb', '')
+
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
     w.hook_timer(1000, 0, 0, "buffer_list_update_callback", "EVENTROUTER")
+    w.hook_timer(3000, 0, 0, "reconnect_callback", "EVENTROUTER")
+
     w.hook_signal('buffer_closing', "buffer_closing_callback", "EVENTROUTER")
     w.hook_signal('buffer_switch', "buffer_switch_callback", "EVENTROUTER")
     w.hook_signal('window_switch', "buffer_switch_callback", "EVENTROUTER")
     w.hook_signal('quit', "quit_notification_cb", "")
+
     w.hook_command(
         # Command name and description
         'slack', 'Plugin to allow typing notification and sync of read markers for slack.com',
@@ -2171,6 +2203,7 @@ def setup_hooks():
         'slack_command_cb', '')
     w.hook_command('me', 'me_command_cb', '')
     w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
+
     w.hook_command_run('/query', 'join_command_cb', '')
     w.hook_command_run('/join', 'join_command_cb', '')
     w.hook_command_run('/part', 'part_command_cb', '')
@@ -2181,7 +2214,16 @@ def setup_hooks():
     w.hook_command_run('/label', 'label_command_cb', '')
     w.hook_command_run("/input complete_next", "complete_next_cb", "")
     w.hook_command_run('/away', 'away_command_cb', '')
+
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
+
+    # Hooks to fix/implement
+    #w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
+    #w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
+    #w.hook_signal('buffer_opened', "buffer_opened_cb", "")
+    #w.hook_signal('input_text_changed', "typing_notification_cb", "")
+    #w.hook_signal('window_scrolled', "scrolled_cb", "")
+    #w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
 
 
 ##### END NEW
@@ -2370,14 +2412,6 @@ if __name__ == "__main__":
             setup_hooks()
 
             # attach to the weechat hooks we need
-
-            # Hooks to fix/implement
-            #w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
-            #w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
-            #w.hook_signal('buffer_opened', "buffer_opened_cb", "")
-            #w.hook_signal('input_text_changed', "typing_notification_cb", "")
-            #w.hook_signal('window_scrolled', "scrolled_cb", "")
-            #w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
 
             tokens = config.slack_api_token.split(',')
             for t in tokens:
