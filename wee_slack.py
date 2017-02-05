@@ -664,7 +664,7 @@ class SlackTeam(object):
     incomplete
     Team object under which users and channels live.. Does lots.
     """
-    def __init__(self, eventrouter, token, subdomain, nick, myidentifier, users, bots, channels):
+    def __init__(self, eventrouter, token, subdomain, nick, myidentifier, users, bots, channels, **kwargs):
         self.state = "disconnected"
         self.ws = None
         self.ws_counter = 0
@@ -684,6 +684,7 @@ class SlackTeam(object):
         self.channel_buffer = None
         self.got_history = True
         self.create_buffer()
+        self.muted_channels = [x for x in kwargs.get('muted_channels', []).split(',')]
         for c in self.channels.keys():
             channels[c].set_related_server(self)
             channels[c].check_should_open()
@@ -902,7 +903,7 @@ class SlackChannel(object):
                 tags = tag("default")
                 self.new_messages = True
 
-            if config.unhide_buffers_with_activity and not self.is_visible():
+            if config.unhide_buffers_with_activity and not self.is_visible() and (self.identifier not in self.team.muted_channels):
                 w.buffer_set(self.channel_buffer, "hidden", "0")
 
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
@@ -1448,6 +1449,7 @@ def handle_rtmstart(login_data, eventrouter):
             users,
             bots,
             channels,
+            muted_channels=login_data["self"]["prefs"]["muted_channels"],
         )
         eventrouter.register_team(t)
 
