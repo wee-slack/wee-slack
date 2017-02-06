@@ -80,7 +80,7 @@ if hasattr(ssl, "get_default_verify_paths") and callable(ssl.get_default_verify_
 IGNORED_EVENTS = [
     "hello",
     "pref_change",
-    "reconnect_url",
+    #"reconnect_url",
 ]
 
 ###### New central Event router
