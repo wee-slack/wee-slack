@@ -5,6 +5,7 @@ import time
 import json
 import pickle
 import sha
+import os
 import re
 import urllib
 import sys
@@ -120,11 +121,10 @@ class EventRouter(object):
         """
         self.recording = not self.recording
         if self.recording:
-            import os
             if not os.path.exists(RECORD_DIR):
                 os.makedirs(RECORD_DIR)
 
-    def record_event(self, message_json, file_name_field):
+    def record_event(self, message_json, file_name_field, subdir=None):
         """
         complete
         Called each time you want to record an event.
@@ -132,8 +132,14 @@ class EventRouter(object):
         file_name_field is the json key whose value you want to be part of the file name
         """
         now = time.time()
+        if subdir:
+            directory = "{}/{}".format(RECORD_DIR, subdir)
+        else:
+            directory = RECORD_DIR
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         mtype = message_json.get(file_name_field, 'unknown')
-        f = open('{}/{}-{}.json'.format(RECORD_DIR, now, mtype), 'w')
+        f = open('{}/{}-{}.json'.format(directory, now, mtype), 'w')
         f.write("{}".format(json.dumps(message_json)))
         f.close()
 
@@ -211,7 +217,7 @@ class EventRouter(object):
             }).jsonify()
             message_json["wee_slack_metadata"] = metadata
             if self.recording:
-                self.record_event(message_json, 'type')
+                self.record_event(message_json, 'type', 'websocket')
             self.receive_json(json.dumps(message_json))
         except WebSocketConnectionClosedException:
             #TODO: handle reconnect here
@@ -255,7 +261,7 @@ class EventRouter(object):
                     j["wee_slack_request_metadata"] = pickle.dumps(request_metadata)
                     self.reply_buffer.pop(request_metadata.response_id)
                     if self.recording:
-                        self.record_event(j, 'wee_slack_process_method')
+                        self.record_event(j, 'wee_slack_process_method', 'http')
                     self.receive_json(json.dumps(j))
                     self.delete_context(data)
                 except:
