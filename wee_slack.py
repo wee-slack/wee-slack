@@ -566,6 +566,21 @@ def buffer_list_update_callback(data, somecount):
 def quit_notification_callback(signal, sig_type, data):
     stop_talking_to_slack()
 
+def typing_notification_cb(signal, sig_type, data):
+    msg = w.buffer_get_string(data, "input")
+    if len(msg) > 8 and msg[:1] != "/":
+        global typing_timer
+        now = time.time()
+        if typing_timer + 4 < now:
+            current_buffer = w.current_buffer()
+            channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
+            if channel:
+                identifier = channel.identifier
+                request = {"type": "typing", "channel": identifier}
+                channel.team.send_to_websocket(request, expect_reply=False)
+                typing_timer = now
+    return w.WEECHAT_RC_OK
+
 def typing_update_cb(data, remaining_calls):
     w.bar_item_update("slack_typing_notice")
     return w.WEECHAT_RC_OK
@@ -2282,6 +2297,7 @@ def setup_hooks():
     w.hook_signal('buffer_switch', "buffer_switch_callback", "EVENTROUTER")
     w.hook_signal('window_switch', "buffer_switch_callback", "EVENTROUTER")
     w.hook_signal('quit', "quit_notification_cb", "")
+    w.hook_signal('input_text_changed', "typing_notification_cb", "")
 
     w.hook_command(
         # Command name and description
@@ -2316,7 +2332,6 @@ def setup_hooks():
     #w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
     #w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
     #w.hook_signal('buffer_opened', "buffer_opened_cb", "")
-    #w.hook_signal('input_text_changed', "typing_notification_cb", "")
     #w.hook_signal('window_scrolled', "scrolled_cb", "")
     #w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
 
@@ -2488,7 +2503,7 @@ if __name__ == "__main__":
             config = PluginConfig()
             config_changed_cb = config.config_changed
 
-            #typing_timer = time.time()
+            typing_timer = time.time()
             #domain = None
             #previous_buffer = None
             #slack_buffer = None
