@@ -1034,11 +1034,12 @@ class SlackChannel(object):
             modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
             if backlog:
                 self.mark_read(ts, update_remote=False, force=True)
-    def send_message(self, message):
+    def send_message(self, message, request_dict_ext={}):
         #team = self.eventrouter.teams[self.team]
         message = linkify_text(message, self.team, self)
         dbg(message)
         request = {"type": "message", "channel": self.identifier, "text": message, "_team": self.team.team_hash, "user": self.team.myidentifier}
+        request.update(request_dict_ext)
         self.team.send_to_websocket(request)
         self.mark_read(force=True)
     def store_message(self, message, team, from_me=False):
@@ -1183,15 +1184,15 @@ class SlackChannel(object):
                 try:
                     for user in self.members:
                         user = self.team.users[user]
-                        #if user.deleted:
-                        #    continue
+                        if user.deleted:
+                            continue
                         w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "", "", 1)
                         #w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
                 except Exception as e:
                     dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
             else:
                 for fn in ["too", "many", "users", "to", "show"]:
-                    w.nicklist_add_nick(self.channel_buffer, afk, fn, w.color('white'), "", "", 1)
+                    w.nicklist_add_nick(self.channel_buffer, "", fn, w.color('white'), "", "", 1)
 
 
 class SlackDMChannel(SlackChannel):
@@ -2244,24 +2245,34 @@ def command_showmuted(current_buffer, args):
 
 def thread_command_callback(data, current_buffer, args):
     current = w.current_buffer()
-    channel = EVENTROUTER.weechat_controller.buffers[current]
-    args = args.split()
-    if len(args) == 2:
-        pm = channel.messages[SlackTS(args[1])]
-        tc = SlackThreadChannel(EVENTROUTER, pm)
-        pm.thread_channel = tc
-        tc.open()
-        #tc.create_buffer()
+    channel = EVENTROUTER.weechat_controller.buffers.get(current)
+    if channel:
+        args = args.split()
+        if args[0] == '/thread':
+            if len(args) == 2:
+                pm = channel.messages[SlackTS(args[1])]
+                tc = SlackThreadChannel(EVENTROUTER, pm)
+                pm.thread_channel = tc
+                tc.open()
+                #tc.create_buffer()
+                return w.WEECHAT_RC_OK_EAT
+        elif args[0] == '/reply':
+            count = int(args[1])
+            msg = " ".join(args[2:])
+            mkeys = channel.sorted_message_keys()
+            mkeys.reverse()
+            parent_id = str(mkeys[count - 1])
+            channel.send_message(msg, request_dict_ext={"thread_ts": parent_id})
+            return w.WEECHAT_RC_OK_EAT
+        w.prnt(current, "Invalid thread command.")
         return w.WEECHAT_RC_OK_EAT
-    elif len(args) == 3:
-        if args[1] == "reply":
-            target = reversed(channel.sorted_message_keys())
-            print target
-            print channel.messages[target][args[2]]
-    w.prnt(current, "Invalid thread command.")
-    return w.WEECHAT_RC_OK_EAT
-    #return w.WEECHAT_RC_OK
 
+def rehistory_command_callback(data, current_buffer, args):
+    current = w.current_buffer()
+    channel = EVENTROUTER.weechat_controller.buffers.get(current)
+    channel.got_history = False
+    w.buffer_clear(channel.channel_buffer)
+    channel.get_history()
 
 def slack_command_cb(data, current_buffer, args):
     a = args.split(' ', 1)
@@ -2387,6 +2398,8 @@ def setup_hooks():
     w.hook_command_run('/leave', 'part_command_cb', '')
     w.hook_command_run('/topic', 'topic_command_cb', '')
     w.hook_command_run('/thread', 'thread_command_callback', '')
+    w.hook_command_run('/reply', 'thread_command_callback', '')
+    w.hook_command_run('/rehistory', 'rehistory_command_callback', '')
     w.hook_command_run('/msg', 'msg_command_cb', '')
     w.hook_command_run('/label', 'label_command_cb', '')
     w.hook_command_run("/input complete_next", "complete_next_cb", "")
