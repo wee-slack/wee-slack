@@ -80,7 +80,7 @@ if hasattr(ssl, "get_default_verify_paths") and callable(ssl.get_default_verify_
 IGNORED_EVENTS = [
     "hello",
     "pref_change",
-    #"reconnect_url",
+    "reconnect_url",
 ]
 
 ###### New central Event router
@@ -98,6 +98,8 @@ class EventRouter(object):
         to the location specified in RECORD_DIR.
         """
         self.queue = []
+        self.slow_queue = []
+        self.slow_queue_timer = 0
         self.teams = {}
         self.context = {}
         self.weechat_controller = WeechatController(self)
@@ -185,7 +187,7 @@ class EventRouter(object):
     def reconnect_if_disconnected(self):
         for team_id, team in self.teams.iteritems():
             if not team.connected:
-                team.reconnect()
+                team.connect()
                 print team
 
     def receive_ws_callback(self, team_hash):
@@ -228,23 +230,35 @@ class EventRouter(object):
         request_metadata = self.retrieve_context(data)
         dbg("RECEIVED CALLBACK with request of {} id of {} and  code {} of length {}".format(request_metadata.request, request_metadata.response_id, return_code, len(out)))
         if return_code == 0:
-            if request_metadata.response_id in self.reply_buffer:
-                self.reply_buffer[request_metadata.response_id] += out
+            if len(out) > 0:
+                if request_metadata.response_id in self.reply_buffer:
+                    #dbg("found response id in reply_buffer", True)
+                    self.reply_buffer[request_metadata.response_id] += out
+                else:
+                    #dbg("didn't find response id in reply_buffer", True)
+                    self.reply_buffer[request_metadata.response_id] = ""
+                    self.reply_buffer[request_metadata.response_id] += out
+                try:
+                    j = json.loads(self.reply_buffer[request_metadata.response_id])
+                except:
+                    pass
+                    #dbg("Incomplete json, awaiting more", True)
+                try:
+                    j["wee_slack_process_method"] = request_metadata.request_normalized
+                    j["wee_slack_request_metadata"] = pickle.dumps(request_metadata)
+                    self.reply_buffer.pop(request_metadata.response_id)
+                    if self.recording:
+                        self.record_event(j, 'wee_slack_process_method')
+                    self.receive_json(json.dumps(j))
+                    self.delete_context(data)
+                except:
+                    dbg("HTTP REQUEST CALLBACK FAILED", True)
+                    pass
+            # We got an empty reply and this is weird so just ditch it and retry
             else:
-                self.reply_buffer[request_metadata.response_id] = ""
-                self.reply_buffer[request_metadata.response_id] += out
-            try:
-                j = json.loads(self.reply_buffer[request_metadata.response_id])
-                j["wee_slack_process_method"] = request_metadata.request_normalized
-                j["wee_slack_request_metadata"] = pickle.dumps(request_metadata)
-                self.reply_buffer.pop(request_metadata.response_id)
-                if self.recording:
-                    self.record_event(j, 'wee_slack_process_method')
-                self.receive_json(json.dumps(j))
+                dbg("length was zero, probably a bug..")
                 self.delete_context(data)
-            except:
-                dbg("HTTP REQUEST CALLBACK FAILED", True)
-                pass
+                self.receive(request_metadata)
         elif return_code != -1:
             self.reply_buffer.pop(request_metadata.response_id, None)
         else:
@@ -277,54 +291,65 @@ class EventRouter(object):
         via callback to drain events from the queue. It also attaches
         useful metadata and context to events as they are processed.
         """
+        if len(self.slow_queue) > 0 and ((self.slow_queue_timer + 1) < time.time()):
+            for q in self.slow_queue[:]:
+                self.queue.append(q)
+            self.slow_queue = []
+            self.slow_queue_timer = time.time()
         if len(self.queue) > 0:
             j = self.queue.pop(0)
             # Reply is a special case of a json reply from websocket.
             kwargs = {}
             if isinstance(j, SlackRequest):
                 if j.should_try():
-                    local_process_async_slack_api_request(j, self)
-                    return
-
-            if "reply_to" in j:
-                dbg("SET FROM REPLY")
-                function_name = "reply"
-            elif "type" in j:
-                dbg("SET FROM type")
-                function_name = j["type"]
-            elif "wee_slack_process_method" in j:
-                dbg("SET FROM META")
-                function_name = j["wee_slack_process_method"]
-            else:
-                dbg("SET FROM NADA")
-                function_name = "unknown"
-
-            # Here we are passing the actual objects. No more lookups.
-            meta = j.get("wee_slack_metadata", None)
-            if meta:
-                try:
-                    if isinstance(meta, str):
-                        dbg("string of metadata")
-                    team = meta.get("team", None)
-                    if team:
-                        kwargs["team"] = self.teams[team]
-                        if "user" in j:
-                            kwargs["user"] = self.teams[team].users[j["user"]]
-                        if "channel" in j:
-                            kwargs["channel"] = self.teams[team].channels[j["channel"]]
-                except:
-                    dbg("metadata failure")
-
-            if function_name not in IGNORED_EVENTS:
-                dbg("running {}".format(function_name))
-                if function_name.startswith("local_") and function_name in self.local_proc:
-                    self.local_proc[function_name](j, self, **kwargs)
-                elif function_name in self.proc:
-                    self.proc[function_name](j, self, **kwargs)
-                elif function_name in self.handlers:
-                    self.handlers[function_name](j, self, **kwargs)
+                    if j.retry_ready():
+                        local_process_async_slack_api_request(j, self)
+                    else:
+                        self.slow_queue.append(j)
                 else:
-                    raise ProcessNotImplemented(function_name)
+                    dbg("Max retries for Slackrequest")
+
+            else:
+
+                if "reply_to" in j:
+                    dbg("SET FROM REPLY")
+                    function_name = "reply"
+                elif "type" in j:
+                    dbg("SET FROM type")
+                    function_name = j["type"]
+                elif "wee_slack_process_method" in j:
+                    dbg("SET FROM META")
+                    function_name = j["wee_slack_process_method"]
+                else:
+                    dbg("SET FROM NADA")
+                    function_name = "unknown"
+
+                # Here we are passing the actual objects. No more lookups.
+                meta = j.get("wee_slack_metadata", None)
+                if meta:
+                    try:
+                        if isinstance(meta, str):
+                            dbg("string of metadata")
+                        team = meta.get("team", None)
+                        if team:
+                            kwargs["team"] = self.teams[team]
+                            if "user" in j:
+                                kwargs["user"] = self.teams[team].users[j["user"]]
+                            if "channel" in j:
+                                kwargs["channel"] = self.teams[team].channels[j["channel"]]
+                    except:
+                        dbg("metadata failure")
+
+                if function_name not in IGNORED_EVENTS:
+                    dbg("running {}".format(function_name))
+                    if function_name.startswith("local_") and function_name in self.local_proc:
+                        self.local_proc[function_name](j, self, **kwargs)
+                    elif function_name in self.proc:
+                        self.proc[function_name](j, self, **kwargs)
+                    elif function_name in self.handlers:
+                        self.handlers[function_name](j, self, **kwargs)
+                    else:
+                        raise ProcessNotImplemented(function_name)
 
 def handle_next(*args):
     """
@@ -401,9 +426,12 @@ def local_process_async_slack_api_request(request, event_router):
     """
     if not event_router.shutting_down:
         weechat_request = 'url:{}'.format(request.request_string())
+        weechat_request += '&nonce={}'.format(''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(4)))
         params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
         request.tried()
         context = event_router.store_context(request)
+        #TODO: let flashcode know about this bug - i have to 'clear' the hashtable or retry requests fail
+        w.hook_process_hashtable('url:', params, config.slack_timeout, "", context)
         w.hook_process_hashtable(weechat_request, params, config.slack_timeout, "receive_httprequest_callback", context)
 
 ###### New Callbacks
@@ -651,6 +679,7 @@ class SlackRequest(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
         self.tries = 0
+        self.start_time = time.time()
         self.domain = 'api.slack.com'
         self.request = request
         self.request_normalized = re.sub(r'\W+', '', request)
@@ -659,23 +688,30 @@ class SlackRequest(object):
         self.post_data = post_data
         self.params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
         self.url = 'https://{}/api/{}?{}'.format(self.domain, request, urllib.urlencode(post_data))
-        self.response_id = sha.sha("{}{}".format(self.url, time.time())).hexdigest()
+        self.response_id = sha.sha("{}{}".format(self.url, self.start_time)).hexdigest()
+        self.retries = kwargs.get('retries', 3)
 #    def __repr__(self):
 #        return "URL: {} Tries: {} ID: {}".format(self.url, self.tries, self.response_id)
     def request_string(self):
         return "{}".format(self.url)
     def tried(self):
         self.tries += 1
+        self.response_id = sha.sha("{}{}".format(self.url, time.time())).hexdigest()
     def should_try(self):
-        return self.tries < 3
+        return self.tries < self.retries
+    def retry_ready(self):
+        return (self.start_time + (self.tries**2)) < time.time()
 
 class SlackTeam(object):
     """
     incomplete
     Team object under which users and channels live.. Does lots.
     """
-    def __init__(self, eventrouter, token, subdomain, nick, myidentifier, users, bots, channels, **kwargs):
-        self.ws = None
+    def __init__(self, eventrouter, token, websocket_url, subdomain, nick, myidentifier, users, bots, channels, **kwargs):
+        self.ws_url = websocket_url
+        self.connected = False
+        self.connecting = False
+        #self.ws = None
         self.ws_counter = 0
         self.ws_replies = {}
         self.eventrouter = eventrouter
@@ -685,14 +721,22 @@ class SlackTeam(object):
         self.domain = subdomain + ".slack.com"
         self.nick = nick
         self.myidentifier = myidentifier
-        self.channels = channels
+        try:
+            if self.channels:
+                for c in channels.keys():
+                    print 'got {} '.format(c)
+                    if not self.channels.get(c):
+                        print 'new {}'.format(c)
+                        self.channels[c] = channels[c]
+        except:
+            self.channels = channels
         self.users = users
         self.bots = bots
-        self.team_hash = str(sha.sha("{}{}".format(self.nick, self.subdomain)).hexdigest())
+        self.team_hash = SlackTeam.generate_team_hash(self.nick, self.subdomain)
+        #self.team_hash = str(sha.sha("{}{}".format(self.nick, self.subdomain)).hexdigest())
         self.name = self.domain
         self.channel_buffer = None
         self.got_history = True
-        self.ws_reconnect_url = None
         self.create_buffer()
         self.muted_channels = {x for x in kwargs.get('muted_channels', []).split(',')}
         for c in self.channels.keys():
@@ -711,6 +755,11 @@ class SlackTeam(object):
         channel.set_related_server(self)
 #    def connect_request_generate(self):
 #        return SlackRequest(self.token, 'rtm.start', {})
+    #def close_all_buffers(self):
+    #    for channel in self.channels:
+    #        self.eventrouter.weechat_controller.unregister_buffer(channel.channel_buffer, update_remote=False, close_buffer=True)
+    #    #also close this server buffer
+    #    self.eventrouter.weechat_controller.unregister_buffer(self.channel_buffer, update_remote=False, close_buffer=True)
     def create_buffer(self):
         if not self.channel_buffer:
             self.channel_buffer = w.buffer_new("{}".format(self.domain), "buffer_input_callback", "EVENTROUTER", "", "")
@@ -728,12 +777,15 @@ class SlackTeam(object):
         return {v.slack_name: k for k, v in self.users.iteritems()}
     def get_team_hash(self):
         return self.team_hash
+    @staticmethod
+    def generate_team_hash(nick, subdomain):
+        return str(sha.sha("{}{}".format(nick, subdomain)).hexdigest())
     def refresh(self):
         self.rename()
     def rename(self):
         pass
-    def attach_websocket(self, ws):
-        self.ws = ws
+    #def attach_websocket(self, ws):
+    #    self.ws = ws
     def is_user_present(self, user_id):
         user = self.users.get(user_id)
         if user.presence == 'active':
@@ -742,24 +794,38 @@ class SlackTeam(object):
             return False
     def mark_read(self):
         pass
-    def reconnect(self):
-        if not self.connected and self.ws_reconnect_url:
-            try:
-                ws = create_connection(self.ws_reconnect_url, sslopt=sslopt_ca_certs)
-                w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
-                ws.sock.setblocking(0)
-                self.attach_websocket(ws)
-                self.set_connected()
-            except Exception as e:
-                dbg("websocket connection error: {}".format(e))
-                self.set_reconnect_url(None)
-                return False
+    def connect(self):
+        if not self.connected and not self.connecting:
+            self.connecting = True
+            if self.ws_url:
+                try:
+                    ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs)
+                    w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
+                    ws.sock.setblocking(0)
+                    self.ws = ws
+                    #self.attach_websocket(ws)
+                    self.set_connected()
+                    self.connecting = False
+                except Exception as e:
+                    dbg("websocket connection error: {}".format(e))
+                    #self.set_reconnect_url(None)
+                    return False
+                    self.connecting = False
+            else:
+                #The fast reconnect failed, so start over-ish
+                for chan in self.channels:
+                    self.channels[chan].got_history = False
+                s = SlackRequest(self.token, 'rtm.start', {}, retries=999)
+                self.eventrouter.receive(s)
+                self.connecting = False
+                #del self.eventrouter.teams[self.get_team_hash()]
+            self.set_reconnect_url(None)
     def set_connected(self):
         self.connected = True
     def set_disconnected(self):
         self.connected = False
     def set_reconnect_url(self, url):
-        self.ws_reconnect_url = url
+        self.ws_url = url
     def next_ws_transaction_id(self):
         if self.ws_counter > 999:
             self.ws_counter = 0
@@ -887,6 +953,8 @@ class SlackChannel(object):
             #else:
             #    w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.team)
             self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
+        #else:
+        #    self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
         try:
             if self.unread_count != 0:
                 for c in range(1, self.unread_count):
@@ -968,6 +1036,9 @@ class SlackChannel(object):
         return w.buffer_get_integer(self.channel_buffer, "hidden") == 0
     def get_history(self):
         if not self.got_history:
+            #we have probably reconnected. flush the buffer
+            if self.team.connected:
+                w.buffer_clear(self.channel_buffer)
             #if config.cache_messages:
             #    for message in message_cache[self.identifier]:
             #        process_message(json.loads(message), True)
@@ -1441,54 +1512,65 @@ def handle_rtmstart(login_data, eventrouter):
     This handles the main entry call to slack, rtm.start
     """
     if login_data["ok"]:
+
         metadata = pickle.loads(login_data["wee_slack_request_metadata"])
 
-        users = {}
-        for item in login_data["users"]:
-            users[item["id"]] = SlackUser(**item)
-            #users.append(SlackUser(**item))
+        #Let's reuse a team if we have it already.
+        th = SlackTeam.generate_team_hash(login_data['self']['name'], login_data['team']['domain'])
+        if not eventrouter.teams.get(th):
 
-        bots = {}
-        for item in login_data["bots"]:
-            bots[item["id"]] = SlackBot(**item)
+            users = {}
+            for item in login_data["users"]:
+                users[item["id"]] = SlackUser(**item)
+                #users.append(SlackUser(**item))
 
-        channels = {}
-        for item in login_data["channels"]:
-            channels[item["id"]] = SlackChannel(eventrouter, **item)
+            bots = {}
+            for item in login_data["bots"]:
+                bots[item["id"]] = SlackBot(**item)
 
-        for item in login_data["ims"]:
-            channels[item["id"]] = SlackDMChannel(eventrouter, users, **item)
+            channels = {}
+            for item in login_data["channels"]:
+                channels[item["id"]] = SlackChannel(eventrouter, **item)
 
-        for item in login_data["groups"]:
-            if item["name"].startswith('mpdm-'):
-                channels[item["id"]] = SlackMPDMChannel(eventrouter, **item)
-            else:
-                channels[item["id"]] = SlackGroupChannel(eventrouter, **item)
+            for item in login_data["ims"]:
+                channels[item["id"]] = SlackDMChannel(eventrouter, users, **item)
 
-        t = SlackTeam(
-            eventrouter,
-            metadata.token,
-            login_data["team"]["domain"],
-            login_data["self"]["name"],
-            login_data["self"]["id"],
-            users,
-            bots,
-            channels,
-            muted_channels=login_data["self"]["prefs"]["muted_channels"],
-        )
-        eventrouter.register_team(t)
+            for item in login_data["groups"]:
+                if item["name"].startswith('mpdm-'):
+                    channels[item["id"]] = SlackMPDMChannel(eventrouter, **item)
+                else:
+                    channels[item["id"]] = SlackGroupChannel(eventrouter, **item)
 
-        web_socket_url = login_data['url']
-        try:
-            ws = create_connection(web_socket_url, sslopt=sslopt_ca_certs)
-            w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", t.get_team_hash())
-            #ws_hook = w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", pickle.dumps(t))
-            ws.sock.setblocking(0)
-            t.attach_websocket(ws)
-            t.set_connected()
-        except Exception as e:
-            dbg("websocket connection error: {}".format(e))
-            return False
+            t = SlackTeam(
+                eventrouter,
+                metadata.token,
+                login_data['url'],
+                login_data["team"]["domain"],
+                login_data["self"]["name"],
+                login_data["self"]["id"],
+                users,
+                bots,
+                channels,
+                muted_channels=login_data["self"]["prefs"]["muted_channels"],
+            )
+            eventrouter.register_team(t)
+
+        else:
+            t = eventrouter.teams.get(th)
+            t.set_reconnect_url(login_data['url'])
+            t.connect()
+
+        #web_socket_url = login_data['url']
+        #try:
+        #    ws = create_connection(web_socket_url, sslopt=sslopt_ca_certs)
+        #    w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", t.get_team_hash())
+        #    #ws_hook = w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", pickle.dumps(t))
+        #    ws.sock.setblocking(0)
+        #    t.attach_websocket(ws)
+        #    t.set_connected()
+        #except Exception as e:
+        #    dbg("websocket connection error: {}".format(e))
+        #    return False
 
         t.buffer_prnt('Connected to Slack')
         t.buffer_prnt('{:<20} {}'.format(u"Websocket URL", login_data["url"]))
