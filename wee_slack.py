@@ -151,7 +151,7 @@ class EventRouter(object):
         """
         identifier = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(40))
         self.context[identifier] = data
-        #dbg("stored context {} {} ".format(identifier, data.url))
+        dbg("stored context {} {} ".format(identifier, data.url))
         return identifier
 
     def retrieve_context(self, identifier):
@@ -2258,7 +2258,6 @@ def command_talk(current_buffer, arg):
     Open a chat with the specified user
     /slack talk [user]
     """
-    print arg
     e = EVENTROUTER
     current = w.current_buffer()
     team = e.weechat_controller.buffers[current].team
@@ -2276,7 +2275,6 @@ def command_talk(current_buffer, arg):
     if arg.startswith('#'):
         arg = arg[1:]
     if arg in c:
-        print("found channel")
         chan = team.channels[c[arg]]
         chan.open()
         if config.switch_buffer_on_join:
@@ -2317,6 +2315,10 @@ def rehistory_command_callback(data, current_buffer, args):
     channel.got_history = False
     w.buffer_clear(channel.channel_buffer)
     channel.get_history()
+
+def hide_command_callback(data, current_buffer, args):
+    current = w.current_buffer()
+    w.buffer_set(current, "hidden", str(int(hide_distractions)))
 
 def slack_command_cb(data, current_buffer, args):
     a = args.split(' ', 1)
@@ -2456,6 +2458,7 @@ def setup_hooks():
     w.hook_command_run('/thread', 'thread_command_callback', '')
     w.hook_command_run('/reply', 'thread_command_callback', '')
     w.hook_command_run('/rehistory', 'rehistory_command_callback', '')
+    w.hook_command_run('/hide', 'hide_command_callback', '')
     w.hook_command_run('/msg', 'msg_command_cb', '')
     w.hook_command_run('/label', 'label_command_cb', '')
     w.hook_command_run("/input complete_next", "complete_next_cb", "")
