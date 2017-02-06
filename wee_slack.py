@@ -1027,7 +1027,7 @@ class SlackChannel(object):
         if update_remote and not self.eventrouter.shutting_down:
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
-    def buffer_prnt(self, nick, text, timestamp, **kwargs):
+    def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, **kwargs):
         data = "{}\t{}".format(nick, text)
         ts = SlackTS(timestamp)
         #without this, DMs won't open automatically
@@ -1035,20 +1035,21 @@ class SlackChannel(object):
             self.open(update_remote=False)
         if self.channel_buffer:
             #backlog messages - we will update the read marker as we print these
-            try:
-                backlog = False
-                if nick in [w.prefix("join"), w.prefix("quit")]:
-                    tags = tag("joinleave")
-                elif ts <= SlackTS(self.last_read):
-                    tags = tag("backlog")
-                    backlog = True
-                elif self.type in ["im", "mpdm"]:
-                    tags = tag("dm")
-                    self.new_messages = True
-                else:
-                    tags = tag("default")
-                    self.new_messages = True
+            backlog = True if ts <= SlackTS(self.last_read) else False
+            if tagset:
+                tags = tag(tagset)
 
+            #we have to infer the tagset because we weren't told
+            elif ts <= SlackTS(self.last_read):
+                tags = tag("backlog")
+            elif self.type in ["im", "mpdm"]:
+                tags = tag("dm")
+                self.new_messages = True
+            else:
+                tags = tag("default")
+                self.new_messages = True
+
+            try:
                 if config.unhide_buffers_with_activity and not self.is_visible() and (self.identifier not in self.team.muted_channels):
                     w.buffer_set(self.channel_buffer, "hidden", "0")
 
@@ -1113,12 +1114,9 @@ class SlackChannel(object):
             #we have probably reconnected. flush the buffer
             if self.team.connected:
                 w.buffer_clear(self.channel_buffer)
-            #if config.cache_messages:
-            #    for message in message_cache[self.identifier]:
-            #        process_message(json.loads(message), True)
+            self.buffer_prnt('', 'getting channel history...', tagset='backlog')
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
-            #async_slack_api_request(self.server.domain, self.server.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE})
             self.got_history = True
     def send_add_reaction(self, msg_number, reaction):
         self.send_change_reaction("reactions.add", msg_number, reaction)
@@ -1854,13 +1852,13 @@ def subprocess_thread_message(message_json, eventrouter, channel, team):
 def subprocess_channel_join(message_json, eventrouter, channel, team):
     joinprefix = w.prefix("join")
     message = SlackMessage(message_json, team, channel, override_sender=joinprefix)
-    channel.buffer_prnt(joinprefix, message.render(), message_json["ts"])
+    channel.buffer_prnt(joinprefix, message.render(), message_json["ts"], tagset='joinleave')
     channel.user_joined(message_json['user'])
 
 def subprocess_channel_leave(message_json, eventrouter, channel, team):
     leaveprefix = w.prefix("quit")
     message = SlackMessage(message_json, team, channel, override_sender=leaveprefix)
-    channel.buffer_prnt(leaveprefix, message.render(), message_json["ts"])
+    channel.buffer_prnt(leaveprefix, message.render(), message_json["ts"], tagset='joinleave')
     channel.user_left(message_json['user'])
     #channel.update_nicklist(message_json['user'])
     #channel.update_nicklist()
