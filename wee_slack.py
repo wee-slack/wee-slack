@@ -80,7 +80,7 @@ if hasattr(ssl, "get_default_verify_paths") and callable(ssl.get_default_verify_
 
 IGNORED_EVENTS = [
     "hello",
-    "pref_change",
+    #"pref_change",
     #"reconnect_url",
 ]
 
@@ -935,16 +935,16 @@ class SlackChannel(object):
         for key, value in message_json.items():
             setattr(self, key, value)
     def open(self, update_remote=True):
+        if update_remote:
+            if "join" in SLACK_API_TRANSLATOR[self.type]:
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                self.eventrouter.receive(s)
         self.create_buffer()
         self.active = True
         self.get_history()
         if "info" in SLACK_API_TRANSLATOR[self.type]:
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
-        if update_remote:
-            if "join" in SLACK_API_TRANSLATOR[self.type]:
-                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
-                self.eventrouter.receive(s)
         #self.create_buffer()
     def check_should_open(self, force=False):
         try:
@@ -1017,26 +1017,29 @@ class SlackChannel(object):
         ts = SlackTS(timestamp)
         if self.channel_buffer:
             #backlog messages - we will update the read marker as we print these
-            backlog = False
-            if ts <= SlackTS(self.last_read):
-                tags = tag("backlog")
-                backlog = True
-            elif self.type in ["im", "mpdm"]:
-                tags = tag("dm")
-                self.new_messages = True
-            #elif nick in [x.strip() for x in w.prefix("join"), w.prefix("quit")]:
-            #    tags = tag("joinleave")
-            else:
-                tags = tag("default")
-                self.new_messages = True
+            try:
+                backlog = False
+                if ts <= SlackTS(self.last_read):
+                    tags = tag("backlog")
+                    backlog = True
+                elif self.type in ["im", "mpdm"]:
+                    tags = tag("dm")
+                    self.new_messages = True
+                elif nick in [x.strip() for x in w.prefix("join"), w.prefix("quit")]:
+                    tags = tag("joinleave")
+                else:
+                    tags = tag("default")
+                    self.new_messages = True
 
-            if config.unhide_buffers_with_activity and not self.is_visible() and (self.identifier not in self.team.muted_channels):
-                w.buffer_set(self.channel_buffer, "hidden", "0")
+                if config.unhide_buffers_with_activity and not self.is_visible() and (self.identifier not in self.team.muted_channels):
+                    w.buffer_set(self.channel_buffer, "hidden", "0")
 
-            w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
-            modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
-            if backlog:
-                self.mark_read(ts, update_remote=False, force=True)
+                w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
+                modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
+                if backlog:
+                    self.mark_read(ts, update_remote=False, force=True)
+            except:
+                dbg("Problem processing buffer_prnt")
     def send_message(self, message, request_dict_ext={}):
         #team = self.eventrouter.teams[self.team]
         message = linkify_text(message, self.team, self)
@@ -1156,6 +1159,17 @@ class SlackChannel(object):
                 s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": ts}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
         self.new_messages = False
+    def user_joined(self, user_id):
+        pass
+        #print type(self.members)
+        #print self.members
+        #print self
+        #self.members.append(user_id)
+        #self.update_nicklist(user_id)
+    def user_left(self, user_id):
+        pass
+        #filter(lambda u: u != user_id, self.members)
+        #self.update_nicklist(user_id)
     def update_nicklist(self, user=None):
         if not self.channel_buffer:
             return
@@ -1178,7 +1192,8 @@ class SlackChannel(object):
             # since this is a change just remove it regardless of where it is
             w.nicklist_remove_nick(self.channel_buffer, nick)
             # now add it back in to whichever..
-            w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "", "", 1)
+            if user.identifier in self.members:
+                w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "", "", 1)
             #w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
 
         # if we didn't get a user, build a complete list. this is expensive.
@@ -1479,13 +1494,16 @@ class SlackMessage(object):
     These are modifiable and can be rerendered to change a message,
     delete a message, add a reaction, add a thread.
     """
-    def __init__(self, message_json, team, channel):
+    def __init__(self, message_json, team, channel, override_sender=None):
         self.team = team
         self.channel = channel
         self.message_json = message_json
         self.submessages = []
         self.thread_channel = None
-        self.sender = self.get_sender()
+        if override_sender:
+            self.sender = override_sender
+        else:
+            self.sender = self.get_sender()
         self.suffix = ''
         self.ts = SlackTS(message_json['ts'])
     def __hash__(self):
@@ -1720,55 +1738,55 @@ def process_pong(message_json, eventrouter, **kwargs):
 def process_message(message_json, eventrouter, store=True, **kwargs):
     channel = kwargs["channel"]
     team = kwargs["team"]
-    try:
-        # send these subtype messages elsewhere
-        known_subtypes = [
-            'thread_message',
-            'message_replied',
-            'message_changed',
-            'message_deleted',
-            #'channel_join',
-            #'channel_leave',
-            #'channel_topic',
-            #'group_join',
-            #'group_leave',
-        ]
-        if "thread_ts" in message_json and "reply_count" not in message_json:
-            message_json["subtype"] = "thread_message"
-        subtype = message_json.get("subtype", None)
-        if subtype and subtype in known_subtypes:
-            f = eval('subprocess_' + subtype)
-            f(message_json, eventrouter, channel, team)
+    #try:
+    # send these subtype messages elsewhere
+    known_subtypes = [
+        'thread_message',
+        'message_replied',
+        'message_changed',
+        'message_deleted',
+        'channel_join',
+        'channel_leave',
+        #'channel_topic',
+        #'group_join',
+        #'group_leave',
+    ]
+    if "thread_ts" in message_json and "reply_count" not in message_json:
+        message_json["subtype"] = "thread_message"
+    subtype = message_json.get("subtype", None)
+    if subtype and subtype in known_subtypes:
+        f = eval('subprocess_' + subtype)
+        f(message_json, eventrouter, channel, team)
+
+    else:
+        message = SlackMessage(message_json, team, channel)
+        text = message.render()
+        #print text
+
+        # special case with actions.
+        if text.startswith("_") and text.endswith("_"):
+            text = text[1:-1]
+            if message.sender != channel.team.nick:
+                text = message.sender + " " + text
+            channel.unread_count += 1
+            channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, **kwargs)
 
         else:
-            message = SlackMessage(message_json, team, channel)
-            text = message.render()
-            #print text
-
-            # special case with actions.
-            if text.startswith("_") and text.endswith("_"):
-                text = text[1:-1]
-                if message.sender != channel.team.nick:
-                    text = message.sender + " " + text
+            suffix = ''
+            if 'edited' in message_json:
+                suffix = ' (edited)'
+            try:
                 channel.unread_count += 1
-                channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, **kwargs)
+            except:
+                channel.unread_count = 1
+            channel.buffer_prnt(message.sender, text + suffix, message.ts, **kwargs)
 
-            else:
-                suffix = ''
-                if 'edited' in message_json:
-                    suffix = ' (edited)'
-                try:
-                    channel.unread_count += 1
-                except:
-                    channel.unread_count = 1
-                channel.buffer_prnt(message.sender, text + suffix, message.ts, **kwargs)
-
-            if store:
-                channel.store_message(message, team)
-            dbg("NORMAL REPLY {}".format(message_json))
-    except:
-        channel.buffer_prnt("WEE-SLACK-ERROR", json.dumps(message_json).encode('utf-8'), message_json["ts"], **kwargs)
-        traceback.print_exc()
+        if store:
+            channel.store_message(message, team)
+        dbg("NORMAL REPLY {}".format(message_json))
+    #except:
+    #    channel.buffer_prnt("WEE-SLACK-ERROR", json.dumps(message_json).encode('utf-8'), message_json["ts"], **kwargs)
+    #    traceback.print_exc()
 
 def subprocess_thread_message(message_json, eventrouter, channel, team):
     #print ("THREADED: " + str(message_json))
@@ -1805,6 +1823,20 @@ def subprocess_thread_message(message_json, eventrouter, channel, team):
     #    message_json["item"]["ts"], message_json)
     #channel.change_message(message_json["thread_ts"], None, message_json["text"])
     #channel.become_thread(message_json["item"]["ts"], message_json)
+
+def subprocess_channel_join(message_json, eventrouter, channel, team):
+    joinprefix = w.prefix("join")
+    message = SlackMessage(message_json, team, channel, override_sender=joinprefix)
+    channel.buffer_prnt(joinprefix, message.render(), message_json["ts"])
+    channel.user_joined(message_json['user'])
+
+def subprocess_channel_leave(message_json, eventrouter, channel, team):
+    leaveprefix = w.prefix("quit")
+    message = SlackMessage(message_json, team, channel, override_sender=leaveprefix)
+    channel.buffer_prnt(leaveprefix, message.render(), message_json["ts"])
+    channel.user_left(message_json['user'])
+    #channel.update_nicklist(message_json['user'])
+    #channel.update_nicklist()
 
 def subprocess_message_replied(message_json, eventrouter, channel, team):
     pass
@@ -2205,29 +2237,32 @@ def join_command_cb(data, current_buffer, args):
     else:
         return w.WEECHAT_RC_OK
 
-def command_talk(current_buffer, args):
+def command_talk(current_buffer, arg):
     """
     incomplete because globals hack
     Open a chat with the specified user
     /slack talk [user]
     """
+    print arg
     e = EVENTROUTER
     current = w.current_buffer()
     team = e.weechat_controller.buffers[current].team
     dbg(team)
     c = team.get_channel_map()
-    if args not in c:
+    if arg not in c:
         u = team.get_username_map()
-        if args in u:
-            s = SlackRequest(team.token, "im.open", {"user": u[args]}, team_hash=team.team_hash)
+        if arg in u:
+            s = SlackRequest(team.token, "im.open", {"user": u[arg]}, team_hash=team.team_hash)
             EVENTROUTER.receive(s)
             dbg("found user")
             #refresh channel map here
             c = team.get_channel_map()
 
-    if args in c:
-        dbg("found channel")
-        chan = team.channels[c[args]]
+    if arg.startswith('#'):
+        arg = arg[1:]
+    if arg in c:
+        print("found channel")
+        chan = team.channels[c[arg]]
         chan.open()
         if config.switch_buffer_on_join:
             w.buffer_set(chan.channel_buffer, "display", "1")
