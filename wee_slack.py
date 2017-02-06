@@ -145,6 +145,7 @@ class EventRouter(object):
         """
         identifier = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(40))
         self.context[identifier] = data
+        #dbg("stored context {} {} ".format(identifier, data.url))
         return identifier
 
     def retrieve_context(self, identifier):
@@ -155,6 +156,7 @@ class EventRouter(object):
         """
         data = self.context.get(identifier, None)
         if data:
+            #dbg("retrieved eontext {} ".format(identifier))
             return data
 
     def delete_context(self, identifier):
@@ -162,6 +164,7 @@ class EventRouter(object):
         Requests can span multiple requests, so we may need to delete this as a last step
         """
         if identifier in self.context:
+            #dbg("deleted eontext {} ".format(identifier))
             del self.context[identifier]
 
     def shutdown(self):
@@ -228,7 +231,11 @@ class EventRouter(object):
         where the request originated and route properly.
         """
         request_metadata = self.retrieve_context(data)
-        dbg("RECEIVED CALLBACK with request of {} id of {} and  code {} of length {}".format(request_metadata.request, request_metadata.response_id, return_code, len(out)))
+        try:
+            dbg("RECEIVED CALLBACK with request of {} id of {} and  code {} of length {}".format(request_metadata.request, request_metadata.response_id, return_code, len(out)))
+        except:
+            dbg(request_metadata)
+            return
         if return_code == 0:
             if len(out) > 0:
                 if request_metadata.response_id in self.reply_buffer:
