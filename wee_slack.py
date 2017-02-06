@@ -753,9 +753,7 @@ class SlackTeam(object):
         try:
             if self.channels:
                 for c in channels.keys():
-                    #print 'got {} '.format(c)
                     if not self.channels.get(c):
-                        #print 'new {}'.format(c)
                         self.channels[c] = channels[c]
         except:
             self.channels = channels
@@ -774,6 +772,8 @@ class SlackTeam(object):
         #    self.channel_set_related_server(c)
         # Last step is to make sure my nickname is the set color
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
+        # This highlight step must happen after we have set related server
+        self.set_highlight_words(kwargs.get('highlight_words', ""))
     def __eq__(self, compare_str):
         if compare_str == self.token or compare_str == self.domain or compare_str == self.subdomain:
             return True
@@ -799,6 +799,11 @@ class SlackTeam(object):
             w.buffer_set(self.channel_buffer, "nicklist", "1")
     def set_muted_channels(self, muted_str):
         self.muted_channels = {x for x in muted_str.split(',')}
+    def set_highlight_words(self, highlight_str):
+        self.highlight_words = {x for x in highlight_str.split(',')}
+        if len(self.highlight_words) > 0:
+            for v in self.channels.itervalues():
+                v.set_highlights()
     def formatted_name(self, **kwargs):
         return self.domain
     def buffer_prnt(self, data):
@@ -966,6 +971,12 @@ class SlackChannel(object):
                     pass
     def set_related_server(self, team):
         self.team = team
+    def set_highlights(self):
+        #highlight my own name and any set highlights
+        if self.channel_buffer:
+            highlights = self.team.highlight_words.union({'@' + self.team.nick})
+            h_str = ",".join(highlights)
+            w.buffer_set(self.channel_buffer, "highlight_words", h_str)
     def create_buffer(self):
         """
         incomplete (muted doesn't work)
@@ -1018,6 +1029,9 @@ class SlackChannel(object):
     def buffer_prnt(self, nick, text, timestamp, **kwargs):
         data = "{}\t{}".format(nick, text)
         ts = SlackTS(timestamp)
+        #without this, DMs won't open automatically
+        if not self.channel_buffer:
+            self.open(update_remote=False)
         if self.channel_buffer:
             #backlog messages - we will update the read marker as we print these
             try:
@@ -1666,6 +1680,7 @@ def handle_rtmstart(login_data, eventrouter):
                 bots,
                 channels,
                 muted_channels=login_data["self"]["prefs"]["muted_channels"],
+                highlight_words=login_data["self"]["prefs"]["highlight_words"],
             )
             eventrouter.register_team(t)
 
@@ -1731,6 +1746,8 @@ def process_pref_change(message_json, eventrouter, **kwargs):
     team = kwargs["team"]
     if message_json['name'] == u'muted_channels':
         team.set_muted_channels(message_json['value'])
+    elif message_json['name'] == u'highlight_words':
+        team.set_highlight_words(message_json['value'])
     else:
         dbg("Preference change not implemented: {}\n".format(message_json['name']))
 
