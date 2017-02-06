@@ -188,7 +188,7 @@ class EventRouter(object):
         for team_id, team in self.teams.iteritems():
             if not team.connected:
                 team.connect()
-                print team
+                dbg("reconnecting {}".format(team))
 
     def receive_ws_callback(self, team_hash):
         """
