@@ -1945,8 +1945,10 @@ def process_reaction_added(message_json, eventrouter, **kwargs):
     if message_json["item"].get("type") == "message":
         ts = SlackTS(message_json['item']["ts"])
 
-        channel.messages[ts].add_reaction(message_json["reaction"], message_json["user"])
-        channel.change_message(ts)
+        message = channel.messages.get(ts, None)
+        if message:
+            message.add_reaction(message_json["reaction"], message_json["user"])
+            channel.change_message(ts)
     else:
         dbg("reaction to item type not supported: " + str(message_json))
 
@@ -1955,8 +1957,10 @@ def process_reaction_removed(message_json, eventrouter, **kwargs):
     if message_json["item"].get("type") == "message":
         ts = SlackTS(message_json['item']["ts"])
 
-        channel.messages[ts].remove_reaction(message_json["reaction"], message_json["user"])
-        channel.change_message(ts)
+        message = channel.messages.get(ts, None)
+        if message:
+            message.remove_reaction(message_json["reaction"], message_json["user"])
+            channel.change_message(ts)
     else:
         dbg("Reaction to item type not supported: " + str(message_json))
 
