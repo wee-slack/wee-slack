@@ -1068,8 +1068,11 @@ class SlackChannel(object):
             elif ts <= SlackTS(self.last_read):
                 tags = tag("backlog")
             elif self.type in ["im", "mpdm"]:
-                tags = tag("dm")
-                self.new_messages = True
+                if nick != self.team.nick:
+                    tags = tag("dm")
+                    self.new_messages = True
+                else:
+                    tags = tag("dmfromme")
             else:
                 tags = tag("default")
                 self.new_messages = True
@@ -2282,11 +2285,12 @@ def tag(tagset, user="unknown user"):
         "highlightme": "notify_highlight,log1",
         #when receiving a direct message
         "dm": "notify_private,notify_message,log1,irc_privmsg",
+        "dmfromme": "notify_none,log1,irc_privmsg",
         #when this is a join/leave, attach for smart filter ala:
         #if user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]
         "joinleave": "irc_smart_filter",
         #catchall ?
-        "default": "notify_message,log1,irc_privmsg",
+        "default": "notify_message,log1",
     }
     return default_tag + "," + tagsets[tagset]
 
