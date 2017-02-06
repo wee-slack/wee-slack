@@ -502,17 +502,17 @@ def buffer_input_callback(signal, buffer_ptr, data):
             channel.send_add_reaction(int(reaction.group(1) or 1), reaction.group(3))
         elif reaction.group(2) == "-":
             channel.send_remove_reaction(int(reaction.group(1) or 1), reaction.group(3))
-#    elif data.startswith('s/'):
-#        try:
-#            old, new, flags = re.split(r'(?<!\\)/', data)[1:]
-#        except ValueError:
-#            pass
-#        else:
-#            # Replacement string in re.sub() is a string, not a regex, so get
-#            # rid of escapes.
-#            new = new.replace(r'\/', '/')
-#            old = old.replace(r'\/', '/')
-#            channel.change_previous_message(old.decode("utf-8"), new.decode("utf-8"), flags)
+    elif data.startswith('s/'):
+        try:
+            old, new, flags = re.split(r'(?<!\\)/', data)[1:]
+        except ValueError:
+            pass
+        else:
+            # Replacement string in re.sub() is a string, not a regex, so get
+            # rid of escapes.
+            new = new.replace(r'\/', '/')
+            old = old.replace(r'\/', '/')
+            channel.edit_previous_message(old.decode("utf-8"), new.decode("utf-8"), flags)
     else:
         channel.send_message(data)
         channel.mark_read(update_remote=True, force=True)
@@ -1063,6 +1063,27 @@ class SlackChannel(object):
             text = m.render(force=True)
         modify_buffer_line(self.channel_buffer, text, ts.major, ts.minor)
         return True
+    def edit_previous_message(self, old, new, flags):
+        message = self.my_last_message()
+        print message
+        if new == "" and old == "":
+            s = SlackRequest(self.team.token, "chat.delete", {"channel": self.identifier, "ts": message['ts']}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+            self.eventrouter.receive(s)
+        else:
+            num_replace = 1
+            if 'g' in flags:
+                num_replace = 0
+            new_message = re.sub(old, new, message["text"], num_replace)
+            if new_message != message["text"]:
+                s = SlackRequest(self.team.token, "chat.update", {"channel": self.identifier, "ts": message['ts'], "text": new_message.encode("utf-8")}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                self.eventrouter.receive(s)
+
+                async_slack_api_request(self.server.domain, self.server.token, 'chat.update', {"channel": self.identifier, "ts": message['ts'], "text": new_message.encode("utf-8")})
+    def my_last_message(self):
+        for message in reversed(self.sorted_message_keys()):
+            m = self.messages[message]
+            if "user" in m.message_json and "text" in m.message_json and m.message_json["user"] == self.team.myidentifier:
+                return m.message_json
     def is_visible(self):
         return w.buffer_get_integer(self.channel_buffer, "hidden") == 0
     def get_history(self):
