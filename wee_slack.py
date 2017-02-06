@@ -793,6 +793,7 @@ class SlackTeam(object):
         if not self.channel_buffer:
             self.channel_buffer = w.buffer_new("{}".format(self.domain), "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
+            w.buffer_set(self.channel_buffer, "localvar_set_type", 'server')
             if w.config_string(w.config_get('irc.look.channel_buffer')) == 'merge_with_core':
                 w.buffer_merge(self.channel_buffer, w.buffer_search_main())
             w.buffer_set(self.channel_buffer, "nicklist", "1")
@@ -1023,6 +1024,8 @@ class SlackChannel(object):
             elif self.type in ["im", "mpdm"]:
                 tags = tag("dm")
                 self.new_messages = True
+            #elif nick in [x.strip() for x in w.prefix("join"), w.prefix("quit")]:
+            #    tags = tag("joinleave")
             else:
                 tags = tag("default")
                 self.new_messages = True
