@@ -897,6 +897,7 @@ class SlackChannel(object):
         self.set_name(self.slack_name)
         #short name relates to the localvar we change for typing indication
         self.current_short_name = self.name
+        self.update_nicklist()
     def __eq__(self, compare_str):
         if compare_str == self.slack_name or compare_str == self.formatted_name() or compare_str == self.formatted_name(style="long_default"):
             return True
@@ -995,7 +996,9 @@ class SlackChannel(object):
                 #dbg("no unread in {}".format(self.name))
         except:
             pass
-            #dbg("exception no unread count")
+
+        self.update_nicklist()
+        #dbg("exception no unread count")
         #if self.unread_count != 0 and not self.muted:
         #    w.buffer_set(self.channel_buffer, "hotlist", "1")
     def destroy_buffer(self, update_remote):
@@ -1131,6 +1134,42 @@ class SlackChannel(object):
                 s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": ts}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
         self.new_messages = False
+    def update_nicklist(self, user=None):
+        if not self.channel_buffer and self.type in ("channel"):
+            return
+        w.buffer_set(self.channel_buffer, "nicklist", "1")
+        # create nicklists for the current channel if they don't exist
+        # if they do, use the existing pointer
+        here = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_HERE)
+        if not here:
+            here = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
+        afk = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_AWAY)
+        if not afk:
+            afk = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
+
+        if user:
+            user = self.team.users[user]
+            nick = w.nicklist_search_nick(self.channel_buffer, "", user.slack_name)
+            # since this is a change just remove it regardless of where it is
+            w.nicklist_remove_nick(self.channel_buffer, nick)
+            # now add it back in to whichever..
+            w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
+
+        # if we didn't get a user, build a complete list. this is expensive.
+        else:
+            if len(self.members) < 1000:
+                try:
+                    for user in self.members:
+                        user = self.team.users[user]
+                        #if user.deleted:
+                        #    continue
+                        w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
+                except Exception as e:
+                    dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
+            else:
+                for fn in ("too", "many", "users"):
+                    fn.nicklist_add_nick(self.channel_buffer, here, w, "", "", "", 1)
+
 
 class SlackDMChannel(SlackChannel):
     """
