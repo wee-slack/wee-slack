@@ -2481,7 +2481,7 @@ if __name__ == "__main__":
             #slack_buffer = None
 
             #never_away = False
-            #hide_distractions = False
+            hide_distractions = False
             #hotlist = w.infolist_get("hotlist", "", "")
             #main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
 
