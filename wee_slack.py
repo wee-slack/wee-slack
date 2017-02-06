@@ -767,7 +767,7 @@ class SlackTeam(object):
         self.channel_buffer = None
         self.got_history = True
         self.create_buffer()
-        self.muted_channels = {x for x in kwargs.get('muted_channels', []).split(',')}
+        self.set_muted_channels(kwargs.get('muted_channels', ""))
         for c in self.channels.keys():
             channels[c].set_related_server(self)
             channels[c].check_should_open()
@@ -797,6 +797,8 @@ class SlackTeam(object):
             if w.config_string(w.config_get('irc.look.server_buffer')) == 'merge_with_core':
                 w.buffer_merge(self.channel_buffer, w.buffer_search_main())
             w.buffer_set(self.channel_buffer, "nicklist", "1")
+    def set_muted_channels(self, muted_str):
+        self.muted_channels = {x for x in muted_str.split(',')}
     def formatted_name(self, **kwargs):
         return self.domain
     def buffer_prnt(self, data):
@@ -1725,6 +1727,13 @@ def process_manual_presence_change(message_json, eventrouter, **kwargs):
 def process_presence_change(message_json, eventrouter, **kwargs):
     kwargs["user"].presence = message_json["presence"]
 
+def process_pref_change(message_json, eventrouter, **kwargs):
+    team = kwargs["team"]
+    if message_json['name'] == u'muted_channels':
+        team.set_muted_channels(message_json['value'])
+    else:
+        dbg("Preference change not implemented: {}\n".format(message_json['name']))
+
 def process_user_typing(message_json, eventrouter, **kwargs):
     channel = kwargs["channel"]
     team = kwargs["team"]
@@ -2272,15 +2281,6 @@ def command_talk(current_buffer, arg):
             w.buffer_set(chan.channel_buffer, "display", "1")
         return True
 
-def command_tmpmute(current_buffer, args):
-    current = w.current_buffer()
-    channel_id = EVENTROUTER.weechat_controller.buffers[current].identifier
-    team = EVENTROUTER.weechat_controller.buffers[current].team
-    if channel_id not in team.muted_channels:
-        team.muted_channels.add(channel_id)
-    else:
-        team.muted_channels.discard(channel_id)
-
 def command_showmuted(current_buffer, args):
     current = w.current_buffer()
     w.prnt(EVENTROUTER.weechat_controller.buffers[current].team.channel_buffer, str(EVENTROUTER.weechat_controller.buffers[current].team.muted_channels))
@@ -2341,6 +2341,18 @@ def command_distracting(current_buffer, args):
 
 def save_distracting_channels():
     w.config_set_plugin('distracting_channels', ','.join(config.distracting_channels))
+
+def command_mute(current_buffer, args):
+    current = w.current_buffer()
+    channel_id = EVENTROUTER.weechat_controller.buffers[current].identifier
+    team = EVENTROUTER.weechat_controller.buffers[current].team
+    if channel_id not in team.muted_channels:
+        team.muted_channels.add(channel_id)
+    else:
+        team.muted_channels.discard(channel_id)
+    s = SlackRequest(team.token, "users.prefs.set", {"name": "muted_channels", "value": ",".join(team.muted_channels)}, team_hash=team.team_hash, channel_identifier=channel_id)
+    EVENTROUTER.receive(s)
+
 
 def command_nodistractions(current_buffer, args):
     global hide_distractions
