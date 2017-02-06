@@ -644,6 +644,22 @@ def nick_completion_cb(data, completion_item, current_buffer, completion):
             w.hook_completion_list_add(completion, "@" + u.slack_name, 1, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
+def emoji_completion_cb(data, completion_item, current_buffer, completion):
+    """
+    Adds all :-prefixed emoji to completion list
+    """
+
+    current_buffer = w.current_buffer()
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
+
+    if current_channel is None:
+        return w.WEECHAT_RC_OK
+
+    for e in EMOJI['emoji']:
+        w.hook_completion_list_add(completion, ":" + e + ":", 0, w.WEECHAT_LIST_POS_SORT)
+
+    return w.WEECHAT_RC_OK
+
 
 def complete_next_cb(data, current_buffer, command):
     """Extract current word, if it is equal to a nick, prefix it with @ and
@@ -2457,6 +2473,20 @@ def create_slack_debug_buffer():
         slack_debug = w.buffer_new("slack-debug", "", "", "closed_slack_debug_buffer_cb", "")
         w.buffer_set(slack_debug, "notify", "0")
 
+def load_emoji():
+    try:
+        global EMOJI
+        DIR = w.info_get("weechat_dir", "")
+        #no idea why this does't work w/o checking the type?!
+        dbg(type(DIR), 0)
+        ef = open('{}/weemoji.json'.format(DIR), 'r')
+        EMOJI = json.loads(ef.read())
+        ef.close()
+    except:
+        dbg("Unexpected error: {}".format(sys.exc_info()), 5)
+    return w.WEECHAT_RC_OK
+
+
 def setup_hooks():
     cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
 
@@ -2503,6 +2533,7 @@ def setup_hooks():
     w.hook_command_run('/away', 'away_command_cb', '')
 
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
+    w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
 
     # Hooks to fix/implement
     #w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
@@ -2702,6 +2733,7 @@ if __name__ == "__main__":
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
 
+            load_emoji()
             setup_hooks()
 
             # attach to the weechat hooks we need
