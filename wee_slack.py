@@ -1115,7 +1115,7 @@ class SlackChannel(object):
             if self.team.connected:
                 w.buffer_clear(self.channel_buffer)
             self.buffer_prnt('', 'getting channel history...', tagset='backlog')
-            s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+            s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE}, team_hash=self.team.team_hash, channel_identifier=self.identifier, clear=True)
             self.eventrouter.receive(s)
             self.got_history = True
     def send_add_reaction(self, msg_number, reaction):
@@ -1725,7 +1725,14 @@ def handle_history(message_json, eventrouter, **kwargs):
     request_metadata = pickle.loads(message_json["wee_slack_request_metadata"])
     kwargs['team'] = eventrouter.teams[request_metadata.team_hash]
     kwargs['channel'] = kwargs['team'].channels[request_metadata.channel_identifier]
+    try:
+        clear = request_metadata.clear
+    except:
+        clear = False
+    print clear
     kwargs['output_type'] = "backlog"
+    if clear:
+        w.buffer_clear(kwargs['channel'].channel_buffer)
     for message in reversed(message_json["messages"]):
         process_message(message, eventrouter, **kwargs)
 
