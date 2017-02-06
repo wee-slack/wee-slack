@@ -261,6 +261,7 @@ class EventRouter(object):
                 self.receive(request_metadata)
         elif return_code != -1:
             self.reply_buffer.pop(request_metadata.response_id, None)
+            self.delete_context(data)
         else:
             if request_metadata.response_id not in self.reply_buffer:
                 self.reply_buffer[request_metadata.response_id] = ""
@@ -808,9 +809,8 @@ class SlackTeam(object):
                     self.connecting = False
                 except Exception as e:
                     dbg("websocket connection error: {}".format(e))
-                    #self.set_reconnect_url(None)
-                    return False
                     self.connecting = False
+                    return False
             else:
                 #The fast reconnect failed, so start over-ish
                 for chan in self.channels:
