@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
 #
 
 import time
@@ -1729,7 +1729,7 @@ def handle_history(message_json, eventrouter, **kwargs):
         clear = request_metadata.clear
     except:
         clear = False
-    print clear
+    dbg(clear, 3)
     kwargs['output_type'] = "backlog"
     if clear:
         w.buffer_clear(kwargs['channel'].channel_buffer)
@@ -2500,24 +2500,25 @@ def setup_hooks():
 ##### END NEW
 
 
-def dbg(message, main_buffer=False, fout=False):
+def dbg(message, level=0, main_buffer=False, fout=False):
     """
     send debug output to the slack-debug buffer and optionally write to a file.
     """
     #TODO: do this smarter
     #return
-    global debug_string
-    message = "DEBUG: {}".format(message)
-    # message = message.encode('utf-8', 'replace')
-    if fout:
-        file('/tmp/debug.log', 'a+').writelines(message + '\n')
-    if main_buffer:
-            #w.prnt("", "---------")
-            w.prnt("", "slack: " + message)
-    else:
-        if slack_debug and (not debug_string or debug_string in message):
-            #w.prnt(slack_debug, "---------")
-            w.prnt(slack_debug, message)
+    if level >= config.debug_level:
+        global debug_string
+        message = "DEBUG: {}".format(message)
+        # message = message.encode('utf-8', 'replace')
+        if fout:
+            file('/tmp/debug.log', 'a+').writelines(message + '\n')
+        if main_buffer:
+                #w.prnt("", "---------")
+                w.prnt("", "slack: " + message)
+        else:
+            if slack_debug and (not debug_string or debug_string in message):
+                #w.prnt(slack_debug, "---------")
+                w.prnt(slack_debug, message)
 
 
 ###### Config code
@@ -2534,6 +2535,7 @@ class PluginConfig(object):
         'colorize_nicks': 'true',
         'colorize_private_chats': 'false',
         'debug_mode': 'false',
+        'debug_level': '3',
         'distracting_channels': '',
         'show_reaction_nicks': 'false',
         'slack_api_token': 'INSERT VALID KEY HERE!',
@@ -2546,6 +2548,7 @@ class PluginConfig(object):
         'thread_suffix_color': 'lightcyan',
         'unhide_buffers_with_activity': 'false',
         'short_buffer_names': 'false',
+        'background_load_all_history': 'false',
     }
 
     # Set missing settings to their defaults. Load non-missing settings from
@@ -2595,6 +2598,9 @@ class PluginConfig(object):
 
     def get_thread_suffix_color(self, key):
         return w.config_get_plugin("thread_suffix_color")
+
+    def get_debug_level(self, key):
+        return int(w.config_get_plugin(key))
 
     def get_slack_timeout(self, key):
         return int(w.config_get_plugin(key))
