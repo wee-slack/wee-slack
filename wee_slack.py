@@ -298,6 +298,15 @@ class EventRouter(object):
         """
         dbg("RECEIVED FROM QUEUE")
         self.queue.append(dataobj)
+    def receive_slow(self, dataobj):
+        """
+        complete
+        Receives a raw object and places it on the slow queue for
+        processing. Object must be known to handle_next or
+        be JSON.
+        """
+        dbg("RECEIVED FROM QUEUE")
+        self.slow_queue.append(dataobj)
     def handle_next(self):
         """
         complete
@@ -305,10 +314,11 @@ class EventRouter(object):
         via callback to drain events from the queue. It also attaches
         useful metadata and context to events as they are processed.
         """
-        if len(self.slow_queue) > 0 and ((self.slow_queue_timer + 1) < time.time()):
-            for q in self.slow_queue[:]:
-                self.queue.append(q)
-            self.slow_queue = []
+        if len(self.slow_queue) > 0 and ((self.slow_queue_timer + 5) < time.time()):
+            #for q in self.slow_queue[0]:
+            dbg("from slow queue", 0)
+            self.queue.append(self.slow_queue.pop())
+            #self.slow_queue = []
             self.slow_queue_timer = time.time()
         if len(self.queue) > 0:
             j = self.queue.pop(0)
@@ -968,6 +978,8 @@ class SlackChannel(object):
                 try:
                     if eval("self." + reason):
                         self.create_buffer()
+                        if config.background_load_all_history:
+                            self.get_history(slow_queue=True)
                 except:
                     pass
     def set_related_server(self, team):
@@ -1109,14 +1121,17 @@ class SlackChannel(object):
                 return m.message_json
     def is_visible(self):
         return w.buffer_get_integer(self.channel_buffer, "hidden") == 0
-    def get_history(self):
+    def get_history(self, slow_queue=False):
         if not self.got_history:
             #we have probably reconnected. flush the buffer
             if self.team.connected:
                 w.buffer_clear(self.channel_buffer)
             self.buffer_prnt('', 'getting channel history...', tagset='backlog')
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE}, team_hash=self.team.team_hash, channel_identifier=self.identifier, clear=True)
-            self.eventrouter.receive(s)
+            if not slow_queue:
+                self.eventrouter.receive(s)
+            else:
+                self.eventrouter.receive_slow(s)
             self.got_history = True
     def send_add_reaction(self, msg_number, reaction):
         self.send_change_reaction("reactions.add", msg_number, reaction)
@@ -1793,7 +1808,7 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
     else:
         message = SlackMessage(message_json, team, channel)
         text = message.render()
-        #print text
+        dbg(text)
 
         # special case with actions.
         if text.startswith("_") and text.endswith("_"):
