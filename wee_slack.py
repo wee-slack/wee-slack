@@ -1186,7 +1186,7 @@ class SlackChannel(object):
         #if not afk:
         #    afk = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
 
-        if user:
+        if user and len(self.members) < 1000:
             user = self.team.users[user]
             nick = w.nicklist_search_nick(self.channel_buffer, "", user.slack_name)
             # since this is a change just remove it regardless of where it is
@@ -1209,8 +1209,8 @@ class SlackChannel(object):
                 except Exception as e:
                     dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
             else:
-                for fn in ["too", "many", "users", "to", "show"]:
-                    w.nicklist_add_nick(self.channel_buffer, "", fn, w.color('white'), "", "", 1)
+                for fn in ["1| too", "2| many", "3| users", "4| to", "5| show"]:
+                    w.nicklist_add_group(self.channel_buffer, '', fn, w.color('white'), 1)
 
 
 class SlackDMChannel(SlackChannel):
