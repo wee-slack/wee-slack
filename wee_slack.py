@@ -753,9 +753,9 @@ class SlackTeam(object):
         try:
             if self.channels:
                 for c in channels.keys():
-                    print 'got {} '.format(c)
+                    #print 'got {} '.format(c)
                     if not self.channels.get(c):
-                        print 'new {}'.format(c)
+                        #print 'new {}'.format(c)
                         self.channels[c] = channels[c]
         except:
             self.channels = channels
@@ -1065,7 +1065,6 @@ class SlackChannel(object):
         return True
     def edit_previous_message(self, old, new, flags):
         message = self.my_last_message()
-        print message
         if new == "" and old == "":
             s = SlackRequest(self.team.token, "chat.delete", {"channel": self.identifier, "ts": message['ts']}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
@@ -1077,8 +1076,6 @@ class SlackChannel(object):
             if new_message != message["text"]:
                 s = SlackRequest(self.team.token, "chat.update", {"channel": self.identifier, "ts": message['ts'], "text": new_message.encode("utf-8")}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
-
-                async_slack_api_request(self.server.domain, self.server.token, 'chat.update', {"channel": self.identifier, "ts": message['ts'], "text": new_message.encode("utf-8")})
     def my_last_message(self):
         for message in reversed(self.sorted_message_keys()):
             m = self.messages[message]
@@ -1160,7 +1157,6 @@ class SlackChannel(object):
             return
         if self.type not in ["channel", "group"]:
             return
-        print self.type
         w.buffer_set(self.channel_buffer, "nicklist", "1")
         # create nicklists for the current channel if they don't exist
         # if they do, use the existing pointer
@@ -2250,17 +2246,21 @@ def thread_command_callback(data, current_buffer, args):
     current = w.current_buffer()
     channel = EVENTROUTER.weechat_controller.buffers[current]
     args = args.split()
-    if len(args) < 2:
-        w.prnt(current, "Missing thread id argument")
-        return w.WEECHAT_RC_OK_EAT
-    else:
+    if len(args) == 2:
         pm = channel.messages[SlackTS(args[1])]
         tc = SlackThreadChannel(EVENTROUTER, pm)
         pm.thread_channel = tc
         tc.open()
         #tc.create_buffer()
         return w.WEECHAT_RC_OK_EAT
-    return w.WEECHAT_RC_OK
+    elif len(args) == 3:
+        if args[1] == "reply":
+            target = reversed(channel.sorted_message_keys())
+            print target
+            print channel.messages[target][args[2]]
+    w.prnt(current, "Invalid thread command.")
+    return w.WEECHAT_RC_OK_EAT
+    #return w.WEECHAT_RC_OK
 
 
 def slack_command_cb(data, current_buffer, args):
