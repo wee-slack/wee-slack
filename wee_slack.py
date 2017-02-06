@@ -1135,17 +1135,21 @@ class SlackChannel(object):
                 self.eventrouter.receive(s)
         self.new_messages = False
     def update_nicklist(self, user=None):
-        if not self.channel_buffer and self.type in ("channel"):
+        if not self.channel_buffer:
             return
+        if self.type not in ["channel", "group"]:
+            return
+        print self.type
         w.buffer_set(self.channel_buffer, "nicklist", "1")
         # create nicklists for the current channel if they don't exist
         # if they do, use the existing pointer
-        here = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_HERE)
-        if not here:
-            here = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
-        afk = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_AWAY)
-        if not afk:
-            afk = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
+        #TODO: put this back for mithrandir
+        #here = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_HERE)
+        #if not here:
+        #    here = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
+        #afk = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_AWAY)
+        #if not afk:
+        #    afk = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
 
         if user:
             user = self.team.users[user]
@@ -1153,7 +1157,8 @@ class SlackChannel(object):
             # since this is a change just remove it regardless of where it is
             w.nicklist_remove_nick(self.channel_buffer, nick)
             # now add it back in to whichever..
-            w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
+            w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "", "", 1)
+            #w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
 
         # if we didn't get a user, build a complete list. this is expensive.
         else:
@@ -1163,12 +1168,13 @@ class SlackChannel(object):
                         user = self.team.users[user]
                         #if user.deleted:
                         #    continue
-                        w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
+                        w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "", "", 1)
+                        #w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
                 except Exception as e:
                     dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
             else:
-                for fn in ("too", "many", "users"):
-                    fn.nicklist_add_nick(self.channel_buffer, here, w, "", "", "", 1)
+                for fn in ["too", "many", "users", "to", "show"]:
+                    w.nicklist_add_nick(self.channel_buffer, afk, fn, w.color('white'), "", "", 1)
 
 
 class SlackDMChannel(SlackChannel):
