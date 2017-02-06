@@ -791,7 +791,8 @@ class SlackTeam(object):
     #    self.eventrouter.weechat_controller.unregister_buffer(self.channel_buffer, update_remote=False, close_buffer=True)
     def create_buffer(self):
         if not self.channel_buffer:
-            self.channel_buffer = w.buffer_new("{}".format(self.domain), "buffer_input_callback", "EVENTROUTER", "", "")
+            bname = self.subdomain if config.short_buffer_names else self.domain
+            self.channel_buffer = w.buffer_new("{}".format(bname), "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'server')
             if w.config_string(w.config_get('irc.look.server_buffer')) == 'merge_with_core':
@@ -2539,6 +2540,7 @@ class PluginConfig(object):
         'record_events': 'false',
         'thread_suffix_color': 'lightcyan',
         'unhide_buffers_with_activity': 'false',
+        'short_buffer_names': 'false',
     }
 
     # Set missing settings to their defaults. Load non-missing settings from
