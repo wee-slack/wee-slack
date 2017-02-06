@@ -654,12 +654,9 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
 
     if current_channel is None:
         return w.WEECHAT_RC_OK
-
     for e in EMOJI['emoji']:
         w.hook_completion_list_add(completion, ":" + e + ":", 0, w.WEECHAT_LIST_POS_SORT)
-
     return w.WEECHAT_RC_OK
-
 
 def complete_next_cb(data, current_buffer, command):
     """Extract current word, if it is equal to a nick, prefix it with @ and
