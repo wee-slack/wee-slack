@@ -1729,7 +1729,7 @@ def handle_history(message_json, eventrouter, **kwargs):
         clear = request_metadata.clear
     except:
         clear = False
-    dbg(clear, 3)
+    dbg(clear)
     kwargs['output_type'] = "backlog"
     if clear:
         w.buffer_clear(kwargs['channel'].channel_buffer)
