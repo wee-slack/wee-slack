@@ -883,6 +883,7 @@ class SlackChannel(object):
         self.active = False
         for key, value in kwargs.items():
             setattr(self, key, value)
+        self.members = set(kwargs.get('members', set()))
         self.eventrouter = eventrouter
         self.slack_name = kwargs["name"]
         self.identifier = kwargs["id"]
@@ -1019,14 +1020,14 @@ class SlackChannel(object):
             #backlog messages - we will update the read marker as we print these
             try:
                 backlog = False
-                if ts <= SlackTS(self.last_read):
+                if nick in [w.prefix("join"), w.prefix("quit")]:
+                    tags = tag("joinleave")
+                elif ts <= SlackTS(self.last_read):
                     tags = tag("backlog")
                     backlog = True
                 elif self.type in ["im", "mpdm"]:
                     tags = tag("dm")
                     self.new_messages = True
-                elif nick in [x.strip() for x in w.prefix("join"), w.prefix("quit")]:
-                    tags = tag("joinleave")
                 else:
                     tags = tag("default")
                     self.new_messages = True
@@ -1160,16 +1161,15 @@ class SlackChannel(object):
                 self.eventrouter.receive(s)
         self.new_messages = False
     def user_joined(self, user_id):
-        pass
-        #print type(self.members)
-        #print self.members
-        #print self
-        #self.members.append(user_id)
-        #self.update_nicklist(user_id)
+        #ugly hack - for some reason this gets turned into a list
+        self.members = set(self.members)
+        self.members.add(user_id)
+        self.update_nicklist(user_id)
     def user_left(self, user_id):
-        pass
+        #pass
         #filter(lambda u: u != user_id, self.members)
-        #self.update_nicklist(user_id)
+        self.members.discard(user_id)
+        self.update_nicklist(user_id)
     def update_nicklist(self, user=None):
         if not self.channel_buffer:
             return
