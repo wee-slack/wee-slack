@@ -1941,8 +1941,10 @@ def process_channel_created(message_json, eventrouter, **kwargs):
     #raise
 
 def process_im_open(message_json, eventrouter, **kwargs):
+    channel = kwargs['channel']
     item = message_json
     kwargs['team'].channels[item["channel"]].check_should_open(True)
+    w.buffer_set(channel.channel_buffer, "hotlist", "2")
 
 def process_im_close(message_json, eventrouter, **kwargs):
     item = message_json
