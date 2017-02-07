@@ -595,6 +595,17 @@ def typing_update_cb(data, remaining_calls):
     w.bar_item_update("slack_typing_notice")
     return w.WEECHAT_RC_OK
 
+def slack_never_away_cb(data, remaining_calls):
+    dbg("check", 5)
+    if config.never_away:
+        for t in EVENTROUTER.teams.values():
+            slackbot = t.get_channel_map()['slackbot']
+            channel = t.channels[slackbot]
+            request = {"type": "typing", "channel": channel.identifier}
+            channel.team.send_to_websocket(request, expect_reply=False)
+            dbg("YAY", 5)
+    return w.WEECHAT_RC_OK
+
 def typing_bar_item_cb(data, current_buffer, args):
     """
     Privides a bar item indicating who is typing in the current channel AND
@@ -2496,6 +2507,7 @@ def setup_hooks():
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
     w.hook_timer(1000, 0, 0, "buffer_list_update_callback", "EVENTROUTER")
     w.hook_timer(3000, 0, 0, "reconnect_callback", "EVENTROUTER")
+    w.hook_timer(1000 * 60 * 5, 0, 0, "slack_never_away_cb", "")
 
     w.hook_signal('buffer_closing', "buffer_closing_callback", "EVENTROUTER")
     w.hook_signal('buffer_switch', "buffer_switch_callback", "EVENTROUTER")
@@ -2537,7 +2549,6 @@ def setup_hooks():
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
 
     # Hooks to fix/implement
-    #w.hook_timer(1000 * 60 * 29, 0, 0, "slack_never_away_cb", "")
     #w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
     #w.hook_signal('buffer_opened', "buffer_opened_cb", "")
     #w.hook_signal('window_scrolled', "scrolled_cb", "")
@@ -2596,6 +2607,7 @@ class PluginConfig(object):
         'unhide_buffers_with_activity': 'false',
         'short_buffer_names': 'false',
         'background_load_all_history': 'false',
+        'never_away': 'false',
     }
 
     # Set missing settings to their defaults. Load non-missing settings from
