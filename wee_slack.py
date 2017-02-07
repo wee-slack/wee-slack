@@ -2003,6 +2003,11 @@ def process_channel_created(message_json, eventrouter, **kwargs):
     #print eventrouter.teams['d80c2b6c3127dbb1991917394ed219e8212a2606'].channels['C3ZM2GMGU'].team.domain
     #raise
 
+def process_channel_rename(message_json, eventrouter, **kwargs):
+    item = message_json["channel"]
+    channel = kwargs['team'].channels[item["id"]]
+    channel.slack_name = message_json['channel']['name']
+
 def process_im_open(message_json, eventrouter, **kwargs):
     channel = kwargs['channel']
     item = message_json
