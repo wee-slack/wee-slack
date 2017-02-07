@@ -596,14 +596,12 @@ def typing_update_cb(data, remaining_calls):
     return w.WEECHAT_RC_OK
 
 def slack_never_away_cb(data, remaining_calls):
-    dbg("check", 5)
     if config.never_away:
         for t in EVENTROUTER.teams.values():
             slackbot = t.get_channel_map()['slackbot']
             channel = t.channels[slackbot]
             request = {"type": "typing", "channel": channel.identifier}
             channel.team.send_to_websocket(request, expect_reply=False)
-            dbg("YAY", 5)
     return w.WEECHAT_RC_OK
 
 def typing_bar_item_cb(data, current_buffer, args):
