@@ -2435,7 +2435,8 @@ def command_mute(current_buffer, args):
 
 def command_openweb(current_buffer, args):
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    url = "https://{}/archives/{}/p{}".format(channel.team.domain, channel.slack_name, SlackTS())
+    now = SlackTS()
+    url = "https://{}/archives/{}/p{}{}".format(channel.team.domain, channel.slack_name, now.majorstr(), now.minorstr())
     w.prnt_date_tags(channel.team.channel_buffer, SlackTS().major, "openweb,logger_backlog_end,notify_none", url)
 
 def command_nodistractions(current_buffer, args):
