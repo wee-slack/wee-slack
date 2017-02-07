@@ -1945,7 +1945,6 @@ def subprocess_message_deleted(message_json, eventrouter, channel, team):
 
 def process_reply(message_json, eventrouter, **kwargs):
     dbg('processing reply')
-    #dbg(message_json, True)
     team = kwargs["team"]
     identifier = message_json["reply_to"]
     try:
@@ -1968,6 +1967,7 @@ def process_reply(message_json, eventrouter, **kwargs):
         #        channels.find(message_json["channel"]).store_message(m, from_me=True)
 
         #        channels.find(message_json["channel"]).buffer_prnt(server.nick, m.render(), m.ts)
+
         process_message(m.message_json, eventrouter, channel=channel, team=team)
         channel.mark_read(update_remote=True, force=True)
         dbg("REPLY {}".format(message_json))
@@ -2072,6 +2072,9 @@ def render(message_json, team, channel, force=False):
         text = text.replace("&lt;", "<")
         text = text.replace("&gt;", ">")
         text = text.replace("&amp;", "&")
+
+        if type(text) is not unicode:
+            text = text.decode('UTF-8', 'replace')
         text = text.encode('utf-8')
 
 #        if self.threads:
