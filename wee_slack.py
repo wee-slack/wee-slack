@@ -2386,8 +2386,12 @@ def rehistory_command_callback(data, current_buffer, args):
     channel.get_history()
 
 def hide_command_callback(data, current_buffer, args):
-    current = w.current_buffer()
-    w.buffer_set(current, "hidden", str(int(hide_distractions)))
+    c = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
+    if c:
+        name = c.formatted_name(style='long_default')
+        if name in config.distracting_channels:
+            w.buffer_set(c.channel_buffer, "hidden", "1")
+    return w.WEECHAT_RC_OK_EAT
 
 def slack_command_cb(data, current_buffer, args):
     a = args.split(' ', 1)
