@@ -2421,6 +2421,10 @@ def command_mute(current_buffer, args):
     s = SlackRequest(team.token, "users.prefs.set", {"name": "muted_channels", "value": ",".join(team.muted_channels)}, team_hash=team.team_hash, channel_identifier=channel_id)
     EVENTROUTER.receive(s)
 
+def command_openweb(current_buffer, args):
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+    url = "https://{}/archives/{}".format(channel.team.domain, channel.slack_name)
+    w.prnt_date_tags(channel.team.channel_buffer, SlackTS().major, "openweb,logger_backlog_end,notify_none", url)
 
 def command_nodistractions(current_buffer, args):
     global hide_distractions
