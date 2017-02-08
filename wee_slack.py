@@ -1804,6 +1804,11 @@ def process_user_typing(message_json, eventrouter, **kwargs):
         channel.set_typing(team.users.get(message_json["user"]).name)
         w.bar_item_update("slack_typing_notice")
 
+def process_team_join(message_json, eventrouter, **kwargs):
+    user = message_json['user']
+    team = kwargs["team"]
+    team.users[user["id"]] = SlackUser(**user)
+
 def process_pong(message_json, eventrouter, **kwargs):
     pass
 
@@ -2434,9 +2439,13 @@ def command_mute(current_buffer, args):
     EVENTROUTER.receive(s)
 
 def command_openweb(current_buffer, args):
+    #if done from server buffer, open slack for reals
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    now = SlackTS()
-    url = "https://{}/archives/{}/p{}000000".format(channel.team.domain, channel.slack_name, now.majorstr())
+    if isinstance(channel, SlackTeam):
+        url = "https://{}".format(channel.team.domain)
+    else:
+        now = SlackTS()
+        url = "https://{}/archives/{}/p{}000000".format(channel.team.domain, channel.slack_name, now.majorstr())
     w.prnt_date_tags(channel.team.channel_buffer, SlackTS().major, "openweb,logger_backlog_end,notify_none", url)
 
 def command_nodistractions(current_buffer, args):
