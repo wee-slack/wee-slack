@@ -1077,10 +1077,8 @@ class SlackChannel(object):
             try:
                 for c in range(self.unread_count_display):
                     if self.type == "im":
-                        print self.channel_buffer
                         w.buffer_set(self.channel_buffer, "hotlist", "2")
                     else:
-                        print self.channel_buffer
                         w.buffer_set(self.channel_buffer, "hotlist", "1")
                 else:
                     pass
