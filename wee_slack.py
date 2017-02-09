@@ -1,6 +1,8 @@
 #-*- coding: utf-8 -*-
 #
 
+from functools import wraps
+
 import time
 import json
 import pickle
@@ -65,6 +67,30 @@ SLACK_API_TRANSLATOR = {
 
 
 }
+
+###### Decorators have to be up here
+
+def slack_buffer_or_ignore(f):
+    """
+    Only run this function if we're in a slack buffer, else ignore
+    """
+    @wraps(f)
+    def wrapper(current_buffer, *args, **kwargs):
+        if current_buffer in EVENTROUTER.weechat_controller.buffers:
+            return w.WEECHAT_RC_OK
+        return f(current_buffer, *args, **kwargs)
+    return wrapper
+
+def slack_buffer_required(f):
+    """
+    Only run this function if we're in a slack buffer, else print error
+    """
+    @wraps(f)
+    def wrapper(current_buffer, *args, **kwargs):
+        if current_buffer not in EVENTROUTER.weechat_controller.buffers:
+            return w.WEECHAT_RC_ERROR
+        return f(current_buffer, *args, **kwargs)
+    return wrapper
 
 
 NICK_GROUP_HERE = "0|Here"
@@ -2311,6 +2337,7 @@ def modify_print_time(buffer, new_id, time):
 
 def tag(tagset, user=None):
     if user:
+        user.replace(" ", "_")
         default_tag = "nick_" + user
     else:
         default_tag = 'nick_unknown'
@@ -2335,6 +2362,7 @@ def tag(tagset, user=None):
 
 ###### New/converted command_ commands
 
+@slack_buffer_or_ignore
 def join_command_cb(data, current_buffer, args):
     args = args.split()
     if len(args) < 2:
@@ -2538,7 +2566,6 @@ def load_emoji():
     except:
         dbg("Unexpected error: {}".format(sys.exc_info()), 5)
     return w.WEECHAT_RC_OK
-
 
 def setup_hooks():
     cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
