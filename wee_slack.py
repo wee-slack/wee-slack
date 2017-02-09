@@ -1074,18 +1074,19 @@ class SlackChannel(object):
             self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
         #else:
         #    self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
-        try:
-            if self.unread_count_display != 0:
-                for c in range(0, self.unread_count_display):
+            try:
+                for c in range(self.unread_count_display):
                     if self.type == "im":
+                        print self.channel_buffer
                         w.buffer_set(self.channel_buffer, "hotlist", "2")
                     else:
+                        print self.channel_buffer
                         w.buffer_set(self.channel_buffer, "hotlist", "1")
-            else:
+                else:
+                    pass
+                    #dbg("no unread in {}".format(self.name))
+            except:
                 pass
-                #dbg("no unread in {}".format(self.name))
-        except:
-            pass
 
         self.update_nicklist()
         #dbg("exception no unread count")
@@ -1898,7 +1899,10 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
             text = text[1:-1]
             if message.sender != channel.team.nick:
                 text = message.sender + " " + text
-            channel.unread_count_display += 1
+            try:
+                channel.unread_count_display += 1
+            except:
+                channel.unread_count_display += 1
             channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, tag_nick=message.sender_plain, **kwargs)
 
         else:
