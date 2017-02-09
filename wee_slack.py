@@ -1550,6 +1550,8 @@ class SlackMessage(object):
     Represents a single slack message and associated context/metadata.
     These are modifiable and can be rerendered to change a message,
     delete a message, add a reaction, add a thread.
+    Note: these can't be tied to a SlackUser object because users
+    can be deleted, so we have to store sender in each one.
     """
     def __init__(self, message_json, team, channel, override_sender=None):
         self.team = team
