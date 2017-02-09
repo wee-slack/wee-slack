@@ -2616,8 +2616,8 @@ def label_command_cb(data, current_buffer, args):
         new_name = " +" + aargs[1]
         w.buffer_set(channel.channel_buffer, "short_name", new_name)
 
-@slack_buffer_required
 def command_p(data, current_buffer, args):
+    args = args.split(' ', 1)[1]
     w.prnt("", "{}".format(eval(args)))
 
 ###### NEW EXCEPTIONS
