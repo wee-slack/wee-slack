@@ -2443,7 +2443,7 @@ def command_topic(data, current_buffer, args):
 
 @slack_buffer_or_ignore
 def me_command_cb(data, current_buffer, args):
-    message = "_{}_".format(args)
+    message = "_{}_".format(args.split(' ', 1)[1])
     buffer_input_callback("EVENTROUTER", current_buffer, message)
     return w.WEECHAT_RC_OK_EAT
 
