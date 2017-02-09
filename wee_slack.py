@@ -953,6 +953,7 @@ class SlackChannel(object):
         self.eventrouter = eventrouter
         self.slack_name = kwargs["name"]
         self.slack_topic = kwargs.get("topic", {"value": ""})
+        self.slack_purpose = kwargs.get("purpose", {"value": ""})
         self.identifier = kwargs["id"]
         self.last_read = SlackTS(kwargs.get("last_read", SlackTS()))
         #print self.last_read
@@ -1002,7 +1003,10 @@ class SlackChannel(object):
     def render_topic(self, topic=None):
         if self.channel_buffer:
             if not topic:
-                encoded_topic = self.slack_topic['value'].encode('utf-8')
+                if self.slack_topic['value'] != "":
+                    encoded_topic = self.slack_topic['value'].encode('utf-8')
+                else:
+                    encoded_topic = self.slack_purpose['value'].encode('utf-8')
             else:
                 encoded_topic = topic.encode('utf-8')
                 self.encoded_topic = topic.encode('utf-8')
