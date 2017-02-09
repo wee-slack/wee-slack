@@ -2394,6 +2394,22 @@ def me_command_cb(data, current_buffer, arg):
     buffer_input_callback("EVENTROUTER", current_buffer, message)
     return w.WEECHAT_RC_OK
 
+@slack_buffer_or_ignore
+def msg_command_cb(data, current_buffer, args):
+    dbg("msg_command_cb")
+    aargs = args.split(None, 2)
+    who = aargs[1]
+    command_talk(current_buffer, who)
+
+    if len(aargs) > 2:
+        message = aargs[2]
+        team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+        cmap = team.get_channel_map()
+        if who in cmap:
+            channel = team.channels[cmap[channel]]
+            channel.send_message(message)
+    return w.WEECHAT_RC_OK_EAT
+
 def command_talk(current_buffer, arg):
     """
     incomplete because globals hack
