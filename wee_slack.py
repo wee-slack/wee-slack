@@ -1998,7 +1998,7 @@ def subprocess_message_deleted(message_json, eventrouter, channel, team):
 
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
     text = unfurl_refs(message_json["text"], ignore_alt_text=False)
-    channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"])
+    channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"], tagset="muted")
     channel.render_topic(message_json["topic"])
 
 def process_reply(message_json, eventrouter, **kwargs):
