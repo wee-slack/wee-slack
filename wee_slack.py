@@ -436,6 +436,9 @@ class Channel(object):
         self.topic = kwargs.get('topic', {"value": ""})["value"]
         self.unread_count = kwargs.get('unread_count_display', 0)
 
+        if self.topic == "":
+            self.topic = kwargs.get('purpose', {"value": ""})["value"]
+
         self.members_table = {}
         self.channel_buffer = None
         self.type = "channel"
