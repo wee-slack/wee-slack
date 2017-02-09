@@ -2399,6 +2399,7 @@ def rehistory_command_callback(data, current_buffer, args):
     channel.got_history = False
     w.buffer_clear(channel.channel_buffer)
     channel.get_history()
+    return w.WEECHAT_RC_OK_EAT
 
 def hide_command_callback(data, current_buffer, args):
     c = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
