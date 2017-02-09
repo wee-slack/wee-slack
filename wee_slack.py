@@ -2587,7 +2587,6 @@ def command_openweb(data, current_buffer, args):
         url = "https://{}/archives/{}/p{}000000".format(channel.team.domain, channel.slack_name, now.majorstr())
     w.prnt_date_tags(channel.team.channel_buffer, SlackTS().major, "openweb,logger_backlog_end,notify_none", url)
 
-@slack_buffer_required
 def command_nodistractions(data, current_buffer, args):
     global hide_distractions
     hide_distractions = not hide_distractions
