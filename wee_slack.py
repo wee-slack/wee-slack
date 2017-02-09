@@ -2368,7 +2368,7 @@ def join_command_cb(data, current_buffer, args):
     if len(args) < 2:
         w.prnt(current_buffer, "Missing channel argument")
         return w.WEECHAT_RC_OK_EAT
-    elif command_talk(current_buffer, args[1]):
+    elif command_talk(data, current_buffer, args[1]):
         return w.WEECHAT_RC_OK_EAT
     else:
         return w.WEECHAT_RC_OK
@@ -2389,6 +2389,52 @@ def part_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 @slack_buffer_or_ignore
+def topic_command_cb(data, current_buffer, args):
+    n = len(args.split())
+    if n < 2:
+        channel = channels.find(current_buffer)
+        if channel:
+            w.prnt(current_buffer, 'Topic for {} is "{}"'.format(channel.name, channel.topic))
+        return w.WEECHAT_RC_OK_EAT
+    elif command_topic(data, current_buffer, args.split(None, 1)[1]):
+        return w.WEECHAT_RC_OK_EAT
+    else:
+        return w.WEECHAT_RC_ERROR
+
+@slack_buffer_required
+def command_topic(data, current_buffer, args):
+    """
+    Change the topic of a channel
+    /slack topic [<channel>] [<topic>|-delete]
+    """
+    print 'topic'
+    e = EVENTROUTER
+    team = e.weechat_controller.buffers[current_buffer].team
+    print team
+    #server = servers.find(current_domain_name())
+    arrrrgs = args.split(None, 1)
+    if arrrrgs[0].startswith('#'):
+        cmap = team.get_channel_map()
+        channel_name = arrrrgs[0][1:]
+        channel = team.channels[cmap[channel_name]]
+        print channel
+#        topic = arrrrgs[1]
+    else:
+        channel = e.weechat_controller.buffers[current_buffer]
+#        topic = args
+        print channel
+
+    if channel:
+        dbg("channel!", 5)
+#        if topic == "-delete":
+#            async_slack_api_request(server.domain, server.token, 'channels.setTopic', {"channel": channel.identifier, "topic": ""})
+#        else:
+#            async_slack_api_request(server.domain, server.token, 'channels.setTopic', {"channel": channel.identifier, "topic": topic})
+#        return True
+#    else:
+#        return False
+
+@slack_buffer_or_ignore
 def me_command_cb(data, current_buffer, arg):
     message = "_{}_".format(arg)
     buffer_input_callback("EVENTROUTER", current_buffer, message)
@@ -2399,7 +2445,7 @@ def msg_command_cb(data, current_buffer, args):
     dbg("msg_command_cb")
     aargs = args.split(None, 2)
     who = aargs[1]
-    command_talk(current_buffer, who)
+    command_talk(data, current_buffer, who)
 
     if len(aargs) > 2:
         message = aargs[2]
@@ -2410,7 +2456,7 @@ def msg_command_cb(data, current_buffer, args):
             channel.send_message(message)
     return w.WEECHAT_RC_OK_EAT
 
-def command_talk(current_buffer, arg):
+def command_talk(data, current_buffer, arg):
     """
     incomplete because globals hack
     Open a chat with the specified user
@@ -2438,7 +2484,7 @@ def command_talk(current_buffer, arg):
             w.buffer_set(chan.channel_buffer, "display", "1")
         return True
 
-def command_showmuted(current_buffer, args):
+def command_showmuted(data, current_buffer, args):
     current = w.current_buffer()
     w.prnt(EVENTROUTER.weechat_controller.buffers[current].team.channel_buffer, str(EVENTROUTER.weechat_controller.buffers[current].team.muted_channels))
 
@@ -2490,12 +2536,12 @@ def slack_command_cb(data, current_buffer, args):
         function_name, args = a[0], None
 
 #    try:
-    EVENTROUTER.cmds[function_name](current_buffer, args)
+    EVENTROUTER.cmds[function_name]("", current_buffer, args)
 #    except KeyError:
 #        w.prnt("", "Command not found: " + function_name)
     return w.WEECHAT_RC_OK
 
-def command_distracting(current_buffer, args):
+def command_distracting(data, current_buffer, args):
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
     if channel:
         fullname = channel.formatted_name(style="long_default")
@@ -2508,7 +2554,7 @@ def command_distracting(current_buffer, args):
 def save_distracting_channels():
     w.config_set_plugin('distracting_channels', ','.join(config.distracting_channels))
 
-def command_mute(current_buffer, args):
+def command_mute(data, current_buffer, args):
     current = w.current_buffer()
     channel_id = EVENTROUTER.weechat_controller.buffers[current].identifier
     team = EVENTROUTER.weechat_controller.buffers[current].team
@@ -2519,7 +2565,7 @@ def command_mute(current_buffer, args):
     s = SlackRequest(team.token, "users.prefs.set", {"name": "muted_channels", "value": ",".join(team.muted_channels)}, team_hash=team.team_hash, channel_identifier=channel_id)
     EVENTROUTER.receive(s)
 
-def command_openweb(current_buffer, args):
+def command_openweb(data, current_buffer, args):
     #if done from server buffer, open slack for reals
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     if isinstance(channel, SlackTeam):
@@ -2529,7 +2575,7 @@ def command_openweb(current_buffer, args):
         url = "https://{}/archives/{}/p{}000000".format(channel.team.domain, channel.slack_name, now.majorstr())
     w.prnt_date_tags(channel.team.channel_buffer, SlackTS().major, "openweb,logger_backlog_end,notify_none", url)
 
-def command_nodistractions(current_buffer, args):
+def command_nodistractions(data, current_buffer, args):
     global hide_distractions
     hide_distractions = not hide_distractions
     if config.distracting_channels != ['']:
@@ -2552,7 +2598,7 @@ def label_command_cb(data, current_buffer, args):
         new_name = " +" + aargs[1]
         w.buffer_set(channel.channel_buffer, "short_name", new_name)
 
-def command_p(current_buffer, args):
+def command_p(data, current_buffer, args):
     w.prnt("", "{}".format(eval(args)))
 
 ###### NEW EXCEPTIONS
@@ -2647,12 +2693,12 @@ def setup_hooks():
     w.hook_command_run('/msg', 'msg_command_cb', '')
     w.hook_command_run('/label', 'label_command_cb', '')
     w.hook_command_run("/input complete_next", "complete_next_cb", "")
-    w.hook_command_run('/away', 'away_command_cb', '')
 
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
 
     # Hooks to fix/implement
+    #w.hook_command_run('/away', 'away_command_cb', '')
     #w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
     #w.hook_signal('buffer_opened', "buffer_opened_cb", "")
     #w.hook_signal('window_scrolled', "scrolled_cb", "")
