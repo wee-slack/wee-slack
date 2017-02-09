@@ -1212,7 +1212,11 @@ class SlackChannel(object):
             s = SlackRequest(self.team.token, method, data)
             self.eventrouter.receive(s)
     def sorted_message_keys(self):
-        return sorted(self.messages)
+        keys = []
+        for k in self.messages:
+            if type(self.messages[k]) == SlackMessage:
+                keys.append(k)
+        return sorted(keys)
     # Typing related
     def set_typing(self, user):
         if self.channel_buffer and self.is_visible():
