@@ -2535,7 +2535,6 @@ def hide_command_callback(data, current_buffer, args):
             w.buffer_set(c.channel_buffer, "hidden", "1")
     return w.WEECHAT_RC_OK_EAT
 
-@slack_buffer_required
 def slack_command_cb(data, current_buffer, args):
     a = args.split(' ', 1)
     if len(a) > 1:
