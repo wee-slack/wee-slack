@@ -2375,7 +2375,6 @@ def join_command_cb(data, current_buffer, args):
 
 @slack_buffer_or_ignore
 def part_command_cb(data, current_buffer, args):
-    #if channels.find(current_buffer) or servers.find(current_buffer):
     e = EVENTROUTER
     args = args.split()
     if len(args) > 1:
@@ -2391,7 +2390,6 @@ def part_command_cb(data, current_buffer, args):
 
 @slack_buffer_or_ignore
 def me_command_cb(data, current_buffer, arg):
-    dbg("me!", 5)
     message = "_{}_".format(arg)
     buffer_input_callback("EVENTROUTER", current_buffer, message)
     return w.WEECHAT_RC_OK
