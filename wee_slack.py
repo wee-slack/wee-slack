@@ -1113,6 +1113,7 @@ class SlackChannel(object):
             backlog = True if ts <= last_read else False
             if tagset:
                 tags = tag(tagset, user=tag_nick)
+                self.new_messages = True
 
             #we have to infer the tagset because we weren't told
             elif ts <= last_read:
