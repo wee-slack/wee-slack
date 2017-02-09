@@ -2304,7 +2304,7 @@ def tag(tagset, user=None):
     if user:
         default_tag = "nick_" + user
     else:
-        default_tag = ''
+        default_tag = 'nick_unknown'
     tagsets = {
         #when replaying something old
         "backlog": "no_highlight,notify_none,logger_backlog_end",
@@ -2317,7 +2317,7 @@ def tag(tagset, user=None):
         "dmfromme": "notify_none,log1,irc_privmsg",
         #when this is a join/leave, attach for smart filter ala:
         #if user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]
-        "joinleave": "irc_smart_filter",
+        "joinleave": "irc_smart_filter,no_highlight",
         #catchall ?
         "default": "notify_message,log1",
     }
