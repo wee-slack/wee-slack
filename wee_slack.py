@@ -75,10 +75,10 @@ def slack_buffer_or_ignore(f):
     Only run this function if we're in a slack buffer, else ignore
     """
     @wraps(f)
-    def wrapper(current_buffer, *args, **kwargs):
-        if current_buffer in EVENTROUTER.weechat_controller.buffers:
+    def wrapper(data, current_buffer, *args, **kwargs):
+        if current_buffer not in EVENTROUTER.weechat_controller.buffers:
             return w.WEECHAT_RC_OK
-        return f(current_buffer, *args, **kwargs)
+        return f(data, current_buffer, *args, **kwargs)
     return wrapper
 
 def slack_buffer_required(f):
@@ -86,10 +86,10 @@ def slack_buffer_required(f):
     Only run this function if we're in a slack buffer, else print error
     """
     @wraps(f)
-    def wrapper(current_buffer, *args, **kwargs):
+    def wrapper(data, current_buffer, *args, **kwargs):
         if current_buffer not in EVENTROUTER.weechat_controller.buffers:
             return w.WEECHAT_RC_ERROR
-        return f(current_buffer, *args, **kwargs)
+        return f(data, current_buffer, *args, **kwargs)
     return wrapper
 
 
@@ -1232,7 +1232,6 @@ class SlackChannel(object):
                 del self.typing[user]
         return typing
     def mark_read(self, ts=None, update_remote=True, force=False):
-        dbg("called mark_read!", 5)
         if not ts:
             ts = SlackTS()
         if self.new_messages or force:
@@ -2364,6 +2363,7 @@ def tag(tagset, user=None):
 
 @slack_buffer_or_ignore
 def join_command_cb(data, current_buffer, args):
+    print args
     args = args.split()
     if len(args) < 2:
         w.prnt(current_buffer, "Missing channel argument")
@@ -2373,6 +2373,29 @@ def join_command_cb(data, current_buffer, args):
     else:
         return w.WEECHAT_RC_OK
 
+@slack_buffer_or_ignore
+def part_command_cb(data, current_buffer, args):
+    #if channels.find(current_buffer) or servers.find(current_buffer):
+    e = EVENTROUTER
+    args = args.split()
+    if len(args) > 1:
+        team = e.weechat_controller.buffers[current_buffer].team
+        cmap = team.get_channel_map()
+        channel = "".join(args[1:])
+        if channel in cmap:
+            buffer_ptr = team.channels[cmap[channel]].channel_buffer
+            e.weechat_controller.unregister_buffer(buffer_ptr, update_remote=True, close_buffer=True)
+    else:
+        e.weechat_controller.unregister_buffer(current_buffer, update_remote=True, close_buffer=True)
+    return w.WEECHAT_RC_OK_EAT
+
+@slack_buffer_or_ignore
+def me_command_cb(data, current_buffer, arg):
+    dbg("me!", 5)
+    message = "_{}_".format(arg)
+    buffer_input_callback("EVENTROUTER", current_buffer, message)
+    return w.WEECHAT_RC_OK
+
 def command_talk(current_buffer, arg):
     """
     incomplete because globals hack
@@ -2380,8 +2403,7 @@ def command_talk(current_buffer, arg):
     /slack talk [user]
     """
     e = EVENTROUTER
-    current = w.current_buffer()
-    team = e.weechat_controller.buffers[current].team
+    team = e.weechat_controller.buffers[current_buffer].team
     dbg(team)
     c = team.get_channel_map()
     if arg not in c:
