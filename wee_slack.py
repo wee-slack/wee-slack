@@ -314,7 +314,7 @@ class EventRouter(object):
         via callback to drain events from the queue. It also attaches
         useful metadata and context to events as they are processed.
         """
-        if len(self.slow_queue) > 0 and ((self.slow_queue_timer + 5) < time.time()):
+        if len(self.slow_queue) > 0 and ((self.slow_queue_timer + 1) < time.time()):
             #for q in self.slow_queue[0]:
             dbg("from slow queue", 0)
             self.queue.append(self.slow_queue.pop())
@@ -1559,8 +1559,10 @@ class SlackMessage(object):
         self.thread_channel = None
         if override_sender:
             self.sender = override_sender
+            self.sender_plain = override_sender
         else:
-            self.sender = self.get_sender()
+            senders = self.get_sender()
+            self.sender, self.sender_plain = senders[0], senders[1]
         self.suffix = ''
         self.ts = SlackTS(message_json['ts'])
     def __hash__(self):
@@ -1577,29 +1579,34 @@ class SlackMessage(object):
         dbg(self.message_json)
     def get_sender(self, utf8=True):
         name = u""
-        self.sender_plain = u""
+        name_plain = u""
         if 'bot_id' in self.message_json and self.message_json['bot_id'] is not None:
             name = u"{} :]".format(self.team.bots[self.message_json["bot_id"]].formatted_name())
+            name_plain = u"{}".format(self.team.bots[self.message_json["bot_id"]].formatted_name(enable_color=False))
         elif 'user' in self.message_json:
             if self.message_json['user'] == self.team.myidentifier:
                 name = self.team.users[self.team.myidentifier].name
+                name_plain = self.team.users[self.team.myidentifier].name
             elif self.message_json['user'] in self.team.users:
                 u = self.team.users[self.message_json['user']]
                 if u.is_bot:
                     name = u"{} :]".format(u.formatted_name())
                 else:
                     name = u"{}".format(u.formatted_name())
-                self.sender_plain = u"{}".format(u.formatted_name(enable_color=False))
+                name_plain = u"{}".format(u.formatted_name(enable_color=False))
         elif 'username' in self.message_json:
             name = u"-{}-".format(self.message_json["username"])
+            name_plain = u"{}".format(self.message_json["username"])
         elif 'service_name' in self.message_json:
             name = u"-{}-".format(self.message_json["service_name"])
+            name_plain = u"{}".format(self.message_json["service_name"])
         else:
             name = u""
+            name_plain = u""
         if utf8:
-            return name.encode('utf-8')
+            return (name.encode('utf-8'), name_plain.encode('utf-8'))
         else:
-            return name
+            return (name, name_plain)
     def add_reaction(self, reaction, user):
         m = self.message_json.get('reactions', None)
         if m:
