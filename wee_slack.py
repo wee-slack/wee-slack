@@ -1205,6 +1205,7 @@ class SlackChannel(object):
                 del self.typing[user]
         return typing
     def mark_read(self, ts=None, update_remote=True, force=False):
+        dbg("called mark_read!", 5)
         if not ts:
             ts = SlackTS()
         if self.new_messages or force:
@@ -1984,9 +1985,9 @@ def process_channel_marked(message_json, eventrouter, **kwargs):
     complete
     """
     channel = kwargs["channel"]
-    ts = kwargs.get("ts", None)
+    ts = message_json.get("ts", None)
     if ts:
-        channel.mark_read(ts=ts, update_remote=False)
+        channel.mark_read(ts=ts, force=True, update_remote=False)
     else:
         dbg("tried to mark something weird {}".format(message_json))
 def process_group_marked(message_json, eventrouter, **kwargs):
