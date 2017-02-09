@@ -2362,18 +2362,6 @@ def tag(tagset, user=None):
 ###### New/converted command_ commands
 
 @slack_buffer_or_ignore
-def join_command_cb(data, current_buffer, args):
-    print args
-    args = args.split()
-    if len(args) < 2:
-        w.prnt(current_buffer, "Missing channel argument")
-        return w.WEECHAT_RC_OK_EAT
-    elif command_talk(data, current_buffer, args[1]):
-        return w.WEECHAT_RC_OK_EAT
-    else:
-        return w.WEECHAT_RC_OK
-
-@slack_buffer_or_ignore
 def part_command_cb(data, current_buffer, args):
     e = EVENTROUTER
     args = args.split()
@@ -2407,32 +2395,32 @@ def command_topic(data, current_buffer, args):
     Change the topic of a channel
     /slack topic [<channel>] [<topic>|-delete]
     """
+    print args
     print 'topic'
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
     print team
     #server = servers.find(current_domain_name())
-    arrrrgs = args.split(None, 1)
-    if arrrrgs[0].startswith('#'):
+    args = args.split(' ')
+    print args
+    if len(args) > 2 and args[1].startswith('#'):
         cmap = team.get_channel_map()
-        channel_name = arrrrgs[0][1:]
+        channel_name = args[1][1:]
         channel = team.channels[cmap[channel_name]]
         print channel
-#        topic = arrrrgs[1]
+        topic = " ".join(args[2:])
     else:
         channel = e.weechat_controller.buffers[current_buffer]
-#        topic = args
-        print channel
+        topic = " ".join(args[1:])
 
     if channel:
-        dbg("channel!", 5)
-#        if topic == "-delete":
-#            async_slack_api_request(server.domain, server.token, 'channels.setTopic', {"channel": channel.identifier, "topic": ""})
-#        else:
-#            async_slack_api_request(server.domain, server.token, 'channels.setTopic', {"channel": channel.identifier, "topic": topic})
-#        return True
-#    else:
-#        return False
+        if topic == "-delete":
+            topic = ''
+        s = SlackRequest(team.token, "channels.setTopic", {"channel": channel.identifier, "topic": topic}, team_hash=team.team_hash)
+        EVENTROUTER.receive(s)
+        return w.WEECHAT_RC_OK_EAT
+    else:
+        return w.WEECHAT_RC_ERROR_EAT
 
 @slack_buffer_or_ignore
 def me_command_cb(data, current_buffer, arg):
@@ -2456,33 +2444,36 @@ def msg_command_cb(data, current_buffer, args):
             channel.send_message(message)
     return w.WEECHAT_RC_OK_EAT
 
-def command_talk(data, current_buffer, arg):
+@slack_buffer_or_ignore
+def command_talk(data, current_buffer, args):
     """
-    incomplete because globals hack
     Open a chat with the specified user
     /slack talk [user]
     """
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
-    dbg(team)
+    dbg(team, 5)
+    channel_name = args.split(' ')[1]
+    dbg(channel_name, 5)
     c = team.get_channel_map()
-    if arg not in c:
+    if channel_name not in c:
         u = team.get_username_map()
-        if arg in u:
-            s = SlackRequest(team.token, "im.open", {"user": u[arg]}, team_hash=team.team_hash)
+        if channel_name in u:
+            s = SlackRequest(team.token, "im.open", {"user": u[channel_name]}, team_hash=team.team_hash)
             EVENTROUTER.receive(s)
             dbg("found user")
             #refresh channel map here
             c = team.get_channel_map()
 
-    if arg.startswith('#'):
-        arg = arg[1:]
-    if arg in c:
-        chan = team.channels[c[arg]]
+    if channel_name.startswith('#'):
+        channel_name = arg[1:]
+    if channel_name in c:
+        chan = team.channels[c[channel_name]]
         chan.open()
         if config.switch_buffer_on_join:
             w.buffer_set(chan.channel_buffer, "display", "1")
-        return True
+        return w.WEECHAT_RC_OK_EAT
+    return w.WEECHAT_RC_OK_EAT
 
 def command_showmuted(data, current_buffer, args):
     current = w.current_buffer()
@@ -2531,14 +2522,14 @@ def hide_command_callback(data, current_buffer, args):
 def slack_command_cb(data, current_buffer, args):
     a = args.split(' ', 1)
     if len(a) > 1:
-        function_name, args = a[0], " ".join(a[1:])
+        function_name, args = a[0], args
     else:
-        function_name, args = a[0], None
+        function_name, args = a[0], args
 
-#    try:
-    EVENTROUTER.cmds[function_name]("", current_buffer, args)
-#    except KeyError:
-#        w.prnt("", "Command not found: " + function_name)
+    try:
+        EVENTROUTER.cmds[function_name]("", current_buffer, args)
+    except KeyError:
+        w.prnt("", "Command not found: " + function_name)
     return w.WEECHAT_RC_OK
 
 def command_distracting(data, current_buffer, args):
@@ -2681,11 +2672,11 @@ def setup_hooks():
     w.hook_command('me', 'me_command_cb', '')
     w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
 
-    w.hook_command_run('/query', 'join_command_cb', '')
-    w.hook_command_run('/join', 'join_command_cb', '')
+    w.hook_command_run('/query', 'command_talk', '')
+    w.hook_command_run('/join', 'command_talk', '')
     w.hook_command_run('/part', 'part_command_cb', '')
     w.hook_command_run('/leave', 'part_command_cb', '')
-    w.hook_command_run('/topic', 'topic_command_cb', '')
+    w.hook_command_run('/topic', 'command_topic', '')
     w.hook_command_run('/thread', 'thread_command_callback', '')
     w.hook_command_run('/reply', 'thread_command_callback', '')
     w.hook_command_run('/rehistory', 'rehistory_command_callback', '')
