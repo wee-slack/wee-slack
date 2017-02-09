@@ -996,7 +996,7 @@ class SlackChannel(object):
         if force:
             self.create_buffer()
         else:
-            for reason in ["is_member", "is_open", "unread_count"]:
+            for reason in ["is_member", "is_open", "unread_count_display"]:
                 try:
                     if eval("self." + reason):
                         self.create_buffer()
@@ -1035,8 +1035,8 @@ class SlackChannel(object):
         #else:
         #    self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
         try:
-            if self.unread_count != 0:
-                for c in range(1, self.unread_count):
+            if self.unread_count_display != 0:
+                for c in range(0, self.unread_count_display):
                     if self.type == "im":
                         w.buffer_set(self.channel_buffer, "hotlist", "2")
                     else:
@@ -1064,17 +1064,18 @@ class SlackChannel(object):
     def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, **kwargs):
         data = "{}\t{}".format(nick, text)
         ts = SlackTS(timestamp)
+        last_read = SlackTS(self.last_read)
         #without this, DMs won't open automatically
-        if not self.channel_buffer:
+        if not self.channel_buffer and ts <= last_read:
             self.open(update_remote=False)
         if self.channel_buffer:
             #backlog messages - we will update the read marker as we print these
-            backlog = True if ts <= SlackTS(self.last_read) else False
+            backlog = True if ts <= last_read else False
             if tagset:
                 tags = tag(tagset)
 
             #we have to infer the tagset because we weren't told
-            elif ts <= SlackTS(self.last_read):
+            elif ts <= last_read:
                 tags = tag("backlog")
             elif self.type in ["im", "mpdm"]:
                 if nick != self.team.nick:
@@ -1846,7 +1847,7 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
             text = text[1:-1]
             if message.sender != channel.team.nick:
                 text = message.sender + " " + text
-            channel.unread_count += 1
+            channel.unread_count_display += 1
             channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, **kwargs)
 
         else:
@@ -1854,9 +1855,9 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
             if 'edited' in message_json:
                 suffix = ' (edited)'
             try:
-                channel.unread_count += 1
+                channel.unread_count_display += 1
             except:
-                channel.unread_count = 1
+                channel.unread_count_display = 1
             channel.buffer_prnt(message.sender, text + suffix, message.ts, **kwargs)
 
         if store:
