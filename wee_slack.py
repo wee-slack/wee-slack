@@ -952,6 +952,7 @@ class SlackChannel(object):
         self.members = set(kwargs.get('members', set()))
         self.eventrouter = eventrouter
         self.slack_name = kwargs["name"]
+        self.slack_topic = kwargs.get("topic", {"value": ""})
         self.identifier = kwargs["id"]
         self.last_read = SlackTS(kwargs.get("last_read", SlackTS()))
         #print self.last_read
@@ -998,6 +999,14 @@ class SlackChannel(object):
             "long_base": "{}.{}".format(self.team.domain, self.slack_name),
         }
         return select[style]
+    def render_topic(self, topic=None):
+        if self.channel_buffer:
+            if not topic:
+                encoded_topic = self.slack_topic['value'].encode('utf-8')
+            else:
+                encoded_topic = topic.encode('utf-8')
+                self.encoded_topic = topic.encode('utf-8')
+            w.buffer_set(self.channel_buffer, "title", encoded_topic)
     def update_from_message_json(self, message_json):
         for key, value in message_json.items():
             setattr(self, key, value)
@@ -1053,6 +1062,7 @@ class SlackChannel(object):
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
+            self.render_topic()
             #if self.server.alias:
             #    w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.alias)
             #else:
@@ -1862,7 +1872,7 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
         'message_deleted',
         'channel_join',
         'channel_leave',
-        #'channel_topic',
+        'channel_topic',
         #'group_join',
         #'group_leave',
     ]
@@ -1985,6 +1995,11 @@ def subprocess_message_changed(message_json, eventrouter, channel, team):
 
 def subprocess_message_deleted(message_json, eventrouter, channel, team):
     channel.change_message(message_json["deleted_ts"], "(deleted)", '')
+
+def subprocess_channel_topic(message_json, eventrouter, channel, team):
+    text = unfurl_refs(message_json["text"], ignore_alt_text=False)
+    channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"])
+    channel.render_topic(message_json["topic"])
 
 def process_reply(message_json, eventrouter, **kwargs):
     dbg('processing reply')
@@ -2395,19 +2410,14 @@ def command_topic(data, current_buffer, args):
     Change the topic of a channel
     /slack topic [<channel>] [<topic>|-delete]
     """
-    print args
-    print 'topic'
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
-    print team
     #server = servers.find(current_domain_name())
     args = args.split(' ')
-    print args
     if len(args) > 2 and args[1].startswith('#'):
         cmap = team.get_channel_map()
         channel_name = args[1][1:]
         channel = team.channels[cmap[channel_name]]
-        print channel
         topic = " ".join(args[2:])
     else:
         channel = e.weechat_controller.buffers[current_buffer]
