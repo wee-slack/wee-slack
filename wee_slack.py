@@ -1061,7 +1061,7 @@ class SlackChannel(object):
         if update_remote and not self.eventrouter.shutting_down:
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
-    def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, **kwargs):
+    def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, **kwargs):
         data = "{}\t{}".format(nick, text)
         ts = SlackTS(timestamp)
         last_read = SlackTS(self.last_read)
@@ -1072,19 +1072,19 @@ class SlackChannel(object):
             #backlog messages - we will update the read marker as we print these
             backlog = True if ts <= last_read else False
             if tagset:
-                tags = tag(tagset)
+                tags = tag(tagset, user=tag_nick)
 
             #we have to infer the tagset because we weren't told
             elif ts <= last_read:
-                tags = tag("backlog")
+                tags = tag("backlog", user=tag_nick)
             elif self.type in ["im", "mpdm"]:
                 if nick != self.team.nick:
-                    tags = tag("dm")
+                    tags = tag("dm", user=tag_nick)
                     self.new_messages = True
                 else:
                     tags = tag("dmfromme")
             else:
-                tags = tag("default")
+                tags = tag("default", user=tag_nick)
                 self.new_messages = True
 
             try:
@@ -1577,6 +1577,7 @@ class SlackMessage(object):
         dbg(self.message_json)
     def get_sender(self, utf8=True):
         name = u""
+        self.sender_plain = u""
         if 'bot_id' in self.message_json and self.message_json['bot_id'] is not None:
             name = u"{} :]".format(self.team.bots[self.message_json["bot_id"]].formatted_name())
         elif 'user' in self.message_json:
@@ -1588,6 +1589,7 @@ class SlackMessage(object):
                     name = u"{} :]".format(u.formatted_name())
                 else:
                     name = u"{}".format(u.formatted_name())
+                self.sender_plain = u"{}".format(u.formatted_name(enable_color=False))
         elif 'username' in self.message_json:
             name = u"-{}-".format(self.message_json["username"])
         elif 'service_name' in self.message_json:
@@ -1848,7 +1850,7 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
             if message.sender != channel.team.nick:
                 text = message.sender + " " + text
             channel.unread_count_display += 1
-            channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, **kwargs)
+            channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, tag_nick=message.sender_plain, **kwargs)
 
         else:
             suffix = ''
@@ -1858,7 +1860,7 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
                 channel.unread_count_display += 1
             except:
                 channel.unread_count_display = 1
-            channel.buffer_prnt(message.sender, text + suffix, message.ts, **kwargs)
+            channel.buffer_prnt(message.sender, text + suffix, message.ts, tag_nick=message.sender_plain, **kwargs)
 
         if store:
             channel.store_message(message, team)
@@ -2298,8 +2300,11 @@ def modify_print_time(buffer, new_id, time):
 
     return w.WEECHAT_RC_OK
 
-def tag(tagset, user="unknown user"):
-    default_tag = "nick_" + user
+def tag(tagset, user=None):
+    if user:
+        default_tag = "nick_" + user
+    else:
+        default_tag = ''
     tagsets = {
         #when replaying something old
         "backlog": "no_highlight,notify_none,logger_backlog_end",
