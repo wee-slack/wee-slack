@@ -2526,6 +2526,7 @@ def rehistory_command_callback(data, current_buffer, args):
     channel.get_history()
     return w.WEECHAT_RC_OK_EAT
 
+@slack_buffer_required
 def hide_command_callback(data, current_buffer, args):
     c = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
     if c:
@@ -2534,6 +2535,7 @@ def hide_command_callback(data, current_buffer, args):
             w.buffer_set(c.channel_buffer, "hidden", "1")
     return w.WEECHAT_RC_OK_EAT
 
+@slack_buffer_required
 def slack_command_cb(data, current_buffer, args):
     a = args.split(' ', 1)
     if len(a) > 1:
@@ -2547,6 +2549,7 @@ def slack_command_cb(data, current_buffer, args):
         w.prnt("", "Command not found: " + function_name)
     return w.WEECHAT_RC_OK
 
+@slack_buffer_required
 def command_distracting(data, current_buffer, args):
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
     if channel:
@@ -2557,9 +2560,11 @@ def command_distracting(data, current_buffer, args):
         config.distracting_channels.pop(config.distracting_channels.index(fullname))
     save_distracting_channels()
 
+@slack_buffer_required
 def save_distracting_channels():
     w.config_set_plugin('distracting_channels', ','.join(config.distracting_channels))
 
+@slack_buffer_required
 def command_mute(data, current_buffer, args):
     current = w.current_buffer()
     channel_id = EVENTROUTER.weechat_controller.buffers[current].identifier
@@ -2571,6 +2576,7 @@ def command_mute(data, current_buffer, args):
     s = SlackRequest(team.token, "users.prefs.set", {"name": "muted_channels", "value": ",".join(team.muted_channels)}, team_hash=team.team_hash, channel_identifier=channel_id)
     EVENTROUTER.receive(s)
 
+@slack_buffer_required
 def command_openweb(data, current_buffer, args):
     #if done from server buffer, open slack for reals
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
@@ -2581,6 +2587,7 @@ def command_openweb(data, current_buffer, args):
         url = "https://{}/archives/{}/p{}000000".format(channel.team.domain, channel.slack_name, now.majorstr())
     w.prnt_date_tags(channel.team.channel_buffer, SlackTS().major, "openweb,logger_backlog_end,notify_none", url)
 
+@slack_buffer_required
 def command_nodistractions(data, current_buffer, args):
     global hide_distractions
     hide_distractions = not hide_distractions
@@ -2597,6 +2604,7 @@ def command_nodistractions(data, current_buffer, args):
 #                config.distracting_channels.pop(config.distracting_channels.index(channel))
 #                save_distracting_channels()
 
+@slack_buffer_required
 def label_command_cb(data, current_buffer, args):
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
     if channel and channel.type == 'thread':
@@ -2604,6 +2612,7 @@ def label_command_cb(data, current_buffer, args):
         new_name = " +" + aargs[1]
         w.buffer_set(channel.channel_buffer, "short_name", new_name)
 
+@slack_buffer_required
 def command_p(data, current_buffer, args):
     w.prnt("", "{}".format(eval(args)))
 
