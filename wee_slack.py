@@ -2442,8 +2442,8 @@ def command_topic(data, current_buffer, args):
         return w.WEECHAT_RC_ERROR_EAT
 
 @slack_buffer_or_ignore
-def me_command_cb(data, current_buffer, arg):
-    message = "_{}_".format(arg)
+def me_command_cb(data, current_buffer, args):
+    message = "_{}_".format(args[1:])
     buffer_input_callback("EVENTROUTER", current_buffer, message)
     return w.WEECHAT_RC_OK
 
