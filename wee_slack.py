@@ -2697,7 +2697,7 @@ def setup_hooks():
         'slack_command_cb', '')
     #w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
 
-    w.hook_command_run('me', 'me_command_cb', '')
+    w.hook_command_run('/me', 'me_command_cb', '')
     w.hook_command_run('/query', 'command_talk', '')
     w.hook_command_run('/join', 'command_talk', '')
     w.hook_command_run('/part', 'part_command_cb', '')
