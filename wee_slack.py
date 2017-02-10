@@ -2089,6 +2089,12 @@ def process_channel_rename(message_json, eventrouter, **kwargs):
     channel = kwargs['team'].channels[item["id"]]
     channel.slack_name = message_json['channel']['name']
 
+def process_im_created(message_json, eventrouter, **kwargs):
+    team = kwargs['team']
+    item = message_json["channel"]
+    c = SlackDMChannel(eventrouter, team=team, users=team.users, **item)
+    team.channels[item["id"]] = c
+
 def process_im_open(message_json, eventrouter, **kwargs):
     channel = kwargs['channel']
     item = message_json
