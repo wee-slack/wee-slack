@@ -806,6 +806,7 @@ class SlackTeam(object):
         self.team = self
         self.subdomain = subdomain
         self.domain = subdomain + ".slack.com"
+        self.preferred_name = self.domain
         self.nick = nick
         self.myidentifier = myidentifier
         try:
