@@ -2009,6 +2009,9 @@ def subprocess_message_deleted(message_json, eventrouter, channel, team):
 
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
     text = unfurl_refs(message_json["text"], ignore_alt_text=False)
+    if type(text) != unicode:
+        text = text.decode('utf-8', 'ignore')
+    text = text.encode('utf-8')
     channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"], tagset="muted")
     channel.render_topic(message_json["topic"])
 
