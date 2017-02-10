@@ -2476,9 +2476,7 @@ def command_talk(data, current_buffer, args):
     """
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
-    dbg(team, 5)
     channel_name = args.split(' ')[1]
-    dbg(channel_name, 5)
     c = team.get_channel_map()
     if channel_name not in c:
         u = team.get_username_map()
@@ -2571,6 +2569,28 @@ def command_distracting(data, current_buffer, args):
 @slack_buffer_required
 def save_distracting_channels():
     w.config_set_plugin('distracting_channels', ','.join(config.distracting_channels))
+
+@slack_buffer_required
+def command_slash(data, current_buffer, args):
+    """
+    Support for custom slack commands
+    /slack slash /customcommand arg1 arg2 arg3
+    """
+    e = EVENTROUTER
+    channel = e.weechat_controller.buffers.get(current_buffer, None)
+    if channel:
+        team = channel.team
+
+        if args is None:
+            server.buffer_prnt("Usage: /slack slash /someslashcommand [arguments...].")
+            return
+
+        split_args = args.split(None, 2)
+        command = split_args[1]
+        text = split_args[2] if len(split_args) > 2 else ""
+
+        s = SlackRequest(team.token, "chat.command", {"command": command, "text": text, 'channel': channel.identifier}, team_hash=team.team_hash, channel_identifier=channel.identifier)
+        EVENTROUTER.receive(s)
 
 @slack_buffer_required
 def command_mute(data, current_buffer, args):
