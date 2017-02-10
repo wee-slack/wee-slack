@@ -705,7 +705,7 @@ def complete_next_cb(data, current_buffer, command):
     current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
 
     #channel = channels.find(current_buffer)
-    if current_channel is None or current_channel.members is None:
+    if not hasattr(current_channel, 'members') or current_channel is None or current_channel.members is None:
         return w.WEECHAT_RC_OK
 
     line_input = w.buffer_get_string(current_buffer, "input")
