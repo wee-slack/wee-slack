@@ -849,8 +849,15 @@ class SlackTeam(object):
     #    self.eventrouter.weechat_controller.unregister_buffer(self.channel_buffer, update_remote=False, close_buffer=True)
     def create_buffer(self):
         if not self.channel_buffer:
-            bname = self.subdomain if config.short_buffer_names else self.domain
-            self.channel_buffer = w.buffer_new("{}".format(bname), "buffer_input_callback", "EVENTROUTER", "", "")
+            if config.short_buffer_names:
+                self.preferred_name = self.subdomain
+            elif config.server_aliases not in ['', None]:
+                name = config.server_aliases.get(self.subdomain, None)
+                if name:
+                    self.preferred_name = name
+            else:
+                self.preferred_name = self.domain
+            self.channel_buffer = w.buffer_new("{}".format(self.preferred_name), "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'server')
             if w.config_string(w.config_get('irc.look.server_buffer')) == 'merge_with_core':
@@ -996,8 +1003,8 @@ class SlackChannel(object):
             "default": prepend + self.slack_name,
             "sidebar": prepend + self.slack_name,
             "base": self.slack_name,
-            "long_default": "{}.{}{}".format(self.team.domain, prepend, self.slack_name),
-            "long_base": "{}.{}".format(self.team.domain, self.slack_name),
+            "long_default": "{}.{}{}".format(self.team.preferred_name, prepend, self.slack_name),
+            "long_base": "{}.{}".format(self.team.preferred_name, self.slack_name),
         }
         return select[style]
     def render_topic(self, topic=None):
@@ -1067,11 +1074,12 @@ class SlackChannel(object):
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
             self.render_topic()
-            #if self.server.alias:
-            #    w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.alias)
-            #else:
-            #    w.buffer_set(self.channel_buffer, "localvar_set_server", self.server.team)
             self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
+            if self.channel_buffer:
+                #if self.team.server_alias:
+                    #w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.server_alias)
+                #else:
+                w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.preferred_name)
         #else:
         #    self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             try:
@@ -1351,8 +1359,8 @@ class SlackDMChannel(SlackChannel):
             "default": self.slack_name,
             "sidebar": prepend + self.slack_name,
             "base": self.slack_name,
-            "long_default": "{}.{}".format(self.team.domain, self.slack_name),
-            "long_base": "{}.{}".format(self.team.domain, self.slack_name),
+            "long_default": "{}.{}".format(self.team.preferred_name, self.slack_name),
+            "long_base": "{}.{}".format(self.team.preferred_name, self.slack_name),
         }
         return print_color + select[style]
     def open(self, update_remote=True):
@@ -1415,8 +1423,8 @@ class SlackMPDMChannel(SlackChannel):
             "default": adjusted_name,
             "sidebar": prepend + adjusted_name,
             "base": adjusted_name,
-            "long_default": "{}.{}".format(self.team.domain, adjusted_name),
-            "long_base": "{}.{}".format(self.team.domain, adjusted_name),
+            "long_default": "{}.{}".format(self.team.preferred_name, adjusted_name),
+            "long_base": "{}.{}".format(self.team.preferred_name, adjusted_name),
         }
         return select[style]
 
@@ -2800,6 +2808,7 @@ class PluginConfig(object):
         'short_buffer_names': 'false',
         'background_load_all_history': 'false',
         'never_away': 'false',
+        'server_aliases': '',
     }
 
     # Set missing settings to their defaults. Load non-missing settings from
@@ -2839,6 +2848,11 @@ class PluginConfig(object):
 
     def get_distracting_channels(self, key):
         return [x.strip() for x in w.config_get_plugin(key).split(',')]
+
+    def get_server_aliases(self, key):
+        alias_list = w.config_get_plugin(key)
+        if len(alias_list) > 0:
+            return dict(item.split(":") for item in alias_list.split(","))
 
     def get_slack_api_token(self, key):
         token = w.config_get_plugin("slack_api_token")
