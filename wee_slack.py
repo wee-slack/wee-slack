@@ -1114,7 +1114,7 @@ class SlackChannel(object):
         ts = SlackTS(timestamp)
         last_read = SlackTS(self.last_read)
         #without this, DMs won't open automatically
-        if not self.channel_buffer and ts <= last_read:
+        if not self.channel_buffer and ts >= last_read:
             self.open(update_remote=False)
         if self.channel_buffer:
             #backlog messages - we will update the read marker as we print these
