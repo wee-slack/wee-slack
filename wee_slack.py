@@ -255,6 +255,7 @@ class SlackServer(object):
                 self.server_buffer_name = self.domain
 
             self.nick = login_data["self"]["name"]
+            self.highlight_words = login_data["self"]["prefs"]["highlight_words"]
             self.create_local_buffer()
 
             if self.create_slack_websocket(login_data):
@@ -503,7 +504,7 @@ class Channel(object):
         if channel_buffer != main_weechat_buffer:
             self.channel_buffer = channel_buffer
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.server.nick)
-            w.buffer_set(self.channel_buffer, "highlight_words", self.server.nick)
+            w.buffer_set(self.channel_buffer, "highlight_words", ",".join([self.server.nick, self.server.highlight_words])
         else:
             self.channel_buffer = None
         channels.update_hashtable()
