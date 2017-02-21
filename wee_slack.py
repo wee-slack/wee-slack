@@ -2259,11 +2259,12 @@ def complete_next_cb(data, buffer, command):
     word = input[word_start:word_end]
     for m in channel.members:
         user = channel.server.users.find(m)
-        if user.name == word:
+        if word == user.name[:len(word)]:
             # Here, we cheat.  Insert a @ in front and rely in the @
             # nicks being in the completion list
-            w.buffer_set(buffer, "input", input[:word_start] + "@" + input[word_start:])
-            w.buffer_set(buffer, "input_pos", str(w.buffer_get_integer(buffer, "input_pos") + 1))
+            extra = len(user.name) - len(word)
+            w.buffer_set(buffer, "input", input[:word_start] + "@" + user.name + input[word_end:])
+            w.buffer_set(buffer, "input_pos", str(word_end + extra + 1))
             return w.WEECHAT_RC_OK_EAT
     return w.WEECHAT_RC_OK
 
