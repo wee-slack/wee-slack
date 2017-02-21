@@ -612,7 +612,7 @@ class Channel(object):
         return " ".join(message)
 
     def set_topic(self, topic):
-        self.topic = topic.encode('utf-8')
+        self.topic = HTMLParser.HTMLParser().unescape(topic).encode('utf-8')
         w.buffer_set(self.channel_buffer, "title", self.topic)
 
     def open(self, update_remote=True):
