@@ -1166,6 +1166,9 @@ class SlackChannel(object):
             mk = self.messages.keys()
             mk.sort()
             for k in mk[:SCROLLBACK_SIZE]:
+                msg_to_delete = self.messages[k]
+                if msg_to_delete.hash:
+                    del self.hashed_messages[msg_to_delete.hash]
                 del self.messages[k]
     def change_message(self, ts, text=None, suffix=None):
         ts = SlackTS(ts)
