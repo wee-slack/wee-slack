@@ -996,10 +996,13 @@ class SlackChannel(object):
                 return True
         return False
     def formatted_name(self, style="default", typing=False, **kwargs):
-        if not typing:
-            prepend = "#"
+        if config.channel_name_typing_indicator:
+            if not typing:
+                prepend = "#"
+            else:
+                prepend = ">"
         else:
-            prepend = ">"
+            prepend = "#"
         select = {
             "default": prepend + self.slack_name,
             "sidebar": prepend + self.slack_name,
@@ -1416,10 +1419,13 @@ class SlackMPDMChannel(SlackChannel):
         self.name = "|".join("-".join(n.split("-")[1:-1]).split("--"))
     def formatted_name(self, style="default", typing=False, **kwargs):
         adjusted_name = "|".join("-".join(self.slack_name.split("-")[1:-1]).split("--"))
-        if not typing:
-            prepend = " "
+        if config.channel_name_typing_indicator:
+            if not typing:
+                prepend = "#"
+            else:
+                prepend = ">"
         else:
-            prepend = ">"
+            prepend = "#"
         select = {
             "default": adjusted_name,
             "sidebar": prepend + adjusted_name,
@@ -2865,6 +2871,7 @@ class PluginConfig(object):
         'thread_suffix_color': 'lightcyan',
         'unhide_buffers_with_activity': 'false',
         'short_buffer_names': 'false',
+        'channel_name_typing_indicator': 'true',
         'background_load_all_history': 'false',
         'never_away': 'false',
         'server_aliases': '',
