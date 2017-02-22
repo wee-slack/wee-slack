@@ -2656,6 +2656,19 @@ def command_nodistractions(data, current_buffer, args):
 #                save_distracting_channels()
 
 @slack_buffer_required
+def command_upload(data, current_buffer, args):
+    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    url = 'https://slack.com/api/files.upload'
+    fname = args.split(' ', 1)
+    file_path = os.path.expanduser(fname[1])
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    if ' ' in file_path:
+        file_path = file_path.replace(' ', '\ ')
+
+    command = 'curl -F file=@{} -F channels={} -F token={} {}'.format(file_path, channel.identifier, team.token, url)
+    w.hook_process(command, config.slack_timeout, '', '')
+
+@slack_buffer_required
 def label_command_cb(data, current_buffer, args):
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
     if channel and channel.type == 'thread':
