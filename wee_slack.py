@@ -2106,6 +2106,15 @@ def process_im_close(message_json, eventrouter, **kwargs):
     cbuf = kwargs['team'].channels[item["channel"]].channel_buffer
     eventrouter.weechat_controller.unregister_buffer(cbuf, False, True)
 
+def process_group_joined(message_json, eventrouter, **kwargs):
+    item = message_json["channel"]
+    if item["name"].startswith("mpdm-"):
+        c = SlackMPDMChannel(eventrouter, team=kwargs["team"], **item)
+    else:
+        c = SlackGroupChannel(eventrouter, team=kwargs["team"], **item)
+    kwargs['team'].channels[item["id"]] = c
+    kwargs['team'].channels[item["id"]].open()
+
 def process_reaction_added(message_json, eventrouter, **kwargs):
     channel = kwargs['team'].channels[message_json["item"]["channel"]]
     if message_json["item"].get("type") == "message":
