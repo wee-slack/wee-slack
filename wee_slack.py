@@ -969,6 +969,7 @@ class SlackChannel(object):
         self.team = kwargs.get('team', None)
         self.got_history = False
         self.messages = {}
+        self.hashed_messages = {}
         self.new_messages = False
         self.typing = {}
         self.type = 'channel'
@@ -1103,6 +1104,7 @@ class SlackChannel(object):
         if self.channel_buffer is not None:
             self.channel_buffer = None
         self.messages = {}
+        self.hashed_messages = {}
         self.got_history = False
         #if update_remote and not eventrouter.shutting_down:
         self.active = False
@@ -1320,6 +1322,14 @@ class SlackChannel(object):
             else:
                 for fn in ["1| too", "2| many", "3| users", "4| to", "5| show"]:
                     w.nicklist_add_group(self.channel_buffer, '', fn, w.color('white'), 1)
+    def hash_message(self, ts):
+        sts = SlackTS(ts)
+        if sts in self.messages:
+            message = self.messages[sts]
+            if not message.hash:
+                tshash = sha.sha(ts).hexdigest()
+                self.hashed_messages[tshash[:3]] = message
+                message.hash = tshash[:3]
 
 
 class SlackDMChannel(SlackChannel):
@@ -1451,10 +1461,11 @@ class SlackThreadChannel(object):
     #def set_name(self, slack_name):
     #    self.name = "#" + slack_name
     def formatted_name(self, style="default", **kwargs):
+        hash_or_ts = self.parent_message.hash or self.parent_message.ts
         styles = {
-            "default": " +{}".format(self.parent_message.ts),
-            "long_default": "{}.{}".format(self.parent_message.channel.formatted_name(style="long_default"), self.parent_message.ts),
-            "sidebar": " +{}".format(self.parent_message.ts),
+            "default": " +{}".format(hash_or_ts),
+            "long_default": "{}.{}".format(self.parent_message.channel.formatted_name(style="long_default"), hash_or_ts),
+            "sidebar": " +{}".format(hash_or_ts),
         }
         return styles[style]
     def refresh(self):
@@ -1611,6 +1622,7 @@ class SlackMessage(object):
         self.message_json = message_json
         self.submessages = []
         self.thread_channel = None
+        self.hash = None
         if override_sender:
             self.sender = override_sender
             self.sender_plain = override_sender
@@ -1623,7 +1635,7 @@ class SlackMessage(object):
         return hash(self.ts)
     def render(self, force=False):
         if len(self.submessages) > 0:
-            return "{} {} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix, "{}[ Thread: {} Replies: {} ]".format(w.color(config.thread_suffix_color), self.ts, len(self.submessages)))
+            return "{} {} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix, "{}[ Thread: {} Replies: {} ]".format(w.color(config.thread_suffix_color), self.hash or self.ts, len(self.submessages)))
         return "{} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix)
     def change_text(self, new_text):
         self.message_json["text"] = new_text
@@ -1943,6 +1955,7 @@ def subprocess_thread_message(message_json, eventrouter, channel, team):
         if parent_message:
             message = SlackThreadMessage(parent_ts, message_json, team, channel)
             parent_message.submessages.append(message)
+            channel.hash_message(parent_ts)
             channel.store_message(message, team)
             channel.change_message(parent_ts)
 
@@ -2532,7 +2545,10 @@ def thread_command_callback(data, current_buffer, args):
         args = args.split()
         if args[0] == '/thread':
             if len(args) == 2:
-                pm = channel.messages[SlackTS(args[1])]
+                try:
+                    pm = channel.messages[SlackTS(args[1])]
+                except:
+                    pm = channel.hashed_messages[args[1]]
                 tc = SlackThreadChannel(EVENTROUTER, pm)
                 pm.thread_channel = tc
                 tc.open()
