@@ -2668,6 +2668,36 @@ def command_upload(data, current_buffer, args):
     command = 'curl -F file=@{} -F channels={} -F token={} {}'.format(file_path, channel.identifier, team.token, url)
     w.hook_process(command, config.slack_timeout, '', '')
 
+def away_command_cb(data, current_buffer, args):
+    #TODO: reimplement all.. maybe
+    (all, message) = re.match("^/away(?:\s+(-all))?(?:\s+(.+))?", args).groups()
+    if message is None:
+        command_back(data, current_buffer, args)
+    else:
+        command_away(data, current_buffer, args)
+    return w.WEECHAT_RC_OK
+
+@slack_buffer_required
+def command_away(data, current_buffer, args):
+    """
+    Sets your status as 'away'
+    /slack away
+    """
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    s = SlackRequest(team.token, "presence.set", {"presence": "away"}, team_hash=team.team_hash)
+    EVENTROUTER.receive(s)
+
+
+@slack_buffer_required
+def command_back(data, current_buffer, args):
+    """
+    Sets your status as 'back'
+    /slack back
+    """
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    s = SlackRequest(team.token, "presence.set", {"presence": "active"}, team_hash=team.team_hash)
+    EVENTROUTER.receive(s)
+
 @slack_buffer_required
 def label_command_cb(data, current_buffer, args):
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
@@ -2772,12 +2802,12 @@ def setup_hooks():
     w.hook_command_run('/msg', 'msg_command_cb', '')
     w.hook_command_run('/label', 'label_command_cb', '')
     w.hook_command_run("/input complete_next", "complete_next_cb", "")
+    w.hook_command_run('/away', 'away_command_cb', '')
 
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
 
     # Hooks to fix/implement
-    #w.hook_command_run('/away', 'away_command_cb', '')
     #w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
     #w.hook_signal('buffer_opened', "buffer_opened_cb", "")
     #w.hook_signal('window_scrolled', "scrolled_cb", "")
