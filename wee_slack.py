@@ -1330,6 +1330,7 @@ class SlackChannel(object):
                     w.nicklist_add_group(self.channel_buffer, '', fn, w.color('white'), 1)
     def hash_message(self, ts):
         ts = SlackTS(ts)
+
         def calc_hash(msg):
             return sha.sha(str(msg.ts)).hexdigest()
 
