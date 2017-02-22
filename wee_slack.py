@@ -1323,13 +1323,30 @@ class SlackChannel(object):
                 for fn in ["1| too", "2| many", "3| users", "4| to", "5| show"]:
                     w.nicklist_add_group(self.channel_buffer, '', fn, w.color('white'), 1)
     def hash_message(self, ts):
-        sts = SlackTS(ts)
-        if sts in self.messages:
-            message = self.messages[sts]
-            if not message.hash:
-                tshash = sha.sha(ts).hexdigest()
-                self.hashed_messages[tshash[:3]] = message
-                message.hash = tshash[:3]
+        ts = SlackTS(ts)
+        def calc_hash(msg):
+            return sha.sha(str(msg.ts)).hexdigest()
+
+        if ts in self.messages and not self.messages[ts].hash:
+            message = self.messages[ts]
+            tshash = calc_hash(message)
+            l = 3
+            shorthash = tshash[:l]
+            while any(x.startswith(shorthash) for x in self.hashed_messages):
+                l += 1
+                shorthash = tshash[:l]
+
+            if shorthash[:-1] in self.hashed_messages:
+                col_msg = self.hashed_messages.pop(shorthash[:-1])
+                col_new_hash = calc_hash(col_msg)[:l]
+                col_msg.hash = col_new_hash
+                self.hashed_messages[col_new_hash] = col_msg
+                self.change_message(str(col_msg.ts))
+                if col_msg.thread_channel:
+                    col_msg.thread_channel.rename()
+
+            self.hashed_messages[shorthash] = message
+            message.hash = shorthash
 
 
 class SlackDMChannel(SlackChannel):
@@ -1457,6 +1474,7 @@ class SlackThreadChannel(object):
         #self.name = "#" + kwargs['name']
         self.type = "thread"
         self.got_history = False
+        self.label = None
         #self.set_name(self.slack_name)
     #def set_name(self, slack_name):
     #    self.name = "#" + slack_name
@@ -1469,7 +1487,7 @@ class SlackThreadChannel(object):
         }
         return styles[style]
     def refresh(self):
-        pass
+        self.rename()
     def mark_read(self, ts=None, update_remote=True, force=False):
         if self.channel_buffer:
             w.buffer_set(self.channel_buffer, "unread", "")
@@ -1531,6 +1549,10 @@ class SlackThreadChannel(object):
         #        s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
         #        self.eventrouter.receive(s)
         self.create_buffer()
+
+    def rename(self):
+        if self.channel_buffer and not self.label:
+            w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
 
     def create_buffer(self):
         """
@@ -2720,6 +2742,7 @@ def label_command_cb(data, current_buffer, args):
     if channel and channel.type == 'thread':
         aargs = args.split(None, 2)
         new_name = " +" + aargs[1]
+        channel.label = new_name
         w.buffer_set(channel.channel_buffer, "short_name", new_name)
 
 def command_p(data, current_buffer, args):
