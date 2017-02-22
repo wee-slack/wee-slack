@@ -1565,6 +1565,10 @@ class SlackThreadChannel(object):
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
+            time_format = w.config_string(w.config_get("weechat.look.buffer_time_format"))
+            parent_time = time.localtime(SlackTS(self.parent_message.ts).major)
+            topic = '{} {} | {}'.format(time.strftime(time_format, parent_time), self.parent_message.sender, self.parent_message.render()	)
+            w.buffer_set(self.channel_buffer, "title", topic.encode('utf-8'))
 
             #self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
 
