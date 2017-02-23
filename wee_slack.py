@@ -2642,7 +2642,6 @@ def command_distracting(data, current_buffer, args):
         config.distracting_channels.pop(config.distracting_channels.index(fullname))
     save_distracting_channels()
 
-@slack_buffer_required
 def save_distracting_channels():
     w.config_set_plugin('distracting_channels', ','.join(config.distracting_channels))
 
