@@ -1631,18 +1631,15 @@ class SlackUser(object):
         self.color_name = color_name
         self.color = w.color(self.color_name)
     def update_color(self):
-        if config.colorize_nicks:
-            self.color_name = w.info_get('irc_nick_color_name', self.name.encode('utf-8'))
-            self.color = w.color(self.color_name)
-        else:
-            self.color = ""
-            self.color_name = ""
+        # This will automatically be none/"" if the user has disabled nick
+        # colourization.
+        self.color_name = w.info_get('nick_color_name', self.name.encode('utf-8'))
+        self.color = w.color(self.color_name)
     def formatted_name(self, prepend="", enable_color=True):
-        if config.colorize_nicks and enable_color:
-            print_color = self.color
+        if enable_color:
+            return self.color + prepend + self.name
         else:
-            print_color = ""
-        return print_color + prepend + self.name
+            return prepend + self.name
 
 class SlackBot(SlackUser):
     """
@@ -2910,7 +2907,6 @@ class PluginConfig(object):
     # TODO: setting descriptions.
     settings = {
         'colorize_messages': 'false',
-        'colorize_nicks': 'true',
         'colorize_private_chats': 'false',
         'debug_mode': 'false',
         'debug_level': '3',
