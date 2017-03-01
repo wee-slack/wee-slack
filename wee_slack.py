@@ -1675,6 +1675,13 @@ class SlackMessage(object):
             self.sender, self.sender_plain = senders[0], senders[1]
         self.suffix = ''
         self.ts = SlackTS(message_json['ts'])
+        text = self.message_json.get('text', '')
+        if text.startswith('_') and text.endswith('_') and not 'subtype' in message_json:
+            message_json['text'] = text[1:-1]
+            message_json['subtype'] = 'me_message'
+        if message_json.get('subtype') == 'me_message' and not message_json['text'].startswith(self.sender):
+            message_json['text'] = self.sender + ' ' + self.message_json['text']
+
     def __hash__(self):
         return hash(self.ts)
     def render(self, force=False):
@@ -1951,6 +1958,7 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
     ]
     if "thread_ts" in message_json and "reply_count" not in message_json:
         message_json["subtype"] = "thread_message"
+
     subtype = message_json.get("subtype", None)
     if subtype and subtype in known_subtypes:
         f = eval('subprocess_' + subtype)
@@ -1959,17 +1967,17 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
     else:
         message = SlackMessage(message_json, team, channel)
         text = message.render()
-        dbg(text)
+        dbg("Rendered message: %s" % text)
+        dbg("Sender: %s (%s)" % (message.sender, message.sender_plain))
 
-        # special case with actions.
-        if text.startswith("_") and text.endswith("_"):
-            text = text[1:-1]
-            if message.sender != channel.team.nick:
-                text = message.sender + " " + text
+        # Handle actions (/me).
+        # We don't use `subtype` here because creating the SlackMessage may
+        # have changed the subtype based on the detected message contents.
+        if message.message_json.get('subtype') == 'me_message':
             try:
                 channel.unread_count_display += 1
             except:
-                channel.unread_count_display += 1
+                channel.unread_count_display = 1
             channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, tag_nick=message.sender_plain, **kwargs)
 
         else:
