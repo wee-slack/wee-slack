@@ -92,12 +92,7 @@ class SearchList(list):
         super(SearchList, self).__init__(self)
 
     def find(self, name):
-        if name in self.hashtable:
-            return self.hashtable[name]
-        # this is a fallback to __eq__ if the item isn't in the hashtable already
-        if name in self:
-            self.update_hashtable()
-            return self[self.index(name)]
+        return self.hashtable.get(name)
 
     def append(self, item, aliases=[]):
         super(SearchList, self).append(item)
