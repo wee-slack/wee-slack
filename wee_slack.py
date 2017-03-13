@@ -101,24 +101,16 @@ class SearchList(list):
 
     def append(self, item, aliases=[]):
         super(SearchList, self).append(item)
-        self.update_hashtable(item)
+        self.insert_hashtable(item)
 
-    def update_hashtable(self, item=None):
-        if item is not None:
-            try:
-                for alias in item.get_aliases():
-                    if alias is not None:
-                        self.hashtable[alias] = item
-            except AttributeError:
-                pass
-        else:
-            for child in self:
-                try:
-                    for alias in child.get_aliases():
-                        if alias is not None:
-                            self.hashtable[alias] = child
-                except AttributeError:
-                    pass
+    def insert_hashtable(self, item):
+        if hasattr(item, "get_aliases"):
+            for alias in filter(None, item.get_aliases()):
+                self.hashtable[alias] = item
+
+    def update_hashtable(self):
+        for item in self:
+            self.insert_hashtable(item)
 
     def find_by_class(self, class_name):
         items = []
