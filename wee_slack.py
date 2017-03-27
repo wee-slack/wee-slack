@@ -2253,7 +2253,6 @@ def linkify_text(message, team, channel):
             #print targets.groups()
             named = targets.groups()
             if named[1] in ["group", "channel", "here"]:
-                dbg(named[1], 5)
                 message[item[0]] = "<!{}>".format(named[1])
             else:
                 try:
