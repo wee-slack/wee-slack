@@ -2253,12 +2253,14 @@ def linkify_text(message, team, channel):
             #print targets.groups()
             named = targets.groups()
             if named[1] in ["group", "channel", "here"]:
+                dbg(named[1], 5)
                 message[item[0]] = "<!{}>".format(named[1])
-            try:
-                if usernames[named[1]]:
-                    message[item[0]] = "<@{}>{}".format(usernames[named[1]], named[2])
-            except:
-                message[item[0]] = "@{}{}".format(named[1], named[2])
+            else:
+                try:
+                    if usernames[named[1]]:
+                        message[item[0]] = "<@{}>{}".format(usernames[named[1]], named[2])
+                except:
+                    message[item[0]] = "@{}{}".format(named[1], named[2])
         if targets and targets.groups()[0] == '#':
             named = targets.groups()
             try:
