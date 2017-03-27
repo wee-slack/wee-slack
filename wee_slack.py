@@ -2247,7 +2247,7 @@ def linkify_text(message, team, channel):
     channels = team.get_channel_map()
     message = message.split(' ')
     for item in enumerate(message):
-        targets = re.match('.*([@#])([\w.-]+[\w. -])(\W*)', item[1])
+        targets = re.match('^\s*([@#])([\w.-]+[\w. -])(\W*)', item[1])
         #print targets
         if targets and targets.groups()[0] == '@':
             #print targets.groups()
