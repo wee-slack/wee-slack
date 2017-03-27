@@ -1446,6 +1446,14 @@ class SlackMPDMChannel(SlackChannel):
         n = kwargs.get('name')
         self.set_name(n)
         self.type = "group"
+    def open(self, update_remote=False):
+        self.create_buffer()
+        self.active = True
+        self.get_history()
+        if "info" in SLACK_API_TRANSLATOR[self.type]:
+            s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+            self.eventrouter.receive(s)
+        #self.create_buffer()
     def set_name(self, n):
         self.name = "|".join("-".join(n.split("-")[1:-1]).split("--"))
     def formatted_name(self, style="default", typing=False, **kwargs):
