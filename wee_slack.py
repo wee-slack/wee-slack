@@ -551,7 +551,7 @@ class Channel(object):
                 dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
 
     def fullname(self):
-        return "{}.{}".format(self.server.server_buffer_name, self.name)
+        return u"{}.{}".format(self.server.server_buffer_name, self.name)
 
     def has_user(self, name):
         return name in self.members
