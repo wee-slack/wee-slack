@@ -729,10 +729,10 @@ class Channel(object):
             chat_color = w.config_string(w.config_get('weechat.color.chat'))
             if type(message) is not unicode:
                 message = message.decode('UTF-8', 'replace')
-            curr_color = w.color(chat_color)
+            curr_color = w.color("resetcolor") + w.color("|{}".format(chat_color))
             if config.colorize_nicks and config.colorize_messages and user_obj:
                 curr_color = user_obj.color
-            message = curr_color + message
+            message = curr_color + convert_attributes(message)
             for user in self.server.users:
                 if user.name in message:
                     message = user.name_regex.sub(
@@ -958,7 +958,8 @@ class User(object):
                 self.color_name = w.config_string(w.config_get('weechat.color.chat_nick_self'))
             else:
                 self.color_name = w.info_get('irc_nick_color_name', self.name)
-            self.color = w.color(self.color_name)
+            # "|" keeps previous attributes (bold, underline, italic)
+            self.color = w.color("|{}".format(self.color_name))
         else:
             self.color = ""
             self.color_name = ""
@@ -998,7 +999,8 @@ class Bot(object):
     def update_color(self):
         if config.colorize_nicks:
             self.color_name = w.info_get('irc_nick_color_name', self.name.encode('utf-8'))
-            self.color = w.color(self.color_name)
+            # "|" keeps previous attributes (bold, underline, italic)
+            self.color = w.color("|{}".format(self.color_name))
         else:
             self.color_name = ""
             self.color = ""
@@ -2454,6 +2456,46 @@ def scrolled_cb(signal, sig_type, data):
         pass
     return w.WEECHAT_RC_OK
 
+def convert_attributes(text):
+    if not config.convert_attributes: return text
+    matches = {
+        "*": "bold",
+        "_": "italic",
+        "~": "underline"    # TODO: change to unicode strikethrough
+    }
+    # Find any of the characters within ` and make sure they don't match
+    codes = list(re.finditer("(`.+?`)", text))
+    effect = ""
+    def filter_match(match):
+        # Check if within a code range
+        for code in codes:
+            if match.start() >= code.start() and match.start() <= code.end():
+                # Don't substitute if within code range
+                return ("{}"*6).format(
+                    match.group(1),
+                    match.group(2),
+                    match.group(3),
+                    match.group(4),
+                    match.group(5),
+                    match.group(6)
+                )
+        # Perform the substitute
+        return ("{}"*6).format(
+            match.group(1),
+            w.color(effect),
+            match.group(3),
+            match.group(4),
+            w.color("-{}".format(effect)),
+            match.group(6)
+        )
+    regex_match = "(^|\s)({0})([^{0}])(.*?)(\\2)($|\W)"
+    for key in matches:
+        effect = matches[key]
+        escaped_key = key.replace("", "\\")[:-1]
+        regex = re.compile(regex_match.format(escaped_key))
+        text = regex.sub(filter_match, text)
+    return text
+
 # END Utility Methods
 
 class PluginConfig(object):
@@ -2475,6 +2517,7 @@ class PluginConfig(object):
         'switch_buffer_on_join': 'true',
         'trigger_value': 'false',
         'unfurl_ignore_alt_text': 'false',
+        'convert_attributes': 'true',
     }
 
     # Set missing settings to their defaults. Load non-missing settings from
