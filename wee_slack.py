@@ -551,7 +551,7 @@ def buffer_input_callback(signal, buffer_ptr, data):
             channel.edit_previous_message(old.decode("utf-8"), new.decode("utf-8"), flags)
     else:
         channel.send_message(data)
-        channel.mark_read(update_remote=True, force=True)
+        #this is probably wrong channel.mark_read(update_remote=True, force=True)
     return w.WEECHAT_RC_ERROR
 
 def buffer_switch_callback(signal, sig_type, data):
@@ -1158,7 +1158,7 @@ class SlackChannel(object):
         request = {"type": "message", "channel": self.identifier, "text": message, "_team": self.team.team_hash, "user": self.team.myidentifier}
         request.update(request_dict_ext)
         self.team.send_to_websocket(request)
-        self.mark_read(force=True)
+        self.mark_read(update_remote=False, force=True)
     def store_message(self, message, team, from_me=False):
         if not self.active:
             return
@@ -1276,7 +1276,7 @@ class SlackChannel(object):
             if update_remote:
                 s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": ts}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
-        self.new_messages = False
+                self.new_messages = False
     def user_joined(self, user_id):
         #ugly hack - for some reason this gets turned into a list
         self.members = set(self.members)
@@ -1553,7 +1553,7 @@ class SlackThreadChannel(object):
         dbg(message)
         request = {"type": "message", "channel": self.parent_message.channel.identifier, "text": message, "_team": self.parent_message.team.team_hash, "user": self.parent_message.team.myidentifier, "thread_ts": str(self.parent_message.ts)}
         self.parent_message.team.send_to_websocket(request)
-        self.mark_read(force=True)
+        self.mark_read(update_remote=False, force=True)
 
     def open(self, update_remote=True):
         self.create_buffer()
