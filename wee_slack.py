@@ -7,7 +7,7 @@ import time
 import json
 import os
 import pickle
-import sha
+import hashlib
 import re
 import urllib
 import HTMLParser
@@ -2297,7 +2297,7 @@ big_data = {}
 def url_processor_cb(data, command, return_code, out, err):
     global big_data
     data = pickle.loads(data)
-    identifier = sha.sha("{}{}".format(data, command)).hexdigest()
+    identifier = hashlib.sha1("{}{}".format(data, command)).hexdigest()
     if identifier not in big_data:
         big_data[identifier] = ''
     big_data[identifier] += out
