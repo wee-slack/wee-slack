@@ -693,7 +693,7 @@ class Channel(object):
             tags += ",notify_private,notify_message,log1,irc_privmsg"
         elif self.muted:
             tags += ",no_highlight,notify_none,logger_backlog_end"
-        elif user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]:
+        elif user in [x.strip() for x in (w.prefix("join"), w.prefix("quit"))]:
             tags += ",irc_smart_filter"
         else:
             tags += ",notify_message,log1,irc_privmsg"
