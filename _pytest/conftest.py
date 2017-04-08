@@ -44,6 +44,7 @@ class FakeWeechat():
 @pytest.fixture
 def fake_weechat():
     wee_slack.w = FakeWeechat()
+    wee_slack.config = wee_slack.PluginConfig()
     pass
 
 
@@ -83,7 +84,7 @@ def channel(monkeypatch, server):
     monkeypatch.setattr(Channel, 'set_topic', mock_do_nothing)
     monkeypatch.setattr(Channel, 'set_topic', mock_do_nothing)
     monkeypatch.setattr(Channel, 'buffer_prnt', mock_buffer_prnt)
-    mychannel = Channel(server, '#testchan', 'C2147483705', True, last_read=0, prepend_name="", members=[], topic="")
+    mychannel = Channel(server, name='#testchan', id='C2147483705')
     return mychannel
 
 @pytest.fixture
