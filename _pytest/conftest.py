@@ -18,13 +18,13 @@ class FakeWeechat():
     WEECHAT_RC_OK = True
 
     def __init__(self):
-        print "INITIALIZE FAKE WEECHAT"
+        print("INITIALIZE FAKE WEECHAT")
     def prnt(*args):
         output = "("
         for arg in args:
             if arg != None:
                 output += "{}, ".format(arg)
-        print "w.prnt {}".format(output)
+        print("w.prnt {}".format(output))
     def hdata_get(*args):
         return "0x000001"
     def hdata_pointer(*args):
@@ -36,14 +36,15 @@ class FakeWeechat():
 
     def __getattr__(self, name):
         def method(*args):
-            print "called {}".format(name)
+            print("called {}".format(name))
             if args:
-                print "\twith args: {}".format(args)
+                print("\twith args: {}".format(args))
         return method
 
 @pytest.fixture
 def fake_weechat():
     wee_slack.w = FakeWeechat()
+    wee_slack.config = wee_slack.PluginConfig()
     pass
 
 
@@ -73,17 +74,17 @@ def myservers(server):
 @pytest.fixture
 def channel(monkeypatch, server):
     def mock_buffer_prnt(*args):
-        print "called buffer_prnt\n\twith args: {}".format(args)
+        print("called buffer_prnt\n\twith args: {}".format(args))
         return
     def mock_do_nothing(*args):
-        print args
+        print(args)
         return True
     monkeypatch.setattr(Channel, 'create_buffer', mock_do_nothing)
     monkeypatch.setattr(Channel, 'attach_buffer', mock_do_nothing)
     monkeypatch.setattr(Channel, 'set_topic', mock_do_nothing)
     monkeypatch.setattr(Channel, 'set_topic', mock_do_nothing)
     monkeypatch.setattr(Channel, 'buffer_prnt', mock_buffer_prnt)
-    mychannel = Channel(server, '#testchan', 'C2147483705', True, last_read=0, prepend_name="", members=[], topic="")
+    mychannel = Channel(server, name='#testchan', id='C2147483705')
     return mychannel
 
 @pytest.fixture
