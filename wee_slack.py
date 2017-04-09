@@ -10,11 +10,15 @@ import pickle
 import hashlib
 import re
 import urllib
-import HTMLParser
 import sys
 import traceback
 import collections
 import ssl
+
+try:
+    from html.parser import HTMLParser
+except ImportError:
+    from HTMLParser import HTMLParser
 
 from websocket import create_connection, WebSocketConnectionClosedException
 
@@ -739,7 +743,7 @@ class Channel(object):
                         r'\1\2{}\3'.format(user.formatted_name() + curr_color),
                         message)
 
-            message = HTMLParser.HTMLParser().unescape(message)
+            message = HTMLParser().unescape(message)
             data = u"{}\t{}".format(name, message).encode('utf-8')
             w.prnt_date_tags(self.channel_buffer, time_int, tags, data)
 
@@ -2480,7 +2484,7 @@ class PluginConfig(object):
     # Set missing settings to their defaults. Load non-missing settings from
     # weechat configs.
     def __init__(self):
-        for key,default in self.settings.iteritems():
+        for key,default in self.settings.items():
             if not w.config_get_plugin(key):
                 w.config_set_plugin(key, default)
         self.config_changed(None, None, None)
@@ -2506,7 +2510,10 @@ class PluginConfig(object):
             return self.get_boolean(key)
 
     def __getattr__(self, key):
-        return self.settings[key]
+        try:
+            return self.settings[key]
+        except KeyError:
+            raise AttributeError(key)
 
     def get_boolean(self, key):
         return w.config_string_to_boolean(w.config_get_plugin(key))
