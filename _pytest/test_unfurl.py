@@ -41,6 +41,6 @@ def test_unfurl_refs(myservers, mychannels, myusers, case):
     slack.users = myusers
     slack.message_cache = {}
     slack.servers[0].users = myusers
-    print mychannels[0].identifier
+    print(mychannels[0].identifier)
 
     assert slack.unfurl_refs(case['input'], ignore_alt_text=case.get('ignore_alt_text', False)) == case['output']

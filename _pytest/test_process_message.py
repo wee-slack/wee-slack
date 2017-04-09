@@ -20,7 +20,7 @@ def test_process_message(slack_debug, monkeypatch, myservers, mychannels, myuser
 
 #    def mock_buffer_prnt_changed(*args):
 #        called['buffer_prnt_changed'] += 1
-#        print args
+#        print(args)
 #    monkeypatch.setattr(wee_slack.Channel, 'buffer_prnt_changed', mock_buffer_prnt_changed)
 
 
@@ -31,8 +31,8 @@ def test_process_message(slack_debug, monkeypatch, myservers, mychannels, myuser
     messages.append( json.loads(open('_pytest/data/message-deleted.json', 'r').read()) )
     for m in messages:
         wee_slack.process_message(m)
-    print "---"
-    print called
-    print "---"
+    print("---")
+    print(called)
+    print("---")
 #    assert called['buffer_prnt'] == 2
 #    assert called['buffer_prnt_changed'] == 1
