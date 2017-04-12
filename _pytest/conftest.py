@@ -1,14 +1,47 @@
+import json
 import pytest
 import sys
 
 sys.path.append(".")
-#sys.path.append(str(pytest.config.rootdir))
 
-from wee_slack import SlackServer
-from wee_slack import Channel
-from wee_slack import User
-from wee_slack import SearchList
+#New stuff
+from wee_slack import EventRouter
+from wee_slack import SlackRequest
 import wee_slack
+
+class fakewebsocket(object):
+    def __init__(self):
+        self.returndata = []
+        pass
+    def add(self, data):
+        self.returndata.append(data)
+    def recv(self):
+        return json.dumps(self.returndata.pop(0))
+    def send(self, data):
+        print "websocket received: {}".format(data)
+        return
+
+@pytest.fixture
+def mock_websocket():
+    return fakewebsocket()
+
+@pytest.fixture
+def realish_eventrouter():
+    e = EventRouter()
+    context = e.store_context(SlackRequest('xoxoxoxox', "rtm.start", {"meh": "blah"}))
+    rtmstartdata = open('_pytest/data/http/rtm.start.json', 'r').read()
+    e.receive_httprequest_callback(context, 1, 0, rtmstartdata, 4)
+    e.handle_next()
+    #e.sc is just shortcuts to these items
+    e.sc = {}
+    e.sc["team_id"] = e.teams.keys()[0]
+    e.sc["team"] = e.teams[e.sc["team_id"]]
+    e.sc["user"] = e.teams[e.sc["team_id"]].users[e.teams[e.sc["team_id"]].users.keys()[0]]
+    socket = mock_websocket
+    e.teams[e.sc["team_id"]].ws = socket
+
+    return e
+
 
 class FakeWeechat():
     """
@@ -18,7 +51,8 @@ class FakeWeechat():
     WEECHAT_RC_OK = True
 
     def __init__(self):
-        print "INITIALIZE FAKE WEECHAT"
+        pass
+        #print "INITIALIZE FAKE WEECHAT"
     def prnt(*args):
         output = "("
         for arg in args:
@@ -33,77 +67,24 @@ class FakeWeechat():
         return "1355517519"
     def hdata_string(*args):
         return "testuser"
-
+    def buffer_new(*args):
+        return "0x8a8a8a8b"
     def __getattr__(self, name):
         def method(*args):
-            print "called {}".format(name)
-            if args:
-                print "\twith args: {}".format(args)
+            pass
+            #print "called {}".format(name)
+            #if args:
+            #    print "\twith args: {}".format(args)
         return method
 
 @pytest.fixture
-def fake_weechat():
+def mock_weechat():
     wee_slack.w = FakeWeechat()
-    pass
-
-
-@pytest.fixture
-def slack_debug():
+    wee_slack.config = wee_slack.PluginConfig()
+    wee_slack.debug_string = None
     wee_slack.slack_debug = "debug_buffer_ptr"
-
-@pytest.fixture
-def server(fake_weechat, monkeypatch):
-#def server(monkeypatch, mychannels, myusers):
-    def mock_connect_to_slack(*args):
-        return True
-    monkeypatch.setattr(SlackServer, 'connect_to_slack', mock_connect_to_slack)
-    myserver = SlackServer('xoxo-12345')
-    myserver.identifier = 'test.slack.com'
-    myserver.nick = 'myusername'
-    return myserver
-
-@pytest.fixture
-def myservers(server):
-    servers = SearchList()
-    servers.append(server)
-    return servers
-
-
-
-@pytest.fixture
-def channel(monkeypatch, server):
-    def mock_buffer_prnt(*args):
-        print "called buffer_prnt\n\twith args: {}".format(args)
-        return
-    def mock_do_nothing(*args):
-        print args
-        return True
-    monkeypatch.setattr(Channel, 'create_buffer', mock_do_nothing)
-    monkeypatch.setattr(Channel, 'attach_buffer', mock_do_nothing)
-    monkeypatch.setattr(Channel, 'set_topic', mock_do_nothing)
-    monkeypatch.setattr(Channel, 'set_topic', mock_do_nothing)
-    monkeypatch.setattr(Channel, 'buffer_prnt', mock_buffer_prnt)
-    mychannel = Channel(server, '#testchan', 'C2147483705', True, last_read=0, prepend_name="", members=[], topic="")
-    return mychannel
-
-@pytest.fixture
-def mychannels(channel):
-    channels = SearchList()
-    channels.append(channel)
-    return channels
-
-@pytest.fixture
-def user(monkeypatch, server):
-    wee_slack.domain = None
-    wee_slack.colorize_nicks = True
+    wee_slack.STOP_TALKING_TO_SLACK = False
+    wee_slack.proc = {}
     pass
-    myuser = User(server, "testuser", 'U2147483697', presence="away")
-    myuser.color = ''
-    return myuser
 
-@pytest.fixture
-def myusers(monkeypatch, user):
-    users = SearchList()
-    users.append(user)
-    return users
 
