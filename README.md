@@ -12,7 +12,7 @@ A WeeChat native client for Slack.com. Provides supplemental features only avail
 
 Features
 --------
-  * **New** Threads support!
+  * **New** [Threads](#threads) support!
   * Slash commands (including custom ones!)
   * Upload to slack capabilities!
   * Emoji reactions!
@@ -190,6 +190,8 @@ Debug mode:
 ```
 /slack debug
 ```
+
+#### Threads
 
 Start a new thread on the most recent message The number indicates which message in the buffer to reply to, in reverse time order:
 ```
