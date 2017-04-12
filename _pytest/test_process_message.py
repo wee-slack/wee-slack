@@ -1,38 +1,48 @@
-
-import wee_slack
-import pytest
 import json
-from collections import defaultdict
 
+from wee_slack import render
 
-def test_process_message(slack_debug, monkeypatch, myservers, mychannels, myusers):
-    called = defaultdict(int)
-    wee_slack.servers = myservers
-    wee_slack.channels = mychannels
-    wee_slack.users = myusers
-    wee_slack.message_cache = {}
-    wee_slack.servers[0].users = myusers
-    wee_slack.unfurl_ignore_alt_text = False
+def test_process_message(monkeypatch, realish_eventrouter, mock_websocket):
 
-    def mock_buffer_prnt(*args):
-        called['buffer_prnt'] += 1
-    monkeypatch.setattr(wee_slack.Channel, 'buffer_prnt', mock_buffer_prnt)
+    e = realish_eventrouter
 
-#    def mock_buffer_prnt_changed(*args):
-#        called['buffer_prnt_changed'] += 1
-#        print args
-#    monkeypatch.setattr(wee_slack.Channel, 'buffer_prnt_changed', mock_buffer_prnt_changed)
+    t = e.teams.keys()[0]
+    u = e.teams[t].users.keys()[0]
 
+    user = e.teams[t].users[u]
+    #print user
+
+    socket = mock_websocket
+    e.teams[t].ws = socket
 
     messages = []
-    messages.append( json.loads(open('_pytest/data/message-normal.json', 'r').read()) )
-    messages.append( json.loads(open('_pytest/data/message-normal2.json', 'r').read()) )
-    messages.append( json.loads(open('_pytest/data/message-changed.json', 'r').read()) )
-    messages.append( json.loads(open('_pytest/data/message-deleted.json', 'r').read()) )
+    messages.append(json.loads(open('_pytest/data/websocket/1485975421.33-message.json', 'r').read()))
+
+    # test message and then change
+    messages.append(json.loads(open('_pytest/data/websocket/1485976157.18-message.json', 'r').read()))
+    messages.append(json.loads(open('_pytest/data/websocket/1485976151.6-message.json', 'r').read()))
+
+    # test message then deletion
+    messages.append(json.loads(open('_pytest/data/websocket/1485975698.45-message.json', 'r').read()))
+    messages.append(json.loads(open('_pytest/data/websocket/1485975723.85-message.json', 'r').read()))
+
     for m in messages:
-        wee_slack.process_message(m)
-    print "---"
-    print called
-    print "---"
-#    assert called['buffer_prnt'] == 2
-#    assert called['buffer_prnt_changed'] == 1
+        m["user"] = user.id
+        socket.add(m)
+
+    e.receive_ws_callback(t)
+    e.handle_next()
+
+    e.receive_ws_callback(t)
+    e.handle_next()
+
+    e.receive_ws_callback(t)
+    e.handle_next()
+
+    e.receive_ws_callback(t)
+    e.handle_next()
+
+
+    #assert e.teams[t].channels['C407ABS94'].messages.keys()[0] == '1485976151.00016'
+    #assert False
+
