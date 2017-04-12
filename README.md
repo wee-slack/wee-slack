@@ -6,7 +6,7 @@ wee-slack
 **News:**
  1.0-RC1 is here. It is a pretty massive refactor, and fixes many of the current issues listed on github. Because there was no good way to do this, it breaks some/many existing PRs. _(please report bugs in #wee-slack on freenode)_
 
-A WeeChat native client for Slack.com. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, search, (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
+A WeeChat native client for Slack.com. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, threads (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
 
 ![animated screenshot](https://github.com/rawdigits/wee-slack/raw/master/docs/slack.gif)
 
