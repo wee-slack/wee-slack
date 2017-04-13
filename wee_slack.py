@@ -2054,19 +2054,19 @@ def subprocess_message_changed(message_json, eventrouter, channel, team):
     if m:
         new_message = m
         #message = SlackMessage(new_message, team, channel)
-        #if "attachments" in m:
-        #    message_json["attachments"] = m["attachments"]
-        #if "text" in m:
-        #    if "text" in message_json:
-        #        message_json["text"] += m["text"]
-        #        dbg("added text!")
-        #    else:
-        #        message_json["text"] = m["text"]
-        #if "fallback" in m:
-        #    if "fallback" in message_json:
-        #        message_json["fallback"] += m["fallback"]
-        #    else:
-        #        message_json["fallback"] = m["fallback"]
+        if "attachments" in m:
+            message_json["attachments"] = m["attachments"]
+        if "text" in m:
+            if "text" in message_json:
+                message_json["text"] += m["text"]
+                dbg("added text!")
+            else:
+                message_json["text"] = m["text"]
+        if "fallback" in m:
+            if "fallback" in message_json:
+                message_json["fallback"] += m["fallback"]
+            else:
+                message_json["fallback"] = m["fallback"]
 
     text_before = (len(new_message['text']) > 0)
     new_message["text"] += unwrap_attachments(message_json, text_before)
