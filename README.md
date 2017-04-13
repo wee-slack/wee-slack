@@ -49,7 +49,7 @@ Setup
 ------
 
 
-####0.
+#### 0.
 
 wee-slack doesn't use the Slack IRC gateway. If you currently connect via the gateway, you should probably remove the server definition.
 
@@ -61,7 +61,7 @@ wee-slack doesn't use the Slack IRC gateway. If you currently connect via the ga
 /python reload
 ```
 
-####1. Install dependencies
+#### 1. Install dependencies
 
 ##### OSX and Linux
 ```
@@ -73,20 +73,20 @@ pip install websocket-client
 pkg install py27-websocket-client py27-six
 ```
 
-####2. copy wee_slack.py to ~/.weechat/python/autoload
+#### 2. copy wee_slack.py to ~/.weechat/python/autoload
 ```
 wget https://raw.githubusercontent.com/rawdigits/wee-slack/master/wee_slack.py
 cp wee_slack.py ~/.weechat/python/autoload
 ```
 
-####3. Start WeeChat
+#### 3. Start WeeChat
 ```
 weechat
 ```
 
 **NOTE:** If weechat is already running, the script can be loaded using ``/python load python/autoload/wee_slack.py``
 
-####4. Add your Slack API key(s)
+#### 4. Add your Slack API key(s)
 ```
 /set plugins.var.python.slack_extension.slack_api_token [YOUR_SLACK_TOKEN]
 ```
@@ -106,7 +106,7 @@ If you don't want to store your API token in plaintext you can use the secure fe
 /set plugins.var.python.slack_extension.slack_api_token [token1],[token2],[token3]
 ```
 
-###5. $PROFIT$
+### 5. $PROFIT$
 ```
 /save
 /python reload
