@@ -2303,7 +2303,9 @@ def unfurl_ref(ref, ignore_alt_text=False):
         if ignore_alt_text:
             display_text = resolve_ref(id)
         else:
-            if id.startswith("#C") or id.startswith("@U"):
+            if id.startswith("#C"):
+                display_text = "#{}".format(ref.split('|')[1])
+            elif id.startswith("@U"):
                 display_text = ref.split('|')[1]
             else:
                 url, desc = ref.split('|', 1)
