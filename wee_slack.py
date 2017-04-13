@@ -3,6 +3,7 @@
 
 from functools import wraps
 
+import unicodedata
 import time
 import json
 import pickle
@@ -872,7 +873,7 @@ class SlackTeam(object):
             for v in self.channels.itervalues():
                 v.set_highlights()
     def formatted_name(self, **kwargs):
-        return self.domain
+        return to_ascii(self.domain)
     def buffer_prnt(self, data):
         w.prnt_date_tags(self.channel_buffer, SlackTS().major, tag("backlog"), data)
     def get_channel_map(self):
@@ -1005,13 +1006,16 @@ class SlackChannel(object):
         else:
             prepend = "#"
         select = {
-            "default": prepend + self.slack_name,
-            "sidebar": prepend + self.slack_name,
-            "base": self.slack_name,
-            "long_default": "{}.{}{}".format(self.team.preferred_name, prepend, self.slack_name),
-            "long_base": "{}.{}".format(self.team.preferred_name, self.slack_name),
+            "default": prepend + self.ascii_slack_name,
+            "sidebar": prepend + self.ascii_slack_name,
+            "base": self.ascii_slack_name,
+            "long_default": u"{}.{}{}".format(self.team.preferred_name, prepend, self.ascii_slack_name),
+            "long_base": u"{}.{}".format(self.team.preferred_name, self.ascii_slack_name),
         }
         return select[style]
+    @property
+    def ascii_slack_name(self):
+        return to_ascii(self.slack_name)
     def render_topic(self, topic=None):
         if self.channel_buffer:
             if not topic:
@@ -1391,13 +1395,16 @@ class SlackDMChannel(SlackChannel):
         else:
             prepend = "+"
         select = {
-            "default": self.slack_name,
-            "sidebar": prepend + self.slack_name,
-            "base": self.slack_name,
-            "long_default": "{}.{}".format(self.team.preferred_name, self.slack_name),
-            "long_base": "{}.{}".format(self.team.preferred_name, self.slack_name),
+            "default": self.ascii_slack_name,
+            "sidebar": prepend + self.ascii_slack_name,
+            "base": self.ascii_slack_name,
+            "long_default": "{}.{}".format(self.team.preferred_name, self.ascii_slack_name),
+            "long_base": "{}.{}".format(self.team.preferred_name, self.ascii_slack_name),
         }
         return print_color + select[style]
+    @property
+    def ascii_slack_name(self):
+        return to_ascii(self.slack_name)
     def open(self, update_remote=True):
         self.create_buffer()
         #self.active = True
@@ -1457,7 +1464,7 @@ class SlackMPDMChannel(SlackChannel):
     def set_name(self, n):
         self.name = "|".join("-".join(n.split("-")[1:-1]).split("--"))
     def formatted_name(self, style="default", typing=False, **kwargs):
-        adjusted_name = "|".join("-".join(self.slack_name.split("-")[1:-1]).split("--"))
+        adjusted_name = "|".join("-".join(self.ascii_slack_name.split("-")[1:-1]).split("--"))
         if config.channel_name_typing_indicator:
             if not typing:
                 prepend = "#"
@@ -1469,10 +1476,13 @@ class SlackMPDMChannel(SlackChannel):
             "default": adjusted_name,
             "sidebar": prepend + adjusted_name,
             "base": adjusted_name,
-            "long_default": "{}.{}".format(self.team.preferred_name, adjusted_name),
-            "long_base": "{}.{}".format(self.team.preferred_name, adjusted_name),
+            "long_default": u"{}.{}".format(self.team.preferred_name, adjusted_name),
+            "long_base": u"{}.{}".format(self.team.preferred_name, adjusted_name),
         }
         return select[style]
+    @property
+    def ascii_slack_name(self):
+        return to_ascii(self.slack_name)
 
 #    def formatted_name(self, **kwargs):
 #        return self.name
@@ -1497,11 +1507,11 @@ class SlackThreadChannel(object):
     #def set_name(self, slack_name):
     #    self.name = "#" + slack_name
     def formatted_name(self, style="default", **kwargs):
-        hash_or_ts = self.parent_message.hash or self.parent_message.ts
+        hash_or_ts = to_ascii(self.parent_message.hash or self.parent_message.ts)
         styles = {
-            "default": " +{}".format(hash_or_ts),
-            "long_default": "{}.{}".format(self.parent_message.channel.formatted_name(style="long_default"), hash_or_ts),
-            "sidebar": " +{}".format(hash_or_ts),
+            "default": u" +{}".format(hash_or_ts),
+            "long_default": u"{}.{}".format(self.parent_message.channel.formatted_name(style="long_default"), hash_or_ts),
+            "sidebar": u" +{}".format(hash_or_ts),
         }
         return styles[style]
     def refresh(self):
@@ -1585,7 +1595,11 @@ class SlackThreadChannel(object):
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
             time_format = w.config_string(w.config_get("weechat.look.buffer_time_format"))
             parent_time = time.localtime(SlackTS(self.parent_message.ts).major)
-            topic = '{} {} | {}'.format(time.strftime(time_format, parent_time), self.parent_message.sender, self.parent_message.render()	)
+            topic = u'{} {} | {}'.format(
+                    time.strftime(time_format, parent_time),
+                    self.parent_message.sender.decode("utf-8", "ignore"),
+                    self.parent_message.render().decode("utf-8", "ignore")
+                    )
             w.buffer_set(self.channel_buffer, "title", topic.encode('utf-8'))
 
             #self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
@@ -1637,9 +1651,9 @@ class SlackUser(object):
         self.color = w.color(self.color_name)
     def formatted_name(self, prepend="", enable_color=True):
         if enable_color:
-            return self.color + prepend + self.name
+            return self.color + prepend + to_ascii(self.name)
         else:
-            return prepend + self.name
+            return prepend + to_ascii(self.name)
 
 class SlackBot(SlackUser):
     """
@@ -3042,6 +3056,11 @@ def trace_calls(frame, event, arg):
     f.flush()
     return
 
+def to_ascii(name):
+    if isinstance(name, unicode):
+        return unicodedata.normalize("NFKD", name).encode("ascii", "ignore")
+    elif isinstance(name, str):
+        return unicodedata.normalize("NFKD", name.decode("utf-8", "ignore")).encode("ascii", "ignore")
 
 # Main
 if __name__ == "__main__":
