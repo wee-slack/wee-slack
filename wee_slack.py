@@ -1368,7 +1368,7 @@ class SlackDMChannel(SlackChannel):
         self.type = 'im'
         self.update_color()
         self.set_name(self.slack_name)
-        self.slack_topic = {"value": users[dmuser].profile.get("status_text")}
+        self.slack_topic = {"value": "[{}] {}".format(users[dmuser].profile.get("status_emoji"), users[dmuser].profile.get("status_text"))}
     def set_name(self, slack_name):
         self.name = slack_name
     def create_buffer(self):
@@ -1636,7 +1636,8 @@ class SlackUser(object):
         # colourization.
         self.color_name = w.info_get('nick_color_name', self.name.encode('utf-8'))
         self.color = w.color(self.color_name)
-    def update_status(self, status_text):
+    def update_status(self, status_emoji, status_text):
+        self.profile["status_emoji"] = status_emoji
         self.profile["status_text"] = status_text
     def formatted_name(self, prepend="", enable_color=True):
         if enable_color:
@@ -1932,9 +1933,9 @@ def process_user_change(message_json, eventrouter, **kwargs):
     user = message_json['user']
     profile = user.get("profile")
     team = kwargs["team"]
-    team.users[user["id"]].update_status(profile.get("status_text"))
+    team.users[user["id"]].update_status(profile.get("status_emoji"), profile.get("status_text"))
     dmchannel = team.get_channel_map()[user["name"]]
-    team.channels[dmchannel].render_topic(topic=team.users[user["id"]].profile["status_text"])
+    team.channels[dmchannel].render_topic(topic="[{}] {}".format(team.users[user["id"]].profile["status_emoji"], team.users[user["id"]].profile["status_text"]))
 
 def process_user_typing(message_json, eventrouter, **kwargs):
     channel = kwargs["channel"]
