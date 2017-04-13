@@ -4,16 +4,17 @@ wee-slack
 =========
 
 **News:**
- The 0.99.1+ has a number of backend changes to make things faster and better. You should use it. :) _(please report bugs in #wee-slack on freenode)_
+ 1.0-RC1 is here. It is a pretty massive refactor, and fixes many of the current issues listed on github. Because there was no good way to do this, it breaks some/many existing PRs. _(please report bugs in #wee-slack on freenode)_
 
-A WeeChat native client for Slack.com. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, search, (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
+A WeeChat native client for Slack.com. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, threads (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
 
 ![animated screenshot](https://github.com/rawdigits/wee-slack/raw/master/docs/slack.gif)
 
 Features
 --------
-  * **New** Slash commands (including custom ones!)
-  * **New** Upload to slack capabilities!
+  * **New** [Threads](#threads) support!
+  * Slash commands (including custom ones!)
+  * Upload to slack capabilities!
   * Emoji reactions!
   * Edited messages work just like the official clients, where the original message changes and has (edited) appended.
   * Unfurled urls dont generate a new message, but replace the original with more info as it is received.
@@ -29,7 +30,6 @@ Features
   * Colorized nicks in chat
   * Supports bidirectional slack read notifications for all channels. (never reread the same messages on the web client or other devices).
   * Typing notification, so you can see when others are typing, and they can see when you type. Appears globally for direct messages
-  * Search slack history allows you to do simple searches across all previous slack conversations
   * Away/back status handling
   * Expands/shows metadata for things like tweets/links
   * Displays edited messages (slack.com irc mode currently doesn't show these)
@@ -37,9 +37,7 @@ Features
 
 In Development
 --------------
-  * fix search
   * add notification of new versions of wee-slack
-  * growl notification
 
 
 Dependencies
@@ -192,6 +190,24 @@ Debug mode:
 ```
 /slack debug
 ```
+
+#### Threads
+
+Start a new thread on the most recent message The number indicates which message in the buffer to reply to, in reverse time order:
+```
+/reply 1 here is a threaded reply to the most recent message!
+```
+
+Open an existing thread as a channel. The argument is the thread identifier, which is printed in square brackets with every threaded message in a channel:
+```
+/thread af8
+```
+
+Label a thread with a memorable name. The above command will open a channel called af8, but perhaps you want to call it "meetingnotes". To do so, select that buffer and type:
+```
+/label meetingnotes
+```
+_Note: labels do not persist once a thread buffer is closed_
 
 Optional settings
 -----------------

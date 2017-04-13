@@ -1,0 +1,11 @@
+language: python
+python:
+  - "2.7"
+install:
+  - 'pip install websocket-client pytest'
+
+script: python -m pytest
+
+notifications:
+  irc: "chat.freenode.net#wee-slack-dev"
+  email: false
