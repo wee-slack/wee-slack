@@ -2579,7 +2579,7 @@ def command_talk(data, current_buffer, args):
             c = team.get_channel_map()
 
     if channel_name.startswith('#'):
-        channel_name = arg[1:]
+        channel_name = channel_name[1:]
     if channel_name in c:
         chan = team.channels[c[channel_name]]
         chan.open()
