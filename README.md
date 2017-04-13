@@ -13,6 +13,7 @@ A WeeChat native client for Slack.com. Provides supplemental features only avail
 Features
 --------
   * **New** [Threads](#threads) support!
+  * **New** [Slack Status](#status) support!
   * Slash commands (including custom ones!)
   * Upload to slack capabilities!
   * Emoji reactions!
@@ -208,6 +209,18 @@ Label a thread with a memorable name. The above command will open a channel call
 /label meetingnotes
 ```
 _Note: labels do not persist once a thread buffer is closed_
+
+#### Status
+
+Set your Slack status on a given team:
+```
+/slack status [:emoji:] [Status message]
+```
+
+Example:
+```
+/slack status :ghost: Boo!
+```
 
 Optional settings
 -----------------
