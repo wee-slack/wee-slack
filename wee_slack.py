@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
+
 from functools import wraps
 
 import time
@@ -382,7 +384,7 @@ class EventRouter(object):
                 meta = j.get("wee_slack_metadata", None)
                 if meta:
                     try:
-                        if isinstance(meta, str):
+                        if isinstance(meta, basestring):
                             dbg("string of metadata")
                         team = meta.get("team", None)
                         if team:
@@ -442,7 +444,7 @@ class WeechatController(object):
         complete
         Adds a weechat buffer to the list of handled buffers for this EventRouter
         """
-        if isinstance(buffer_ptr, str):
+        if isinstance(buffer_ptr, basestring):
             self.buffers[buffer_ptr] = channel
         else:
             raise InvalidType(type(buffer_ptr))
@@ -452,7 +454,7 @@ class WeechatController(object):
         complete
         Adds a weechat buffer to the list of handled buffers for this EventRouter
         """
-        if isinstance(buffer_ptr, str):
+        if isinstance(buffer_ptr, basestring):
             try:
                 self.buffers[buffer_ptr].destroy_buffer(update_remote)
                 if close_buffer:
@@ -1822,11 +1824,11 @@ class SlackMessage(object):
         dbg(self.message_json)
 
     def get_sender(self, utf8=True):
-        name = u""
-        name_plain = u""
+        name = ""
+        name_plain = ""
         if 'bot_id' in self.message_json and self.message_json['bot_id'] is not None:
-            name = u"{} :]".format(self.team.bots[self.message_json["bot_id"]].formatted_name())
-            name_plain = u"{}".format(self.team.bots[self.message_json["bot_id"]].formatted_name(enable_color=False))
+            name = "{} :]".format(self.team.bots[self.message_json["bot_id"]].formatted_name())
+            name_plain = "{}".format(self.team.bots[self.message_json["bot_id"]].formatted_name(enable_color=False))
         elif 'user' in self.message_json:
             if self.message_json['user'] == self.team.myidentifier:
                 name = self.team.users[self.team.myidentifier].name
@@ -1834,19 +1836,19 @@ class SlackMessage(object):
             elif self.message_json['user'] in self.team.users:
                 u = self.team.users[self.message_json['user']]
                 if u.is_bot:
-                    name = u"{} :]".format(u.formatted_name())
+                    name = "{} :]".format(u.formatted_name())
                 else:
-                    name = u"{}".format(u.formatted_name())
-                name_plain = u"{}".format(u.formatted_name(enable_color=False))
+                    name = "{}".format(u.formatted_name())
+                name_plain = "{}".format(u.formatted_name(enable_color=False))
         elif 'username' in self.message_json:
-            name = u"-{}-".format(self.message_json["username"])
-            name_plain = u"{}".format(self.message_json["username"])
+            name = "-{}-".format(self.message_json["username"])
+            name_plain = "{}".format(self.message_json["username"])
         elif 'service_name' in self.message_json:
-            name = u"-{}-".format(self.message_json["service_name"])
-            name_plain = u"{}".format(self.message_json["service_name"])
+            name = "-{}-".format(self.message_json["service_name"])
+            name_plain = "{}".format(self.message_json["service_name"])
         else:
-            name = u""
-            name_plain = u""
+            name = ""
+            name_plain = ""
         if utf8:
             return (name.encode('utf-8'), name_plain.encode('utf-8'))
         else:
@@ -1861,9 +1863,9 @@ class SlackMessage(object):
                     r["users"].append(user)
                     found = True
             if not found:
-                self.message_json["reactions"].append({u"name": reaction, u"users": [user]})
+                self.message_json["reactions"].append({"name": reaction, "users": [user]})
         else:
-            self.message_json["reactions"] = [{u"name": reaction, u"users": [user]}]
+            self.message_json["reactions"] = [{"name": reaction, "users": [user]}]
 
     def remove_reaction(self, reaction, user):
         m = self.message_json.get('reactions', None)
@@ -2010,12 +2012,12 @@ def handle_rtmstart(login_data, eventrouter):
         #    return False
 
         t.buffer_prnt('Connected to Slack')
-        t.buffer_prnt('{:<20} {}'.format(u"Websocket URL", login_data["url"]))
-        t.buffer_prnt('{:<20} {}'.format(u"User name", login_data["self"]["name"]))
-        t.buffer_prnt('{:<20} {}'.format(u"User ID", login_data["self"]["id"]))
-        t.buffer_prnt('{:<20} {}'.format(u"Team name", login_data["team"]["name"]))
-        t.buffer_prnt('{:<20} {}'.format(u"Team domain", login_data["team"]["domain"]))
-        t.buffer_prnt('{:<20} {}'.format(u"Team id", login_data["team"]["id"]))
+        t.buffer_prnt('{:<20} {}'.format("Websocket URL", login_data["url"]))
+        t.buffer_prnt('{:<20} {}'.format("User name", login_data["self"]["name"]))
+        t.buffer_prnt('{:<20} {}'.format("User ID", login_data["self"]["id"]))
+        t.buffer_prnt('{:<20} {}'.format("Team name", login_data["team"]["name"]))
+        t.buffer_prnt('{:<20} {}'.format("Team domain", login_data["team"]["domain"]))
+        t.buffer_prnt('{:<20} {}'.format("Team id", login_data["team"]["id"]))
 
         dbg("connected to {}".format(t.domain))
 
@@ -2066,9 +2068,9 @@ def process_presence_change(message_json, eventrouter, **kwargs):
 
 def process_pref_change(message_json, eventrouter, **kwargs):
     team = kwargs["team"]
-    if message_json['name'] == u'muted_channels':
+    if message_json['name'] == 'muted_channels':
         team.set_muted_channels(message_json['value'])
-    elif message_json['name'] == u'highlight_words':
+    elif message_json['name'] == 'highlight_words':
         team.set_highlight_words(message_json['value'])
     else:
         dbg("Preference change not implemented: {}\n".format(message_json['name']))
@@ -2391,9 +2393,9 @@ def render(message_json, team, channel, force=False):
             if message_json['text'] is not None:
                 text = message_json["text"]
             else:
-                text = u""
+                text = ""
         else:
-            text = u""
+            text = ""
 
         text = unfurl_refs(text, ignore_alt_text=config.unfurl_ignore_alt_text)
 
@@ -2483,7 +2485,7 @@ def unfurl_ref(ref, ignore_alt_text=False):
                 display_text = ref.split('|')[1]
             else:
                 url, desc = ref.split('|', 1)
-                display_text = u"{} ({})".format(url, desc)
+                display_text = "{} ({})".format(url, desc)
     else:
         display_text = resolve_ref(ref)
     return display_text
@@ -2494,7 +2496,7 @@ def unwrap_attachments(message_json, text_before):
     a = message_json.get("attachments", None)
     if a:
         if text_before:
-            attachment_text = u'\n'
+            attachment_text = '\n'
         for attachment in a:
             # Attachments should be rendered roughly like:
             #
