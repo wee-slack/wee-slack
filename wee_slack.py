@@ -571,7 +571,7 @@ def buffer_input_callback(signal, buffer_ptr, data):
             # rid of escapes.
             new = new.replace(r'\/', '/')
             old = old.replace(r'\/', '/')
-            channel.edit_previous_message(old.decode("utf-8"), new.decode("utf-8"), flags)
+            channel.edit_previous_message(old, new, flags)
     else:
         channel.send_message(data)
         # this is probably wrong channel.mark_read(update_remote=True, force=True)
@@ -1089,13 +1089,10 @@ class SlackChannel(object):
         if self.channel_buffer:
             if not topic:
                 if self.slack_topic['value'] != "":
-                    encoded_topic = self.slack_topic['value'].encode('utf-8')
+                    topic = self.slack_topic['value']
                 else:
-                    encoded_topic = self.slack_purpose['value'].encode('utf-8')
-            else:
-                encoded_topic = topic.encode('utf-8')
-                self.encoded_topic = topic.encode('utf-8')
-            w.buffer_set(self.channel_buffer, "title", encoded_topic)
+                    topic = self.slack_purpose['value']
+            w.buffer_set(self.channel_buffer, "title", topic)
 
     def update_from_message_json(self, message_json):
         for key, value in message_json.items():
@@ -1280,7 +1277,7 @@ class SlackChannel(object):
                 num_replace = 0
             new_message = re.sub(old, new, message["text"], num_replace)
             if new_message != message["text"]:
-                s = SlackRequest(self.team.token, "chat.update", {"channel": self.identifier, "ts": message['ts'], "text": new_message.encode("utf-8")}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                s = SlackRequest(self.team.token, "chat.update", {"channel": self.identifier, "ts": message['ts'], "text": new_message}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
 
     def my_last_message(self):
@@ -1479,7 +1476,7 @@ class SlackDMChannel(SlackChannel):
 
     def update_color(self):
         if config.colorize_private_chats:
-            self.color_name = w.info_get('irc_nick_color_name', self.name.encode('utf-8'))
+            self.color_name = w.info_get('irc_nick_color_name', self.name)
             self.color = w.color(self.color_name)
         else:
             self.color = ""
@@ -1705,7 +1702,7 @@ class SlackThreadChannel(object):
             time_format = w.config_string(w.config_get("weechat.look.buffer_time_format"))
             parent_time = time.localtime(SlackTS(self.parent_message.ts).major)
             topic = '{} {} | {}'.format(time.strftime(time_format, parent_time), self.parent_message.sender, self.parent_message.render()	)
-            w.buffer_set(self.channel_buffer, "title", topic.encode('utf-8'))
+            w.buffer_set(self.channel_buffer, "title", topic)
 
             # self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
 
@@ -1758,7 +1755,7 @@ class SlackUser(object):
     def update_color(self):
         # This will automatically be none/"" if the user has disabled nick
         # colourization.
-        self.color_name = w.info_get('nick_color_name', self.name.encode('utf-8'))
+        self.color_name = w.info_get('nick_color_name', self.name)
         self.color = w.color(self.color_name)
 
     def formatted_name(self, prepend="", enable_color=True):
@@ -2145,7 +2142,7 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
             channel.store_message(message, team)
         dbg("NORMAL REPLY {}".format(message_json))
     # except:
-    #    channel.buffer_prnt("WEE-SLACK-ERROR", json.dumps(message_json).encode('utf-8'), message_json["ts"], **kwargs)
+    #    channel.buffer_prnt("WEE-SLACK-ERROR", json.dumps(message_json), message_json["ts"], **kwargs)
     #    traceback.print_exc()
 
 
@@ -2238,9 +2235,6 @@ def subprocess_message_deleted(message_json, eventrouter, channel, team):
 
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
     text = unfurl_refs(message_json["text"], ignore_alt_text=False)
-    if type(text) != unicode:
-        text = text.decode('utf-8', 'ignore')
-    text = text.encode('utf-8')
     channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"], tagset="muted")
     channel.render_topic(message_json["topic"])
 
@@ -2408,10 +2402,6 @@ def render(message_json, team, channel, force=False):
                       r'\1{}\2{}\3'.format(w.color('bold'), w.color('-bold')), text)
         text = re.sub(r'(^| )_([^_]+)_([^a-zA-Z0-9_]|$)',
                       r'\1{}\2{}\3'.format(w.color('underline'), w.color('-underline')), text)
-
-        if type(text) is not unicode:
-            text = text.decode('UTF-8', 'replace')
-        text = text.encode('utf-8')
 
 #        if self.threads:
 #            text += " [Replies: {} Thread ID: {} ] ".format(len(self.threads), self.thread_id)
@@ -3102,7 +3092,6 @@ def dbg(message, level=0, main_buffer=False, fout=False):
     if level >= config.debug_level:
         global debug_string
         message = "DEBUG: {}".format(message)
-        # message = message.encode('utf-8', 'replace')
         if fout:
             file('/tmp/debug.log', 'a+').writelines(message + '\n')
         if main_buffer:
