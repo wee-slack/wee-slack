@@ -1823,7 +1823,7 @@ class SlackMessage(object):
         self.suffix = new_suffix
         dbg(self.message_json)
 
-    def get_sender(self, utf8=True):
+    def get_sender(self):
         name = ""
         name_plain = ""
         if 'bot_id' in self.message_json and self.message_json['bot_id'] is not None:
@@ -1849,10 +1849,7 @@ class SlackMessage(object):
         else:
             name = ""
             name_plain = ""
-        if utf8:
-            return (name.encode('utf-8'), name_plain.encode('utf-8'))
-        else:
-            return (name, name_plain)
+        return (name, name_plain)
 
     def add_reaction(self, reaction, user):
         m = self.message_json.get('reactions', None)
