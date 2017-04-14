@@ -13,6 +13,7 @@ import re
 import urllib
 import sys
 import traceback
+import collections
 import ssl
 import random
 import string
@@ -21,7 +22,7 @@ from websocket import create_connection, WebSocketConnectionClosedException
 
 # hack to make tests possible.. better way?
 try:
-    import weechat as w
+    import weechat
 except:
     pass
 
@@ -103,6 +104,53 @@ if hasattr(ssl, "get_default_verify_paths") and callable(ssl.get_default_verify_
     ssl_defaults = ssl.get_default_verify_paths()
     if ssl_defaults.cafile is not None:
         sslopt_ca_certs = {'ca_certs': ssl_defaults.cafile}
+
+###### Unicode handling
+
+
+def encode_to_utf8(data):
+    if isinstance(data, unicode):
+        return data.encode('utf-8')
+    if isinstance(data, bytes):
+        return data
+    elif isinstance(data, collections.Mapping):
+        return dict(map(encode_to_utf8, data.iteritems()))
+    elif isinstance(data, collections.Iterable):
+        return type(data)(map(encode_to_utf8, data))
+    else:
+        return data
+
+
+def decode_from_utf8(data):
+    if isinstance(data, bytes):
+        return data.decode('utf-8')
+    if isinstance(data, unicode):
+        return data
+    elif isinstance(data, collections.Mapping):
+        return dict(map(decode_from_utf8, data.iteritems()))
+    elif isinstance(data, collections.Iterable):
+        return type(data)(map(decode_from_utf8, data))
+    else:
+        return data
+
+
+class WeechatWrapper(object):
+    def __init__(self, wrapped_class):
+        self.wrapped_class = wrapped_class
+
+    def __getattr__(self, attr):
+        orig_attr = self.wrapped_class.__getattribute__(attr)
+        if callable(orig_attr):
+            def hooked(*args, **kwargs):
+                result = orig_attr(*encode_to_utf8(args), **encode_to_utf8(kwargs))
+                # Prevent wrapped_class from becoming unwrapped
+                if result == self.wrapped_class:
+                    return self
+                return decode_from_utf8(result)
+            return hooked
+        else:
+            return decode_from_utf8(orig_attr)
+
 
 ##### BEGIN NEW
 
@@ -3239,6 +3287,8 @@ def trace_calls(frame, event, arg):
 
 # Main
 if __name__ == "__main__":
+
+    w = WeechatWrapper(weechat)
 
     if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
                   SCRIPT_DESC, "script_unloaded", ""):
