@@ -287,7 +287,7 @@ class EventRouter(object):
         """
         try:
             # Read the data from the websocket associated with this team.
-            data = self.teams[team_hash].ws.recv()
+            data = decode_from_utf8(self.teams[team_hash].ws.recv())
             message_json = json.loads(data)
             metadata = WeeSlackMetadata({
                 "team": team_hash,
@@ -858,7 +858,7 @@ class SlackRequest(object):
         post_data["token"] = token
         self.post_data = post_data
         self.params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
-        self.url = 'https://{}/api/{}?{}'.format(self.domain, request, urllib.urlencode(post_data))
+        self.url = 'https://{}/api/{}?{}'.format(self.domain, request, urllib.urlencode(encode_to_utf8(post_data)))
         self.response_id = sha.sha("{}{}".format(self.url, self.start_time)).hexdigest()
         self.retries = kwargs.get('retries', 3)
 #    def __repr__(self):
@@ -1053,7 +1053,7 @@ class SlackTeam(object):
         try:
             if expect_reply:
                 self.ws_replies[data["id"]] = data
-            self.ws.send(message)
+            self.ws.send(encode_to_utf8(message))
             dbg("Sent {}...".format(message[:100]))
         except:
             print "WS ERROR"
