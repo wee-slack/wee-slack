@@ -2231,9 +2231,13 @@ def render(message_json, team, channel, force=False):
         text = text.replace("&gt;", ">")
         text = text.replace("&amp;", "&")
         text = re.sub(r'(^| )\*([^*]+)\*([^a-zA-Z0-9_]|$)',
-                      r'\1{}\2{}\3'.format(w.color('bold'), w.color('-bold')), text)
+                      r'\1{}\2{}\3'.format(w.color(config.render_bold_as),
+                                           w.color('-' + config.render_bold_as)),
+                      text)
         text = re.sub(r'(^| )_([^_]+)_([^a-zA-Z0-9_]|$)',
-                      r'\1{}\2{}\3'.format(w.color('underline'), w.color('-underline')), text)
+                      r'\1{}\2{}\3'.format(w.color(config.render_italic_as),
+                                           w.color('-' + config.render_italic_as)),
+                      text)
 
         if type(text) is not unicode:
             text = text.decode('UTF-8', 'replace')
@@ -2254,7 +2258,11 @@ def linkify_text(message, team, channel):
     # function is only called on message send..
     usernames = team.get_username_map()
     channels = team.get_channel_map()
-    message = message.replace('\x02', '*').replace('\x1F', '_').split(' ')
+    message = (message
+        .replace('\x02', '*')
+        .replace('\x1D', '_')
+        .replace('\x1F', config.map_underline_to)
+        .split(' '))
     for item in enumerate(message):
         targets = re.match('^\s*([@#])([\w.-]+[\w. -])(\W*)', item[1])
         #print targets
@@ -2923,6 +2931,9 @@ class PluginConfig(object):
         'debug_mode': 'false',
         'debug_level': '3',
         'distracting_channels': '',
+        'map_underline_to': '_',
+        'render_bold_as': 'bold',
+        'render_italic_as': 'italic',
         'show_reaction_nicks': 'false',
         'slack_api_token': 'INSERT VALID KEY HERE!',
         'slack_timeout': '20000',
@@ -2975,6 +2986,19 @@ class PluginConfig(object):
     def get_boolean(self, key):
         return w.config_string_to_boolean(w.config_get_plugin(key))
 
+    def get_string(self, key):
+        return w.config_get_plugin(key)
+
+    def get_int(self, key):
+        return int(w.config_get_plugin(key))
+
+    get_debug_level = get_int
+    get_map_underline_to = get_string
+    get_render_bold_as = get_string
+    get_render_italic_as = get_string
+    get_slack_timeout = get_int
+    get_thread_suffix_color = get_string
+
     def get_distracting_channels(self, key):
         return [x.strip() for x in w.config_get_plugin(key).split(',')]
 
@@ -2989,15 +3013,6 @@ class PluginConfig(object):
             return w.string_eval_expression(token, {}, {}, {})
         else:
             return token
-
-    def get_thread_suffix_color(self, key):
-        return w.config_get_plugin("thread_suffix_color")
-
-    def get_debug_level(self, key):
-        return int(w.config_get_plugin(key))
-
-    def get_slack_timeout(self, key):
-        return int(w.config_get_plugin(key))
 
     def migrate(self):
         """
