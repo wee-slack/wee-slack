@@ -2780,7 +2780,6 @@ def command_status(data, current_buffer, args):
 
         profile = {"status_text":text,"status_emoji":emoji}
 
-        team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
         s = SlackRequest(team.token, "users.profile.set", {"profile": profile}, team_hash=team.team_hash, channel_identifier=channel.identifier)
         EVENTROUTER.receive(s)
 
