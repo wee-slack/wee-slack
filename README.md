@@ -224,7 +224,7 @@ Turn on colorized messages (messages match nick color):
 
 Set channel prefix to something other than my-slack-subdomain.slack.com (e.g. when using buffers.pl):
 ```
-/set plugins.var.python.slack.server_aliases.my-slack-subdomain "mysub"
+/set plugins.var.python.slack.server_aliases "my-slack-subdomain:mysub"
 ```
 
 Show who added each reaction. Makes reactions appear like `[:smile:(@nick1,@nick2)]` instead of `[:smile:2]`.
