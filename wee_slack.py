@@ -3030,6 +3030,31 @@ def command_away(data, current_buffer, args):
 
 
 @slack_buffer_required
+def command_status(data, current_buffer, args):
+    """
+    Lets you set your Slack Status (not to be confused with away/here)
+    /slack status [emoji] [status_message]
+    """
+    e = EVENTROUTER
+    channel = e.weechat_controller.buffers.get(current_buffer, None)
+    if channel:
+        team = channel.team
+
+        if args is None:
+            server.buffer_prnt("Usage: /slack status [status emoji] [status text].")
+            return
+
+        split_args = args.split(None, 2)
+        emoji = split_args[1] if len(split_args) > 1 else ""
+        text = split_args[2] if len(split_args) > 2 else ""
+
+        profile = {"status_text":text,"status_emoji":emoji}
+
+        s = SlackRequest(team.token, "users.profile.set", {"profile": profile}, team_hash=team.team_hash, channel_identifier=channel.identifier)
+        EVENTROUTER.receive(s)
+
+
+@slack_buffer_required
 def command_back(data, current_buffer, args):
     """
     Sets your status as 'back'
