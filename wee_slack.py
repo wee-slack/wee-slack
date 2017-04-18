@@ -1368,7 +1368,7 @@ class SlackDMChannel(SlackChannel):
         self.type = 'im'
         self.update_color()
         self.set_name(self.slack_name)
-        self.slack_topic = {"value": "[{}] {}".format(users[dmuser].profile.get("status_emoji"), users[dmuser].profile.get("status_text"))}
+        self.slack_topic = {"value": create_user_status_string(users[dmuser].profile)}
     def set_name(self, slack_name):
         self.name = slack_name
     def create_buffer(self):
@@ -1935,7 +1935,7 @@ def process_user_change(message_json, eventrouter, **kwargs):
     team = kwargs["team"]
     team.users[user["id"]].update_status(profile.get("status_emoji"), profile.get("status_text"))
     dmchannel = team.get_channel_map()[user["name"]]
-    team.channels[dmchannel].render_topic(topic="[{}] {}".format(team.users[user["id"]].profile["status_emoji"], team.users[user["id"]].profile["status_text"]))
+    team.channels[dmchannel].render_topic(topic=create_user_status_string(profile))
 
 def process_user_typing(message_json, eventrouter, **kwargs):
     channel = kwargs["channel"]
@@ -2400,6 +2400,11 @@ def resolve_ref(ref):
 
         # Something else, just return as-is
     return ref
+
+def create_user_status_string(profile):
+    status_emoji = profile.get("status_emoji") if profile.get("status_emoji") else "None"
+    status_text = profile.get("status_text") if profile.get("status_text") else "None"
+    return "[{}] {}".format(status_emoji, status_text)
 
 def create_reaction_string(reactions):
     count = 0
