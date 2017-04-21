@@ -1859,8 +1859,8 @@ class SlackMessage(object):
             self.sender, self.sender_plain = senders[0], senders[1]
         self.suffix = ''
         self.ts = SlackTS(message_json['ts'])
-        text = self.message_json.get('text', '')
-        if text.startswith('_') and text.endswith('_') and 'subtype' not in message_json:
+        text = self.message_json.get('text')
+        if text and text.startswith('_') and text.endswith('_') and 'subtype' not in message_json:
             message_json['text'] = text[1:-1]
             message_json['subtype'] = 'me_message'
         if message_json.get('subtype') == 'me_message' and not message_json['text'].startswith(self.sender):
