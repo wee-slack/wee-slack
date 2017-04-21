@@ -35,8 +35,6 @@ SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 BACKLOG_SIZE = 200
 SCROLLBACK_SIZE = 500
 
-CACHE_VERSION = "4"
-
 RECORD_DIR = "/tmp/weeslack-debug"
 
 SLACK_API_TRANSLATOR = {
@@ -3184,7 +3182,6 @@ def setup_hooks():
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
 
     # Hooks to fix/implement
-    # w.hook_timer(1000 * 60 * 5, 0, 0, "cache_write_cb", "")
     # w.hook_signal('buffer_opened', "buffer_opened_cb", "")
     # w.hook_signal('window_scrolled', "scrolled_cb", "")
     # w.hook_timer(3000, 0, 0, "slack_connection_persistence_cb", "")
@@ -3222,7 +3219,6 @@ class PluginConfig(object):
     # extracted.
     # TODO: setting descriptions.
     settings = {
-        'colorize_messages': 'false',
         'colorize_private_chats': 'false',
         'debug_mode': 'false',
         'debug_level': '3',
@@ -3233,7 +3229,6 @@ class PluginConfig(object):
         'switch_buffer_on_join': 'true',
         'trigger_value': 'false',
         'unfurl_ignore_alt_text': 'false',
-        'cache_messages': 'true',
         'record_events': 'false',
         'thread_suffix_color': 'lightcyan',
         'unhide_buffers_with_activity': 'false',
@@ -3364,7 +3359,6 @@ if __name__ == "__main__":
             # setup_trace()
 
             # WEECHAT_HOME = w.info_get("weechat_dir", "")
-            # CACHE_NAME = "slack.cache"
             # STOP_TALKING_TO_SLACK = False
 
             # Global var section
@@ -3381,10 +3375,6 @@ if __name__ == "__main__":
             hide_distractions = False
             # hotlist = w.infolist_get("hotlist", "", "")
             # main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
-
-            # message_cache = collections.defaultdict(list)
-            # if config.cache_messages:
-            #    cache_load()
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
 
