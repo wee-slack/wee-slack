@@ -2458,10 +2458,10 @@ def render(message_json, team, channel, force=False):
         text = text.replace("&lt;", "<")
         text = text.replace("&gt;", ">")
         text = text.replace("&amp;", "&")
-        text = re.sub(r'(^| )\*([^*]+)\*([^a-zA-Z0-9_]|$)',
-                      r'\1{}\2{}\3'.format(w.color('bold'), w.color('-bold')), text)
-        text = re.sub(r'(^| )_([^_]+)_([^a-zA-Z0-9_]|$)',
-                      r'\1{}\2{}\3'.format(w.color('underline'), w.color('-underline')), text)
+        text = re.sub(r'(^| )\*([^*]+)\*(?=[^a-zA-Z0-9_]|$)',
+                      r'\1{}\2{}'.format(w.color('bold'), w.color('-bold')), text)
+        text = re.sub(r'(^| )_([^_]+)_(?=[^a-zA-Z0-9_]|$)',
+                      r'\1{}\2{}'.format(w.color('underline'), w.color('-underline')), text)
 
 #        if self.threads:
 #            text += " [Replies: {} Thread ID: {} ] ".format(len(self.threads), self.thread_id)
