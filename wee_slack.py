@@ -2438,6 +2438,17 @@ def process_reaction_removed(message_json, eventrouter, **kwargs):
 
 ###### New module/global methods
 
+def render_formatting(text):
+    text = re.sub(r'(^| )\*([^*]+)\*([^a-zA-Z0-9_]|$)',
+                  r'\1{}\2{}\3'.format(w.color(config.render_bold_as),
+                                       w.color('-' + config.render_bold_as)),
+                  text)
+    text = re.sub(r'(^| )_([^_]+)_([^a-zA-Z0-9_]|$)',
+                  r'\1{}\2{}\3'.format(w.color(config.render_italic_as),
+                                       w.color('-' + config.render_italic_as)),
+                  text)
+    return text
+
 
 def render(message_json, team, channel, force=False):
     # If we already have a rendered version in the object, just return that.
@@ -2466,14 +2477,8 @@ def render(message_json, team, channel, force=False):
         text = text.replace("&lt;", "<")
         text = text.replace("&gt;", ">")
         text = text.replace("&amp;", "&")
-        text = re.sub(r'(^| )\*([^*]+)\*([^a-zA-Z0-9_]|$)',
-                      r'\1{}\2{}\3'.format(w.color(config.render_bold_as),
-                                           w.color('-' + config.render_bold_as)),
-                      text)
-        text = re.sub(r'(^| )_([^_]+)_([^a-zA-Z0-9_]|$)',
-                      r'\1{}\2{}\3'.format(w.color(config.render_italic_as),
-                                           w.color('-' + config.render_italic_as)),
-                      text)
+        if message_json.get('mrkdwn', True):
+            text = render_formatting(text)
 
 #        if self.threads:
 #            text += " [Replies: {} Thread ID: {} ] ".format(len(self.threads), self.thread_id)
