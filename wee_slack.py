@@ -1849,6 +1849,7 @@ class SlackMessage(object):
         self.submessages = []
         self.thread_channel = None
         self.hash = None
+        self.color = None
         if override_sender:
             self.sender = override_sender
             self.sender_plain = override_sender
@@ -1864,13 +1865,22 @@ class SlackMessage(object):
         if message_json.get('subtype') == 'me_message' and not message_json['text'].startswith(self.sender):
             message_json['text'] = self.sender + ' ' + self.message_json['text']
 
+        if 'user' in self.message_json and self.message_json['user'] in self.team.users:
+            u = self.team.users[self.message_json['user']]
+            self.color = u.color
+
     def __hash__(self):
         return hash(self.ts)
 
     def render(self, force=False):
         if len(self.submessages) > 0:
-            return "{} {} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix, "{}[ Thread: {} Replies: {} ]".format(w.color(config.thread_suffix_color), self.hash or self.ts, len(self.submessages)))
-        return "{} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix)
+            text = "{} {} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix, "{}[ Thread: {} Replies: {} ]".format(w.color(config.thread_suffix_color), self.hash or self.ts, len(self.submessages)))
+        else:
+            text = "{} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix)
+        if config.colorize_messages and self.color is not None:
+            return self.color + text
+        else:
+            return text
 
     def change_text(self, new_text):
         self.message_json["text"] = new_text
