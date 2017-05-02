@@ -8,7 +8,7 @@ wee-slack
 
 A WeeChat native client for Slack.com. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, threads (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
 
-![animated screenshot](https://github.com/rawdigits/wee-slack/raw/master/docs/slack.gif)
+![animated screenshot](https://github.com/wee-slack/wee-slack/raw/master/docs/slack.gif)
 
 Features
 --------
@@ -76,7 +76,7 @@ pkg install py27-websocket-client py27-six
 
 #### 2. copy wee_slack.py to ~/.weechat/python/autoload
 ```
-wget https://raw.githubusercontent.com/rawdigits/wee-slack/master/wee_slack.py
+wget https://raw.githubusercontent.com/wee-slack/wee-slack/master/wee_slack.py
 cp wee_slack.py ~/.weechat/python/autoload
 ```
 
