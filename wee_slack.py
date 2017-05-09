@@ -102,6 +102,14 @@ if hasattr(ssl, "get_default_verify_paths") and callable(ssl.get_default_verify_
     ssl_defaults = ssl.get_default_verify_paths()
     if ssl_defaults.cafile is not None:
         sslopt_ca_certs = {'ca_certs': ssl_defaults.cafile}
+    else:
+        # Some systems don't have cafile, but capath. Websocket library doesn't
+        # support capath, so in that case we just hold our nose and disable
+        # certificate validation entirely.
+        w.prnt("", "slack: WARNING: system has no root certificates, or has "
+            "them in a format python-websocket-client doesn't support. "
+            "Disabling certificate validation for the connection to Slack.")
+        sslopt_ca_certs = {'cert_reqs': ssl.CERT_NONE}
 
 ###### Unicode handling
 
