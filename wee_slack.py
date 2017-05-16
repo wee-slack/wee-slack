@@ -1536,7 +1536,9 @@ class SlackDMChannel(SlackChannel):
 
     def update_color(self):
         if config.colorize_private_chats:
-            self.color_name = w.info_get('irc_nick_color_name', self.name)
+            self.color_name = w.info_get('nick_color_name', self.name)
+            if not self.color_name:
+                self.color_name = w.info_get('irc_nick_color_name', self.name)
             self.color = w.color(self.color_name)
         else:
             self.color = ""
