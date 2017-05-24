@@ -17,6 +17,7 @@ import collections
 import ssl
 import random
 import string
+import subprocess
 
 from websocket import create_connection, WebSocketConnectionClosedException
 
@@ -2911,6 +2912,54 @@ def msg_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 
+@slack_buffer_required
+def command_edit(data, current_buffer, args):
+    """
+    Open an editor to draft a multiline message to be sent
+    as a single input
+    /slack edit [extension] [channel]
+    """
+    data = decode_from_utf8(data)
+    args = decode_from_utf8(args)
+    e = EVENTROUTER
+    team = e.weechat_controller.buffers[current_buffer].team
+    args = args.split(' ')
+    extension = "md"
+    backticks = False
+    channel = e.weechat_controller.buffers[current_buffer]
+    if len(args) > 1:
+        if args[1].startswith('#'):
+            channel = team.channels[team.get_channel_map()[args[1][1:]]]
+        else:
+            extension = args[1]
+            backticks = True
+            if len(args) > 2 and args[2].startswith('#'):
+                channel = team.channels[team.get_channel_map()[args[2][1:]]]
+
+    editor = (weechat.config_get_plugin("editor") or
+              os.environ.get("EDITOR", "vim -f"))
+    path = os.path.expanduser("~/.weechat/slack_edit." + extension)
+    open(path, "w+")
+
+    cmd = editor.split() + [path]
+    code = subprocess.Popen(cmd).wait()
+    if code != 0:
+        os.remove(path)
+        weechat.command(current_buffer, "/window refresh")
+        return weechat.WEECHAT_RC_ERROR
+
+    with open(path) as f:
+        text = f.read()
+        if backticks:
+            text = "```\n" + text.strip() + "\n```"
+        channel.send_message(text)
+
+    os.remove(path)
+    weechat.command(current_buffer, "/window refresh")
+
+    return weechat.WEECHAT_RC_OK
+
+
 @slack_buffer_or_ignore
 def command_talk(data, current_buffer, args):
     """
@@ -3355,6 +3404,9 @@ class PluginConfig(object):
         'distracting_channels': Setting(
             default='',
             desc='List of channels to hide.'),
+        'editor': Setting(
+            default='',
+            desc='`/slack edit` editor.'),
         'map_underline_to': Setting(
             default='_',
             desc='When sending underlined text to slack, use this formatting'
