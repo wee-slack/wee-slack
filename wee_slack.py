@@ -3264,6 +3264,7 @@ class PluginConfig(object):
         'debug_mode': 'false',
         'debug_level': '3',
         'distracting_channels': '',
+        'editor': '',
         'show_reaction_nicks': 'false',
         'slack_api_token': 'INSERT VALID KEY HERE!',
         'slack_timeout': '20000',
