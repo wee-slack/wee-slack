@@ -3226,42 +3226,113 @@ def dbg(message, level=0, main_buffer=False, fout=False):
 
 ###### Config code
 
+Setting = collections.namedtuple('Setting', ['default', 'desc'])
 
 class PluginConfig(object):
     # Default settings.
-    # These are in the (string) format that weechat expects; at __init__ time
-    # this value will be used to set the default for any settings not already
-    # defined, and then the real (python) values of the settings will be
-    # extracted.
-    # TODO: setting descriptions.
+    # These are, initially, each a (default, desc) tuple; the former is the
+    # default value of the setting, in the (string) format that weechat
+    # expects, and the latter is the user-friendly description of the setting.
+    # At __init__ time these values are extracted, the description is used to
+    # set or update the setting description for use with /help, and the default
+    # value is used to set the default for any settings not already defined.
+    # Following this procedure, the keys remain the same, but the values are
+    # the real (python) values of the settings.
     settings = {
-        'colorize_private_chats': 'false',
-        'debug_mode': 'false',
-        'debug_level': '3',
-        'distracting_channels': '',
-        'map_underline_to': '_',
-        'render_bold_as': 'bold',
-        'render_italic_as': 'italic',
-        'show_reaction_nicks': 'false',
-        'slack_api_token': 'INSERT VALID KEY HERE!',
-        'slack_timeout': '20000',
-        'switch_buffer_on_join': 'true',
-        'trigger_value': 'false',
-        'unfurl_ignore_alt_text': 'false',
-        'record_events': 'false',
-        'thread_suffix_color': 'lightcyan',
-        'unhide_buffers_with_activity': 'false',
-        'short_buffer_names': 'false',
-        'channel_name_typing_indicator': 'true',
-        'background_load_all_history': 'false',
-        'never_away': 'false',
-        'server_aliases': '',
+        'background_load_all_history': Setting(
+            default='false',
+            desc='Load history for each channel in the background as soon as it'
+            ' opens, rather than waiting for the user to look at it.'),
+        'channel_name_typing_indicator': Setting(
+            default='true',
+            desc='Change the prefix of a channel from # to > when someone is'
+            ' typing in it. Note that this will (temporarily) affect the sort'
+            ' order if you sort buffers by name rather than by number.'),
+        'colorize_private_chats': Setting(
+            default='false',
+            desc='Whether to use nick-colors in DM windows.'),
+        'debug_mode': Setting(
+            default='false',
+            desc='Open a dedicated buffer for debug messages and start logging'
+            ' to it. How verbose the logging is depends on log_level.'),
+        'debug_level': Setting(
+            default='3',
+            desc='Show only this level of debug info (or higher) when'
+            ' debug_mode is on. Lower levels -> more messages.'),
+        'distracting_channels': Setting(
+            default='',
+            desc='List of channels to hide.'),
+        'map_underline_to': Setting(
+            default='_',
+            desc='When sending underlined text to slack, use this formatting'
+            ' character for it. The default ("_") sends it as italics. Use'
+            ' "*" to send bold instead.'),
+        'never_away': Setting(
+            default='false',
+            desc='Poke Slack every five minutes so that it never marks you "away".'),
+        'record_events': Setting(
+            default='false',
+            desc='Log all traffic from Slack to disk as JSON.'),
+        'render_bold_as': Setting(
+            default='bold',
+            desc='When receiving bold text from Slack, render it as this in weechat.'),
+        'render_italic_as': Setting(
+            default='italic',
+            desc='When receiving bold text from Slack, render it as this in weechat.'
+            ' If your terminal lacks italic support, consider using "underline" instead.'),
+        'server_aliases': Setting(
+            default='',
+            desc='A comma separated list of `subdomain:alias` pairs. The alias'
+            ' will be used instead of the actual name of the slack (in buffer'
+            ' names, logging, etc). E.g `work:no_fun_allowed` would make your'
+            ' work slack show up as `no_fun_allowed` rather than `work.slack.com`.'),
+        'short_buffer_names': Setting(
+            default='false',
+            desc='Use `foo.#channel` rather than `foo.slack.com.#channel` as the'
+            ' internal name for Slack buffers. Overrides server_aliases.'),
+        'show_reaction_nicks': Setting(
+            default='false',
+            desc='Display the name of the reacting user(s) alongside each reactji.'),
+        'slack_api_token': Setting(
+            default='INSERT VALID KEY HERE!',
+            desc='List of Slack API tokens, one per Slack instance you want to'
+            ' connect to. See the README for details on how to get these.'),
+        'slack_timeout': Setting(
+            default='20000',
+            desc='How long (ms) to wait when communicating with Slack.'),
+        'switch_buffer_on_join': Setting(
+            default='true',
+            desc='When /joining a channel, automatically switch to it as well.'),
+        'thread_suffix_color': Setting(
+            default='lightcyan',
+            desc='Color to use for the [thread: XXX] suffix on messages that'
+            ' have threads attached to them.'),
+        'unfurl_ignore_alt_text': Setting(
+            default='false',
+            desc='When displaying ("unfurling") links to channels/users/etc,'
+            ' ignore the "alt text" present in the message and instead use the'
+            ' canonical name of the thing being linked to.'),
+        'unhide_buffers_with_activity': Setting(
+            default='false',
+            desc='When activity occurs on a buffer, unhide it even if it was'
+            ' previously hidden (whether by the user or by the'
+            ' distracting_channels setting).'),
     }
 
     # Set missing settings to their defaults. Load non-missing settings from
     # weechat configs.
     def __init__(self):
+        # Set all descriptions, replace the values in the dict with the
+        # default setting value rather than the (setting,desc) tuple.
+        # Use items() rather than iteritems() so we don't need to worry about
+        # invalidating the iterator.
+        for key, (default, desc) in self.settings.items():
+            w.config_set_desc_plugin(key, desc)
+            self.settings[key] = default
+
+        # Migrate settings from old versions of Weeslack...
         self.migrate()
+        # ...and then set anything left over from the defaults.
         for key, default in self.settings.iteritems():
             if not w.config_get_plugin(key):
                 w.config_set_plugin(key, default)
