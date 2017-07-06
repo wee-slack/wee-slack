@@ -1024,7 +1024,7 @@ class SlackTeam(object):
             if self.ws_url:
                 try:
                     ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs)
-                    w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
+                    self.hook = w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
                     ws.sock.setblocking(0)
                     self.ws = ws
                     # self.attach_websocket(ws)
@@ -1048,6 +1048,7 @@ class SlackTeam(object):
         self.connected = True
 
     def set_disconnected(self):
+        w.unhook(self.hook)
         self.connected = False
 
     def set_reconnect_url(self, url):
