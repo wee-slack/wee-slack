@@ -2281,8 +2281,7 @@ def subprocess_message_changed(message_json, eventrouter, channel, team):
             else:
                 message_json["fallback"] = m["fallback"]
 
-    text_before = (len(new_message['text']) > 0)
-    new_message["text"] += unwrap_attachments(message_json, text_before)
+    new_message["text"] += unwrap_attachments(message_json, new_message["text"])
     if "edited" in new_message:
         channel.change_message(new_message["ts"], new_message["text"], ' (edited)')
     else:
@@ -2450,8 +2449,7 @@ def render(message_json, team, channel, force=False):
 
         text = unfurl_refs(text, ignore_alt_text=config.unfurl_ignore_alt_text)
 
-        text_before = (len(text) > 0)
-        text += unfurl_refs(unwrap_attachments(message_json, text_before), ignore_alt_text=config.unfurl_ignore_alt_text)
+        text += unfurl_refs(unwrap_attachments(message_json, text), ignore_alt_text=config.unfurl_ignore_alt_text)
 
         text = text.lstrip()
         text = text.replace("\t", "    ")
@@ -2558,14 +2556,18 @@ def unwrap_attachments(message_json, text_before):
             if 'pretext' in attachment:
                 t.append(attachment['pretext'])
             title = attachment.get('title', None)
-            title_link = attachment.get('title_link', None)
+            title_link = attachment.get('title_link', '')
+            if title_link in text_before:
+                title_link = ''
             if title and title_link:
                 t.append('%s%s (%s)' % (prepend_title_text, title, title_link,))
                 prepend_title_text = ''
             elif title and not title_link:
-                t.append(prepend_title_text + title)
+                t.append('%s%s' % (prepend_title_text, title,))
                 prepend_title_text = ''
-            t.append(attachment.get("from_url", ""))
+            from_url = attachment.get('from_url', '')
+            if from_url not in text_before:
+                t.append(from_url)
 
             atext = attachment.get("text", None)
             if atext:
