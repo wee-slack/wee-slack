@@ -1283,9 +1283,39 @@ class SlackChannel(object):
                 if config.unhide_buffers_with_activity and not self.is_visible() and (self.identifier not in self.team.muted_channels):
                     w.buffer_set(self.channel_buffer, "hidden", "0")
 
+                code_block_count = 0;
                 for line in text.split("\n"): 
-                    message = u"{}\t{}".format(nick, line).encode('utf-8') 
-                    w.prnt_date_tags(self.channel_buffer, ts.major, tags, message)
+                    code_block_hit = False
+                    is_three_back_ticks = line.startswith("```")
+                    single_back_ticks = re.findall(r"`(.*?)`", line)
+
+                    if is_three_back_ticks == True and code_block_count == 0 and not code_block_hit:
+                        code_color = w.color('*gray,darkgray');
+                        code_block_count += 1
+                        code_block_hit = True
+                        self.buffer_prnt('', code_color + '| block begin → ', '')
+
+                    if is_three_back_ticks == True and code_block_count == 1 and not code_block_hit:
+                        code_color = w.color('*gray,darkgray');
+                        code_block_count = 0
+                        code_block_hit = True
+                        self.buffer_prnt('', code_color + ' ← block end |', '')
+                    
+                    if code_block_hit == False:
+                        if code_block_count == 1:
+                            code_color = w.color('*darkgray,gray');
+                            line = code_color + line
+                            line = '{:<3} {} {}'.format(code_color, line, code_color)
+
+                        if len(single_back_ticks) > 0:
+                            code_color = w.color('brown');
+                            self_color = w.color('white');
+                            line = self_color + line;
+                            for item in single_back_ticks:
+                                line = line.replace(item, code_color + item + self_color).replace('`','')
+
+                        message = u"{}\t{}".format(nick, line).encode('utf-8') 
+                        w.prnt_date_tags(self.channel_buffer, ts.major, tags, message)
 
                 modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
                 if backlog:
