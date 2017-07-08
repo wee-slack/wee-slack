@@ -17,6 +17,7 @@ import collections
 import ssl
 import random
 import string
+import subprocess
 
 from websocket import create_connection, WebSocketConnectionClosedException
 
@@ -1253,7 +1254,6 @@ class SlackChannel(object):
             self.eventrouter.receive(s)
 
     def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, **kwargs):
-        data = "{}\t{}".format(nick, text)
         ts = SlackTS(timestamp)
         last_read = SlackTS(self.last_read)
         # without this, DMs won't open automatically
@@ -1283,7 +1283,10 @@ class SlackChannel(object):
                 if config.unhide_buffers_with_activity and not self.is_visible() and (self.identifier not in self.team.muted_channels):
                     w.buffer_set(self.channel_buffer, "hidden", "0")
 
-                w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
+                for line in text.split("\n"): 
+                    message = u"{}\t{}".format(nick, line).encode('utf-8') 
+                    w.prnt_date_tags(self.channel_buffer, ts.major, tags, message)
+
                 modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
                 if backlog:
                     self.mark_read(ts, update_remote=False, force=True)
@@ -2802,6 +2805,54 @@ def msg_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 
+@slack_buffer_required
+def command_edit(data, current_buffer, args):
+    """
+    Open an editor to draft a multiline message to be sent
+    as a single input
+    /slack edit [extension] [channel]
+    """
+    data = decode_from_utf8(data)
+    args = decode_from_utf8(args)
+    e = EVENTROUTER
+    team = e.weechat_controller.buffers[current_buffer].team
+    args = args.split(' ')
+    extension = "md"
+    backticks = False
+    channel = e.weechat_controller.buffers[current_buffer]
+    if len(args) > 1:
+        if args[1].startswith('#'):
+            channel = team.channels[team.get_channel_map()[args[1][1:]]]
+        else:
+            extension = args[1]
+            backticks = True
+            if len(args) > 2 and args[2].startswith('#'):
+                channel = team.channels[team.get_channel_map()[args[2][1:]]]
+
+    editor = (weechat.config_get_plugin("editor") or
+              os.environ.get("EDITOR", "vim -f"))
+    path = os.path.expanduser("~/.weechat/slack_edit." + extension)
+    open(path, "w+")
+
+    cmd = editor.split() + [path]
+    code = subprocess.Popen(cmd).wait()
+    if code != 0:
+        os.remove(path)
+        weechat.command(current_buffer, "/window refresh")
+        return weechat.WEECHAT_RC_ERROR
+
+    with open(path) as f:
+        text = f.read()
+        if backticks:
+            text = "```\n" + text.strip() + "\n```"
+        channel.send_message(text)
+
+    os.remove(path)
+    weechat.command(current_buffer, "/window refresh")
+
+    return weechat.WEECHAT_RC_OK
+
+
 @slack_buffer_or_ignore
 def command_talk(data, current_buffer, args):
     """
@@ -3223,6 +3274,7 @@ class PluginConfig(object):
         'debug_mode': 'false',
         'debug_level': '3',
         'distracting_channels': '',
+        'editor': '',
         'show_reaction_nicks': 'false',
         'slack_api_token': 'INSERT VALID KEY HERE!',
         'slack_timeout': '20000',
