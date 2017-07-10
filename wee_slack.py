@@ -1783,6 +1783,8 @@ class SlackThreadChannel(object):
         #        self.eventrouter.receive(s)
         self.create_buffer()
 
+
+
     def rename(self):
         if self.channel_buffer and not self.label:
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
@@ -1800,7 +1802,8 @@ class SlackThreadChannel(object):
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
             time_format = w.config_string(w.config_get("weechat.look.buffer_time_format"))
             parent_time = time.localtime(SlackTS(self.parent_message.ts).major)
-            topic = '{} {} | {}'.format(time.strftime(time_format, parent_time), self.parent_message.sender, self.parent_message.render()	)
+            topic = '{} {} | {}'.format('', self.parent_message.sender, self.parent_message.render()	)
+            # topic = time.strftime(time_format, parent_time)
             w.buffer_set(self.channel_buffer, "title", topic)
 
             # self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
@@ -3175,11 +3178,14 @@ def label_command_cb(data, current_buffer, args):
     data = decode_from_utf8(data)
     args = decode_from_utf8(args)
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+
     if channel and channel.type == 'thread':
         aargs = args.split(None, 2)
         new_name = " +" + aargs[1]
         channel.label = new_name
         w.buffer_set(channel.channel_buffer, "short_name", new_name)
+		
+    return w.WEECHAT_RC_OK_EAT
 
 
 def command_p(data, current_buffer, args):
