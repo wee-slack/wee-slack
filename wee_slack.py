@@ -150,6 +150,13 @@ class WeechatWrapper(object):
             return decode_from_utf8(orig_attr)
 
 
+##### Helpers
+
+def get_nick_color_name(nick):
+    info_name_prefix = "irc_" if int(weechat_version) < 0x1050000 else ""
+    return w.info_get(info_name_prefix + "nick_color_name", nick)
+
+
 ##### BEGIN NEW
 
 IGNORED_EVENTS = [
@@ -1537,7 +1544,7 @@ class SlackDMChannel(SlackChannel):
 
     def update_color(self):
         if config.colorize_private_chats:
-            self.color_name = w.info_get('irc_nick_color_name', self.name)
+            self.color_name = get_nick_color_name(self.name)
             self.color = w.color(self.color_name)
         else:
             self.color = ""
@@ -1816,7 +1823,7 @@ class SlackUser(object):
     def update_color(self):
         # This will automatically be none/"" if the user has disabled nick
         # colourization.
-        self.color_name = w.info_get('nick_color_name', self.name)
+        self.color_name = get_nick_color_name(self.name)
         self.color = w.color(self.color_name)
 
     def formatted_name(self, prepend="", enable_color=True):
@@ -3350,8 +3357,8 @@ if __name__ == "__main__":
     if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
                   SCRIPT_DESC, "script_unloaded", ""):
 
-        version = w.info_get("version_number", "") or 0
-        if int(version) < 0x1030000:
+        weechat_version = w.info_get("version_number", "") or 0
+        if int(weechat_version) < 0x1030000:
             w.prnt("", "\nERROR: Weechat version 1.3+ is required to use {}.\n\n".format(SCRIPT_NAME))
         else:
 
