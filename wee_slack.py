@@ -693,7 +693,7 @@ def typing_notification_cb(signal, sig_type, data):
             if channel:
                 identifier = channel.identifier
                 request = {"type": "typing", "channel": identifier}
-                channel.team.send_to_websocket(request, expect_reply=False)
+                # channel.team.send_to_websocket(request, expect_reply=False)
                 typing_timer = now
     return w.WEECHAT_RC_OK
 
@@ -1699,7 +1699,7 @@ class SlackThreadChannel(object):
         self.eventrouter = eventrouter
         self.parent_message = parent_message
         self.channel_buffer = None
-        # self.identifier = ""
+        self.identifier = ""
         # self.name = "#" + kwargs['name']
         self.type = "thread"
         self.got_history = False
