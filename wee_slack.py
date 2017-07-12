@@ -3350,8 +3350,8 @@ if __name__ == "__main__":
     if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
                   SCRIPT_DESC, "script_unloaded", ""):
 
-        version = w.info_get("version_number", "") or 0
-        if int(version) < 0x1030000:
+        weechat_version = w.info_get("version_number", "") or 0
+        if int(weechat_version) < 0x1030000:
             w.prnt("", "\nERROR: Weechat version 1.3+ is required to use {}.\n\n".format(SCRIPT_NAME))
         else:
 
