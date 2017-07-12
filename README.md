@@ -225,16 +225,6 @@ Example:
 Optional settings
 -----------------
 
-Turn off colorized nicks:
-```
-/set plugins.var.python.slack.colorize_nicks 0
-```
-
-Turn on colorized messages (messages match nick color):
-```
-/set plugins.var.python.slack.colorize_nicks 1
-```
-
 Set channel prefix to something other than my-slack-subdomain.slack.com (e.g. when using buffers.pl):
 ```
 /set plugins.var.python.slack.server_aliases "my-slack-subdomain:mysub,other-domain:coolbeans"
