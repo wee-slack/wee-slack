@@ -696,7 +696,7 @@ def typing_notification_cb(signal, sig_type, data):
         if typing_timer + 4 < now:
             current_buffer = w.current_buffer()
             channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
-            if channel:
+            if channel and channel.type != "thread":
                 identifier = channel.identifier
                 request = {"type": "typing", "channel": identifier}
                 channel.team.send_to_websocket(request, expect_reply=False)
