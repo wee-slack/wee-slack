@@ -152,6 +152,13 @@ class WeechatWrapper(object):
             return decode_from_utf8(orig_attr)
 
 
+##### Helpers
+
+def get_nick_color_name(nick):
+    info_name_prefix = "irc_" if int(weechat_version) < 0x1050000 else ""
+    return w.info_get(info_name_prefix + "nick_color_name", nick)
+
+
 ##### BEGIN NEW
 
 IGNORED_EVENTS = [
@@ -1025,7 +1032,7 @@ class SlackTeam(object):
             if self.ws_url:
                 try:
                     ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs)
-                    w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
+                    self.hook = w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
                     ws.sock.setblocking(0)
                     self.ws = ws
                     # self.attach_websocket(ws)
@@ -1049,6 +1056,7 @@ class SlackTeam(object):
         self.connected = True
 
     def set_disconnected(self):
+        w.unhook(self.hook)
         self.connected = False
 
     def set_reconnect_url(self, url):
@@ -1575,7 +1583,7 @@ class SlackDMChannel(SlackChannel):
 
     def update_color(self):
         if config.colorize_private_chats:
-            self.color_name = w.info_get('irc_nick_color_name', self.name)
+            self.color_name = get_nick_color_name(self.name)
             self.color = w.color(self.color_name)
         else:
             self.color = ""
@@ -1857,7 +1865,7 @@ class SlackUser(object):
     def update_color(self):
         # This will automatically be none/"" if the user has disabled nick
         # colourization.
-        self.color_name = w.info_get('nick_color_name', self.name)
+        self.color_name = get_nick_color_name(self.name)
         self.color = w.color(self.color_name)
 
     def formatted_name(self, prepend="", enable_color=True):
@@ -2490,6 +2498,17 @@ def process_reaction_removed(message_json, eventrouter, **kwargs):
 
 ###### New module/global methods
 
+def render_formatting(text):
+    text = re.sub(r'(^| )\*([^*]+)\*([^a-zA-Z0-9_]|$)',
+                  r'\1{}\2{}\3'.format(w.color(config.render_bold_as),
+                                       w.color('-' + config.render_bold_as)),
+                  text)
+    text = re.sub(r'(^| )_([^_]+)_([^a-zA-Z0-9_]|$)',
+                  r'\1{}\2{}\3'.format(w.color(config.render_italic_as),
+                                       w.color('-' + config.render_italic_as)),
+                  text)
+    return text
+
 
 def render(message_json, team, channel, force=False):
     # If we already have a rendered version in the object, just return that.
@@ -2518,10 +2537,8 @@ def render(message_json, team, channel, force=False):
         text = text.replace("&lt;", "<")
         text = text.replace("&gt;", ">")
         text = text.replace("&amp;", "&")
-        text = re.sub(r'(^| )\*([^*]+)\*([^a-zA-Z0-9_]|$)',
-                      r'\1{}\2{}\3'.format(w.color('bold'), w.color('-bold')), text)
-        text = re.sub(r'(^| )_([^_]+)_([^a-zA-Z0-9_]|$)',
-                      r'\1{}\2{}\3'.format(w.color('underline'), w.color('-underline')), text)
+        if message_json.get('mrkdwn', True):
+            text = render_formatting(text)
 
 #        if self.threads:
 #            text += " [Replies: {} Thread ID: {} ] ".format(len(self.threads), self.thread_id)
@@ -2537,7 +2554,11 @@ def linkify_text(message, team, channel):
     # function is only called on message send..
     usernames = team.get_username_map()
     channels = team.get_channel_map()
-    message = message.replace('\x02', '*').replace('\x1F', '_').split(' ')
+    message = (message
+        .replace('\x02', '*')
+        .replace('\x1D', '_')
+        .replace('\x1F', config.map_underline_to)
+        .split(' '))
     for item in enumerate(message):
         targets = re.match('^\s*([@#])([\w.-]+[\w. -])(\W*)', item[1])
         if targets and targets.groups()[0] == '@':
@@ -3366,40 +3387,114 @@ def dbg(message, level=0, main_buffer=False, fout=False):
 
 ###### Config code
 
+Setting = collections.namedtuple('Setting', ['default', 'desc'])
 
 class PluginConfig(object):
     # Default settings.
-    # These are in the (string) format that weechat expects; at __init__ time
-    # this value will be used to set the default for any settings not already
-    # defined, and then the real (python) values of the settings will be
-    # extracted.
-    # TODO: setting descriptions.
-    settings = {
-        'colorize_private_chats': 'false',
-        'debug_mode': 'false',
-        'debug_level': '3',
-        'distracting_channels': '',
-        'editor': '',
-        'show_reaction_nicks': 'false',
-        'slack_api_token': 'INSERT VALID KEY HERE!',
-        'slack_timeout': '20000',
-        'switch_buffer_on_join': 'true',
-        'trigger_value': 'false',
-        'unfurl_ignore_alt_text': 'false',
-        'record_events': 'false',
-        'thread_suffix_color': 'lightcyan',
-        'unhide_buffers_with_activity': 'false',
-        'short_buffer_names': 'false',
-        'channel_name_typing_indicator': 'true',
-        'background_load_all_history': 'false',
-        'never_away': 'false',
-        'server_aliases': '',
+    # These are, initially, each a (default, desc) tuple; the former is the
+    # default value of the setting, in the (string) format that weechat
+    # expects, and the latter is the user-friendly description of the setting.
+    # At __init__ time these values are extracted, the description is used to
+    # set or update the setting description for use with /help, and the default
+    # value is used to set the default for any settings not already defined.
+    # Following this procedure, the keys remain the same, but the values are
+    # the real (python) values of the settings.
+    default_settings = {
+        'background_load_all_history': Setting(
+            default='false',
+            desc='Load history for each channel in the background as soon as it'
+            ' opens, rather than waiting for the user to look at it.'),
+        'channel_name_typing_indicator': Setting(
+            default='true',
+            desc='Change the prefix of a channel from # to > when someone is'
+            ' typing in it. Note that this will (temporarily) affect the sort'
+            ' order if you sort buffers by name rather than by number.'),
+        'colorize_private_chats': Setting(
+            default='false',
+            desc='Whether to use nick-colors in DM windows.'),
+        'debug_mode': Setting(
+            default='false',
+            desc='Open a dedicated buffer for debug messages and start logging'
+            ' to it. How verbose the logging is depends on log_level.'),
+        'debug_level': Setting(
+            default='3',
+            desc='Show only this level of debug info (or higher) when'
+            ' debug_mode is on. Lower levels -> more messages.'),
+        'distracting_channels': Setting(
+            default='',
+            desc='List of channels to hide.'),
+        'map_underline_to': Setting(
+            default='_',
+            desc='When sending underlined text to slack, use this formatting'
+            ' character for it. The default ("_") sends it as italics. Use'
+            ' "*" to send bold instead.'),
+        'never_away': Setting(
+            default='false',
+            desc='Poke Slack every five minutes so that it never marks you "away".'),
+        'record_events': Setting(
+            default='false',
+            desc='Log all traffic from Slack to disk as JSON.'),
+        'render_bold_as': Setting(
+            default='bold',
+            desc='When receiving bold text from Slack, render it as this in weechat.'),
+        'render_italic_as': Setting(
+            default='italic',
+            desc='When receiving bold text from Slack, render it as this in weechat.'
+            ' If your terminal lacks italic support, consider using "underline" instead.'),
+        'server_aliases': Setting(
+            default='',
+            desc='A comma separated list of `subdomain:alias` pairs. The alias'
+            ' will be used instead of the actual name of the slack (in buffer'
+            ' names, logging, etc). E.g `work:no_fun_allowed` would make your'
+            ' work slack show up as `no_fun_allowed` rather than `work.slack.com`.'),
+        'short_buffer_names': Setting(
+            default='false',
+            desc='Use `foo.#channel` rather than `foo.slack.com.#channel` as the'
+            ' internal name for Slack buffers. Overrides server_aliases.'),
+        'show_reaction_nicks': Setting(
+            default='false',
+            desc='Display the name of the reacting user(s) alongside each reactji.'),
+        'slack_api_token': Setting(
+            default='INSERT VALID KEY HERE!',
+            desc='List of Slack API tokens, one per Slack instance you want to'
+            ' connect to. See the README for details on how to get these.'),
+        'slack_timeout': Setting(
+            default='20000',
+            desc='How long (ms) to wait when communicating with Slack.'),
+        'switch_buffer_on_join': Setting(
+            default='true',
+            desc='When /joining a channel, automatically switch to it as well.'),
+        'thread_suffix_color': Setting(
+            default='lightcyan',
+            desc='Color to use for the [thread: XXX] suffix on messages that'
+            ' have threads attached to them.'),
+        'unfurl_ignore_alt_text': Setting(
+            default='false',
+            desc='When displaying ("unfurling") links to channels/users/etc,'
+            ' ignore the "alt text" present in the message and instead use the'
+            ' canonical name of the thing being linked to.'),
+        'unhide_buffers_with_activity': Setting(
+            default='false',
+            desc='When activity occurs on a buffer, unhide it even if it was'
+            ' previously hidden (whether by the user or by the'
+            ' distracting_channels setting).'),
     }
 
     # Set missing settings to their defaults. Load non-missing settings from
     # weechat configs.
     def __init__(self):
+        self.settings = {}
+        # Set all descriptions, replace the values in the dict with the
+        # default setting value rather than the (setting,desc) tuple.
+        # Use items() rather than iteritems() so we don't need to worry about
+        # invalidating the iterator.
+        for key, (default, desc) in self.default_settings.items():
+            w.config_set_desc_plugin(key, desc)
+            self.settings[key] = default
+
+        # Migrate settings from old versions of Weeslack...
         self.migrate()
+        # ...and then set anything left over from the defaults.
         for key, default in self.settings.iteritems():
             if not w.config_get_plugin(key):
                 w.config_set_plugin(key, default)
@@ -3431,6 +3526,19 @@ class PluginConfig(object):
     def get_boolean(self, key):
         return w.config_string_to_boolean(w.config_get_plugin(key))
 
+    def get_string(self, key):
+        return w.config_get_plugin(key)
+
+    def get_int(self, key):
+        return int(w.config_get_plugin(key))
+
+    get_debug_level = get_int
+    get_map_underline_to = get_string
+    get_render_bold_as = get_string
+    get_render_italic_as = get_string
+    get_slack_timeout = get_int
+    get_thread_suffix_color = get_string
+
     def get_distracting_channels(self, key):
         return [x.strip() for x in w.config_get_plugin(key).split(',')]
 
@@ -3445,15 +3553,6 @@ class PluginConfig(object):
             return w.string_eval_expression(token, {}, {}, {})
         else:
             return token
-
-    def get_thread_suffix_color(self, key):
-        return w.config_get_plugin("thread_suffix_color")
-
-    def get_debug_level(self, key):
-        return int(w.config_get_plugin(key))
-
-    def get_slack_timeout(self, key):
-        return int(w.config_get_plugin(key))
 
     def migrate(self):
         """
@@ -3506,8 +3605,8 @@ if __name__ == "__main__":
     if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
                   SCRIPT_DESC, "script_unloaded", ""):
 
-        version = w.info_get("version_number", "") or 0
-        if int(version) < 0x1030000:
+        weechat_version = w.info_get("version_number", "") or 0
+        if int(weechat_version) < 0x1030000:
             w.prnt("", "\nERROR: Weechat version 1.3+ is required to use {}.\n\n".format(SCRIPT_NAME))
         else:
 
