@@ -3238,7 +3238,7 @@ class PluginConfig(object):
     # value is used to set the default for any settings not already defined.
     # Following this procedure, the keys remain the same, but the values are
     # the real (python) values of the settings.
-    settings = {
+    default_settings = {
         'background_load_all_history': Setting(
             default='false',
             desc='Load history for each channel in the background as soon as it'
@@ -3322,11 +3322,12 @@ class PluginConfig(object):
     # Set missing settings to their defaults. Load non-missing settings from
     # weechat configs.
     def __init__(self):
+        self.settings = {}
         # Set all descriptions, replace the values in the dict with the
         # default setting value rather than the (setting,desc) tuple.
         # Use items() rather than iteritems() so we don't need to worry about
         # invalidating the iterator.
-        for key, (default, desc) in self.settings.items():
+        for key, (default, desc) in self.default_settings.items():
             w.config_set_desc_plugin(key, desc)
             self.settings[key] = default
 
