@@ -2355,15 +2355,17 @@ def process_pinslist(message_json, eventrouter, **kwargs):
         buffer = weechat.buffer_new("Pinneds", "", "", "", "")
         weechat.buffer_set(buffer, "Pinneds", "List of pinneds itens.")
 
+    weechat.prnt(buffer, "Total pinned items: {}".format(len(message_json["items"])))
     for pinned_item in message_json["items"]:
         created_at = time.strftime("%B %d, %Y - %H:%M", time.localtime(int(pinned_item["message"]["ts"].split(".")[0])))
         text = pinned_item["message"]["text"]
         weechat.prnt(buffer, created_at)
         weechat.prnt(buffer, u"{}".format(text).encode('utf-8'))
-        for attach in pinned_item["message"]["attachments"]:
-            weechat.prnt(buffer,u"{:<25}".format(attach["title"]))
-            weechat.prnt(buffer,u"{:<25}".format(attach["from_url"]))
-            weechat.prtn(buffer, "  -  ")
+        attachments = pinned_item["message"].get("attachments")
+        if attachments:
+            for attach in attachments:
+                weechat.prnt(buffer,u"{:<25}".format(attach["title"]))
+                weechat.prnt(buffer,u"{:<25}".format(attach["from_url"]))
     return w.WEECHAT_RC_OK_EAT
 
 
