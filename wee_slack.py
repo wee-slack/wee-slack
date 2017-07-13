@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 
 from functools import wraps
 
+import datetime
 import time
 import json
 import pickle
@@ -413,7 +414,6 @@ class EventRouter(object):
                     dbg("Max retries for Slackrequest")
 
             else:
-
                 if "reply_to" in j:
                     dbg("SET FROM REPLY")
                     function_name = "reply"
@@ -2341,6 +2341,24 @@ def subprocess_channel_topic(message_json, eventrouter, channel, team):
     channel.render_topic(message_json["topic"])
 
 
+def process_pinslist(message_json, eventrouter, **kwargs):
+    buffer = weechat.buffer_search("", "Pinneds")
+    if not buffer:
+        buffer = weechat.buffer_new("Pinneds", "", "", "", "")
+        weechat.buffer_set(buffer, "Pinneds", "List of pinneds itens.")
+
+    for pinned_item in message_json["items"]:
+        created_at = time.strftime("%B %d, %Y - %H:%M", time.localtime(int(pinned_item["message"]["ts"].split(".")[0])))
+        text = pinned_item["message"]["text"]
+        weechat.prnt(buffer, created_at)
+        weechat.prnt(buffer, u"{}".format(text).encode('utf-8'))
+        for attach in pinned_item["message"]["attachments"]:
+            weechat.prnt(buffer,u"{:<25}".format(attach["title"]))
+            weechat.prnt(buffer,u"{:<25}".format(attach["from_url"]))
+            weechat.prtn(buffer, "  -  ")
+    return w.WEECHAT_RC_OK_EAT
+
+
 def process_reply(message_json, eventrouter, **kwargs):
     dbg('processing reply')
     team = kwargs["team"]
@@ -2784,6 +2802,30 @@ def topic_command_cb(data, current_buffer, args):
     else:
         return w.WEECHAT_RC_ERROR
 
+@slack_buffer_required
+def command_pinneds(data, current_buffer, args):
+    """
+    List pinneds items in a channel
+    """
+    data = decode_from_utf8(data)
+    args = decode_from_utf8(args)
+    e = EVENTROUTER
+    team = e.weechat_controller.buffers[current_buffer].team
+    args = args.split(' ')
+
+    if len(args) > 2 and args[1].startswith('#'):
+        cmap = team.get_channel_map()
+        channel_name = args[1][1:]
+        channel = team.channels[cmap[channel_name]]
+    else:
+        channel = e.weechat_controller.buffers[current_buffer]
+
+    if channel:
+        s = SlackRequest(team.token, "pins.list", {"channel": channel.identifier}, team_hash=team.team_hash, channel_identifier=channel.identifier)
+        EVENTROUTER.receive(s)
+        return w.WEECHAT_RC_OK_EAT
+    else:
+        return w.WEECHAT_RC_ERROR_EAT
 
 @slack_buffer_required
 def command_topic(data, current_buffer, args):
@@ -3290,6 +3332,7 @@ def setup_hooks():
     w.hook_command_run('/label', 'label_command_cb', '')
     w.hook_command_run("/input complete_next", "complete_next_cb", "")
     w.hook_command_run('/away', 'away_command_cb', '')
+    w.hook_command_run('/pinneds', 'command_pinneds', '')
 
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
