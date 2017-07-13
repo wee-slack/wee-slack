@@ -769,6 +769,7 @@ def nick_completion_cb(data, completion_item, current_buffer, completion):
 
 
 def emoji_completion_cb(data, completion_item, current_buffer, completion):
+    weechat.prnt("", "emoji completion")
     """
     Adds all :-prefixed emoji to completion list
     """
@@ -778,9 +779,11 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
     current_buffer = w.current_buffer()
     current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
 
+    weechat.prnt("", e)
     if current_channel is None:
+        weechat.prnt("", "is none")
         return w.WEECHAT_RC_OK
-    for e in EMOJI['emoji']:
+    for e in EMOJI:
         w.hook_completion_list_add(completion, ":" + e + ":", 0, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
@@ -3241,6 +3244,7 @@ def load_emoji():
         EMOJI = json.loads(ef.read())
         ef.close()
     except:
+        weechat.prnt("", "Unexpected error: {}".format(sys.exc_info()))
         dbg("Unexpected error: {}".format(sys.exc_info()), 5)
     return w.WEECHAT_RC_OK
 
