@@ -56,6 +56,7 @@ SLACK_API_TRANSLATOR = {
         "join": "channels.join",
         "leave": "groups.leave",
         "mark": "groups.mark",
+        "info": "groups.info"
     },
     "thread": {
         "history": None,
@@ -2086,6 +2087,14 @@ def handle_channelsinfo(channel_json, eventrouter, **kwargs):
     team = eventrouter.teams[request_metadata.team_hash]
     channel = team.channels[channel_id]
     channel.set_unread_count_display(unread_count_display)
+
+def handle_groupsinfo(group_json, eventrouter, **kwargs):
+    unread_count_display = group_json['group']['unread_count_display']
+    group_id = group_json['group']['id']
+    request_metadata = pickle.loads(group_json["wee_slack_request_metadata"])
+    team = eventrouter.teams[request_metadata.team_hash]
+    group = team.channels[group_id]
+    group.set_unread_count_display(unread_count_display)
  
 def handle_groupshistory(message_json, eventrouter, **kwargs):
     handle_history(message_json, eventrouter, **kwargs)
