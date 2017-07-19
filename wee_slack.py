@@ -1238,6 +1238,7 @@ class SlackChannel(object):
                 w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.preferred_name)
         # else:
         #    self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
+        self.update_nicklist()
 
         if "info" in SLACK_API_TRANSLATOR[self.type]:
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
