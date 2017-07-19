@@ -1243,6 +1243,11 @@ class SlackChannel(object):
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
 
+        if self.type == "im":
+            if "join" in SLACK_API_TRANSLATOR[self.type]:
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"user": self.user, "return_im": "true"}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                self.eventrouter.receive(s)
+
     def destroy_buffer(self, update_remote):
         if self.channel_buffer is not None:
             self.channel_buffer = None
@@ -2081,20 +2086,26 @@ def handle_rtmstart(login_data, eventrouter):
     # self.identifier = self.domain
 
 def handle_channelsinfo(channel_json, eventrouter, **kwargs):
-    unread_count_display = channel_json['channel']['unread_count_display']
-    channel_id = channel_json['channel']['id']
     request_metadata = pickle.loads(channel_json["wee_slack_request_metadata"])
     team = eventrouter.teams[request_metadata.team_hash]
-    channel = team.channels[channel_id]
+    channel = team.channels[request_metadata.channel_identifier]
+    unread_count_display = channel_json['channel']['unread_count_display']
     channel.set_unread_count_display(unread_count_display)
 
 def handle_groupsinfo(group_json, eventrouter, **kwargs):
-    unread_count_display = group_json['group']['unread_count_display']
-    group_id = group_json['group']['id']
     request_metadata = pickle.loads(group_json["wee_slack_request_metadata"])
     team = eventrouter.teams[request_metadata.team_hash]
-    group = team.channels[group_id]
+    group = team.channels[request_metadata.channel_identifier]
+    unread_count_display = group_json['group']['unread_count_display']
+    group_id = group_json['group']['id']
     group.set_unread_count_display(unread_count_display)
+
+def handle_imopen(im_json, eventrouter, **kwargs):
+    request_metadata = pickle.loads(im_json["wee_slack_request_metadata"])
+    team = eventrouter.teams[request_metadata.team_hash]
+    im = team.channels[request_metadata.channel_identifier]
+    unread_count_display = im_json['channel']['unread_count_display']
+    im.set_unread_count_display(unread_count_display)
  
 def handle_groupshistory(message_json, eventrouter, **kwargs):
     handle_history(message_json, eventrouter, **kwargs)
