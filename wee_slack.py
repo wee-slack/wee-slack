@@ -56,6 +56,7 @@ SLACK_API_TRANSLATOR = {
         "join": "channels.join",
         "leave": "groups.leave",
         "mark": "groups.mark",
+        "info": "groups.info"
     },
     "thread": {
         "history": None,
@@ -1111,6 +1112,7 @@ class SlackChannel(object):
         # short name relates to the localvar we change for typing indication
         self.current_short_name = self.name
         self.update_nicklist()
+        self.unread_count_display = 0
 
     def __eq__(self, compare_str):
         if compare_str == self.slack_name or compare_str == self.formatted_name() or compare_str == self.formatted_name(style="long_default"):
@@ -1135,6 +1137,14 @@ class SlackChannel(object):
                 w.buffer_set(self.channel_buffer, "short_name", new_name)
                 return True
         return False
+
+    def set_unread_count_display(self, count):
+        self.unread_count_display = count
+        if (self.unread_count_display > 0):
+            if self.type == "im":
+                w.buffer_set(self.channel_buffer, "hotlist", "2")
+            else:
+                w.buffer_set(self.channel_buffer, "hotlist", "1")
 
     def formatted_name(self, style="default", typing=False, **kwargs):
         if config.channel_name_typing_indicator:
@@ -1174,9 +1184,6 @@ class SlackChannel(object):
         self.create_buffer()
         self.active = True
         self.get_history()
-        if "info" in SLACK_API_TRANSLATOR[self.type]:
-            s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
-            self.eventrouter.receive(s)
         # self.create_buffer()
 
     def check_should_open(self, force=False):
@@ -1231,22 +1238,16 @@ class SlackChannel(object):
                 w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.preferred_name)
         # else:
         #    self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
-            try:
-                for c in range(self.unread_count_display):
-                    if self.type == "im":
-                        w.buffer_set(self.channel_buffer, "hotlist", "2")
-                    else:
-                        w.buffer_set(self.channel_buffer, "hotlist", "1")
-                else:
-                    pass
-                    # dbg("no unread in {}".format(self.name))
-            except:
-                pass
-
         self.update_nicklist()
-        # dbg("exception no unread count")
-        # if self.unread_count != 0 and not self.muted:
-        #    w.buffer_set(self.channel_buffer, "hotlist", "1")
+
+        if "info" in SLACK_API_TRANSLATOR[self.type]:
+            s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+            self.eventrouter.receive(s)
+
+        if self.type == "im":
+            if "join" in SLACK_API_TRANSLATOR[self.type]:
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"user": self.user, "return_im": "true"}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                self.eventrouter.receive(s)
 
     def destroy_buffer(self, update_remote):
         if self.channel_buffer is not None:
@@ -2085,7 +2086,28 @@ def handle_rtmstart(login_data, eventrouter):
 
     # self.identifier = self.domain
 
+def handle_channelsinfo(channel_json, eventrouter, **kwargs):
+    request_metadata = pickle.loads(channel_json["wee_slack_request_metadata"])
+    team = eventrouter.teams[request_metadata.team_hash]
+    channel = team.channels[request_metadata.channel_identifier]
+    unread_count_display = channel_json['channel']['unread_count_display']
+    channel.set_unread_count_display(unread_count_display)
 
+def handle_groupsinfo(group_json, eventrouter, **kwargs):
+    request_metadata = pickle.loads(group_json["wee_slack_request_metadata"])
+    team = eventrouter.teams[request_metadata.team_hash]
+    group = team.channels[request_metadata.channel_identifier]
+    unread_count_display = group_json['group']['unread_count_display']
+    group_id = group_json['group']['id']
+    group.set_unread_count_display(unread_count_display)
+
+def handle_imopen(im_json, eventrouter, **kwargs):
+    request_metadata = pickle.loads(im_json["wee_slack_request_metadata"])
+    team = eventrouter.teams[request_metadata.team_hash]
+    im = team.channels[request_metadata.channel_identifier]
+    unread_count_display = im_json['channel']['unread_count_display']
+    im.set_unread_count_display(unread_count_display)
+ 
 def handle_groupshistory(message_json, eventrouter, **kwargs):
     handle_history(message_json, eventrouter, **kwargs)
 
