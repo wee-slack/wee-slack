@@ -2840,7 +2840,7 @@ def msg_command_cb(data, current_buffer, args):
         team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
         cmap = team.get_channel_map()
         if who in cmap:
-            channel = team.channels[cmap[channel]]
+            channel = team.channels[cmap[who]]
             channel.send_message(message)
     return w.WEECHAT_RC_OK_EAT
 
