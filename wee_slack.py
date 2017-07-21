@@ -2833,7 +2833,10 @@ def msg_command_cb(data, current_buffer, args):
     dbg("msg_command_cb")
     aargs = args.split(None, 2)
     who = aargs[1]
-    command_talk(data, current_buffer, who)
+    if who == "*":
+        who = EVENTROUTER.weechat_controller.buffers[current_buffer].slack_name
+    else:
+        command_talk(data, current_buffer, who)
 
     if len(aargs) > 2:
         message = aargs[2]
