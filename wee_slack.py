@@ -2110,7 +2110,7 @@ def handle_imopen(im_json, eventrouter, **kwargs):
     im = team.channels[request_metadata.channel_identifier]
     unread_count_display = im_json['channel']['unread_count_display']
     im.set_unread_count_display(unread_count_display)
- 
+
 def handle_groupshistory(message_json, eventrouter, **kwargs):
     handle_history(message_json, eventrouter, **kwargs)
 
@@ -2558,7 +2558,7 @@ def unfurl_refs(text, ignore_alt_text=False):
     #  - <#C2147483705|#otherchannel>
     #  - <@U2147483697|@othernick>
     # Test patterns lives in ./_pytest/test_unfurl.py
-    matches = re.findall(r"(<[@#]?(?:[^<]*)>)", text)
+    matches = re.findall(r"(<[@#]?(?:[^>]*)>)", text)
     for m in matches:
         # Replace them with human readable strings
         text = text.replace(m, unfurl_ref(m[1:-1], ignore_alt_text))
