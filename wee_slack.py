@@ -2151,7 +2151,15 @@ def process_manual_presence_change(message_json, eventrouter, **kwargs):
 
 
 def process_presence_change(message_json, eventrouter, **kwargs):
-    kwargs["user"].presence = message_json["presence"]
+    if "user" in kwargs:
+        user = kwargs["user"]
+        team = kwargs["team"]
+        user.presence = message_json["presence"]
+
+        for c in team.channels:
+            c = team.channels[c]
+            if user.id in c.members:
+                c.update_nicklist(user.id)
 
 
 def process_pref_change(message_json, eventrouter, **kwargs):
