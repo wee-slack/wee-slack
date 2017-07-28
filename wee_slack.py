@@ -2335,9 +2335,9 @@ def subprocess_message_deleted(message_json, eventrouter, channel, team):
 
 
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
-    text = unfurl_refs(message_json["text"], ignore_alt_text=False)
+    text = unhtmlescape(unfurl_refs(message_json["text"], ignore_alt_text=False))
     channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"], tagset="muted")
-    channel.render_topic(message_json["topic"])
+    channel.render_topic(unhtmlescape(message_json["topic"]))
 
 
 def process_reply(message_json, eventrouter, **kwargs):
@@ -2506,10 +2506,7 @@ def render(message_json, team, channel, force=False):
         text += unfurl_refs(unwrap_attachments(message_json, text_before), ignore_alt_text=config.unfurl_ignore_alt_text)
 
         text = text.lstrip()
-        text = text.replace("\t", "    ")
-        text = text.replace("&lt;", "<")
-        text = text.replace("&gt;", ">")
-        text = text.replace("&amp;", "&")
+        text = unhtmlescape(text.replace("\t", "    "))
         if message_json.get('mrkdwn', True):
             text = render_formatting(text)
 
@@ -2597,6 +2594,12 @@ def unfurl_ref(ref, ignore_alt_text=False):
     else:
         display_text = resolve_ref(ref)
     return display_text
+
+
+def unhtmlescape(text):
+    return text.replace("&lt;", "<") \
+               .replace("&gt;", ">") \
+               .replace("&amp;", "&")
 
 
 def unwrap_attachments(message_json, text_before):
