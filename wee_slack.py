@@ -1081,6 +1081,14 @@ class SlackTeam(object):
             dbg("Unexpected error: {}\nSent: {}".format(sys.exc_info()[0], data))
             self.set_connected()
 
+    def update_member_presence(self, user, presence):
+        user.presence = presence
+
+        for c in self.channels:
+            c = self.channels[c]
+            if user.id in c.members:
+                c.update_nicklist(user.id)
+
 
 class SlackChannel(object):
     """
@@ -2151,7 +2159,10 @@ def process_manual_presence_change(message_json, eventrouter, **kwargs):
 
 
 def process_presence_change(message_json, eventrouter, **kwargs):
-    kwargs["user"].presence = message_json["presence"]
+    if "user" in kwargs:
+        user = kwargs["user"]
+        team = kwargs["team"]
+        team.update_member_presence(user, message_json["presence"])
 
 
 def process_pref_change(message_json, eventrouter, **kwargs):
