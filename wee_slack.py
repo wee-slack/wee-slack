@@ -1675,11 +1675,15 @@ class SlackMPDMChannel(SlackChannel):
             self.eventrouter.receive(s)
         # self.create_buffer()
 
+    @staticmethod
+    def adjust_name(n):
+        return "|".join("-".join(n.split("-")[1:-1]).split("--"))
+
     def set_name(self, n):
-        self.name = "|".join("-".join(n.split("-")[1:-1]).split("--"))
+        self.name = self.adjust_name(n)
 
     def formatted_name(self, style="default", typing=False, **kwargs):
-        adjusted_name = "|".join("-".join(self.slack_name.split("-")[1:-1]).split("--"))
+        adjusted_name = self.adjust_name(self.slack_name)
         if config.channel_name_typing_indicator:
             if not typing:
                 prepend = "#"
