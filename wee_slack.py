@@ -610,7 +610,7 @@ def buffer_input_callback(signal, buffer_ptr, data):
     eventrouter = eval(signal)
     channel = eventrouter.weechat_controller.get_channel_from_buffer_ptr(buffer_ptr)
     if not channel:
-        return w.WEECHAT_RC_OK_EAT
+        return w.WEECHAT_RC_ERROR
 
     reaction = re.match("^\s*(\d*)(\+|-):(.*):\s*$", data)
     if reaction:
@@ -632,7 +632,7 @@ def buffer_input_callback(signal, buffer_ptr, data):
     else:
         channel.send_message(data)
         # this is probably wrong channel.mark_read(update_remote=True, force=True)
-    return w.WEECHAT_RC_ERROR
+    return w.WEECHAT_RC_OK
 
 
 def buffer_switch_callback(signal, sig_type, data):
