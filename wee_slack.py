@@ -613,12 +613,14 @@ def buffer_input_callback(signal, buffer_ptr, data):
         return w.WEECHAT_RC_ERROR
 
     reaction = re.match("^\s*(\d*)(\+|-):(.*):\s*$", data)
+    substitute = re.match("^(\d*)s/", data)
     if reaction:
         if reaction.group(2) == "+":
             channel.send_add_reaction(int(reaction.group(1) or 1), reaction.group(3))
         elif reaction.group(2) == "-":
             channel.send_remove_reaction(int(reaction.group(1) or 1), reaction.group(3))
-    elif data.startswith('s/'):
+    elif substitute:
+        msgno = int(substitute.group(1) or 1)
         try:
             old, new, flags = re.split(r'(?<!\\)/', data)[1:]
         except ValueError:
@@ -628,7 +630,7 @@ def buffer_input_callback(signal, buffer_ptr, data):
             # rid of escapes.
             new = new.replace(r'\/', '/')
             old = old.replace(r'\/', '/')
-            channel.edit_previous_message(old, new, flags)
+            channel.edit_nth_previous_message(msgno, old, new, flags)
     else:
         channel.send_message(data)
         # this is probably wrong channel.mark_read(update_remote=True, force=True)
@@ -1337,8 +1339,8 @@ class SlackChannel(object):
         modify_buffer_line(self.channel_buffer, text, ts.major, ts.minor)
         return True
 
-    def edit_previous_message(self, old, new, flags):
-        message = self.my_last_message()
+    def edit_nth_previous_message(self, n, old, new, flags):
+        message = self.my_last_message(n)
         if new == "" and old == "":
             s = SlackRequest(self.team.token, "chat.delete", {"channel": self.identifier, "ts": message['ts']}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
@@ -1351,11 +1353,13 @@ class SlackChannel(object):
                 s = SlackRequest(self.team.token, "chat.update", {"channel": self.identifier, "ts": message['ts'], "text": new_message}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
 
-    def my_last_message(self):
+    def my_last_message(self, msgno):
         for message in reversed(self.sorted_message_keys()):
             m = self.messages[message]
             if "user" in m.message_json and "text" in m.message_json and m.message_json["user"] == self.team.myidentifier:
-                return m.message_json
+                msgno -= 1
+                if msgno == 0:
+                    return m.message_json
 
     def is_visible(self):
         return w.buffer_get_integer(self.channel_buffer, "hidden") == 0

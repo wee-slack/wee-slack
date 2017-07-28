@@ -156,6 +156,11 @@ Modify previous message:
 s/old text/new text/
 ```
 
+Modify 3rd previous message:
+```
+3s/old text/new text/
+```
+
 Replace all instances of text in previous message:
 ```
 s/old text/new text/g
