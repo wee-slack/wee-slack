@@ -119,7 +119,6 @@ Commands
 Join a channel:
 ```
 /join [channel]
-/slack join [channel]
 ```
 
 Start a direct chat with someone:
