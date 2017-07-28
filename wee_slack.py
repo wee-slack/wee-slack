@@ -1465,13 +1465,12 @@ class SlackChannel(object):
         w.buffer_set(self.channel_buffer, "nicklist", "1")
         # create nicklists for the current channel if they don't exist
         # if they do, use the existing pointer
-        # TODO: put this back for mithrandir
-        # here = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_HERE)
-        # if not here:
-        #    here = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
-        # afk = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_AWAY)
-        # if not afk:
-        #    afk = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
+        here = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_HERE)
+        if not here:
+           here = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
+        afk = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_AWAY)
+        if not afk:
+           afk = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
 
         if user and len(self.members) < 1000:
             user = self.team.users[user]
@@ -1479,9 +1478,11 @@ class SlackChannel(object):
             # since this is a change just remove it regardless of where it is
             w.nicklist_remove_nick(self.channel_buffer, nick)
             # now add it back in to whichever..
+            nick_group = afk
+            if self.team.is_user_present(user.identifier):
+                nick_group = here
             if user.identifier in self.members:
-                w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "", "", 1)
-            # w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
+                w.nicklist_add_nick(self.channel_buffer, nick_group, user.name, user.color_name, "", "", 1)
 
         # if we didn't get a user, build a complete list. this is expensive.
         else:
@@ -1491,11 +1492,14 @@ class SlackChannel(object):
                         user = self.team.users[user]
                         if user.deleted:
                             continue
-                        w.nicklist_add_nick(self.channel_buffer, "", user.name, user.color_name, "", "", 1)
-                        # w.nicklist_add_nick(self.channel_buffer, here, user.name, user.color_name, "", "", 1)
+                        nick_group = afk
+                        if self.team.is_user_present(user.identifier):
+                            nick_group = here
+                        w.nicklist_add_nick(self.channel_buffer, nick_group, user.name, user.color_name, "", "", 1)
                 except Exception as e:
                     dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
             else:
+                w.nicklist_remove_all(self.channel_buffer)
                 for fn in ["1| too", "2| many", "3| users", "4| to", "5| show"]:
                     w.nicklist_add_group(self.channel_buffer, '', fn, w.color('white'), 1)
 
