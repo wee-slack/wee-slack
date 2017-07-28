@@ -921,6 +921,7 @@ class SlackTeam(object):
         self.preferred_name = self.domain
         self.nick = nick
         self.myidentifier = myidentifier
+        self.identifier = myidentifier
         try:
             if self.channels:
                 for c in channels.keys():
