@@ -2751,10 +2751,17 @@ def modify_print_time(buffer, new_id, time):
         struct_hdata_line = w.hdata_get('line')
         struct_hdata_line_data = w.hdata_get('line_data')
 
-        # get a pointer to the data in line_pointer via layout of struct_hdata_line
-        data = w.hdata_pointer(struct_hdata_line, line_pointer, 'data')
-        if data:
-            w.hdata_update(struct_hdata_line_data, data, {"date_printed": new_id})
+        prefix = ''
+        while not prefix and line_pointer:
+            # get a pointer to the data in line_pointer via layout of struct_hdata_line
+            data = w.hdata_pointer(struct_hdata_line, line_pointer, 'data')
+            if data:
+                prefix = w.hdata_string(struct_hdata_line_data, data, 'prefix')
+                w.hdata_update(struct_hdata_line_data, data, {"date_printed": new_id})
+            # move backwards one line and repeat, so all the lines of the message are set
+            # exit when you reach a prefix, which means you have reached the
+            # first line of the message, or if you hit the end
+            line_pointer = w.hdata_move(struct_hdata_line, line_pointer, -1)
 
     return w.WEECHAT_RC_OK
 
