@@ -2716,6 +2716,8 @@ def modify_buffer_line(buffer, new_line, timestamp, time_id):
         # hold the structure of a line and of line data
         struct_hdata_line = w.hdata_get('line')
         struct_hdata_line_data = w.hdata_get('line_data')
+        # keep track of the number of lines with the matching time and id
+        number_of_matching_lines = 0
 
         while line_pointer:
             # get a pointer to the data in line_pointer via layout of struct_hdata_line
@@ -2726,13 +2728,25 @@ def modify_buffer_line(buffer, new_line, timestamp, time_id):
                 # prefix = w.hdata_string(struct_hdata_line_data, data, 'prefix')
 
                 if timestamp == int(line_timestamp) and int(time_id) == line_time_id:
-                    # w.prnt("", "found matching time date is {}, time is {} ".format(timestamp, line_timestamp))
-                    w.hdata_update(struct_hdata_line_data, data, {"message": new_line})
+                    number_of_matching_lines += 1
+                elif number_of_matching_lines > 0:
+                    # since number_of_matching_lines is non-zero, we have
+                    # already reached the message and can stop traversing
                     break
-                else:
-                    pass
             # move backwards one line and try again - exit the while if you hit the end
             line_pointer = w.hdata_move(struct_hdata_line, line_pointer, -1)
+
+        # split the message into at most the number of existing lines
+        lines = new_line.split('\n', number_of_matching_lines - 1)
+        # pad the list with empty strings until the number of elements equals
+        # number_of_matching_lines
+        lines += [''] * (number_of_matching_lines - len(lines))
+
+        if line_pointer:
+            for line in lines:
+                line_pointer = w.hdata_move(struct_hdata_line, line_pointer, 1)
+                data = w.hdata_pointer(struct_hdata_line, line_pointer, 'data')
+                w.hdata_update(struct_hdata_line_data, data, {"message": line})
     return w.WEECHAT_RC_OK
 
 
