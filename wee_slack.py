@@ -1684,13 +1684,10 @@ class SlackMPDMChannel(SlackChannel):
 
     def formatted_name(self, style="default", typing=False, **kwargs):
         adjusted_name = self.adjust_name(self.slack_name)
-        if config.channel_name_typing_indicator:
-            if not typing:
-                prepend = "#"
-            else:
-                prepend = ">"
+        if typing and config.channel_name_typing_indicator:
+            prepend = ">"
         else:
-            prepend = "#"
+            prepend = "@"
         select = {
             "default": adjusted_name,
             "sidebar": prepend + adjusted_name,
