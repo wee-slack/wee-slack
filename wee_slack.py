@@ -2733,6 +2733,10 @@ def modify_buffer_line(buffer, new_line, timestamp, time_id):
                     # since number_of_matching_lines is non-zero, we have
                     # already reached the message and can stop traversing
                     break
+            else:
+                dbg(('Encountered line without any data while trying to modify '
+                    'line. This is not handled, so aborting modification.'))
+                return w.WEECHAT_RC_ERROR
             # move backwards one line and try again - exit the while if you hit the end
             line_pointer = w.hdata_move(struct_hdata_line, line_pointer, -1)
 
@@ -2772,6 +2776,9 @@ def modify_print_time(buffer, new_id, time):
             if data:
                 prefix = w.hdata_string(struct_hdata_line_data, data, 'prefix')
                 w.hdata_update(struct_hdata_line_data, data, {"date_printed": new_id})
+            else:
+                dbg('Encountered line without any data while setting message id.')
+                return w.WEECHAT_RC_ERROR
             # move backwards one line and repeat, so all the lines of the message are set
             # exit when you reach a prefix, which means you have reached the
             # first line of the message, or if you hit the end
