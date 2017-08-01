@@ -2541,11 +2541,11 @@ def linkify_text(message, team, channel):
         .replace('\x1D', '_')
         .replace('\x1F', config.map_underline_to)
         # Escape chars that have special meaning to Slack. Note that we do not
-        # (and should not) perform a full URL escaping here.
+        # (and should not) perform full HTML entity-encoding here.
         # See https://api.slack.com/docs/message-formatting for details.
-        .replace('<', '&lt')
-        .replace('>', '&gt')
-        .replace('&', '&amp')
+        .replace('&', '&amp;')
+        .replace('<', '&lt;')
+        .replace('>', '&gt;')
         .split(' '))
     for item in enumerate(message):
         targets = re.match('^\s*([@#])([\w.-]+[\w. -])(\W*)', item[1])
