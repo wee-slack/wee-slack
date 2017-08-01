@@ -2742,6 +2742,9 @@ def modify_buffer_line(buffer, new_line, timestamp, time_id):
 
         # split the message into at most the number of existing lines
         lines = new_line.split('\n', number_of_matching_lines - 1)
+        # updating a line with a string containing newlines causes the lines to
+        # be broken when viewed in bare display mode
+        lines = [line.replace('\n', ' | ') for line in lines]
         # pad the list with empty strings until the number of elements equals
         # number_of_matching_lines
         lines += [''] * (number_of_matching_lines - len(lines))
