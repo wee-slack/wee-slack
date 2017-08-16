@@ -1911,7 +1911,7 @@ class SlackMessage(object):
     def get_sender(self):
         name = ""
         name_plain = ""
-        if 'bot_id' in self.message_json and self.message_json['bot_id'] is not None:
+        if self.message_json.get('bot_id') in self.team.bots:
             name = "{} :]".format(self.team.bots[self.message_json["bot_id"]].formatted_name())
             name_plain = "{}".format(self.team.bots[self.message_json["bot_id"]].formatted_name(enable_color=False))
         elif 'user' in self.message_json:
