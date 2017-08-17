@@ -2613,6 +2613,23 @@ def unhtmlescape(text):
                .replace("&amp;", "&")
 
 
+def rgb2term_prefix(color):
+    if color:
+        try:
+            # Strangely enough color_rgb2term requires hex color as string
+            # representation of 0xRRGGBB in base-10...
+            color_int = str(int(color.lower(), 16))
+            color_code = w.info_get('color_rgb2term', color_int)
+        except ValueError:
+            # In case color is not valid hex representation, just use it as is
+            # weechat should gracefuly handle most basic colors (yellow, blue,
+            # ...) or fall back to defaults
+            color_code = color.lower()
+
+        return w.color(color_code)
+    return ''
+
+
 def unwrap_attachments(message_json, text_before):
     attachment_text = ''
     a = message_json.get("attachments", None)
@@ -2657,7 +2674,12 @@ def unwrap_attachments(message_json, text_before):
             fallback = attachment.get("fallback", None)
             if t == [] and fallback:
                 t.append(fallback)
-            attachment_text += "\n".join([x.strip() for x in t if x])
+
+            color_prefix = ''
+            if config.colorize_attachments:
+                color_prefix = rgb2term_prefix(attachment.get('color', ''))
+
+            attachment_text += "\n".join([color_prefix+x.strip() for x in t if x])
     return attachment_text
 
 
@@ -3310,6 +3332,9 @@ class PluginConfig(object):
             desc='Change the prefix of a channel from # to > when someone is'
             ' typing in it. Note that this will (temporarily) affect the sort'
             ' order if you sort buffers by name rather than by number.'),
+        'colorize_attachments': Setting(
+            default='true',
+            desc='Whether to colorize message attachment lines.'),
         'colorize_private_chats': Setting(
             default='false',
             desc='Whether to use nick-colors in DM windows.'),
