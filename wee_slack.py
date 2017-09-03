@@ -637,6 +637,19 @@ def buffer_input_callback(signal, buffer_ptr, data):
     return w.WEECHAT_RC_OK
 
 
+# Workaround for supporting multiline messages. It intercepts before the input
+# callback is called, as this is called with the whole message, while it is
+# normally split on newline before being sent to buffer_input_callback
+def input_text_for_buffer_cb(data, modifier, current_buffer, string):
+    if current_buffer not in EVENTROUTER.weechat_controller.buffers:
+        return string
+    message = decode_from_utf8(string)
+    if "\n" in message and not message.startswith("/"):
+        buffer_input_callback("EVENTROUTER", current_buffer, message)
+        return ""
+    return string
+
+
 def buffer_switch_callback(signal, sig_type, data):
     """
     incomplete
@@ -3565,6 +3578,7 @@ if __name__ == "__main__":
             # main_weechat_buffer = w.info_get("irc_buffer", "{}.{}".format(domain, "DOESNOTEXIST!@#$"))
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
+            w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
 
             load_emoji()
             setup_hooks()
