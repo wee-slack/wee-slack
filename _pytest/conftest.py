@@ -31,7 +31,8 @@ def realish_eventrouter(mock_weechat):
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.start", {"meh": "blah"}))
     rtmstartdata = open('_pytest/data/http/rtm.start.json', 'r').read()
     e.receive_httprequest_callback(context, 1, 0, rtmstartdata, 4)
-    e.handle_next()
+    while len(e.queue):
+        e.handle_next()
     #e.sc is just shortcuts to these items
     e.sc = {}
     e.sc["team_id"] = e.teams.keys()[0]
