@@ -26,7 +26,7 @@ def mock_websocket():
     return fakewebsocket()
 
 @pytest.fixture
-def realish_eventrouter():
+def realish_eventrouter(mock_weechat):
     e = EventRouter()
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.start", {"meh": "blah"}))
     rtmstartdata = open('_pytest/data/http/rtm.start.json', 'r').read()
