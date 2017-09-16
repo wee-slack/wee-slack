@@ -3234,8 +3234,8 @@ def load_emoji():
         ef = open('{}/weemoji.json'.format(DIR), 'r')
         EMOJI = json.loads(ef.read())
         ef.close()
-    except:
-        dbg("Unexpected error: {}".format(sys.exc_info()), 5)
+    except Exception as e:
+        dbg("Couldn't load emoji list: {}".format(e), 5)
     return w.WEECHAT_RC_OK
 
 
