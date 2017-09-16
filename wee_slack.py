@@ -787,9 +787,9 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
     current_buffer = w.current_buffer()
     current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
 
-    if current_channel is None or not EMOJI:
+    if current_channel is None:
         return w.WEECHAT_RC_OK
-    for e in EMOJI['emoji']:
+    for e in current_channel.team.emoji_completions:
         w.hook_completion_list_add(completion, ":" + e + ":", 0, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
@@ -944,12 +944,21 @@ class SlackTeam(object):
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
         # This highlight step must happen after we have set related server
         self.set_highlight_words(kwargs.get('highlight_words', ""))
+        self.load_emoji_completions()
 
     def __eq__(self, compare_str):
         if compare_str == self.token or compare_str == self.domain or compare_str == self.subdomain:
             return True
         else:
             return False
+
+    def load_emoji_completions(self):
+        if EMOJI:
+            self.emoji_completions = list(EMOJI["emoji"])
+            s = SlackRequest(self.token, "emoji.list", {}, team_hash=self.team_hash)
+            self.eventrouter.receive(s)
+        else:
+            self.emoji_completions = []
 
     def add_channel(self, channel):
         self.channels[channel["id"]] = channel
@@ -2104,6 +2113,14 @@ def handle_rtmstart(login_data, eventrouter):
         dbg("connected to {}".format(t.domain))
 
     # self.identifier = self.domain
+
+
+def handle_emojilist(emoji_json, eventrouter, **kwargs):
+    if emoji_json["ok"]:
+        request_metadata = pickle.loads(emoji_json["wee_slack_request_metadata"])
+        team = eventrouter.teams[request_metadata.team_hash]
+        team.emoji_completions.extend(emoji_json["emoji"].keys())
+
 
 def handle_channelsinfo(channel_json, eventrouter, **kwargs):
     request_metadata = pickle.loads(channel_json["wee_slack_request_metadata"])
