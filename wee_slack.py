@@ -2031,10 +2031,9 @@ def handle_rtmstart(login_data, eventrouter):
     """
     This handles the main entry call to slack, rtm.start
     """
+    metadata = pickle.loads(login_data["wee_slack_request_metadata"])
+
     if login_data["ok"]:
-
-        metadata = pickle.loads(login_data["wee_slack_request_metadata"])
-
         # Let's reuse a team if we have it already.
         th = SlackTeam.generate_team_hash(login_data['self']['name'], login_data['team']['domain'])
         if not eventrouter.teams.get(th):
@@ -2102,6 +2101,10 @@ def handle_rtmstart(login_data, eventrouter):
         t.buffer_prnt('{:<20} {}'.format("Team id", login_data["team"]["id"]))
 
         dbg("connected to {}".format(t.domain))
+
+    else:
+        w.prnt("", "ERROR: Failed connecting to Slack with token {}: {}"
+            .format(metadata.token, login_data["error"]))
 
     # self.identifier = self.domain
 
