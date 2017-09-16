@@ -3231,8 +3231,6 @@ def load_emoji():
     try:
         global EMOJI
         DIR = w.info_get("weechat_dir", "")
-        # no idea why this does't work w/o checking the type?!
-        dbg(type(DIR), 0)
         ef = open('{}/weemoji.json'.format(DIR), 'r')
         EMOJI = json.loads(ef.read())
         ef.close()
