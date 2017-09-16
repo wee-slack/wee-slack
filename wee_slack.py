@@ -787,7 +787,7 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
     current_buffer = w.current_buffer()
     current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
 
-    if current_channel is None:
+    if current_channel is None or not EMOJI:
         return w.WEECHAT_RC_OK
     for e in EMOJI['emoji']:
         w.hook_completion_list_add(completion, ":" + e + ":", 0, w.WEECHAT_LIST_POS_SORT)
@@ -3229,14 +3229,11 @@ def create_slack_debug_buffer():
 
 def load_emoji():
     try:
-        global EMOJI
         DIR = w.info_get("weechat_dir", "")
-        ef = open('{}/weemoji.json'.format(DIR), 'r')
-        EMOJI = json.loads(ef.read())
-        ef.close()
+        with open('{}/weemoji.json'.format(DIR), 'r') as ef:
+            return json.loads(ef.read())
     except Exception as e:
         dbg("Couldn't load emoji list: {}".format(e), 5)
-    return w.WEECHAT_RC_OK
 
 
 def setup_hooks():
@@ -3564,7 +3561,8 @@ if __name__ == "__main__":
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
 
-            load_emoji()
+            global EMOJI
+            EMOJI = load_emoji()
             setup_hooks()
 
             # attach to the weechat hooks we need
