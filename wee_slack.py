@@ -104,6 +104,8 @@ if hasattr(ssl, "get_default_verify_paths") and callable(ssl.get_default_verify_
     if ssl_defaults.cafile is not None:
         sslopt_ca_certs = {'ca_certs': ssl_defaults.cafile}
 
+EMOJI = []
+
 ###### Unicode handling
 
 
@@ -953,12 +955,10 @@ class SlackTeam(object):
             return False
 
     def load_emoji_completions(self):
-        if EMOJI:
-            self.emoji_completions = list(EMOJI["emoji"])
+        self.emoji_completions = list(EMOJI)
+        if self.emoji_completions:
             s = SlackRequest(self.token, "emoji.list", {}, team_hash=self.team_hash)
             self.eventrouter.receive(s)
-        else:
-            self.emoji_completions = []
 
     def add_channel(self, channel):
         self.channels[channel["id"]] = channel
@@ -3248,9 +3248,10 @@ def load_emoji():
     try:
         DIR = w.info_get("weechat_dir", "")
         with open('{}/weemoji.json'.format(DIR), 'r') as ef:
-            return json.loads(ef.read())
+            return json.loads(ef.read())["emoji"]
     except Exception as e:
         dbg("Couldn't load emoji list: {}".format(e), 5)
+    return []
 
 
 def setup_hooks():
@@ -3578,8 +3579,7 @@ if __name__ == "__main__":
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
 
-            global EMOJI
-            EMOJI = load_emoji()
+            EMOJI.extend(load_emoji())
             setup_hooks()
 
             # attach to the weechat hooks we need
