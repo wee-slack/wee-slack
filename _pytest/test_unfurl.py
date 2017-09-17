@@ -38,6 +38,10 @@ slack = wee_slack
         'input': "try the #general channel",
         'output': "try the #general channel",
     },
+    {
+        'input': "<@U407ABLLW> I think 3 > 2",
+        'output': "@alice I think 3 > 2",
+    },
 ))
 def test_unfurl_refs(case, realish_eventrouter):
     slack.EVENTROUTER = realish_eventrouter
