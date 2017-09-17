@@ -10,17 +10,17 @@ slack = wee_slack
         'output': "foo",
     },
     {
-        'input': "<@U2147483697|@othernick>: foo",
-        'output': "@testuser: foo",
+        'input': "<@U407ABLLW|@othernick>: foo",
+        'output': "@alice: foo",
         'ignore_alt_text': True,
     },
     {
-        'input': "foo <#C2147483705|#otherchannel> foo",
+        'input': "foo <#C407ABS94|otherchannel> foo",
         'output': "foo #otherchannel foo",
     },
     {
-        'input': "foo <#C2147483705> foo",
-        'output': "foo #test-chan foo",
+        'input': "foo <#C407ABS94> foo",
+        'output': "foo #general foo",
     },
     {
         'input': "url: <https://example.com|example> suffix",
@@ -31,23 +31,21 @@ slack = wee_slack
         'output': "url: https://example.com (example with spaces) suffix",
     },
     {
-        'input': "<@U2147483697|@othernick> multiple unfurl <https://example.com|example with spaces>",
+        'input': "<@U407ABLLW|@othernick> multiple unfurl <https://example.com|example with spaces>",
         'output': "@othernick multiple unfurl https://example.com (example with spaces)",
     },
     {
-        'input': "try the #test-chan channel",
-        'output': "try the #test-chan channel",
+        'input': "try the #general channel",
+        'output': "try the #general channel",
+    },
+    {
+        'input': "<@U407ABLLW> I think 3 > 2",
+        'output': "@alice I think 3 > 2",
     },
 ))
-def test_unfurl_refs(case):
-    pass
-    #print myslack
-    #slack.servers = myslack.server
-    #slack.channels = myslack.channel
-    #slack.users = myslack.user
-    #slack.message_cache = {}
-    #slack.servers[0].users = myslack.user
-    #print myslack.channel[0].identifier
+def test_unfurl_refs(case, realish_eventrouter):
+    slack.EVENTROUTER = realish_eventrouter
 
-    #assert slack.unfurl_refs(case['input'], ignore_alt_text=case.get('ignore_alt_text', False)) == case['output']
-
+    result = slack.unfurl_refs(
+        case['input'], ignore_alt_text=case.get('ignore_alt_text', False))
+    assert result == case['output']
