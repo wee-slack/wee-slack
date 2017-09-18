@@ -2033,78 +2033,78 @@ def handle_rtmstart(login_data, eventrouter):
     """
     metadata = pickle.loads(login_data["wee_slack_request_metadata"])
 
-    if login_data["ok"]:
-        # Let's reuse a team if we have it already.
-        th = SlackTeam.generate_team_hash(login_data['self']['name'], login_data['team']['domain'])
-        if not eventrouter.teams.get(th):
-
-            users = {}
-            for item in login_data["users"]:
-                users[item["id"]] = SlackUser(**item)
-                # users.append(SlackUser(**item))
-
-            bots = {}
-            for item in login_data["bots"]:
-                bots[item["id"]] = SlackBot(**item)
-
-            channels = {}
-            for item in login_data["channels"]:
-                channels[item["id"]] = SlackChannel(eventrouter, **item)
-
-            for item in login_data["ims"]:
-                channels[item["id"]] = SlackDMChannel(eventrouter, users, **item)
-
-            for item in login_data["groups"]:
-                if item["name"].startswith('mpdm-'):
-                    channels[item["id"]] = SlackMPDMChannel(eventrouter, **item)
-                else:
-                    channels[item["id"]] = SlackGroupChannel(eventrouter, **item)
-
-            t = SlackTeam(
-                eventrouter,
-                metadata.token,
-                login_data['url'],
-                login_data["team"]["domain"],
-                login_data["self"]["name"],
-                login_data["self"]["id"],
-                users,
-                bots,
-                channels,
-                muted_channels=login_data["self"]["prefs"]["muted_channels"],
-                highlight_words=login_data["self"]["prefs"]["highlight_words"],
-            )
-            eventrouter.register_team(t)
-
-        else:
-            t = eventrouter.teams.get(th)
-            t.set_reconnect_url(login_data['url'])
-            t.connect()
-
-        # web_socket_url = login_data['url']
-        # try:
-        #    ws = create_connection(web_socket_url, sslopt=sslopt_ca_certs)
-        #    w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", t.get_team_hash())
-        #    #ws_hook = w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", pickle.dumps(t))
-        #    ws.sock.setblocking(0)
-        #    t.attach_websocket(ws)
-        #    t.set_connected()
-        # except Exception as e:
-        #    dbg("websocket connection error: {}".format(e))
-        #    return False
-
-        t.buffer_prnt('Connected to Slack')
-        t.buffer_prnt('{:<20} {}'.format("Websocket URL", login_data["url"]))
-        t.buffer_prnt('{:<20} {}'.format("User name", login_data["self"]["name"]))
-        t.buffer_prnt('{:<20} {}'.format("User ID", login_data["self"]["id"]))
-        t.buffer_prnt('{:<20} {}'.format("Team name", login_data["team"]["name"]))
-        t.buffer_prnt('{:<20} {}'.format("Team domain", login_data["team"]["domain"]))
-        t.buffer_prnt('{:<20} {}'.format("Team id", login_data["team"]["id"]))
-
-        dbg("connected to {}".format(t.domain))
-
-    else:
+    if not login_data["ok"]:
         w.prnt("", "ERROR: Failed connecting to Slack with token {}: {}"
             .format(metadata.token, login_data["error"]))
+        return
+
+    # Let's reuse a team if we have it already.
+    th = SlackTeam.generate_team_hash(login_data['self']['name'], login_data['team']['domain'])
+    if not eventrouter.teams.get(th):
+
+        users = {}
+        for item in login_data["users"]:
+            users[item["id"]] = SlackUser(**item)
+            # users.append(SlackUser(**item))
+
+        bots = {}
+        for item in login_data["bots"]:
+            bots[item["id"]] = SlackBot(**item)
+
+        channels = {}
+        for item in login_data["channels"]:
+            channels[item["id"]] = SlackChannel(eventrouter, **item)
+
+        for item in login_data["ims"]:
+            channels[item["id"]] = SlackDMChannel(eventrouter, users, **item)
+
+        for item in login_data["groups"]:
+            if item["name"].startswith('mpdm-'):
+                channels[item["id"]] = SlackMPDMChannel(eventrouter, **item)
+            else:
+                channels[item["id"]] = SlackGroupChannel(eventrouter, **item)
+
+        t = SlackTeam(
+            eventrouter,
+            metadata.token,
+            login_data['url'],
+            login_data["team"]["domain"],
+            login_data["self"]["name"],
+            login_data["self"]["id"],
+            users,
+            bots,
+            channels,
+            muted_channels=login_data["self"]["prefs"]["muted_channels"],
+            highlight_words=login_data["self"]["prefs"]["highlight_words"],
+        )
+        eventrouter.register_team(t)
+
+    else:
+        t = eventrouter.teams.get(th)
+        t.set_reconnect_url(login_data['url'])
+        t.connect()
+
+    # web_socket_url = login_data['url']
+    # try:
+    #    ws = create_connection(web_socket_url, sslopt=sslopt_ca_certs)
+    #    w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", t.get_team_hash())
+    #    #ws_hook = w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", pickle.dumps(t))
+    #    ws.sock.setblocking(0)
+    #    t.attach_websocket(ws)
+    #    t.set_connected()
+    # except Exception as e:
+    #    dbg("websocket connection error: {}".format(e))
+    #    return False
+
+    t.buffer_prnt('Connected to Slack')
+    t.buffer_prnt('{:<20} {}'.format("Websocket URL", login_data["url"]))
+    t.buffer_prnt('{:<20} {}'.format("User name", login_data["self"]["name"]))
+    t.buffer_prnt('{:<20} {}'.format("User ID", login_data["self"]["id"]))
+    t.buffer_prnt('{:<20} {}'.format("Team name", login_data["team"]["name"]))
+    t.buffer_prnt('{:<20} {}'.format("Team domain", login_data["team"]["domain"]))
+    t.buffer_prnt('{:<20} {}'.format("Team id", login_data["team"]["id"]))
+
+    dbg("connected to {}".format(t.domain))
 
     # self.identifier = self.domain
 
