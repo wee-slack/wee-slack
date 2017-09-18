@@ -1,5 +1,5 @@
 
-def test_send_message(monkeypatch, realish_eventrouter, mock_websocket):
+def test_send_message(realish_eventrouter, mock_websocket):
     e = realish_eventrouter
 
     t = e.teams.keys()[0]

@@ -2,7 +2,7 @@ import json
 
 from wee_slack import render
 
-def test_process_message(monkeypatch, realish_eventrouter, mock_websocket):
+def test_process_message(realish_eventrouter, mock_websocket):
 
     e = realish_eventrouter
 

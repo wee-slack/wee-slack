@@ -4,7 +4,7 @@ import json
 #from wee_slack import render
 from wee_slack import ProcessNotImplemented
 
-def test_process_message(monkeypatch, realish_eventrouter, mock_websocket):
+def test_everything(realish_eventrouter, mock_websocket):
 
     eventrouter = realish_eventrouter
 

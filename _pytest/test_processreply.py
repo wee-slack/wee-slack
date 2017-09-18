@@ -1,6 +1,6 @@
 #from wee_slack import process_reply
 
-def test_process_reply(monkeypatch, realish_eventrouter, mock_websocket):
+def test_process_reply(realish_eventrouter, mock_websocket):
 
     e = realish_eventrouter
 
