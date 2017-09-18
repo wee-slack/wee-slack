@@ -2045,7 +2045,6 @@ def handle_rtmstart(login_data, eventrouter):
         users = {}
         for item in login_data["users"]:
             users[item["id"]] = SlackUser(**item)
-            # users.append(SlackUser(**item))
 
         bots = {}
         for item in login_data["bots"]:
@@ -2084,18 +2083,6 @@ def handle_rtmstart(login_data, eventrouter):
         t.set_reconnect_url(login_data['url'])
         t.connect()
 
-    # web_socket_url = login_data['url']
-    # try:
-    #    ws = create_connection(web_socket_url, sslopt=sslopt_ca_certs)
-    #    w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", t.get_team_hash())
-    #    #ws_hook = w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", pickle.dumps(t))
-    #    ws.sock.setblocking(0)
-    #    t.attach_websocket(ws)
-    #    t.set_connected()
-    # except Exception as e:
-    #    dbg("websocket connection error: {}".format(e))
-    #    return False
-
     t.buffer_prnt('Connected to Slack')
     t.buffer_prnt('{:<20} {}'.format("Websocket URL", login_data["url"]))
     t.buffer_prnt('{:<20} {}'.format("User name", login_data["self"]["name"]))
@@ -2105,8 +2092,6 @@ def handle_rtmstart(login_data, eventrouter):
     t.buffer_prnt('{:<20} {}'.format("Team id", login_data["team"]["id"]))
 
     dbg("connected to {}".format(t.domain))
-
-    # self.identifier = self.domain
 
 def handle_channelsinfo(channel_json, eventrouter, **kwargs):
     request_metadata = pickle.loads(channel_json["wee_slack_request_metadata"])
