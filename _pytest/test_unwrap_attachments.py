@@ -121,6 +121,28 @@ import pytest
             "Second field value",
         ]),
     },
+    {
+        'input_message': {'attachments': [{
+            'title': 'First attachment title',
+            'text': 'First attachment text',
+            'title_link': 'http://title.link.1',
+            'from_url': 'http://from.url.1',
+        }, {
+            'title': 'Second attachment title',
+            'text': 'Second attachment text',
+            'title_link': 'http://title.link.2',
+            'from_url': 'http://from.url.2',
+        }]},
+        'input_text_before': "",
+        'output': "\n".join([
+            "First attachment title (http://title.link.1)",
+            "http://from.url.1",
+            "First attachment text",
+            "Second attachment title (http://title.link.2)",
+            "http://from.url.2",
+            "Second attachment text",
+        ]),
+    },
 ))
 def test_unwrap_attachments(case):
     result = wee_slack.unwrap_attachments(

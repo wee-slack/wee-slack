@@ -2600,11 +2600,11 @@ def unhtmlescape(text):
 
 
 def unwrap_attachments(message_json, text_before):
-    attachment_text = ''
+    attachment_texts = []
     a = message_json.get("attachments", None)
     if a:
         if text_before:
-            attachment_text = '\n'
+            attachment_texts.append('')
         for attachment in a:
             # Attachments should be rendered roughly like:
             #
@@ -2647,8 +2647,8 @@ def unwrap_attachments(message_json, text_before):
             fallback = attachment.get("fallback", None)
             if t == [] and fallback:
                 t.append(fallback)
-            attachment_text += "\n".join([x.strip() for x in t if x])
-    return attachment_text
+            attachment_texts.append("\n".join([x.strip() for x in t if x]))
+    return "\n".join(attachment_texts)
 
 
 def resolve_ref(ref):
