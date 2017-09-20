@@ -45,6 +45,19 @@ import pytest
     {
         'input_message': {'attachments': [{
             'title': 'Title',
+            'text': 'Attachment text',
+            'title_link': 'http://link',
+            'from_url': 'http://link',
+        }]},
+        'input_text_before': "",
+        'output': "\n".join([
+            "Title (http://link)",
+            "Attachment text",
+        ]),
+    },
+    {
+        'input_message': {'attachments': [{
+            'title': 'Title',
             'text': 'Attachment text\n\n\nWith multiple lines',
         }]},
         'input_text_before': "",

@@ -2629,7 +2629,7 @@ def unwrap_attachments(message_json, text_before):
                 t.append('%s%s' % (prepend_title_text, title,))
                 prepend_title_text = ''
             from_url = attachment.get('from_url', '')
-            if from_url not in text_before:
+            if from_url not in text_before and from_url != title_link:
                 t.append(from_url)
 
             atext = attachment.get("text", None)
