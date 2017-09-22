@@ -156,6 +156,12 @@ class WeechatWrapper(object):
         else:
             return decode_from_utf8(orig_attr)
 
+    # Ensure all lines sent to weechat specifies a prefix. For lines after the
+    # first, we want to disable the prefix, which is done by specifying a space.
+    def prnt_date_tags(self, buffer, date, tags, message):
+        message = message.replace("\n", "\n \t")
+        return self.wrap_for_utf8(self.wrapped_class.prnt_date_tags)(buffer, date, tags, message)
+
 
 ##### Helpers
 
