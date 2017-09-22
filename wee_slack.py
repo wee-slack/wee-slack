@@ -137,16 +137,22 @@ class WeechatWrapper(object):
     def __init__(self, wrapped_class):
         self.wrapped_class = wrapped_class
 
+    # Helper method used to encode/decode method calls.
+    def wrap_for_utf8(self, method):
+        def hooked(*args, **kwargs):
+            result = method(*encode_to_utf8(args), **encode_to_utf8(kwargs))
+            # Prevent wrapped_class from becoming unwrapped
+            if result == self.wrapped_class:
+                return self
+            return decode_from_utf8(result)
+        return hooked
+
+    # Encode and decode everything sent to/received from weechat. We use the
+    # unicode type internally in wee-slack, but has to send utf8 to weechat.
     def __getattr__(self, attr):
         orig_attr = self.wrapped_class.__getattribute__(attr)
         if callable(orig_attr):
-            def hooked(*args, **kwargs):
-                result = orig_attr(*encode_to_utf8(args), **encode_to_utf8(kwargs))
-                # Prevent wrapped_class from becoming unwrapped
-                if result == self.wrapped_class:
-                    return self
-                return decode_from_utf8(result)
-            return hooked
+            return self.wrap_for_utf8(orig_attr)
         else:
             return decode_from_utf8(orig_attr)
 
