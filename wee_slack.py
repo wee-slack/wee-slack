@@ -1026,7 +1026,7 @@ class SlackTeam(object):
         else:
             return False
 
-    def mark_read(self):
+    def mark_read(self, ts=None, update_remote=True, force=False):
         pass
 
     def connect(self):
