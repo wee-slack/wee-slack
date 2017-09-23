@@ -1151,6 +1151,7 @@ class SlackChannel(object):
 
     def set_unread_count_display(self, count):
         self.unread_count_display = count
+        self.new_messages = bool(self.unread_count_display)
         for c in range(self.unread_count_display):
             if self.type == "im":
                 w.buffer_set(self.channel_buffer, "hotlist", "2")
