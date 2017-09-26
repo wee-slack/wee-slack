@@ -1107,8 +1107,8 @@ class SlackChannel(object):
         self.members = set(kwargs.get('members', set()))
         self.eventrouter = eventrouter
         self.slack_name = kwargs["name"]
-        self.slack_topic = kwargs.get("topic", {"value": ""})
         self.slack_purpose = kwargs.get("purpose", {"value": ""})
+        self.topic = kwargs.get("topic", {}).get("value", "")
         self.identifier = kwargs["id"]
         self.last_read = SlackTS(kwargs.get("last_read", SlackTS()))
         self.channel_buffer = None
@@ -1174,14 +1174,17 @@ class SlackChannel(object):
         }
         return select[style]
 
-    def render_topic(self, topic=None):
+    def render_topic(self):
         if self.channel_buffer:
-            if not topic:
-                if self.slack_topic['value'] != "":
-                    topic = self.slack_topic['value']
-                else:
-                    topic = self.slack_purpose['value']
+            if self.topic != "":
+                topic = self.topic
+            else:
+                topic = self.slack_purpose['value']
             w.buffer_set(self.channel_buffer, "title", topic)
+
+    def set_topic(self, value):
+        self.topic = value
+        self.render_topic()
 
     def update_from_message_json(self, message_json):
         for key, value in message_json.items():
@@ -2335,7 +2338,7 @@ def subprocess_message_deleted(message_json, eventrouter, channel, team):
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
     text = unhtmlescape(unfurl_refs(message_json["text"], ignore_alt_text=False))
     channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"], tagset="muted")
-    channel.render_topic(unhtmlescape(message_json["topic"]))
+    channel.set_topic(unhtmlescape(message_json["topic"]))
 
 
 def process_reply(message_json, eventrouter, **kwargs):
@@ -2869,7 +2872,7 @@ def topic_command_cb(data, current_buffer, command):
         return w.WEECHAT_RC_OK_EAT
 
     if topic is None:
-        w.prnt(channel.channel_buffer, 'Topic for {} is "{}"'.format(channel.name, channel.slack_topic['value']))
+        w.prnt(channel.channel_buffer, 'Topic for {} is "{}"'.format(channel.name, channel.topic))
     else:
         s = SlackRequest(team.token, "channels.setTopic", {"channel": channel.identifier, "topic": topic}, team_hash=team.team_hash)
         EVENTROUTER.receive(s)
