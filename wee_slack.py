@@ -2825,6 +2825,28 @@ def part_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 
+def parse_topic_command(command):
+    args = command.split()[1:]
+    channel_name = None
+    topic = None
+
+    if args:
+        if args[0].startswith('#'):
+            channel_name = args[0][1:]
+            topic = args[1:]
+        else:
+            topic = args
+
+    if topic == []:
+        topic = None
+    if topic:
+        topic = ' '.join(topic)
+    if topic == '-delete':
+        topic = ''
+
+    return channel_name, topic
+
+
 @slack_buffer_or_ignore
 def topic_command_cb(data, current_buffer, command):
     """
@@ -2833,18 +2855,10 @@ def topic_command_cb(data, current_buffer, command):
     """
     data = decode_from_utf8(data)
     command = decode_from_utf8(command)
+
+    channel_name, topic = parse_topic_command(command)
+
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
-
-    args = command.split()[1:]
-    channel_name = None
-    topic = []
-    if args:
-        if args[0].startswith('#'):
-            channel_name = args[0][1:]
-            topic = args[1:]
-        else:
-            topic = args
-
     if channel_name:
         channel = team.channels.get(team.get_channel_map().get(channel_name))
     else:
@@ -2854,12 +2868,7 @@ def topic_command_cb(data, current_buffer, command):
         w.prnt(team.channel_buffer, "#{}: No such channel".format(channel_name))
         return w.WEECHAT_RC_OK_EAT
 
-    if topic:
-        topic = ' '.join(topic)
-    if topic == '-delete':
-        topic = ''
-
-    if topic == []:
+    if topic is None:
         w.prnt(channel.channel_buffer, 'Topic for {} is "{}"'.format(channel.name, channel.slack_topic['value']))
     else:
         s = SlackRequest(team.token, "channels.setTopic", {"channel": channel.identifier, "topic": topic}, team_hash=team.team_hash)
