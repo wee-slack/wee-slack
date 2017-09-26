@@ -2587,7 +2587,12 @@ def unfurl_ref(ref, ignore_alt_text=False):
                 display_text = ref.split('|')[1]
             else:
                 url, desc = ref.split('|', 1)
-                display_text = "{} ({})".format(url, desc)
+                if (config.unfurl_prevent_auto_linking and
+                        match_url = r"^\w+:(//)?{}$".format(re.escape(desc))
+                        re.match(match_url, url)):
+                    display_text = desc
+                else:
+                    display_text = "{} ({})".format(url, desc)
     else:
         display_text = resolve_ref(ref)
     return display_text
@@ -3395,6 +3400,13 @@ class PluginConfig(object):
             desc='When displaying ("unfurling") links to channels/users/etc,'
             ' ignore the "alt text" present in the message and instead use the'
             ' canonical name of the thing being linked to.'),
+        'unfurl_prevent_auto_linking': Setting(
+            default='false',
+            desc='When displaying ("unfurling") links to channels/users/etc,'
+            ' only show the "alt text" if that is the same as the url without'
+            ' the protocol. This is useful because Slack inserts http:// in'
+            ' front of words containg dots and mailto: in front of email'
+            ' addresses, so this will remove it.'),
         'unhide_buffers_with_activity': Setting(
             default='false',
             desc='When activity occurs on a buffer, unhide it even if it was'
