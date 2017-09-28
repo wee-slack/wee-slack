@@ -1184,11 +1184,10 @@ class SlackChannel(object):
                 w.buffer_set(self.channel_buffer, "hotlist", "1")
 
     def formatted_name(self, style="default", typing=False, **kwargs):
-        if config.channel_name_typing_indicator:
-            if not typing:
-                prepend = "#"
-            else:
-                prepend = ">"
+        if typing and config.channel_name_typing_indicator:
+            prepend = ">"
+        elif self.type == "group":
+            prepend = config.group_name_prefix
         else:
             prepend = "#"
         select = {
@@ -1646,12 +1645,11 @@ class SlackGroupChannel(SlackChannel):
 
     def __init__(self, eventrouter, **kwargs):
         super(SlackGroupChannel, self).__init__(eventrouter, **kwargs)
-        self.name = "#" + kwargs['name']
         self.type = "group"
         self.set_name(self.slack_name)
 
     def set_name(self, slack_name):
-        self.name = "#" + slack_name
+        self.name = config.group_name_prefix + slack_name
 
     # def formatted_name(self, prepend="#", enable_color=True, basic=False):
     #    return prepend + self.slack_name
@@ -1678,18 +1676,19 @@ class SlackMPDMChannel(SlackChannel):
             self.eventrouter.receive(s)
         # self.create_buffer()
 
+    @staticmethod
+    def adjust_name(n):
+        return "|".join("-".join(n.split("-")[1:-1]).split("--"))
+
     def set_name(self, n):
-        self.name = "|".join("-".join(n.split("-")[1:-1]).split("--"))
+        self.name = self.adjust_name(n)
 
     def formatted_name(self, style="default", typing=False, **kwargs):
-        adjusted_name = "|".join("-".join(self.slack_name.split("-")[1:-1]).split("--"))
-        if config.channel_name_typing_indicator:
-            if not typing:
-                prepend = "#"
-            else:
-                prepend = ">"
+        adjusted_name = self.adjust_name(self.slack_name)
+        if typing and config.channel_name_typing_indicator:
+            prepend = ">"
         else:
-            prepend = "#"
+            prepend = "@"
         select = {
             "default": adjusted_name,
             "sidebar": prepend + adjusted_name,
@@ -3390,6 +3389,9 @@ class PluginConfig(object):
         'distracting_channels': Setting(
             default='',
             desc='List of channels to hide.'),
+        'group_name_prefix': Setting(
+            default='&',
+            desc='The prefix of buffer names for groups (private channels).'),
         'map_underline_to': Setting(
             default='_',
             desc='When sending underlined text to slack, use this formatting'
@@ -3500,6 +3502,7 @@ class PluginConfig(object):
         return int(w.config_get_plugin(key))
 
     get_debug_level = get_int
+    get_group_name_prefix = get_string
     get_map_underline_to = get_string
     get_render_bold_as = get_string
     get_render_italic_as = get_string
