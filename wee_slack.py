@@ -1051,7 +1051,7 @@ class SlackTeam(object):
         else:
             return False
 
-    def mark_read(self):
+    def mark_read(self, ts=None, update_remote=True, force=False):
         pass
 
     def connect(self):
@@ -1176,6 +1176,7 @@ class SlackChannel(object):
 
     def set_unread_count_display(self, count):
         self.unread_count_display = count
+        self.new_messages = bool(self.unread_count_display)
         for c in range(self.unread_count_display):
             if self.type == "im":
                 w.buffer_set(self.channel_buffer, "hotlist", "2")
@@ -3199,6 +3200,23 @@ def label_command_cb(data, current_buffer, args):
         w.buffer_set(channel.channel_buffer, "short_name", new_name)
 
 
+def set_unread_cb(data, current_buffer, command):
+    data = decode_from_utf8(data)
+    command = decode_from_utf8(command)
+    for channel in EVENTROUTER.weechat_controller.buffers.values():
+        channel.mark_read()
+    return w.WEECHAT_RC_OK
+
+
+@slack_buffer_or_ignore
+def set_unread_current_buffer_cb(data, current_buffer, command):
+    data = decode_from_utf8(data)
+    command = decode_from_utf8(command)
+    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    channel.mark_read()
+    return w.WEECHAT_RC_OK
+
+
 def command_p(data, current_buffer, args):
     args = args.split(' ', 1)[1]
     w.prnt("", "{}".format(eval(args)))
@@ -3300,6 +3318,8 @@ def setup_hooks():
     w.hook_command_run('/msg', 'msg_command_cb', '')
     w.hook_command_run('/label', 'label_command_cb', '')
     w.hook_command_run("/input complete_next", "complete_next_cb", "")
+    w.hook_command_run("/input set_unread", "set_unread_cb", "")
+    w.hook_command_run("/input set_unread_current_buffer", "set_unread_current_buffer_cb", "")
     w.hook_command_run('/away', 'away_command_cb', '')
 
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
