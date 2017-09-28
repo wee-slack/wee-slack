@@ -656,7 +656,7 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
     if current_buffer not in EVENTROUTER.weechat_controller.buffers:
         return string
     message = decode_from_utf8(string)
-    if "\n" in message and not message.startswith("/"):
+    if not message.startswith("/") and "\n" in message:
         buffer_input_callback("EVENTROUTER", current_buffer, message)
         return ""
     return string
