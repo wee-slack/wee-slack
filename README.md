@@ -176,11 +176,6 @@ Add a reaction to the nth last message. The number can be omitted and defaults t
 3+:smile:
 ```
 
-Set all read markers to a specific time:
-```
-/slack setallreadmarkers (time in epoch)
-```
-
 Upload a file to the current slack buffer:
 ```
 /slack upload [file_path]
