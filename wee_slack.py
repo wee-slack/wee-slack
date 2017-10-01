@@ -2587,10 +2587,12 @@ def unfurl_ref(ref, ignore_alt_text=False):
                 display_text = ref.split('|')[1]
             else:
                 url, desc = ref.split('|', 1)
-                if (config.unfurl_prevent_auto_linking and
-                        match_url = r"^\w+:(//)?{}$".format(re.escape(desc))
-                        re.match(match_url, url)):
+                match_url = r"^\w+:(//)?{}$".format(re.escape(desc))
+                url_matches_desc = re.match(match_url, url)
+                if url_matches_desc and config.unfurl_auto_link_display == "text":
                     display_text = desc
+                elif url_matches_desc and config.unfurl_auto_link_display == "url":
+                    display_text = url
                 else:
                     display_text = "{} ({})".format(url, desc)
     else:
@@ -3400,13 +3402,15 @@ class PluginConfig(object):
             desc='When displaying ("unfurling") links to channels/users/etc,'
             ' ignore the "alt text" present in the message and instead use the'
             ' canonical name of the thing being linked to.'),
-        'unfurl_prevent_auto_linking': Setting(
-            default='false',
+        'unfurl_auto_link_display': Setting(
+            default='both',
             desc='When displaying ("unfurling") links to channels/users/etc,'
-            ' only show the "alt text" if that is the same as the url without'
-            ' the protocol. This is useful because Slack inserts http:// in'
-            ' front of words containg dots and mailto: in front of email'
-            ' addresses, so this will remove it.'),
+            ' determine what is displayed when the text matches the url'
+            ' without the protocol. This happens when Slack automatically'
+            ' creates links, e.g. from words separated by dots or email'
+            ' addresses. Set it to "text" to only display the text written by'
+            ' the user, "url" to only display the url or "both" (the default)'
+            ' to display both.'),
         'unhide_buffers_with_activity': Setting(
             default='false',
             desc='When activity occurs on a buffer, unhide it even if it was'
@@ -3472,6 +3476,7 @@ class PluginConfig(object):
     get_render_italic_as = get_string
     get_slack_timeout = get_int
     get_thread_suffix_color = get_string
+    get_unfurl_auto_link_display = get_string
 
     def get_distracting_channels(self, key):
         return [x.strip() for x in w.config_get_plugin(key).split(',')]
