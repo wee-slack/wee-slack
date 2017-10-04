@@ -239,9 +239,10 @@ Show channel name in hotlist after activity
 /set weechat.look.hotlist_names_level 14
 ```
 
-Enable debug mode:
+Enable debug mode and change debug level (default 3, decrease to increase logging and vice versa):
 ```
 /set plugins.var.python.slack.debug_mode on
+/set plugins.var.python.slack.debug_level 2
 ```
 
 Support
