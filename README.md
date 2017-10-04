@@ -34,7 +34,7 @@ Features
   * Away/back status handling
   * Expands/shows metadata for things like tweets/links
   * Displays edited messages (slack.com irc mode currently doesn't show these)
-  * *Super fun* debug mode. See what the websocket is saying with `/slack debug`
+  * *Super fun* debug mode. See what the websocket is saying
 
 In Development
 --------------
@@ -186,11 +186,6 @@ Run a Slack slash command. Simply prepend `/slack slash` to what you'd type in t
 /slack slash /desiredcommand arg1 arg2 arg3
 ```
 
-Debug mode:
-```
-/slack debug
-```
-
 #### Threads
 
 Start a new thread on the most recent message The number indicates which message in the buffer to reply to, in reverse time order:
@@ -242,6 +237,12 @@ Show typing notification in main bar (slack_typing_notice):
 Show channel name in hotlist after activity
 ```
 /set weechat.look.hotlist_names_level 14
+```
+
+Enable debug mode and change debug level (default 3, decrease to increase logging and vice versa):
+```
+/set plugins.var.python.slack.debug_mode on
+/set plugins.var.python.slack.debug_level 2
 ```
 
 Support
