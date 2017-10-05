@@ -3,7 +3,7 @@ import json
 
 from wee_slack import ProcessNotImplemented
 
-def test_process_reply(monkeypatch, mock_websocket, realish_eventrouter):
+def test_process_team_join(mock_websocket, realish_eventrouter):
 
     eventrouter = realish_eventrouter
 

@@ -1,5 +1,5 @@
 
-def test_PresenceChange(monkeypatch, realish_eventrouter, mock_websocket):
+def test_PresenceChange(realish_eventrouter, mock_websocket):
 
     e = realish_eventrouter
 

@@ -6,7 +6,7 @@ from wee_slack import linkify_text
 #    assert False
 
 
-def test_linkifytext_does_partial_html_entity_encoding(mock_weechat, realish_eventrouter):
+def test_linkifytext_does_partial_html_entity_encoding(realish_eventrouter):
     team = realish_eventrouter.teams.values()[0]
     channel = team.channels.values()[0]
 
