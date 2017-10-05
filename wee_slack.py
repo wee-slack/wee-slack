@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 
 from functools import wraps
 
-import datetime
 import time
 import json
 import pickle
@@ -18,7 +17,6 @@ import collections
 import ssl
 import random
 import string
-import subprocess
 
 from websocket import create_connection, WebSocketConnectionClosedException
 
@@ -434,6 +432,7 @@ class EventRouter(object):
                     dbg("Max retries for Slackrequest")
 
             else:
+
                 if "reply_to" in j:
                     dbg("SET FROM REPLY")
                     function_name = "reply"
@@ -1300,6 +1299,7 @@ class SlackChannel(object):
             self.eventrouter.receive(s)
 
     def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, **kwargs):
+        data = "{}\t{}".format(nick, text)
         ts = SlackTS(timestamp)
         last_read = SlackTS(self.last_read)
         # without this, DMs won't open automatically
@@ -1329,46 +1329,7 @@ class SlackChannel(object):
                 if config.unhide_buffers_with_activity and not self.is_visible() and (self.identifier not in self.team.muted_channels):
                     w.buffer_set(self.channel_buffer, "hidden", "0")
 
-                code_block_count = 0;
-                count_line = 0;
-                for line in text.split("\n"): 
-                    code_block_hit = False
-                    is_three_back_ticks = line.startswith("```")
-                    is_one_line = len(re.findall(r"```", line)) == 2
-                    single_back_ticks = re.findall(r"`(.*?)`", line)
-
-                    if is_three_back_ticks == True and code_block_count == 0 and not code_block_hit and not is_one_line:
-                        code_block_count += 1
-                        code_block_hit = True
-
-                    if is_three_back_ticks == True and code_block_count == 1 and not code_block_hit and not is_one_line:
-                        code_block_count = 0
-                        code_block_hit = True
-                    
-                    if code_block_hit == False:
-                        count_line += 1
-
-                        if is_one_line == True:
-                            line = line.replace('```', '')
-
-                        if code_block_count == 1 or is_one_line == True:
-                            code_color = w.color('*darkgray,gray');
-                            line = code_color + line
-                            line = '{:<3} {} {}'.format(code_color, line, code_color)
-
-                        if len(single_back_ticks) > 0 and not is_one_line:
-                            code_color = w.color('brown');
-                            self_color = w.color('white');
-                            line = self_color + line;
-                            for item in single_back_ticks:
-                                line = line.replace(item, code_color + item + self_color).replace('`','')
-                        
-                        if count_line > 1:
-                            nick = ''                        
-
-                        message = u"{}\t{}".format(nick, line).encode('utf-8') 
-                        w.prnt_date_tags(self.channel_buffer, ts.major, tags, message)
-
+                w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
                 modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
                 if backlog:
                     self.mark_read(ts, update_remote=False, force=True)
@@ -1751,7 +1712,7 @@ class SlackThreadChannel(object):
         self.eventrouter = eventrouter
         self.parent_message = parent_message
         self.channel_buffer = None
-        self.identifier = ""
+        # self.identifier = ""
         # self.name = "#" + kwargs['name']
         self.type = "thread"
         self.got_history = False
@@ -1835,8 +1796,6 @@ class SlackThreadChannel(object):
         #        self.eventrouter.receive(s)
         self.create_buffer()
 
-
-
     def rename(self):
         if self.channel_buffer and not self.label:
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
@@ -1855,8 +1814,7 @@ class SlackThreadChannel(object):
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
             time_format = w.config_string(w.config_get("weechat.look.buffer_time_format"))
             parent_time = time.localtime(SlackTS(self.parent_message.ts).major)
-            topic = '{} {} | {}'.format('', self.parent_message.sender, self.parent_message.render()	)
-            # topic = time.strftime(time_format, parent_time)
+            topic = '{} {} | {}'.format(time.strftime(time_format, parent_time), self.parent_message.sender, self.parent_message.render()	)
             w.buffer_set(self.channel_buffer, "title", topic)
 
             # self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
@@ -2405,26 +2363,6 @@ def subprocess_channel_topic(message_json, eventrouter, channel, team):
     channel.render_topic(unhtmlescape(message_json["topic"]))
 
 
-def process_pinslist(message_json, eventrouter, **kwargs):
-    buffer = weechat.buffer_search("", "Pinneds")
-    if not buffer:
-        buffer = weechat.buffer_new("Pinneds", "", "", "", "")
-        weechat.buffer_set(buffer, "Pinneds", "List of pinneds itens.")
-
-    weechat.prnt(buffer, "Total pinned items: {}".format(len(message_json["items"])))
-    for pinned_item in message_json["items"]:
-        created_at = time.strftime("%B %d, %Y - %H:%M", time.localtime(int(pinned_item["message"]["ts"].split(".")[0])))
-        text = pinned_item["message"]["text"]
-        weechat.prnt(buffer, created_at)
-        weechat.prnt(buffer, u"{}".format(text).encode('utf-8'))
-        attachments = pinned_item["message"].get("attachments")
-        if attachments:
-            for attach in attachments:
-                weechat.prnt(buffer,u"{:<25}".format(attach["title"]))
-                weechat.prnt(buffer,u"{:<25}".format(attach["from_url"]))
-    return w.WEECHAT_RC_OK_EAT
-
-
 def process_reply(message_json, eventrouter, **kwargs):
     dbg('processing reply')
     team = kwargs["team"]
@@ -2925,30 +2863,6 @@ def topic_command_cb(data, current_buffer, args):
     else:
         return w.WEECHAT_RC_ERROR
 
-@slack_buffer_required
-def command_pinneds(data, current_buffer, args):
-    """
-    List pinneds items in a channel
-    """
-    data = decode_from_utf8(data)
-    args = decode_from_utf8(args)
-    e = EVENTROUTER
-    team = e.weechat_controller.buffers[current_buffer].team
-    args = args.split(' ')
-
-    if len(args) > 2 and args[1].startswith('#'):
-        cmap = team.get_channel_map()
-        channel_name = args[1][1:]
-        channel = team.channels[cmap[channel_name]]
-    else:
-        channel = e.weechat_controller.buffers[current_buffer]
-
-    if channel:
-        s = SlackRequest(team.token, "pins.list", {"channel": channel.identifier}, team_hash=team.team_hash, channel_identifier=channel.identifier)
-        EVENTROUTER.receive(s)
-        return w.WEECHAT_RC_OK_EAT
-    else:
-        return w.WEECHAT_RC_ERROR_EAT
 
 @slack_buffer_required
 def command_topic(data, current_buffer, args):
@@ -3009,74 +2923,6 @@ def msg_command_cb(data, current_buffer, args):
         if who in cmap:
             channel = team.channels[cmap[who]]
             channel.send_message(message)
-    return w.WEECHAT_RC_OK_EAT
-
-
-@slack_buffer_required
-def command_edit(data, current_buffer, args):
-    """
-    Open an editor to draft a multiline message to be sent
-    as a single input
-    /slack edit [extension] [channel]
-    """
-    data = decode_from_utf8(data)
-    args = decode_from_utf8(args)
-    e = EVENTROUTER
-    team = e.weechat_controller.buffers[current_buffer].team
-    args = args.split(' ')
-    extension = "md"
-    backticks = False
-    channel = e.weechat_controller.buffers[current_buffer]
-    if len(args) > 1:
-        if args[1].startswith('#'):
-            channel = team.channels[team.get_channel_map()[args[1][1:]]]
-        else:
-            extension = args[1]
-            backticks = True
-            if len(args) > 2 and args[2].startswith('#'):
-                channel = team.channels[team.get_channel_map()[args[2][1:]]]
-
-    editor = (weechat.config_get_plugin("editor") or
-              os.environ.get("EDITOR", "vim -f"))
-    path = os.path.expanduser("~/.weechat/slack_edit." + extension)
-    open(path, "w+")
-
-    cmd = editor.split() + [path]
-    code = subprocess.Popen(cmd).wait()
-    if code != 0:
-        os.remove(path)
-        weechat.command(current_buffer, "/window refresh")
-        return weechat.WEECHAT_RC_ERROR
-
-    with open(path) as f:
-        text = f.read()
-        if backticks:
-            text = "```\n" + text.strip() + "\n```"
-        channel.send_message(text)
-
-    os.remove(path)
-    weechat.command(current_buffer, "/window refresh")
-
-    return weechat.WEECHAT_RC_OK
-
-@slack_buffer_required
-def command_channels(data, current_buffer, args):
-    e = EVENTROUTER
-    team = e.weechat_controller.buffers[current_buffer].team
-
-    for channel in team.get_channel_map():
-        line = "{:<25}".format(channel)
-        team.buffer_prnt(line)
-    return w.WEECHAT_RC_OK_EAT
-
-@slack_buffer_required
-def command_users(data, current_buffer, args):
-    e = EVENTROUTER
-    team = e.weechat_controller.buffers[current_buffer].team
-
-    for user in team.get_username_map():
-        line = "{:<25}".format(user)
-        team.buffer_prnt(line)
     return w.WEECHAT_RC_OK_EAT
 
 
@@ -3346,14 +3192,11 @@ def label_command_cb(data, current_buffer, args):
     data = decode_from_utf8(data)
     args = decode_from_utf8(args)
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
-
     if channel and channel.type == 'thread':
         aargs = args.split(None, 2)
         new_name = " +" + aargs[1]
         channel.label = new_name
         w.buffer_set(channel.channel_buffer, "short_name", new_name)
-		
-    return w.WEECHAT_RC_OK_EAT
 
 
 def set_unread_cb(data, current_buffer, command):
@@ -3477,7 +3320,6 @@ def setup_hooks():
     w.hook_command_run("/input set_unread", "set_unread_cb", "")
     w.hook_command_run("/input set_unread_current_buffer", "set_unread_current_buffer_cb", "")
     w.hook_command_run('/away', 'away_command_cb', '')
-    w.hook_command_run('/pinneds', 'command_pinneds', '')
 
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
