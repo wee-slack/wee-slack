@@ -2953,6 +2953,30 @@ def msg_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 
+@slack_buffer_required
+@utf8_decode
+def command_channels(data, current_buffer, args):
+    e = EVENTROUTER
+    team = e.weechat_controller.buffers[current_buffer].team
+
+    team.buffer_prnt("Channels:")
+    for channel in team.get_channel_map():
+        team.buffer_prnt("    {}".format(channel))
+    return w.WEECHAT_RC_OK_EAT
+
+
+@slack_buffer_required
+@utf8_decode
+def command_users(data, current_buffer, args):
+    e = EVENTROUTER
+    team = e.weechat_controller.buffers[current_buffer].team
+
+    team.buffer_prnt("Users:")
+    for user in team.users.values():
+        team.buffer_prnt("    {:<25}({})".format(user.name, user.presence))
+    return w.WEECHAT_RC_OK_EAT
+
+
 @slack_buffer_or_ignore
 @utf8_decode
 def command_talk(data, current_buffer, args):
