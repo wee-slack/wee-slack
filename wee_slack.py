@@ -2981,6 +2981,8 @@ def thread_command_callback(data, current_buffer, args):
                 pm.thread_channel = tc
                 tc.open()
                 # tc.create_buffer()
+                if config.switch_buffer_on_join:
+                    w.buffer_set(tc.channel_buffer, "display", "1")
                 return w.WEECHAT_RC_OK_EAT
         elif args[0] == '/reply':
             count = int(args[1])
