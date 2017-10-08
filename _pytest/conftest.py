@@ -49,7 +49,9 @@ class FakeWeechat():
     this is the thing that acts as "w." everywhere..
     basically mock out all of the weechat calls here i guess
     """
-    WEECHAT_RC_OK = True
+    WEECHAT_RC_ERROR = 0
+    WEECHAT_RC_OK = 1
+    WEECHAT_RC_OK_EAT = 2
 
     def __init__(self):
         pass
