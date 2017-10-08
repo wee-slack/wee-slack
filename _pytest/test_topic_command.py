@@ -1,4 +1,6 @@
-from wee_slack import parse_topic_command
+import wee_slack
+from wee_slack import parse_topic_command, topic_command_cb
+from mock import patch
 
 
 def test_parse_topic_without_arguments():
@@ -42,3 +44,53 @@ def test_parse_topic_with_channel_and_delete():
 
     assert channel_name == 'general'
     assert topic == ''
+
+
+def test_call_topic_without_arguments(realish_eventrouter):
+    team = realish_eventrouter.teams.values()[-1]
+    channel = team.channels.values()[-1]
+    current_buffer = channel.channel_buffer
+    wee_slack.EVENTROUTER = realish_eventrouter
+
+    command = '/topic'
+
+    with patch('wee_slack.w.prnt') as fake_prnt:
+        result = topic_command_cb(None, current_buffer, command)
+        fake_prnt.assert_called_with(
+            channel.channel_buffer,
+            'Topic for {} is "{}"'.format(channel.name, channel.topic),
+        )
+        assert result == wee_slack.w.WEECHAT_RC_OK_EAT
+
+
+def test_call_topic_with_unknown_channel(realish_eventrouter):
+    team = realish_eventrouter.teams.values()[-1]
+    channel = team.channels.values()[-1]
+    current_buffer = channel.channel_buffer
+    wee_slack.EVENTROUTER = realish_eventrouter
+
+    command = '/topic #nonexisting'
+
+    with patch('wee_slack.w.prnt') as fake_prnt:
+        result = topic_command_cb(None, current_buffer, command)
+        fake_prnt.assert_called_with(
+            team.channel_buffer,
+            "#nonexisting: No such channel",
+        )
+        assert result == wee_slack.w.WEECHAT_RC_OK_EAT
+
+
+def test_call_topic_with_channel_and_string(realish_eventrouter):
+    team = realish_eventrouter.teams.values()[-1]
+    channel = team.channels.values()[-1]
+    current_buffer = channel.channel_buffer
+    wee_slack.EVENTROUTER = realish_eventrouter
+
+    command = '/topic #general new topic'
+
+    result = topic_command_cb(None, current_buffer, command)
+    request = realish_eventrouter.queue[-1]
+    assert request.request == 'channels.setTopic'
+    assert request.post_data == {
+        'channel': 'C407ABS94', 'token': 'xoxoxoxox', 'topic': 'new topic'}
+    assert result == wee_slack.w.WEECHAT_RC_OK_EAT
