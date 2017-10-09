@@ -1132,8 +1132,8 @@ class SlackChannel(object):
         self.members = set(kwargs.get('members', set()))
         self.eventrouter = eventrouter
         self.slack_name = kwargs["name"]
-        self.slack_topic = kwargs.get("topic", {"value": ""})
         self.slack_purpose = kwargs.get("purpose", {"value": ""})
+        self.topic = kwargs.get("topic", {}).get("value", "")
         self.identifier = kwargs["id"]
         self.last_read = SlackTS(kwargs.get("last_read", SlackTS()))
         self.channel_buffer = None
@@ -1199,14 +1199,17 @@ class SlackChannel(object):
         }
         return select[style]
 
-    def render_topic(self, topic=None):
+    def render_topic(self):
         if self.channel_buffer:
-            if not topic:
-                if self.slack_topic['value'] != "":
-                    topic = self.slack_topic['value']
-                else:
-                    topic = self.slack_purpose['value']
+            if self.topic != "":
+                topic = self.topic
+            else:
+                topic = self.slack_purpose['value']
             w.buffer_set(self.channel_buffer, "title", topic)
+
+    def set_topic(self, value):
+        self.topic = value
+        self.render_topic()
 
     def update_from_message_json(self, message_json):
         for key, value in message_json.items():
@@ -2360,7 +2363,7 @@ def subprocess_message_deleted(message_json, eventrouter, channel, team):
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
     text = unhtmlescape(unfurl_refs(message_json["text"], ignore_alt_text=False))
     channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"], tagset="muted")
-    channel.render_topic(unhtmlescape(message_json["topic"]))
+    channel.set_topic(unhtmlescape(message_json["topic"]))
 
 
 def process_reply(message_json, eventrouter, **kwargs):
@@ -2850,49 +2853,55 @@ def part_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 
+def parse_topic_command(command):
+    args = command.split()[1:]
+    channel_name = None
+    topic = None
+
+    if args:
+        if args[0].startswith('#'):
+            channel_name = args[0][1:]
+            topic = args[1:]
+        else:
+            topic = args
+
+    if topic == []:
+        topic = None
+    if topic:
+        topic = ' '.join(topic)
+    if topic == '-delete':
+        topic = ''
+
+    return channel_name, topic
+
+
 @slack_buffer_or_ignore
-def topic_command_cb(data, current_buffer, args):
-    n = len(args.split())
-    if n < 2:
-        channel = channels.find(current_buffer)
-        if channel:
-            w.prnt(current_buffer, 'Topic for {} is "{}"'.format(channel.name, channel.topic))
-        return w.WEECHAT_RC_OK_EAT
-    elif command_topic(data, current_buffer, args.split(None, 1)[1]):
-        return w.WEECHAT_RC_OK_EAT
-    else:
-        return w.WEECHAT_RC_ERROR
-
-
-@slack_buffer_required
-def command_topic(data, current_buffer, args):
+def topic_command_cb(data, current_buffer, command):
     """
     Change the topic of a channel
-    /slack topic [<channel>] [<topic>|-delete]
+    /topic [<channel>] [<topic>|-delete]
     """
     data = decode_from_utf8(data)
-    args = decode_from_utf8(args)
-    e = EVENTROUTER
-    team = e.weechat_controller.buffers[current_buffer].team
-    # server = servers.find(current_domain_name())
-    args = args.split(' ')
-    if len(args) > 2 and args[1].startswith('#'):
-        cmap = team.get_channel_map()
-        channel_name = args[1][1:]
-        channel = team.channels[cmap[channel_name]]
-        topic = " ".join(args[2:])
-    else:
-        channel = e.weechat_controller.buffers[current_buffer]
-        topic = " ".join(args[1:])
+    command = decode_from_utf8(command)
 
-    if channel:
-        if topic == "-delete":
-            topic = ''
+    channel_name, topic = parse_topic_command(command)
+
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    if channel_name:
+        channel = team.channels.get(team.get_channel_map().get(channel_name))
+    else:
+        channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+
+    if not channel:
+        w.prnt(team.channel_buffer, "#{}: No such channel".format(channel_name))
+        return w.WEECHAT_RC_OK_EAT
+
+    if topic is None:
+        w.prnt(channel.channel_buffer, 'Topic for {} is "{}"'.format(channel.name, channel.topic))
+    else:
         s = SlackRequest(team.token, "channels.setTopic", {"channel": channel.identifier, "topic": topic}, team_hash=team.team_hash)
         EVENTROUTER.receive(s)
-        return w.WEECHAT_RC_OK_EAT
-    else:
-        return w.WEECHAT_RC_ERROR_EAT
+    return w.WEECHAT_RC_OK_EAT
 
 
 @slack_buffer_or_ignore
@@ -3311,7 +3320,7 @@ def setup_hooks():
     w.hook_command_run('/join', 'command_talk', '')
     w.hook_command_run('/part', 'part_command_cb', '')
     w.hook_command_run('/leave', 'part_command_cb', '')
-    w.hook_command_run('/topic', 'command_topic', '')
+    w.hook_command_run('/topic', 'topic_command_cb', '')
     w.hook_command_run('/thread', 'thread_command_callback', '')
     w.hook_command_run('/reply', 'thread_command_callback', '')
     w.hook_command_run('/rehistory', 'rehistory_command_callback', '')
