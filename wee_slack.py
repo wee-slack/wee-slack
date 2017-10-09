@@ -51,6 +51,13 @@ SLACK_API_TRANSLATOR = {
         "leave": "im.close",
         "mark": "im.mark",
     },
+    "mpim": {
+        "history": "mpim.history",
+        "join": "mpim.open",
+        "leave": "mpim.close",
+        "mark": "mpim.mark",
+        "info": "groups.info",
+    },
     "group": {
         "history": "groups.history",
         "join": "channels.join",
@@ -1668,7 +1675,7 @@ class SlackMPDMChannel(SlackChannel):
         super(SlackMPDMChannel, self).__init__(eventrouter, **kwargs)
         n = kwargs.get('name')
         self.set_name(n)
-        self.type = "group"
+        self.type = "mpim"
 
     def open(self, update_remote=False):
         self.create_buffer()
@@ -2155,6 +2162,10 @@ def handle_imhistory(message_json, eventrouter, **kwargs):
     handle_history(message_json, eventrouter, **kwargs)
 
 
+def handle_mpimhistory(message_json, eventrouter, **kwargs):
+    handle_history(message_json, eventrouter, **kwargs)
+
+
 def handle_history(message_json, eventrouter, **kwargs):
     request_metadata = pickle.loads(message_json["wee_slack_request_metadata"])
     kwargs['team'] = eventrouter.teams[request_metadata.team_hash]
@@ -2452,6 +2463,10 @@ def process_im_open(message_json, eventrouter, **kwargs):
     item = message_json
     kwargs['team'].channels[item["channel"]].check_should_open(True)
     w.buffer_set(channel.channel_buffer, "hotlist", "2")
+
+
+def process_mpim_open(message_json, eventrouter, **kwargs):
+    process_im_open(message_json, eventrouter, **kwargs)
 
 
 def process_im_close(message_json, eventrouter, **kwargs):
