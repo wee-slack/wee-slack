@@ -121,10 +121,10 @@ Join a channel:
 /join [channel]
 ```
 
-Start a direct chat with someone:
+Start a direct chat with someone or multiple users:
 ```
-/query [username]
-/slack talk [username]
+/query [username] ([username2] [username3]...)
+/slack talk [username] ([username2] [username3]...)
 ```
 
 List channels:

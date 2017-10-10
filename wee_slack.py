@@ -2981,20 +2981,51 @@ def command_users(data, current_buffer, args):
 @utf8_decode
 def command_talk(data, current_buffer, args):
     """
-    Open a chat with the specified user
-    /slack talk [user]
+    Open a chat with the specified user(s)
+    /slack talk [user] ([user2] [user3]...)
     """
 
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
-    channel_name = args.split(' ')[1]
+    users = args.split(' ')[1:]
     c = team.get_channel_map()
-    if channel_name not in c:
-        u = team.get_username_map()
+
+    if len(users) > 1:
+        # Add the current user if not specified since all MPDM names have it
+        if team.nick not in users:
+            users.append(team.nick)
+
+        # Use the user order given if no channels are found below
+        channel_name = 'mpdm-{}-1'.format('--'.join(users))
+
+        # Use the name of any existing channel with the same set of users
+        user_set = set(users)
+        mpdm_regex = re.compile(r'-+')
+        for channel in c:
+            if channel.startswith('mpdm-') and user_set == set(
+                    mpdm_regex.split(channel)[1:-1]):
+                channel_name = channel
+                break
+    else:
+        channel_name = users[0]
         if channel_name.startswith('@'):
             channel_name = channel_name[1:]
-        if channel_name in u:
-            s = SlackRequest(team.token, "im.open", {"user": u[channel_name]}, team_hash=team.team_hash)
+
+    if channel_name not in c:
+        # Get the IDs of the users
+        u = team.get_username_map()
+        user_ids = tuple(u[user] for user in users if user in u)
+
+        # Open the DM or MPDM depending on the number of users
+        if user_ids:
+            if len(user_ids) > 1:
+                method = 'mpim.open'
+                params = {'user_ids': ','.join(user_ids)}
+            else:
+                method = 'im.open'
+                params = {'user': user_ids[0]}
+
+            s = SlackRequest(team.token, method, params, team_hash=team.team_hash)
             EVENTROUTER.receive(s)
             dbg("found user")
             # refresh channel map here
