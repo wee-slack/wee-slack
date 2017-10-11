@@ -1286,7 +1286,7 @@ class SlackChannel(object):
 
         if self.type == "im":
             if "join" in SLACK_API_TRANSLATOR[self.type]:
-                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"user": self.user, "return_im": "true"}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"user": self.user, "return_im": True}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
 
     def destroy_buffer(self, update_remote):
@@ -1624,7 +1624,7 @@ class SlackDMChannel(SlackChannel):
             self.eventrouter.receive(s)
         if update_remote:
             if "join" in SLACK_API_TRANSLATOR[self.type]:
-                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"user": self.user, "return_im": "true"}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"user": self.user, "return_im": True}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
         self.create_buffer()
 
