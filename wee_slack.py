@@ -2600,6 +2600,7 @@ def unhtmlescape(text):
 
 
 def unwrap_attachments(message_json, text_before):
+    text_before_unescaped = unhtmlescape(text_before)
     attachment_texts = []
     a = message_json.get("attachments", None)
     if a:
@@ -2620,7 +2621,7 @@ def unwrap_attachments(message_json, text_before):
                 t.append(attachment['pretext'])
             title = attachment.get('title', None)
             title_link = attachment.get('title_link', '')
-            if title_link in text_before:
+            if title_link in text_before_unescaped:
                 title_link = ''
             if title and title_link:
                 t.append('%s%s (%s)' % (prepend_title_text, title, title_link,))
@@ -2629,7 +2630,7 @@ def unwrap_attachments(message_json, text_before):
                 t.append('%s%s' % (prepend_title_text, title,))
                 prepend_title_text = ''
             from_url = attachment.get('from_url', '')
-            if from_url not in text_before and from_url != title_link:
+            if from_url not in text_before_unescaped and from_url != title_link:
                 t.append(from_url)
 
             atext = attachment.get("text", None)

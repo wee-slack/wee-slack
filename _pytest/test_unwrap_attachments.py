@@ -32,10 +32,10 @@ import pytest
         'input_message': {'attachments': [{
             'title': 'Title',
             'text': 'Attachment text',
-            'title_link': 'http://link',
-            'from_url': 'http://link',
+            'title_link': 'http://link?a=1&b=2',
+            'from_url': 'http://link?a=1&b=2',
         }]},
-        'input_text_before': "http://link",
+        'input_text_before': "http://link?a=1&amp;b=2",
         'output': "\n".join([
             "",
             "Title",
