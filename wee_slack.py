@@ -2,6 +2,7 @@
 
 from __future__ import unicode_literals
 
+from collections import OrderedDict
 from functools import wraps
 
 import time
@@ -1114,7 +1115,7 @@ class SlackChannel(object):
         self.channel_buffer = None
         self.team = kwargs.get('team', None)
         self.got_history = False
-        self.messages = {}
+        self.messages = OrderedDict()
         self.hashed_messages = {}
         self.new_messages = False
         self.typing = {}
@@ -1264,7 +1265,7 @@ class SlackChannel(object):
     def destroy_buffer(self, update_remote):
         if self.channel_buffer is not None:
             self.channel_buffer = None
-        self.messages = {}
+        self.messages = OrderedDict()
         self.hashed_messages = {}
         self.got_history = False
         # if update_remote and not eventrouter.shutting_down:
@@ -1326,14 +1327,14 @@ class SlackChannel(object):
         if from_me:
             message.message_json["user"] = team.myidentifier
         self.messages[SlackTS(message.ts)] = message
-        if len(self.messages.keys()) > SCROLLBACK_SIZE:
-            mk = self.messages.keys()
-            mk.sort()
-            for k in mk[:SCROLLBACK_SIZE]:
-                msg_to_delete = self.messages[k]
-                if msg_to_delete.hash:
-                    del self.hashed_messages[msg_to_delete.hash]
-                del self.messages[k]
+
+        sorted_messages = sorted(self.messages.items())
+        messages_to_delete = sorted_messages[:-SCROLLBACK_SIZE]
+        messages_to_keep = sorted_messages[-SCROLLBACK_SIZE:]
+        for message_hash in [m[1].hash for m in messages_to_delete]:
+            if message_hash in self.hashed_messages:
+                del self.hashed_messages[message_hash]
+        self.messages = OrderedDict(messages_to_keep)
 
     def change_message(self, ts, text=None, suffix=None):
         ts = SlackTS(ts)
@@ -1399,11 +1400,8 @@ class SlackChannel(object):
             self.eventrouter.receive(s)
 
     def sorted_message_keys(self):
-        keys = []
-        for k in self.messages:
-            if type(self.messages[k]) == SlackMessage:
-                keys.append(k)
-        return sorted(keys)
+        return [key for key, message in self.messages.items()
+                if type(message) == SlackMessage]
 
     # Typing related
     def set_typing(self, user):
