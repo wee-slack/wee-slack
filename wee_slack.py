@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 
 from collections import OrderedDict
 from functools import wraps
+from itertools import islice
 
 import time
 import json
@@ -1363,8 +1364,8 @@ class SlackChannel(object):
                 self.eventrouter.receive(s)
 
     def my_last_message(self, msgno):
-        for message in reversed(self.sorted_message_keys()):
-            m = self.messages[message]
+        for key in self.main_message_keys_reversed():
+            m = self.messages[key]
             if "user" in m.message_json and "text" in m.message_json and m.message_json["user"] == self.team.myidentifier:
                 msgno -= 1
                 if msgno == 0:
@@ -1394,14 +1395,15 @@ class SlackChannel(object):
 
     def send_change_reaction(self, method, msg_number, reaction):
         if 0 < msg_number < len(self.messages):
-            timestamp = self.sorted_message_keys()[-msg_number]
+            keys = self.main_message_keys_reversed()
+            timestamp = next(islice(keys, msg_number - 1, None))
             data = {"channel": self.identifier, "timestamp": timestamp, "name": reaction}
             s = SlackRequest(self.team.token, method, data)
             self.eventrouter.receive(s)
 
-    def sorted_message_keys(self):
-        return [key for key, message in self.messages.items()
-                if type(message) == SlackMessage]
+    def main_message_keys_reversed(self):
+        return (key for key in reversed(self.messages)
+                if type(self.messages[key]) == SlackMessage)
 
     # Typing related
     def set_typing(self, user):
@@ -1443,8 +1445,7 @@ class SlackChannel(object):
 
     def mark_read(self, ts=None, update_remote=True, force=False):
         if not ts:
-            msg_timestamps = self.sorted_message_keys()
-            ts = msg_timestamps[-1] if msg_timestamps else SlackTS()
+            ts = next(self.main_message_keys_reversed(), SlackTS())
         if self.new_messages or force:
             if self.channel_buffer:
                 w.buffer_set(self.channel_buffer, "unread", "")
@@ -2959,9 +2960,8 @@ def thread_command_callback(data, current_buffer, args):
         elif args[0] == '/reply':
             count = int(args[1])
             msg = " ".join(args[2:])
-            mkeys = channel.sorted_message_keys()
-            mkeys.reverse()
-            parent_id = str(mkeys[count - 1])
+            mkeys = channel.main_message_keys_reversed()
+            parent_id = str(next(islice(mkeys, count - 1, None)))
             channel.send_message(msg, request_dict_ext={"thread_ts": parent_id})
             return w.WEECHAT_RC_OK_EAT
         w.prnt(current, "Invalid thread command.")
