@@ -3126,30 +3126,30 @@ def format_nick(nick, previous_nick=None):
     return nick_prefix_color + nick_prefix + w.color("reset") + nick + nick_suffix_color + nick_suffix + w.color("reset")
 
 
-def tag(tagset, user=None):
-    if user:
-        default_tag = "nick_" + user.replace(" ", "_")
-    else:
-        default_tag = 'nick_unknown'
+def tag(tagset, user=None, muted=False):
     tagsets = {
         # messages in the team/server buffer, e.g. "new channel created"
-        "team_info": "no_highlight,log3",
-        "team_message": "irc_privmsg,notify_message,log1",
+        "team_info": {"no_highlight", "log3"},
+        "team_message": {"irc_privmsg", "notify_message", "log1"},
         # when replaying something old
-        "backlog": "irc_privmsg,no_highlight,notify_none,logger_backlog",
-        # when posting messages to a muted channel
-        "muted": "irc_privmsg,no_highlight,notify_none,log1",
+        "backlog": {"irc_privmsg", "no_highlight", "notify_none", "logger_backlog"},
         # when receiving a direct message
-        "dm": "irc_privmsg,notify_private,log1",
-        "dmfromme": "irc_privmsg,no_highlight,notify_none,log1",
+        "dm": {"irc_privmsg", "notify_private", "log1"},
+        "dmfromme": {"irc_privmsg", "no_highlight", "notify_none", "log1"},
         # when this is a join/leave, attach for smart filter ala:
         # if user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]
-        "joinleave": "irc_smart_filter,no_highlight,log4",
-        "topic": "irc_topic,no_highlight,log3",
+        "joinleave": {"irc_smart_filter", "no_highlight", "log4"},
+        "topic": {"irc_topic", "no_highlight", "log3"},
         # catchall ?
-        "default": "irc_privmsg,notify_message,log1",
+        "default": {"irc_privmsg", "notify_message", "log1"},
     }
-    return "{},slack_{},{}".format(default_tag, tagset, tagsets[tagset])
+    nick_tag = {"nick_{}".format(user or "unknown").replace(" ", "_")}
+    slack_tag = {"slack_{}".format(tagset)}
+    tags = nick_tag | slack_tag | tagsets[tagset]
+    if muted:
+        tags -= {"notify_highlight", "notify_message", "notify_private"}
+        tags |= {"no_highlight", "notify_none"}
+    return ",".join(tags)
 
 ###### New/converted command_ commands
 
