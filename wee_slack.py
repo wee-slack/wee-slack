@@ -1275,6 +1275,10 @@ class SlackChannel(object):
     def __repr__(self):
         return "Name:{} Identifier:{}".format(self.name, self.identifier)
 
+    @property
+    def muted(self):
+        return self.identifier in self.team.muted_channels
+
     def set_name(self, slack_name):
         self.name = "#" + slack_name
 
@@ -1300,6 +1304,8 @@ class SlackChannel(object):
     def set_unread_count_display(self, count):
         self.unread_count_display = count
         self.new_messages = bool(self.unread_count_display)
+        if self.muted:
+            return
         for c in range(self.unread_count_display):
             if self.type in ["im", "mpim"]:
                 w.buffer_set(self.channel_buffer, "hotlist", "2")
@@ -1383,7 +1389,6 @@ class SlackChannel(object):
 
     def create_buffer(self):
         """
-        incomplete (muted doesn't work)
         Creates the weechat buffer where the channel magic happens.
         """
         if not self.channel_buffer:
@@ -1445,24 +1450,26 @@ class SlackChannel(object):
             # backlog messages - we will update the read marker as we print these
             backlog = True if ts <= last_read else False
             if tagset:
-                tags = tag(tagset, user=tag_nick)
                 self.new_messages = True
 
             # we have to infer the tagset because we weren't told
             elif ts <= last_read:
-                tags = tag("backlog", user=tag_nick)
+                tagset = "backlog"
             elif self.type in ["im", "mpim"]:
                 if tag_nick != self.team.nick:
-                    tags = tag("dm", user=tag_nick)
+                    tagset = "dm"
                     self.new_messages = True
                 else:
-                    tags = tag("dmfromme")
+                    tagset = "dmfromme"
             else:
-                tags = tag("default", user=tag_nick)
+                tagset = "default"
                 self.new_messages = True
 
+            tags = tag(tagset, user=tag_nick, muted=self.muted)
+
             try:
-                if config.unhide_buffers_with_activity and not self.is_visible() and (self.identifier not in self.team.muted_channels):
+                if (config.unhide_buffers_with_activity
+                        and not self.is_visible() and not self.muted):
                     w.buffer_set(self.channel_buffer, "hidden", "0")
 
                 w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
@@ -1999,7 +2006,6 @@ class SlackThreadChannel(object):
 
     def create_buffer(self):
         """
-        incomplete (muted doesn't work)
         Creates the weechat buffer where the thread magic happens.
         """
         if not self.channel_buffer:
