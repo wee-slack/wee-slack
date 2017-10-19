@@ -1078,7 +1078,7 @@ class SlackTeam(object):
                     self.set_connected()
                     self.connecting = False
                 except Exception as e:
-                    dbg("websocket connection error: {}".format(e))
+                    dbg("websocket connection error: {}".format(decode_from_utf8(e)))
                     self.connecting = False
                     return False
             else:
@@ -1544,7 +1544,7 @@ class SlackChannel(object):
                             nick_group = here
                         w.nicklist_add_nick(self.channel_buffer, nick_group, user.name, user.color_name, "", "", 1)
                 except Exception as e:
-                    dbg("DEBUG: {} {} {}".format(self.identifier, self.name, e))
+                    dbg("DEBUG: {} {} {}".format(self.identifier, self.name, decode_from_utf8(e)))
             else:
                 w.nicklist_remove_all(self.channel_buffer)
                 for fn in ["1| too", "2| many", "3| users", "4| to", "5| show"]:
