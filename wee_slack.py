@@ -593,6 +593,7 @@ def receive_httprequest_callback(data, command, return_code, out, err):
     return w.WEECHAT_RC_OK
 
 
+@utf8_decode
 def receive_ws_callback(*args):
     """
     complete
@@ -604,6 +605,7 @@ def receive_ws_callback(*args):
     return w.WEECHAT_RC_OK
 
 
+@utf8_decode
 def reconnect_callback(*args):
     EVENTROUTER.reconnect_if_disconnected()
     return w.WEECHAT_RC_OK
@@ -760,6 +762,7 @@ def slack_never_away_cb(data, remaining_calls):
     return w.WEECHAT_RC_OK
 
 
+@utf8_decode
 def typing_bar_item_cb(data, current_buffer, args):
     """
     Privides a bar item indicating who is typing in the current channel AND
