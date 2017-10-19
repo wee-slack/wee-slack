@@ -2930,9 +2930,9 @@ def command_channels(data, current_buffer, args):
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
 
+    team.buffer_prnt("Channels:")
     for channel in team.get_channel_map():
-        line = "{:<25}".format(channel)
-        team.buffer_prnt(line)
+        team.buffer_prnt(channel)
     return w.WEECHAT_RC_OK_EAT
 
 @slack_buffer_required
@@ -2940,9 +2940,9 @@ def command_users(data, current_buffer, args):
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
 
+    team.buffer_prnt("Channels:")
     for user in team.get_username_map():
-        line = "{:<25}".format(user)
-        team.buffer_prnt(line)
+        team.buffer_prnt(user)
     return w.WEECHAT_RC_OK_EAT
 
 
