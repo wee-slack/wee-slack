@@ -40,21 +40,28 @@ RECORD_DIR = "/tmp/weeslack-debug"
 SLACK_API_TRANSLATOR = {
     "channel": {
         "history": "channels.history",
-        "join": "channels.join",
-        "leave": "channels.leave",
+        "join": "conversations.join",
+        "leave": "conversations.leave",
         "mark": "channels.mark",
         "info": "channels.info",
     },
     "im": {
         "history": "im.history",
-        "join": "im.open",
-        "leave": "im.close",
+        "join": "conversations.open",
+        "leave": "conversations.close",
         "mark": "im.mark",
+    },
+    "mpim": {
+        "history": "mpim.history",
+        "join": "conversations.open",
+        "leave": "conversations.close",
+        "mark": "mpim.mark",
+        "info": "groups.info",
     },
     "group": {
         "history": "groups.history",
-        "join": "channels.join",
-        "leave": "groups.leave",
+        "join": "conversations.join",
+        "leave": "conversations.leave",
         "mark": "groups.mark",
         "info": "groups.info"
     },
@@ -1229,7 +1236,7 @@ class SlackChannel(object):
     def open(self, update_remote=True):
         if update_remote:
             if "join" in SLACK_API_TRANSLATOR[self.type]:
-                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
         self.create_buffer()
         self.active = True
@@ -1297,7 +1304,7 @@ class SlackChannel(object):
 
         if self.type == "im":
             if "join" in SLACK_API_TRANSLATOR[self.type]:
-                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"user": self.user, "return_im": True}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"users": self.user, "return_im": True}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
 
     def destroy_buffer(self, update_remote):
@@ -1635,7 +1642,7 @@ class SlackDMChannel(SlackChannel):
             self.eventrouter.receive(s)
         if update_remote:
             if "join" in SLACK_API_TRANSLATOR[self.type]:
-                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"user": self.user, "return_im": True}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"users": self.user, "return_im": True}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
         self.create_buffer()
 
@@ -1679,7 +1686,7 @@ class SlackMPDMChannel(SlackChannel):
         super(SlackMPDMChannel, self).__init__(eventrouter, **kwargs)
         n = kwargs.get('name')
         self.set_name(n)
-        self.type = "group"
+        self.type = "mpim"
 
     def open(self, update_remote=False):
         self.create_buffer()
@@ -2147,12 +2154,12 @@ def handle_groupsinfo(group_json, eventrouter, **kwargs):
     group_id = group_json['group']['id']
     group.set_unread_count_display(unread_count_display)
 
-def handle_imopen(im_json, eventrouter, **kwargs):
-    request_metadata = pickle.loads(im_json["wee_slack_request_metadata"])
+def handle_conversationsopen(conversation_json, eventrouter, **kwargs):
+    request_metadata = pickle.loads(conversation_json["wee_slack_request_metadata"])
     team = eventrouter.teams[request_metadata.team_hash]
-    im = team.channels[request_metadata.channel_identifier]
-    unread_count_display = im_json['channel']['unread_count_display']
-    im.set_unread_count_display(unread_count_display)
+    conversation = team.channels[request_metadata.channel_identifier]
+    unread_count_display = conversation_json['channel']['unread_count_display']
+    conversation.set_unread_count_display(unread_count_display)
 
 def handle_groupshistory(message_json, eventrouter, **kwargs):
     handle_history(message_json, eventrouter, **kwargs)
@@ -2163,6 +2170,10 @@ def handle_channelshistory(message_json, eventrouter, **kwargs):
 
 
 def handle_imhistory(message_json, eventrouter, **kwargs):
+    handle_history(message_json, eventrouter, **kwargs)
+
+
+def handle_mpimhistory(message_json, eventrouter, **kwargs):
     handle_history(message_json, eventrouter, **kwargs)
 
 
