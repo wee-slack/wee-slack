@@ -53,7 +53,7 @@ SLACK_API_TRANSLATOR = {
     },
     "mpim": {
         "history": "mpim.history",
-        "join": "conversations.open",
+        "join": "mpim.open",  # conversations.open lacks unread_count_display
         "leave": "conversations.close",
         "mark": "mpim.mark",
         "info": "groups.info",
@@ -1704,12 +1704,15 @@ class SlackMPDMChannel(SlackChannel):
         self.set_name(n)
         self.type = "mpim"
 
-    def open(self, update_remote=False):
+    def open(self, update_remote=True):
         self.create_buffer()
         self.active = True
         self.get_history()
         if "info" in SLACK_API_TRANSLATOR[self.type]:
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+            self.eventrouter.receive(s)
+        if update_remote and 'join' in SLACK_API_TRANSLATOR[self.type]:
+            s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]['join'], {'users': ','.join(self.members)}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
         # self.create_buffer()
 
@@ -2170,12 +2173,23 @@ def handle_groupsinfo(group_json, eventrouter, **kwargs):
     group_id = group_json['group']['id']
     group.set_unread_count_display(unread_count_display)
 
-def handle_conversationsopen(conversation_json, eventrouter, **kwargs):
+def handle_conversationsopen(conversation_json, eventrouter, object_name='channel', **kwargs):
     request_metadata = pickle.loads(conversation_json["wee_slack_request_metadata"])
-    team = eventrouter.teams[request_metadata.team_hash]
-    conversation = team.channels[request_metadata.channel_identifier]
-    unread_count_display = conversation_json['channel']['unread_count_display']
-    conversation.set_unread_count_display(unread_count_display)
+
+    # Set unread count if the channel isn't new (channel_identifier exists)
+    try:
+        channel_id = request_metadata.channel_identifier
+        team = eventrouter.teams[request_metadata.team_hash]
+        conversation = team.channels[channel_id]
+        unread_count_display = conversation_json[object_name]['unread_count_display']
+        conversation.set_unread_count_display(unread_count_display)
+    except AttributeError:
+        pass
+
+
+def handle_mpimopen(mpim_json, eventrouter, object_name='group', **kwargs):
+    handle_conversationsopen(mpim_json, eventrouter, object_name, **kwargs)
+
 
 def handle_groupshistory(message_json, eventrouter, **kwargs):
     handle_history(message_json, eventrouter, **kwargs)
