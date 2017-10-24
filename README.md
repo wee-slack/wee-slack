@@ -123,8 +123,8 @@ Join a channel:
 
 Start a direct chat with someone or multiple users:
 ```
-/query [username] ([username2] [username3]...)
-/slack talk [username] ([username2] [username3]...)
+/query <username>[,<username2>[,<username3>...]]
+/slack talk <username>[,<username2>[,<username3>...]]
 ```
 
 List channels:

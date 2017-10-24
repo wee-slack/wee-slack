@@ -1048,6 +1048,16 @@ class SlackTeam(object):
     def get_username_map(self):
         return {v.slack_name: k for k, v in self.users.iteritems()}
 
+    def find_channel_by_name(self, name):
+        for channel in self.channels.itervalues():
+            if channel.slack_name == name:
+                return channel
+
+    def find_channel_by_members(self, channel_type, users):
+        for channel in self.channels.itervalues():
+            if channel.type == channel_type and channel.get_members() == users:
+                return channel
+
     def get_team_hash(self):
         return self.team_hash
 
@@ -1193,6 +1203,9 @@ class SlackChannel(object):
                 w.buffer_set(self.channel_buffer, "short_name", new_name)
                 return True
         return False
+
+    def get_members(self):
+        return self.members
 
     def set_unread_count_display(self, count):
         self.unread_count_display = count
@@ -1601,6 +1614,9 @@ class SlackDMChannel(SlackChannel):
 
     def set_name(self, slack_name):
         self.name = slack_name
+
+    def get_members(self):
+        return {self.user}
 
     def create_buffer(self):
         if not self.channel_buffer:
@@ -2982,59 +2998,49 @@ def command_users(data, current_buffer, args):
 def command_talk(data, current_buffer, args):
     """
     Open a chat with the specified user(s)
-    /slack talk [user] ([user2] [user3]...)
+    /slack talk <user>[,<user2>[,<user3>...]]
     """
 
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
-    users = args.split(' ')[1:]
-    c = team.get_channel_map()
-
-    if len(users) > 1:
-        # Add the current user if not specified since all MPDM names have it
-        if team.nick not in users:
-            users.append(team.nick)
-
-        # Use the user order given if no channels are found below
-        channel_name = 'mpdm-{}-1'.format('--'.join(users))
-
-        # Use the name of any existing channel with the same set of users
-        user_set = set(users)
-        mpdm_regex = re.compile(r'-+')
-        for channel in c:
-            if channel.startswith('mpdm-') and user_set == set(
-                    mpdm_regex.split(channel)[1:-1]):
-                channel_name = channel
-                break
-    else:
-        channel_name = users[0]
-        if channel_name.startswith('@'):
-            channel_name = channel_name[1:]
-
-    if channel_name not in c:
-        # Get the IDs of the users
-        u = team.get_username_map()
-        user_ids = tuple(u[user] for user in users if user in u)
-
-        # Open the DM or MPDM depending on the number of users
-        if user_ids:
-            if len(user_ids) > 1:
-                method = 'mpim.open'
-                params = {'user_ids': ','.join(user_ids)}
-            else:
-                method = 'im.open'
-                params = {'user': user_ids[0]}
-
-            s = SlackRequest(team.token, method, params, team_hash=team.team_hash)
-            EVENTROUTER.receive(s)
-            dbg("found user")
-            # refresh channel map here
-            c = team.get_channel_map()
+    channel_name = args.split(' ')[1]
 
     if channel_name.startswith('#'):
         channel_name = channel_name[1:]
-    if channel_name in c:
-        chan = team.channels[c[channel_name]]
+
+    chan = team.find_channel_by_name(channel_name)
+
+    # If the channel name doesn't exist, try finding a DM or MPDM instead
+    if not chan:
+        # Get the IDs of the users
+        u = team.get_username_map()
+        users = set()
+        for user in channel_name.split(','):
+            if user.startswith('@'):
+                user = user[1:]
+            if user in u:
+                users.add(u[user])
+
+        if users:
+            if len(users) > 1:
+                channel_type = 'mpim'
+                # Add the current user if not given since they'll be in MPDMs
+                if team.myidentifier not in users:
+                    users.add(team.myidentifier)
+            else:
+                channel_type = 'im'
+
+            chan = team.find_channel_by_members(channel_type, users)
+
+            # If the DM or MPDM doesn't exist, create it
+            if not chan:
+                s = SlackRequest(team.token, SLACK_API_TRANSLATOR[channel_type]['join'], {'users': ','.join(users)}, team_hash=team.team_hash)
+                EVENTROUTER.receive(s)
+                dbg("found user")
+                # Find the channel after creating it
+                chan = team.find_channel_by_members(channel_type, users)
+
+    if chan:
         chan.open()
         if config.switch_buffer_on_join:
             w.buffer_set(chan.channel_buffer, "display", "1")
