@@ -1021,6 +1021,7 @@ class SlackTeam(object):
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'server')
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.nick)
+            w.buffer_set(self.channel_buffer, "localvar_set_server", self.preferred_name)
             if w.config_string(w.config_get('irc.look.server_buffer')) == 'merge_with_core':
                 w.buffer_merge(self.channel_buffer, w.buffer_search_main())
             w.buffer_set(self.channel_buffer, "nicklist", "1")
