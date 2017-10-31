@@ -186,6 +186,12 @@ Run a Slack slash command. Simply prepend `/slack slash` to what you'd type in t
 /slack slash /desiredcommand arg1 arg2 arg3
 ```
 
+To send a command as a normal message instead of performing the action, prefix it with a slash or a space, like so:
+```
+//slack
+ s/a/b/
+```
+
 #### Threads
 
 Start a new thread on the most recent message The number indicates which message in the buffer to reply to, in reverse time order:
