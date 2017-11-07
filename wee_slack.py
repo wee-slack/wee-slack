@@ -1039,7 +1039,7 @@ class SlackTeam(object):
         return self.domain
 
     def buffer_prnt(self, data):
-        w.prnt_date_tags(self.channel_buffer, SlackTS().major, tag("backlog"), data)
+        w.prnt_date_tags(self.channel_buffer, SlackTS().major, tag("team"), data)
 
     def get_channel_map(self):
         return {v.slack_name: k for k, v in self.channels.iteritems()}
@@ -2838,20 +2838,20 @@ def tag(tagset, user=None):
     else:
         default_tag = 'nick_unknown'
     tagsets = {
+        # messages in the team/server buffer, e.g. "new channel created"
+        "team": "irc_notice,notify_private,log3",
         # when replaying something old
-        "backlog": "no_highlight,notify_none,logger_backlog_end",
+        "backlog": "irc_privmsg,no_highlight,notify_none,logger_backlog",
         # when posting messages to a muted channel
-        "muted": "no_highlight,notify_none,logger_backlog_end",
-        # when my nick is in the message
-        "highlightme": "notify_highlight,log1",
+        "muted": "irc_privmsg,no_highlight,notify_none,log1",
         # when receiving a direct message
-        "dm": "notify_private,notify_message,log1,irc_privmsg",
-        "dmfromme": "notify_none,log1,irc_privmsg",
+        "dm": "irc_privmsg,notify_private,log1",
+        "dmfromme": "irc_privmsg,no_highlight,notify_none,log1",
         # when this is a join/leave, attach for smart filter ala:
         # if user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]
-        "joinleave": "irc_smart_filter,no_highlight",
+        "joinleave": "irc_smart_filter,no_highlight,log4",
         # catchall ?
-        "default": "notify_message,log1",
+        "default": "irc_privmsg,notify_message,log1",
     }
     return default_tag + "," + tagsets[tagset]
 
