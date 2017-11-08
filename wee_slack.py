@@ -1515,7 +1515,7 @@ class SlackChannel(object):
     def update_nicklist(self, user=None):
         if not self.channel_buffer:
             return
-        if self.type not in ["channel", "group"]:
+        if self.type not in ["channel", "group", "mpim"]:
             return
         w.buffer_set(self.channel_buffer, "nicklist", "1")
         # create nicklists for the current channel if they don't exist
