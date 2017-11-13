@@ -2992,6 +2992,8 @@ def command_talk(data, current_buffer, args):
     c = team.get_channel_map()
     if channel_name not in c:
         u = team.get_username_map()
+        if channel_name.startswith('@'):
+            channel_name = channel_name[1:]
         if channel_name in u:
             s = SlackRequest(team.token, "im.open", {"user": u[channel_name]}, team_hash=team.team_hash)
             EVENTROUTER.receive(s)
