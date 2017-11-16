@@ -1024,7 +1024,6 @@ class SlackTeam(object):
             w.buffer_set(self.channel_buffer, "localvar_set_server", self.preferred_name)
             if w.config_string(w.config_get('irc.look.server_buffer')) == 'merge_with_core':
                 w.buffer_merge(self.channel_buffer, w.buffer_search_main())
-            w.buffer_set(self.channel_buffer, "nicklist", "1")
 
     def set_muted_channels(self, muted_str):
         self.muted_channels = {x for x in muted_str.split(',')}
