@@ -1251,7 +1251,10 @@ class SlackChannel(object):
             self.create_buffer()
             return
 
-        if (hasattr(self, "is_member") and self.is_member) or self.is_open or self.unread_count_display:
+        # Only check is_member if is_open is not set, because in some cases
+        # (e.g. group DMs), is_member should be ignored in favor of is_open.
+        is_open = self.is_open if hasattr(self, "is_open") else self.is_member
+        if is_open or self.unread_count_display:
             self.create_buffer()
             if config.background_load_all_history:
                 self.get_history(slow_queue=True)
