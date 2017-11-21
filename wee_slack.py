@@ -644,7 +644,7 @@ def buffer_input_callback(signal, buffer_ptr, data):
     if not channel:
         return w.WEECHAT_RC_ERROR
 
-    reaction = re.match("^\s*(\d*)(\+|-):(.*):\s*$", data)
+    reaction = re.match("^(\d*)(\+|-):(.*):\s*$", data)
     substitute = re.match("^(\d*)s/", data)
     if reaction:
         if reaction.group(2) == "+":
@@ -664,6 +664,8 @@ def buffer_input_callback(signal, buffer_ptr, data):
             old = old.replace(r'\/', '/')
             channel.edit_nth_previous_message(msgno, old, new, flags)
     else:
+        if data.startswith(('//', ' ')):
+            data = data[1:]
         channel.send_message(data)
         # this is probably wrong channel.mark_read(update_remote=True, force=True)
     return w.WEECHAT_RC_OK
