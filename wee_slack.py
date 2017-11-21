@@ -3333,7 +3333,8 @@ def setup_hooks():
     w.hook_signal('buffer_switch', "buffer_switch_callback", "EVENTROUTER")
     w.hook_signal('window_switch', "buffer_switch_callback", "EVENTROUTER")
     w.hook_signal('quit', "quit_notification_cb", "")
-    w.hook_signal('input_text_changed', "typing_notification_cb", "")
+    if config.send_typing_notice:
+        w.hook_signal('input_text_changed', "typing_notification_cb", "")
 
     w.hook_command(
         # Command name and description
@@ -3456,6 +3457,10 @@ class PluginConfig(object):
             default='italic',
             desc='When receiving bold text from Slack, render it as this in weechat.'
             ' If your terminal lacks italic support, consider using "underline" instead.'),
+        'send_typing_notice': Setting(
+            default='true',
+            desc='Alert Slack users when you are typing a message in the input bar '
+            '(Requires reload)'),
         'server_aliases': Setting(
             default='',
             desc='A comma separated list of `subdomain:alias` pairs. The alias'
