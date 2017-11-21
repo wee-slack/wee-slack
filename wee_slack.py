@@ -1267,7 +1267,7 @@ class SlackChannel(object):
     def set_highlights(self):
         # highlight my own name and any set highlights
         if self.channel_buffer:
-            highlights = self.team.highlight_words.union({'@' + self.team.nick, "!here", "!channel", "!everyone"})
+            highlights = self.team.highlight_words.union({'@' + self.team.nick, self.team.myidentifier, "!here", "!channel", "!everyone"})
             h_str = ",".join(highlights)
             w.buffer_set(self.channel_buffer, "highlight_words", h_str)
 
