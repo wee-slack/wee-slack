@@ -1244,22 +1244,20 @@ class SlackChannel(object):
         # self.create_buffer()
 
     def check_should_open(self, force=False):
-        try:
-            if self.is_archived:
-                return
-        except:
-            pass
+        if hasattr(self, "is_archived") and self.is_archived:
+            return
+
         if force:
             self.create_buffer()
-        else:
-            for reason in ["is_member", "is_open", "unread_count_display"]:
-                try:
-                    if eval("self." + reason):
-                        self.create_buffer()
-                        if config.background_load_all_history:
-                            self.get_history(slow_queue=True)
-                except:
-                    pass
+            return
+
+        # Only check is_member if is_open is not set, because in some cases
+        # (e.g. group DMs), is_member should be ignored in favor of is_open.
+        is_open = self.is_open if hasattr(self, "is_open") else self.is_member
+        if is_open or self.unread_count_display:
+            self.create_buffer()
+            if config.background_load_all_history:
+                self.get_history(slow_queue=True)
 
     def set_related_server(self, team):
         self.team = team
