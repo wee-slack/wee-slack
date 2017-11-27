@@ -25,6 +25,11 @@ try:
 except:
     from StringIO import StringIO
 
+try:
+    from emoji_aliases import convert_aliases_to_emoji
+except:
+    convert_aliases_to_emoji = None
+
 from websocket import create_connection, WebSocketConnectionClosedException
 
 # hack to make tests possible.. better way?
@@ -3161,6 +3166,12 @@ def modify_buffer_line(buffer_pointer, ts, new_text):
 
     for pointer, line in zip(pointers, lines):
         data = w.hdata_pointer(hdata.line, pointer, 'data')
+        if convert_aliases_to_emoji is not None:
+            try:
+                line = convert_aliases_to_emoji(None, None, None, line.encode('utf-8'))
+            except:
+                dbg("emoji issue: {}\n".format(traceback.format_exc()))
+                pass
         w.hdata_update(hdata.line_data, data, {"message": line})
 
     return w.WEECHAT_RC_OK
