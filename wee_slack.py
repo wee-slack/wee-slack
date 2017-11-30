@@ -1048,16 +1048,6 @@ class SlackTeam(object):
     def get_username_map(self):
         return {v.slack_name: k for k, v in self.users.iteritems()}
 
-    def find_channel_by_name(self, name):
-        for channel in self.channels.itervalues():
-            if channel.slack_name == name:
-                return channel
-
-    def find_channel_by_members(self, channel_type, users):
-        for channel in self.channels.itervalues():
-            if channel.type == channel_type and channel.get_members() == users:
-                return channel
-
     def get_team_hash(self):
         return self.team_hash
 
@@ -2175,16 +2165,13 @@ def handle_groupsinfo(group_json, eventrouter, **kwargs):
 
 def handle_conversationsopen(conversation_json, eventrouter, object_name='channel', **kwargs):
     request_metadata = pickle.loads(conversation_json["wee_slack_request_metadata"])
-
     # Set unread count if the channel isn't new (channel_identifier exists)
-    try:
+    if hasattr(request_metadata, 'channel_identifier'):
         channel_id = request_metadata.channel_identifier
         team = eventrouter.teams[request_metadata.team_hash]
         conversation = team.channels[channel_id]
         unread_count_display = conversation_json[object_name]['unread_count_display']
         conversation.set_unread_count_display(unread_count_display)
-    except AttributeError:
-        pass
 
 
 def handle_mpimopen(mpim_json, eventrouter, object_name='group', **kwargs):
@@ -3022,9 +3009,10 @@ def command_talk(data, current_buffer, args):
     if channel_name.startswith('#'):
         channel_name = channel_name[1:]
 
-    chan = team.find_channel_by_name(channel_name)
+    # Try finding the channel by name
+    chan = team.channels.get(team.get_channel_map().get(channel_name))
 
-    # If the channel name doesn't exist, try finding a DM or MPDM instead
+    # If the channel doesn't exist, try finding a DM or MPDM instead
     if not chan:
         # Get the IDs of the users
         u = team.get_username_map()
@@ -3038,21 +3026,22 @@ def command_talk(data, current_buffer, args):
         if users:
             if len(users) > 1:
                 channel_type = 'mpim'
-                # Add the current user if not given since they'll be in MPDMs
-                if team.myidentifier not in users:
-                    users.add(team.myidentifier)
+                # Add the current user since MPDMs include them as a member
+                users.add(team.myidentifier)
             else:
                 channel_type = 'im'
 
-            chan = team.find_channel_by_members(channel_type, users)
+            # Try finding the channel by type and members
+            for channel in team.channels.itervalues():
+                if (channel.type == channel_type and
+                        channel.get_members() == users):
+                    chan = channel
+                    break
 
             # If the DM or MPDM doesn't exist, create it
             if not chan:
                 s = SlackRequest(team.token, SLACK_API_TRANSLATOR[channel_type]['join'], {'users': ','.join(users)}, team_hash=team.team_hash)
                 EVENTROUTER.receive(s)
-                dbg("found user")
-                # Find the channel after creating it
-                chan = team.find_channel_by_members(channel_type, users)
 
     if chan:
         chan.open()
