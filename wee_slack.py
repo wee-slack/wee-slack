@@ -53,7 +53,7 @@ SLACK_API_TRANSLATOR = {
     },
     "mpim": {
         "history": "mpim.history",
-        "join": "conversations.open",
+        "join": "mpim.open",  # conversations.open lacks unread_count_display
         "leave": "conversations.close",
         "mark": "mpim.mark",
         "info": "groups.info",
@@ -1194,6 +1194,9 @@ class SlackChannel(object):
                 return True
         return False
 
+    def get_members(self):
+        return self.members
+
     def set_unread_count_display(self, count):
         self.unread_count_display = count
         self.new_messages = bool(self.unread_count_display)
@@ -1602,6 +1605,9 @@ class SlackDMChannel(SlackChannel):
     def set_name(self, slack_name):
         self.name = slack_name
 
+    def get_members(self):
+        return {self.user}
+
     def create_buffer(self):
         if not self.channel_buffer:
             super(SlackDMChannel, self).create_buffer()
@@ -1688,12 +1694,15 @@ class SlackMPDMChannel(SlackChannel):
         self.set_name(n)
         self.type = "mpim"
 
-    def open(self, update_remote=False):
+    def open(self, update_remote=True):
         self.create_buffer()
         self.active = True
         self.get_history()
         if "info" in SLACK_API_TRANSLATOR[self.type]:
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+            self.eventrouter.receive(s)
+        if update_remote and 'join' in SLACK_API_TRANSLATOR[self.type]:
+            s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]['join'], {'users': ','.join(self.members)}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
         # self.create_buffer()
 
@@ -2154,12 +2163,20 @@ def handle_groupsinfo(group_json, eventrouter, **kwargs):
     group_id = group_json['group']['id']
     group.set_unread_count_display(unread_count_display)
 
-def handle_conversationsopen(conversation_json, eventrouter, **kwargs):
+def handle_conversationsopen(conversation_json, eventrouter, object_name='channel', **kwargs):
     request_metadata = pickle.loads(conversation_json["wee_slack_request_metadata"])
-    team = eventrouter.teams[request_metadata.team_hash]
-    conversation = team.channels[request_metadata.channel_identifier]
-    unread_count_display = conversation_json['channel']['unread_count_display']
-    conversation.set_unread_count_display(unread_count_display)
+    # Set unread count if the channel isn't new (channel_identifier exists)
+    if hasattr(request_metadata, 'channel_identifier'):
+        channel_id = request_metadata.channel_identifier
+        team = eventrouter.teams[request_metadata.team_hash]
+        conversation = team.channels[channel_id]
+        unread_count_display = conversation_json[object_name]['unread_count_display']
+        conversation.set_unread_count_display(unread_count_display)
+
+
+def handle_mpimopen(mpim_json, eventrouter, object_name='group', **kwargs):
+    handle_conversationsopen(mpim_json, eventrouter, object_name, **kwargs)
+
 
 def handle_groupshistory(message_json, eventrouter, **kwargs):
     handle_history(message_json, eventrouter, **kwargs)
@@ -2981,29 +2998,52 @@ def command_users(data, current_buffer, args):
 @utf8_decode
 def command_talk(data, current_buffer, args):
     """
-    Open a chat with the specified user
-    /slack talk [user]
+    Open a chat with the specified user(s)
+    /slack talk <user>[,<user2>[,<user3>...]]
     """
 
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
     channel_name = args.split(' ')[1]
-    c = team.get_channel_map()
-    if channel_name not in c:
-        u = team.get_username_map()
-        if channel_name.startswith('@'):
-            channel_name = channel_name[1:]
-        if channel_name in u:
-            s = SlackRequest(team.token, "im.open", {"user": u[channel_name]}, team_hash=team.team_hash)
-            EVENTROUTER.receive(s)
-            dbg("found user")
-            # refresh channel map here
-            c = team.get_channel_map()
 
     if channel_name.startswith('#'):
         channel_name = channel_name[1:]
-    if channel_name in c:
-        chan = team.channels[c[channel_name]]
+
+    # Try finding the channel by name
+    chan = team.channels.get(team.get_channel_map().get(channel_name))
+
+    # If the channel doesn't exist, try finding a DM or MPDM instead
+    if not chan:
+        # Get the IDs of the users
+        u = team.get_username_map()
+        users = set()
+        for user in channel_name.split(','):
+            if user.startswith('@'):
+                user = user[1:]
+            if user in u:
+                users.add(u[user])
+
+        if users:
+            if len(users) > 1:
+                channel_type = 'mpim'
+                # Add the current user since MPDMs include them as a member
+                users.add(team.myidentifier)
+            else:
+                channel_type = 'im'
+
+            # Try finding the channel by type and members
+            for channel in team.channels.itervalues():
+                if (channel.type == channel_type and
+                        channel.get_members() == users):
+                    chan = channel
+                    break
+
+            # If the DM or MPDM doesn't exist, create it
+            if not chan:
+                s = SlackRequest(team.token, SLACK_API_TRANSLATOR[channel_type]['join'], {'users': ','.join(users)}, team_hash=team.team_hash)
+                EVENTROUTER.receive(s)
+
+    if chan:
         chan.open()
         if config.switch_buffer_on_join:
             w.buffer_set(chan.channel_buffer, "display", "1")
