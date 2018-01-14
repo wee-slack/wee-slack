@@ -2,7 +2,9 @@
 
 from __future__ import unicode_literals
 
+from collections import OrderedDict
 from functools import wraps
+from itertools import islice
 
 import time
 import json
@@ -1159,7 +1161,7 @@ class SlackChannel(object):
         self.channel_buffer = None
         self.team = kwargs.get('team', None)
         self.got_history = False
-        self.messages = {}
+        self.messages = OrderedDict()
         self.hashed_messages = {}
         self.new_messages = False
         self.typing = {}
@@ -1313,7 +1315,7 @@ class SlackChannel(object):
     def destroy_buffer(self, update_remote):
         if self.channel_buffer is not None:
             self.channel_buffer = None
-        self.messages = {}
+        self.messages = OrderedDict()
         self.hashed_messages = {}
         self.got_history = False
         # if update_remote and not eventrouter.shutting_down:
@@ -1375,14 +1377,14 @@ class SlackChannel(object):
         if from_me:
             message.message_json["user"] = team.myidentifier
         self.messages[SlackTS(message.ts)] = message
-        if len(self.messages.keys()) > SCROLLBACK_SIZE:
-            mk = self.messages.keys()
-            mk.sort()
-            for k in mk[:SCROLLBACK_SIZE]:
-                msg_to_delete = self.messages[k]
-                if msg_to_delete.hash:
-                    del self.hashed_messages[msg_to_delete.hash]
-                del self.messages[k]
+
+        sorted_messages = sorted(self.messages.items())
+        messages_to_delete = sorted_messages[:-SCROLLBACK_SIZE]
+        messages_to_keep = sorted_messages[-SCROLLBACK_SIZE:]
+        for message_hash in [m[1].hash for m in messages_to_delete]:
+            if message_hash in self.hashed_messages:
+                del self.hashed_messages[message_hash]
+        self.messages = OrderedDict(messages_to_keep)
 
     def change_message(self, ts, text=None, suffix=None):
         ts = SlackTS(ts)
@@ -1411,8 +1413,8 @@ class SlackChannel(object):
                 self.eventrouter.receive(s)
 
     def my_last_message(self, msgno):
-        for message in reversed(self.sorted_message_keys()):
-            m = self.messages[message]
+        for key in self.main_message_keys_reversed():
+            m = self.messages[key]
             if "user" in m.message_json and "text" in m.message_json and m.message_json["user"] == self.team.myidentifier:
                 msgno -= 1
                 if msgno == 0:
@@ -1442,17 +1444,15 @@ class SlackChannel(object):
 
     def send_change_reaction(self, method, msg_number, reaction):
         if 0 < msg_number < len(self.messages):
-            timestamp = self.sorted_message_keys()[-msg_number]
+            keys = self.main_message_keys_reversed()
+            timestamp = next(islice(keys, msg_number - 1, None))
             data = {"channel": self.identifier, "timestamp": timestamp, "name": reaction}
             s = SlackRequest(self.team.token, method, data)
             self.eventrouter.receive(s)
 
-    def sorted_message_keys(self):
-        keys = []
-        for k in self.messages:
-            if type(self.messages[k]) == SlackMessage:
-                keys.append(k)
-        return sorted(keys)
+    def main_message_keys_reversed(self):
+        return (key for key in reversed(self.messages)
+                if type(self.messages[key]) == SlackMessage)
 
     # Typing related
     def set_typing(self, user):
@@ -1494,7 +1494,7 @@ class SlackChannel(object):
 
     def mark_read(self, ts=None, update_remote=True, force=False):
         if not ts:
-            ts = SlackTS()
+            ts = next(self.main_message_keys_reversed(), SlackTS())
         if self.new_messages or force:
             if self.channel_buffer:
                 w.buffer_set(self.channel_buffer, "unread", "")
@@ -3079,9 +3079,8 @@ def thread_command_callback(data, current_buffer, args):
         elif args[0] == '/reply':
             count = int(args[1])
             msg = " ".join(args[2:])
-            mkeys = channel.sorted_message_keys()
-            mkeys.reverse()
-            parent_id = str(mkeys[count - 1])
+            mkeys = channel.main_message_keys_reversed()
+            parent_id = str(next(islice(mkeys, count - 1, None)))
             channel.send_message(msg, request_dict_ext={"thread_ts": parent_id})
             return w.WEECHAT_RC_OK_EAT
         w.prnt(current, "Invalid thread command.")
