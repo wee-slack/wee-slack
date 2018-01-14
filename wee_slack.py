@@ -2497,6 +2497,11 @@ def process_reaction_removed(message_json, eventrouter, **kwargs):
     else:
         dbg("Reaction to item type not supported: " + str(message_json))
 
+
+def process_emoji_changed(message_json, eventrouter, **kwargs):
+    team = kwargs['team']
+    team.load_emoji_completions()
+
 ###### New module/global methods
 
 def render_formatting(text):
