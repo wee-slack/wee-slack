@@ -2565,9 +2565,9 @@ def render(message_json, team, channel, force=False):
         else:
             text = ""
 
-        text = unfurl_refs(text, ignore_alt_text=config.unfurl_ignore_alt_text)
+        text = unfurl_refs(text)
 
-        text += unfurl_refs(unwrap_attachments(message_json, text), ignore_alt_text=config.unfurl_ignore_alt_text)
+        text += unfurl_refs(unwrap_attachments(message_json, text))
 
         text = text.lstrip()
         text = unhtmlescape(text.replace("\t", "    "))
@@ -2624,7 +2624,7 @@ def linkify_text(message, team, channel):
     return " ".join(message)
 
 
-def unfurl_refs(text, ignore_alt_text=False):
+def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
     """
     input : <@U096Q7CQM|someuser> has joined the channel
     ouput : someuser has joined the channel
@@ -2634,14 +2634,21 @@ def unfurl_refs(text, ignore_alt_text=False):
     #  - <#C2147483705|#otherchannel>
     #  - <@U2147483697|@othernick>
     # Test patterns lives in ./_pytest/test_unfurl.py
+
+    if ignore_alt_text is None:
+        ignore_alt_text = config.unfurl_ignore_alt_text
+    if auto_link_display is None:
+        auto_link_display = config.unfurl_auto_link_display
+
     matches = re.findall(r"(<[@#]?(?:[^>]*)>)", text)
     for m in matches:
         # Replace them with human readable strings
-        text = text.replace(m, unfurl_ref(m[1:-1], ignore_alt_text))
+        text = text.replace(
+            m, unfurl_ref(m[1:-1], ignore_alt_text, auto_link_display))
     return text
 
 
-def unfurl_ref(ref, ignore_alt_text=False):
+def unfurl_ref(ref, ignore_alt_text, auto_link_display):
     id = ref.split('|')[0]
     display_text = ref
     if ref.find('|') > -1:
@@ -2654,7 +2661,14 @@ def unfurl_ref(ref, ignore_alt_text=False):
                 display_text = ref.split('|')[1]
             else:
                 url, desc = ref.split('|', 1)
-                display_text = "{} ({})".format(url, desc)
+                match_url = r"^\w+:(//)?{}$".format(re.escape(desc))
+                url_matches_desc = re.match(match_url, url)
+                if url_matches_desc and auto_link_display == "text":
+                    display_text = desc
+                elif url_matches_desc and auto_link_display == "url":
+                    display_text = url
+                else:
+                    display_text = "{} ({})".format(url, desc)
     else:
         display_text = resolve_ref(ref)
     return display_text
@@ -3533,6 +3547,15 @@ class PluginConfig(object):
             desc='When displaying ("unfurling") links to channels/users/etc,'
             ' ignore the "alt text" present in the message and instead use the'
             ' canonical name of the thing being linked to.'),
+        'unfurl_auto_link_display': Setting(
+            default='both',
+            desc='When displaying ("unfurling") links to channels/users/etc,'
+            ' determine what is displayed when the text matches the url'
+            ' without the protocol. This happens when Slack automatically'
+            ' creates links, e.g. from words separated by dots or email'
+            ' addresses. Set it to "text" to only display the text written by'
+            ' the user, "url" to only display the url or "both" (the default)'
+            ' to display both.'),
         'unhide_buffers_with_activity': Setting(
             default='false',
             desc='When activity occurs on a buffer, unhide it even if it was'
@@ -3599,6 +3622,7 @@ class PluginConfig(object):
     get_render_italic_as = get_string
     get_slack_timeout = get_int
     get_thread_suffix_color = get_string
+    get_unfurl_auto_link_display = get_string
 
     def get_distracting_channels(self, key):
         return [x.strip() for x in w.config_get_plugin(key).split(',')]
