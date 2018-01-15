@@ -2992,8 +2992,18 @@ def command_register(data, current_buffer, args):
             ).format(CLIENT_ID, CLIENT_SECRET, aargs[1])
             ret = urllib.urlopen(uri).read()
             d = json.loads(ret)
-            if d["ok"] == True:
-                w.prnt(current_buffer, "Success! Access token is: " + d['access_token'])
+            if d["ok"]:
+                if config.is_default('slack_api_token'):
+                    w.config_set_plugin('slack_api_token', d['access_token'])
+                else:
+                    # Add new token to existing set, joined by comma.
+                    tok = config.get_string('slack_api_token')
+                    w.config_set_plugin('slack_api_token',
+                                        ','.join([tok, d['access_token']]))
+                w.prnt(current_buffer,
+                       "Success! Added team \"%s\"" % (d['team_name'],))
+                w.prnt(current_buffer,
+                       "Please reload wee-slack")
             else:
                 w.prnt(current_buffer, "Failed! Error is: " + d['error'])
 
@@ -3648,6 +3658,10 @@ class PluginConfig(object):
 
     def get_int(self, key):
         return int(w.config_get_plugin(key))
+
+    def is_default(self, key):
+        default = self.default_settings.get(key).default
+        return w.config_get_plugin(key) == default
 
     get_debug_level = get_int
     get_group_name_prefix = get_string
