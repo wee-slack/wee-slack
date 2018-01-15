@@ -2964,10 +2964,10 @@ def me_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 
-def command_register(current_buffer, args):
+def command_register(data, current_buffer, args):
     CLIENT_ID="2468770254.51917335286"
     CLIENT_SECRET="dcb7fe380a000cba0cca3169a5fe8d70" #this is not really a secret
-    if not args:
+    if args == 'register':
         message = """
 #### Retrieving a Slack token via OAUTH ####
 
@@ -2983,11 +2983,14 @@ def command_register(current_buffer, args):
         w.prnt(current_buffer, message)
     else:
         aargs = args.split(None, 2)
-        if len(aargs) <> 1:
+        if len(aargs) != 2:
             w.prnt(current_buffer, "ERROR: invalid args to register")
         else:
-            #w.prnt(current_buffer, "https://slack.com/api/oauth.access?client_id={}&client_secret={}&code={}".format(CLIENT_ID, CLIENT_SECRET, aargs[0]))
-            ret = urllib.urlopen("https://slack.com/api/oauth.access?client_id={}&client_secret={}&code={}".format(CLIENT_ID, CLIENT_SECRET, aargs[0])).read()
+            uri = (
+                "https://slack.com/api/oauth.access?"
+                "client_id={}&client_secret={}&code={}"
+            ).format(CLIENT_ID, CLIENT_SECRET, aargs[1])
+            ret = urllib.urlopen(uri).read()
             d = json.loads(ret)
             if d["ok"] == True:
                 w.prnt(current_buffer, "Success! Access token is: " + d['access_token'])
