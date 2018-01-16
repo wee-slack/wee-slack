@@ -124,6 +124,8 @@ if hasattr(ssl, "get_default_verify_paths") and callable(ssl.get_default_verify_
     if ssl_defaults.cafile is not None:
         sslopt_ca_certs = {'ca_certs': ssl_defaults.cafile}
 
+EMOJI = []
+
 ###### Unicode handling
 
 
@@ -837,7 +839,7 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
 
     if current_channel is None:
         return w.WEECHAT_RC_OK
-    for e in EMOJI['emoji']:
+    for e in current_channel.team.emoji_completions:
         w.hook_completion_list_add(completion, ":" + e + ":", 0, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
@@ -991,12 +993,19 @@ class SlackTeam(object):
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
         # This highlight step must happen after we have set related server
         self.set_highlight_words(kwargs.get('highlight_words', ""))
+        self.load_emoji_completions()
 
     def __eq__(self, compare_str):
         if compare_str == self.token or compare_str == self.domain or compare_str == self.subdomain:
             return True
         else:
             return False
+
+    def load_emoji_completions(self):
+        self.emoji_completions = list(EMOJI)
+        if self.emoji_completions:
+            s = SlackRequest(self.token, "emoji.list", {}, team_hash=self.team_hash)
+            self.eventrouter.receive(s)
 
     def add_channel(self, channel):
         self.channels[channel["id"]] = channel
@@ -2148,6 +2157,14 @@ def handle_rtmstart(login_data, eventrouter):
 
     dbg("connected to {}".format(t.domain))
 
+
+def handle_emojilist(emoji_json, eventrouter, **kwargs):
+    if emoji_json["ok"]:
+        request_metadata = pickle.loads(emoji_json["wee_slack_request_metadata"])
+        team = eventrouter.teams[request_metadata.team_hash]
+        team.emoji_completions.extend(emoji_json["emoji"].keys())
+
+
 def handle_channelsinfo(channel_json, eventrouter, **kwargs):
     request_metadata = pickle.loads(channel_json["wee_slack_request_metadata"])
     team = eventrouter.teams[request_metadata.team_hash]
@@ -2533,6 +2550,11 @@ def process_reaction_removed(message_json, eventrouter, **kwargs):
             channel.change_message(ts)
     else:
         dbg("Reaction to item type not supported: " + str(message_json))
+
+
+def process_emoji_changed(message_json, eventrouter, **kwargs):
+    team = kwargs['team']
+    team.load_emoji_completions()
 
 ###### New module/global methods
 
@@ -3361,16 +3383,12 @@ def create_slack_debug_buffer():
 
 def load_emoji():
     try:
-        global EMOJI
         DIR = w.info_get("weechat_dir", "")
-        # no idea why this does't work w/o checking the type?!
-        dbg(type(DIR), 0)
-        ef = open('{}/weemoji.json'.format(DIR), 'r')
-        EMOJI = json.loads(ef.read())
-        ef.close()
-    except:
-        dbg("Unexpected error: {}".format(sys.exc_info()), 5)
-    return w.WEECHAT_RC_OK
+        with open('{}/weemoji.json'.format(DIR), 'r') as ef:
+            return json.loads(ef.read())["emoji"]
+    except Exception as e:
+        dbg("Couldn't load emoji list: {}".format(e), 5)
+    return []
 
 
 def setup_hooks():
@@ -3720,7 +3738,7 @@ if __name__ == "__main__":
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
             w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
 
-            load_emoji()
+            EMOJI.extend(load_emoji())
             setup_hooks()
 
             # attach to the weechat hooks we need

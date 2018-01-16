@@ -222,6 +222,14 @@ Example:
 /slack status :ghost: Boo!
 ```
 
+#### Emoji tab completions
+
+To enable tab completion of emojis, copy or symlink the `weemoji.json` file to your weechat config directory (e.g. `~/.weechat`). Then append `|%(emoji)` to the `weechat.completion.default_template` config option, e.g. like this:
+
+```
+/set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(emoji)"
+```
+
 Optional settings
 -----------------
 
