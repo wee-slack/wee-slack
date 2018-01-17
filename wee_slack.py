@@ -1756,6 +1756,8 @@ class SlackThreadChannel(object):
         self.type = "thread"
         self.got_history = False
         self.label = None
+        self.members = self.parent_message.channel.members
+        self.team = self.parent_message.channel.team
         # self.set_name(self.slack_name)
     # def set_name(self, slack_name):
     #    self.name = "#" + slack_name
