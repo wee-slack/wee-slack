@@ -1155,12 +1155,11 @@ class SlackChannel(object):
     """
 
     def __init__(self, eventrouter, **kwargs):
-        # We require these two things for a vaid object,
+        # We require these two things for a valid object,
         # the rest we can just learn from slack
         self.active = False
         for key, value in kwargs.items():
             setattr(self, key, value)
-        self.members = set(kwargs.get('members', set()))
         self.eventrouter = eventrouter
         self.slack_name = kwargs["name"]
         self.slack_purpose = kwargs.get("purpose", {"value": ""})
@@ -1178,7 +1177,7 @@ class SlackChannel(object):
         self.set_name(self.slack_name)
         # short name relates to the localvar we change for typing indication
         self.current_short_name = self.name
-        self.update_nicklist()
+        self.set_members(kwargs.get('members', []))
         self.unread_count_display = 0
 
     def __eq__(self, compare_str):
@@ -1204,6 +1203,10 @@ class SlackChannel(object):
                 w.buffer_set(self.channel_buffer, "short_name", new_name)
                 return True
         return False
+
+    def set_members(self, members):
+        self.members = set(members)
+        self.update_nicklist()
 
     def get_members(self):
         return self.members
@@ -2169,8 +2172,8 @@ def handle_channelsinfo(channel_json, eventrouter, **kwargs):
     request_metadata = pickle.loads(channel_json["wee_slack_request_metadata"])
     team = eventrouter.teams[request_metadata.team_hash]
     channel = team.channels[request_metadata.channel_identifier]
-    unread_count_display = channel_json['channel']['unread_count_display']
-    channel.set_unread_count_display(unread_count_display)
+    channel.set_unread_count_display(channel_json['channel']['unread_count_display'])
+    channel.set_members(channel_json['channel']['members'])
 
 def handle_groupsinfo(group_json, eventrouter, **kwargs):
     request_metadata = pickle.loads(group_json["wee_slack_request_metadata"])
