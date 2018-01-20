@@ -340,6 +340,9 @@ class EventRouter(object):
             # TODO: handle reconnect here
             self.teams[team_hash].set_disconnected()
             return w.WEECHAT_RC_OK
+        except ssl.SSLWantReadError:
+            # Expected to happen occasionally on SSL websockets.
+            return w.WEECHAT_RC_OK
         except Exception:
             dbg("socket issue: {}\n".format(traceback.format_exc()))
             return w.WEECHAT_RC_OK
