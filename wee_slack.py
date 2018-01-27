@@ -2966,8 +2966,6 @@ def me_command_cb(data, current_buffer, args):
 
 
 def command_register(data, current_buffer, args):
-    e = EVENTROUTER
-    team = e.weechat_controller.buffers[current_buffer].team
     CLIENT_ID = "2468770254.51917335286"
     CLIENT_SECRET = "dcb7fe380a000cba0cca3169a5fe8d70"  # Not really a secret.
     if args == 'register':
@@ -2979,23 +2977,25 @@ def command_register(data, current_buffer, args):
             3) Click "Authorize" in the browser **IMPORTANT: the redirect will fail, this is expected**
             4) Copy the "code" portion of the URL to your clipboard
             5) Return to weechat and run `/slack register [code]`
-""")
-        team.buffer_prnt(message)
+        """)
+        w.prnt("", message)
         return
 
-    aargs = args.split(None, 2)
-    if len(aargs) != 2:
-        team.buffer_prnt("ERROR: invalid args to register")
+    try:
+        _, oauth_code = args.split()
+    except ValueError:
+        w.prnt("",
+               "ERROR: wrong number of arguments given for register command")
         return
 
     uri = (
         "https://slack.com/api/oauth.access?"
         "client_id={}&client_secret={}&code={}"
-    ).format(CLIENT_ID, CLIENT_SECRET, aargs[1])
+    ).format(CLIENT_ID, CLIENT_SECRET, oauth_code)
     ret = urllib.urlopen(uri).read()
     d = json.loads(ret)
     if not d["ok"]:
-        team.buffer_prnt(
+        w.prnt("",
             "ERROR: Couldn't get Slack OAuth token: {}".format(d['error']))
         return
 
@@ -3007,8 +3007,8 @@ def command_register(data, current_buffer, args):
         w.config_set_plugin('slack_api_token',
                             ','.join([tok, d['access_token']]))
 
-    team.buffer_prnt("Success! Added team \"%s\"" % (d['team_name'],))
-    team.buffer_prnt("Please reload wee-slack")
+    w.prnt("", "Success! Added team \"%s\"" % (d['team_name'],))
+    w.prnt("", "Please reload wee-slack with: /script reload slack")
 
 
 @slack_buffer_or_ignore

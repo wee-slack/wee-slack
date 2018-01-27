@@ -95,9 +95,9 @@ Log in to Slack:
 /slack register
 ```
 
-This command opens your browser and prompts you to authorize WeeChat with Slack.
-Once you've accomplished this, copy the "code" portion of the URL in the browser
-and pass it to this command:
+This command prints a link you should open in your browser to authorize WeeChat
+with Slack. Once you've accomplished this, copy the "code" portion of the URL in
+the browser and pass it to this command:
 
 ```
 /slack register [YOUR_SLACK_TOKEN]
