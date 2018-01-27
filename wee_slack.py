@@ -195,7 +195,6 @@ def get_nick_color_name(nick):
 ##### BEGIN NEW
 
 IGNORED_EVENTS = [
-    "hello",
     # "pref_change",
     # "reconnect_url",
 ]
@@ -1108,7 +1107,7 @@ class SlackTeam(object):
                 # The fast reconnect failed, so start over-ish
                 for chan in self.channels:
                     self.channels[chan].got_history = False
-                s = SlackRequest(self.token, 'rtm.start', {}, retries=999)
+                s = initiate_connection(self.token, retries=999)
                 self.eventrouter.receive(s)
                 self.connecting = False
                 # del self.eventrouter.teams[self.get_team_hash()]
@@ -1151,6 +1150,11 @@ class SlackTeam(object):
             if user.id in c.members:
                 c.update_nicklist(user.id)
 
+    def subscribe_users_presence(self):
+        self.send_to_websocket({
+            "type": "presence_sub",
+            "ids": self.users.keys(),
+            }, expect_reply=False)
 
 class SlackChannel(object):
     """
@@ -2234,6 +2238,8 @@ def handle_history(message_json, eventrouter, **kwargs):
 
 ###### New/converted process_ and subprocess_ methods
 
+def process_hello(message_json, eventrouter, **kwargs):
+    kwargs['team'].subscribe_users_presence()
 
 def process_reconnect_url(message_json, eventrouter, **kwargs):
     kwargs['team'].set_reconnect_url(message_json['url'])
@@ -2245,9 +2251,15 @@ def process_manual_presence_change(message_json, eventrouter, **kwargs):
 
 def process_presence_change(message_json, eventrouter, **kwargs):
     if "user" in kwargs:
+        # TODO: remove once it's stable
         user = kwargs["user"]
         team = kwargs["team"]
         team.update_member_presence(user, message_json["presence"])
+    if "users" in message_json:
+        team = kwargs["team"]
+        for user_id in message_json["users"]:
+            user = team.users[user_id]
+            team.update_member_presence(user, message_json["presence"])
 
 
 def process_pref_change(message_json, eventrouter, **kwargs):
@@ -3705,6 +3717,11 @@ def trace_calls(frame, event, arg):
     f.flush()
     return
 
+def initiate_connection(token, retries=3):
+    return SlackRequest(token,
+            'rtm.start',
+            {"batch_presence_aware": 1 },
+            retries=retries)
 
 # Main
 if __name__ == "__main__":
@@ -3751,7 +3768,7 @@ if __name__ == "__main__":
 
             tokens = config.slack_api_token.split(',')
             for t in tokens:
-                s = SlackRequest(t, 'rtm.start', {})
+                s = initiate_connection(t)
                 EVENTROUTER.receive(s)
             if config.record_events:
                 EVENTROUTER.record()
