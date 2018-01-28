@@ -88,10 +88,35 @@ weechat
 **NOTE:** If weechat is already running, the script can be loaded using ``/python load python/autoload/wee_slack.py``
 
 #### 4. Add your Slack API key(s)
+
+Log in to Slack:
+
+```
+/slack register
+```
+
+This command prints a link you should open in your browser to authorize WeeChat
+with Slack. Once you've accomplished this, copy the "code" portion of the URL in
+the browser and pass it to this command:
+
+```
+/slack register [YOUR_SLACK_TOKEN]
+```
+
+Your Slack team is now added, and you can complete setup by restarting the
+wee-slack plugin.
+
+```
+/python reload slack
+```
+
+Alternatively, you can click the "Request token" button at the
+[Slack legacy token page](https://api.slack.com/custom-integrations/legacy-tokens),
+and paste it directly into your settings:
+
 ```
 /set plugins.var.python.slack.slack_api_token [YOUR_SLACK_TOKEN]
 ```
-^^ (find this at https://api.slack.com/custom-integrations/legacy-tokens using the "Request token" button)
 
 If you don't want to store your API token in plaintext you can use the secure features of weechat:
 
