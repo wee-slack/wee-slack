@@ -1152,9 +1152,14 @@ class SlackTeam(object):
                 c.update_nicklist(user.id)
 
     def subscribe_users_presence(self):
+        # FIXME: There is a limitation in the API to the size of the
+        # json we can send.
+        # We should try to be smarter to fetch the users whom we want to
+        # subscribe to.
+        users = self.users.keys()[0:750]
         self.send_to_websocket({
             "type": "presence_sub",
-            "ids": self.users.keys(),
+            "ids": users,
             }, expect_reply=False)
 
 class SlackChannel(object):
