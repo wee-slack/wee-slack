@@ -827,7 +827,7 @@ def nick_completion_cb(data, completion_item, current_buffer, completion):
     for m in current_channel.members:
         u = current_channel.team.users.get(m, None)
         if u:
-            w.hook_completion_list_add(completion, "@" + u.slack_name, 1, w.WEECHAT_LIST_POS_SORT)
+            w.hook_completion_list_add(completion, "@" + u.name, 1, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
 
@@ -886,7 +886,7 @@ def complete_next_cb(data, current_buffer, command):
 
     for m in current_channel.members:
         u = current_channel.team.users.get(m, None)
-        if u and u.slack_name == word:
+        if u and u.name == word:
             # Here, we cheat.  Insert a @ in front and rely in the @
             # nicks being in the completion list
             w.buffer_set(current_buffer, "input", line_input[:word_start] + "@" + line_input[word_start:])
@@ -1060,7 +1060,7 @@ class SlackTeam(object):
         return {v.slack_name: k for k, v in self.channels.iteritems()}
 
     def get_username_map(self):
-        return {v.slack_name: k for k, v in self.users.iteritems()}
+        return {v.name: k for k, v in self.users.iteritems()}
 
     def get_team_hash(self):
         return self.team_hash
@@ -1551,7 +1551,7 @@ class SlackChannel(object):
 
         if user and len(self.members) < 1000:
             user = self.team.users[user]
-            nick = w.nicklist_search_nick(self.channel_buffer, "", user.slack_name)
+            nick = w.nicklist_search_nick(self.channel_buffer, "", user.name)
             # since this is a change just remove it regardless of where it is
             w.nicklist_remove_nick(self.channel_buffer, nick)
             # now add it back in to whichever..
@@ -1899,13 +1899,20 @@ class SlackUser(object):
     """
 
     def __init__(self, **kwargs):
-        # We require these two things for a vaid object,
+        # We require these two things for a valid object,
         # the rest we can just learn from slack
         self.identifier = kwargs["id"]
-        self.slack_name = kwargs["name"]
-        self.name = kwargs["name"]
+        self.profile = {}  # in case it's not in kwargs
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+        if self.profile.get("display_name"):
+            self.slack_name = self.profile["display_name"]
+            self.name = self.profile["display_name"].replace(' ', '')
+        else:
+            # No display name set. Fall back to the deprecated username field.
+            self.slack_name = kwargs["name"]
+            self.name = self.slack_name
         self.update_color()
 
     def __repr__(self):
