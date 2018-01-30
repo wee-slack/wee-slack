@@ -742,6 +742,7 @@ def buffer_list_update_callback(data, somecount):
 
 def quit_notification_callback(signal, sig_type, data):
     stop_talking_to_slack()
+    return w.WEECHAT_RC_OK
 
 
 @utf8_decode
@@ -3481,7 +3482,7 @@ def setup_hooks():
     w.hook_signal('buffer_closing', "buffer_closing_callback", "EVENTROUTER")
     w.hook_signal('buffer_switch', "buffer_switch_callback", "EVENTROUTER")
     w.hook_signal('window_switch', "buffer_switch_callback", "EVENTROUTER")
-    w.hook_signal('quit', "quit_notification_cb", "")
+    w.hook_signal('quit', "quit_notification_callback", "")
     if config.send_typing_notice:
         w.hook_signal('input_text_changed', "typing_notification_cb", "")
 
@@ -3804,7 +3805,6 @@ if __name__ == "__main__":
             # setup_trace()
 
             # WEECHAT_HOME = w.info_get("weechat_dir", "")
-            # STOP_TALKING_TO_SLACK = False
 
             # Global var section
             slack_debug = None
