@@ -1757,7 +1757,7 @@ class SlackThreadChannel(object):
         self.got_history = False
         self.label = None
         self.members = self.parent_message.channel.members
-        self.team = self.parent_message.channel.team
+        self.team = self.parent_message.team
         # self.set_name(self.slack_name)
     # def set_name(self, slack_name):
     #    self.name = "#" + slack_name
@@ -1818,10 +1818,10 @@ class SlackThreadChannel(object):
 
     def send_message(self, message):
         # team = self.eventrouter.teams[self.team]
-        message = linkify_text(message, self.parent_message.team, self)
+        message = linkify_text(message, self.team, self)
         dbg(message)
-        request = {"type": "message", "channel": self.parent_message.channel.identifier, "text": message, "_team": self.parent_message.team.team_hash, "user": self.parent_message.team.myidentifier, "thread_ts": str(self.parent_message.ts)}
-        self.parent_message.team.send_to_websocket(request)
+        request = {"type": "message", "channel": self.parent_message.channel.identifier, "text": message, "_team": self.team.team_hash, "user": self.team.myidentifier, "thread_ts": str(self.parent_message.ts)}
+        self.team.send_to_websocket(request)
         self.mark_read(update_remote=False, force=True)
 
     def open(self, update_remote=True):
@@ -1850,7 +1850,7 @@ class SlackThreadChannel(object):
             self.channel_buffer = w.buffer_new(self.formatted_name(style="long_default"), "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
-            w.buffer_set(self.channel_buffer, "localvar_set_nick", self.parent_message.team.nick)
+            w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
             time_format = w.config_string(w.config_get("weechat.look.buffer_time_format"))
