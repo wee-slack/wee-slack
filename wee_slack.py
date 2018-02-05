@@ -1557,6 +1557,8 @@ class SlackChannel(object):
 
         if user and len(self.members) < 1000:
             user = self.team.users[user]
+            if user.deleted:
+                return
             nick = w.nicklist_search_nick(self.channel_buffer, "", user.name)
             # since this is a change just remove it regardless of where it is
             w.nicklist_remove_nick(self.channel_buffer, nick)
