@@ -3029,12 +3029,12 @@ def command_register(data, current_buffer, args):
         message = textwrap.dedent("""
             #### Retrieving a Slack token via OAUTH ####
 
-            1) Paste this into a browser: https://slack.com/oauth/authorize?client_id=2468770254.51917335286&scope=client
+            1) Paste this into a browser: https://slack.com/oauth/authorize?client_id=%s&scope=client
             2) Select the team you wish to access from wee-slack in your browser.
             3) Click "Authorize" in the browser **IMPORTANT: the redirect will fail, this is expected**
             4) Copy the "code" portion of the URL to your clipboard
             5) Return to weechat and run `/slack register [code]`
-        """)
+        """ % (CLIENT_ID, ))
         w.prnt("", message)
         return
 
