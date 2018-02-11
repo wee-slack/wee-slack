@@ -8,18 +8,22 @@ from itertools import islice
 
 import textwrap
 import time
+import threading
 import json
 import pickle
 import sha
 import os
 import re
 import urllib
+import urlparse
 import sys
 import traceback
 import collections
 import ssl
 import random
 import string
+import webbrowser
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
 from websocket import create_connection, WebSocketConnectionClosedException
 
@@ -3022,33 +3026,51 @@ def me_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 
+OAUTH_CLIENT_ID = "2468770254.51917335286"
+OAUTH_CLIENT_SECRET = "dcb7fe380a000cba0cca3169a5fe8d70"  # Not really a secret.
+OAUTH_LOCAL_PORT = 54782
+
 def command_register(data, current_buffer, args):
-    CLIENT_ID = "2468770254.51917335286"
-    CLIENT_SECRET = "dcb7fe380a000cba0cca3169a5fe8d70"  # Not really a secret.
-    if args == 'register':
-        message = textwrap.dedent("""
-            #### Retrieving a Slack token via OAUTH ####
-
-            1) Paste this into a browser: https://slack.com/oauth/authorize?client_id=%s&scope=client
-            2) Select the team you wish to access from wee-slack in your browser.
-            3) Click "Authorize" in the browser **IMPORTANT: the redirect will fail, this is expected**
-            4) Copy the "code" portion of the URL to your clipboard
-            5) Return to weechat and run `/slack register [code]`
-        """ % (CLIENT_ID, ))
-        w.prnt("", message)
-        return
-
-    try:
-        _, oauth_code = args.split()
-    except ValueError:
+    is_local = False
+    oauth_code = None
+    splitted_args = args.split()
+    if len(splitted_args) == 2:
+        _, arg = args.split()
+        if arg == 'local':
+            is_local = True
+        else:
+            oauth_code = arg
+    elif len(splitted_args) != 1:
         w.prnt("",
                "ERROR: wrong number of arguments given for register command")
         return
 
-    uri = (
-        "https://slack.com/api/oauth.access?"
-        "client_id={}&client_secret={}&code={}"
-    ).format(CLIENT_ID, CLIENT_SECRET, oauth_code)
+    if oauth_code is None:
+        # Step 1: get OAuth code, using redirect to local server or to httpbin.
+        if is_local:
+            oauth_code = _register_oauth_local(current_buffer)
+            if oauth_code is None:
+                # Error.
+                return
+        else:
+            _register_oauth_remote(current_buffer)
+            # User must rerun this command later, like "/slack register <code>".
+            return
+
+    # Step 2: use the OAuth code to get a token, then save token in our config.
+    # Slack requires a consistent redirect_uri from Step 1 to 2 although it's
+    # only used in Step 1.
+    if is_local:
+        redirect_uri = 'http://localhost:%d' % (OAUTH_LOCAL_PORT,)
+    else:
+        redirect_uri = 'http://httpbin.org/get'
+
+    uri = "https://slack.com/api/oauth.access?" + urllib.urlencode({
+        'client_id': OAUTH_CLIENT_ID,
+        'client_secret': OAUTH_CLIENT_SECRET,
+        'code': oauth_code,
+        'redirect_uri': redirect_uri})
+
     ret = urllib.urlopen(uri).read()
     d = json.loads(ret)
     if not d["ok"]:
@@ -3066,6 +3088,87 @@ def command_register(data, current_buffer, args):
 
     w.prnt("", "Success! Added team \"%s\"" % (d['team_name'],))
     w.prnt("", "Please reload wee-slack with: /script reload slack")
+
+
+def _register_oauth_local(current_buffer):
+    """Complete OAuth step 1, when weechat is running on localhost.
+
+    Start a local web server and use localhost as the post-authorization
+    redirect URL.
+    """
+    # Receive the query string of the post-auth redirect here.
+    query = {}
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+
+            try:
+                query.update(urlparse.parse_qs(self.path.lstrip('/?')))
+                assert 'code' in query
+                message = (
+                    "<h1>wee-slack successfully authorized</h1>"
+                    "<p>Return to weechat to complete authorization.</p>")
+            except Exception:
+                message = (
+                    "<h1>wee-slack authorization failed</h1>"
+                    "<p>Error parsing OAuth code from URI %s</p>" % self.path)
+
+            self.wfile.write("""<html><body>%s</body></html>""" % message)
+
+            # Killing server directly would deadlock. Defer to a thread.
+            killer = threading.Thread(target=server.shutdown)
+            killer.setDaemon(True)
+            killer.start()
+
+    server = HTTPServer(('localhost', OAUTH_LOCAL_PORT), Handler)
+
+    # App is configured on slack.com/developers to allow "localhost" redirect,
+    # and alas it requires a pre-defined port number.
+    oauth_uri = "https://slack.com/oauth/authorize?" + urllib.urlencode({
+        'client_id': OAUTH_CLIENT_ID,
+        'scope': 'client',
+        'redirect_uri': 'http://localhost:%d' % (OAUTH_LOCAL_PORT,)})
+
+    w.prnt(current_buffer, """
+#### Retrieving a Slack token via OAUTH ####
+
+Select the team you wish to access from wee-slack in your browser
+and click "Authorize".
+
+""")
+
+    webbrowser.open(oauth_uri, new=2)  # 2 means "new tab".
+    w.command(current_buffer, '/window refresh')  # In case of error output.
+
+    server.serve_forever()
+
+    if 'code' in query:
+        return query['code'][0]
+    else:
+        w.prnt(current_buffer, "Error authenticating wee-slack with Slack")
+
+
+def _register_oauth_remote(current_buffer):
+    """Complete OAuth step 1, when weechat is running over ssh.
+
+    Use httpbin.org as the post-authorization redirect URL.
+    """
+    message = textwrap.dedent("""
+        #### Retrieving a Slack token via OAUTH ####
+    
+        1) Paste this into a browser:
+        
+          https://slack.com/oauth/authorize?client_id=%s&scope=client&redirect_uri=http://httpbin.org/get
+        
+        2) Select the team you wish to access from wee-slack in your browser.
+        3) Copy the "code" portion of the URL to your clipboard
+        4) Return to weechat and run `/slack register [code]`
+    """ % (OAUTH_CLIENT_ID,))
+    w.prnt("", message)
+    return
 
 
 @slack_buffer_or_ignore

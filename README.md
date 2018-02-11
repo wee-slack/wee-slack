@@ -89,7 +89,15 @@ weechat
 
 #### 4. Add your Slack API key(s)
 
-Log in to Slack:
+If weechat is running on your local machine, you can log in to Slack easily:
+
+```
+/slack register local
+```
+
+This command opens your browser, and completes the authentication process
+automatically when you click "Authorize" in the browser. If you are using
+weechat over ssh, use:
 
 ```
 /slack register
