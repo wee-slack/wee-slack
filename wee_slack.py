@@ -3063,7 +3063,7 @@ def command_register(data, current_buffer, args):
     if is_local:
         redirect_uri = 'http://localhost:%d' % (OAUTH_LOCAL_PORT,)
     else:
-        redirect_uri = 'http://httpbin.org/get'
+        redirect_uri = 'https://httpbin.org/get'
 
     uri = "https://slack.com/api/oauth.access?" + urllib.urlencode({
         'client_id': OAUTH_CLIENT_ID,
@@ -3161,7 +3161,7 @@ def _register_oauth_remote(current_buffer):
     
         1) Paste this into a browser:
         
-          https://slack.com/oauth/authorize?client_id=%s&scope=client&redirect_uri=http://httpbin.org/get
+          https://slack.com/oauth/authorize?client_id=%s&scope=client&redirect_uri=https://httpbin.org/get
         
         2) Select the team you wish to access from wee-slack in your browser.
         3) Copy the "code" portion of the URL to your clipboard
