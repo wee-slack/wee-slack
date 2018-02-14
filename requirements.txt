@@ -1,0 +1,14 @@
+attrs==17.4.0
+funcsigs==1.0.2
+gevent==1.2.2
+greenlet==0.4.13
+mock==2.0.0
+-e git+git@github.com:guyzmo/notmuch-abook.git@390d37ad19f2629c9f7436784403899ed483a3fa#egg=notmuch_abook-master
+pbr==3.1.1
+pluggy==0.6.0
+py==1.5.2
+pytest==3.4.0
+six==1.11.0
+websocket==0.2.1
+websocket-client==0.46.0
+wheel==0.24.0
