@@ -39,8 +39,8 @@ import pytest
         'input_text_before': "",
         'output': "\n".join([
             "Title (http://title.link)",
-            "http://image.url",
             "Attachment text",
+            "http://image.url",
         ]),
     },
     {
