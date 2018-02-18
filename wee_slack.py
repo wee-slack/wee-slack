@@ -2942,7 +2942,7 @@ def tag(tagset, user=None):
         # catchall ?
         "default": "irc_privmsg,notify_message,log1",
     }
-    return default_tag + "," + tagsets[tagset]
+    return "{},slack_{},{}".format(default_tag, tagset, tagsets[tagset])
 
 ###### New/converted command_ commands
 
