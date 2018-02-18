@@ -2928,7 +2928,7 @@ def tag(tagset, user=None):
         default_tag = 'nick_unknown'
     tagsets = {
         # messages in the team/server buffer, e.g. "new channel created"
-        "team": "log3",
+        "team": "no_highlight,log3",
         # when replaying something old
         "backlog": "irc_privmsg,no_highlight,notify_none,logger_backlog",
         # when posting messages to a muted channel
