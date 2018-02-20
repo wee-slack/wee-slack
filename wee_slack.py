@@ -2052,8 +2052,11 @@ class SlackUser(object):
         if self.profile.get("display_name"):
             self.slack_name = self.profile["display_name"]
             self.name = self.profile["display_name"].replace(' ', '')
+        elif self.profile.get("real_name"):
+            self.slack_name = self.profile["real_name"]
+            self.name = self.profile["real_name"].replace(' ', '')
         else:
-            # No display name set. Fall back to the deprecated username field.
+            # No display or full name set. Fall back to the deprecated username field.
             self.slack_name = kwargs["name"]
             self.name = self.slack_name
         self.update_color()
