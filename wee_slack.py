@@ -3013,6 +3013,34 @@ def topic_command_cb(data, current_buffer, command):
         EVENTROUTER.receive(s)
     return w.WEECHAT_RC_OK_EAT
 
+@slack_buffer_or_ignore
+@utf8_decode
+def whois_command_cb(data, current_buffer, command):
+    """
+    Get real name of user
+    /whois <display_name>
+    """
+
+    args = command.split()
+    if len(args) < 2:
+        w.prnt(current_buffer, "Not enough arguments")
+        return w.WEECHAT_RC_OK_EAT
+    user = args[1]
+    if (user.startswith('@')):
+        user = user[1:]
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    u = team.get_username_map()
+    name = ''
+    if (user in u):
+        try:
+            name = team.users.get(u[user], None).real_name
+        except AttributeError:
+            pass
+    if name:
+        w.prnt(current_buffer, "@{}: {}".format(user, name))
+    else:
+        w.prnt(current_buffer, "@{}: No such user".format(user))
+    return w.WEECHAT_RC_OK_EAT
 
 @slack_buffer_or_ignore
 @utf8_decode
@@ -3521,6 +3549,7 @@ def setup_hooks():
     w.hook_command_run("/input set_unread", "set_unread_cb", "")
     w.hook_command_run("/input set_unread_current_buffer", "set_unread_current_buffer_cb", "")
     w.hook_command_run('/away', 'away_command_cb', '')
+    w.hook_command_run('/whois', 'whois_command_cb', '')
 
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
