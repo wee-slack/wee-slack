@@ -2928,7 +2928,7 @@ def tag(tagset, user=None):
         default_tag = 'nick_unknown'
     tagsets = {
         # messages in the team/server buffer, e.g. "new channel created"
-        "team": "irc_notice,notify_private,log3",
+        "team": "no_highlight,log3",
         # when replaying something old
         "backlog": "irc_privmsg,no_highlight,notify_none,logger_backlog",
         # when posting messages to a muted channel
@@ -2942,7 +2942,7 @@ def tag(tagset, user=None):
         # catchall ?
         "default": "irc_privmsg,notify_message,log1",
     }
-    return default_tag + "," + tagsets[tagset]
+    return "{},slack_{},{}".format(default_tag, tagset, tagsets[tagset])
 
 ###### New/converted command_ commands
 
