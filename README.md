@@ -65,6 +65,12 @@ wee-slack doesn't use the Slack IRC gateway. If you currently connect via the ga
 pip install websocket-client
 ```
 
+Note: If you installed weechat with Homebrew, you will have to locate the python runtime environment used.
+If `--with-python@2` was used, you should use:
+```
+sudo /usr/local/opt/python@2/bin/pip2 install websocket_client
+```
+
 ##### FreeBSD
 ```
 pkg install py27-websocket-client py27-six
