@@ -2009,14 +2009,16 @@ class SlackMessage(object):
                 name_plain = self.team.users[self.team.myidentifier].name
             elif self.message_json['user'] in self.team.users:
                 u = self.team.users[self.message_json['user']]
-                if u.is_bot:
-                    name = "{} :]".format(u.formatted_name())
-                else:
-                    name = "{}".format(u.formatted_name())
+                name = "{}".format(u.formatted_name())
                 name_plain = "{}".format(u.formatted_name(enable_color=False))
         elif 'username' in self.message_json:
-            name = "-{}-".format(self.message_json["username"])
-            name_plain = "{}".format(self.message_json["username"])
+            u = self.message_json["username"]
+            if self.message_json.get("subtype") == "bot_message":
+                name = "{} :]".format(u)
+                name_plain = "{}".format(u)
+            else:
+                name = "-{}-".format(u)
+                name_plain = "{}".format(u)
         elif 'service_name' in self.message_json:
             name = "-{}-".format(self.message_json["service_name"])
             name_plain = "{}".format(self.message_json["service_name"])
