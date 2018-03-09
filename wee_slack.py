@@ -20,6 +20,10 @@ import collections
 import ssl
 import random
 import string
+try:
+    from cStringIO import StringIO
+except:
+    from StringIO import StringIO
 
 from websocket import create_connection, WebSocketConnectionClosedException
 
@@ -364,15 +368,11 @@ class EventRouter(object):
             return
         if return_code == 0:
             if len(out) > 0:
-                if request_metadata.response_id in self.reply_buffer:
-                    # dbg("found response id in reply_buffer", True)
-                    self.reply_buffer[request_metadata.response_id] += out
-                else:
-                    # dbg("didn't find response id in reply_buffer", True)
-                    self.reply_buffer[request_metadata.response_id] = ""
-                    self.reply_buffer[request_metadata.response_id] += out
+                if request_metadata.response_id not in self.reply_buffer:
+                    self.reply_buffer[request_metadata.response_id] = StringIO()
+                self.reply_buffer[request_metadata.response_id].write(out)
                 try:
-                    j = json.loads(self.reply_buffer[request_metadata.response_id])
+                    j = json.loads(self.reply_buffer[request_metadata.response_id].getvalue())
                 except:
                     pass
                     # dbg("Incomplete json, awaiting more", True)
@@ -397,8 +397,8 @@ class EventRouter(object):
             self.delete_context(data)
         else:
             if request_metadata.response_id not in self.reply_buffer:
-                self.reply_buffer[request_metadata.response_id] = ""
-            self.reply_buffer[request_metadata.response_id] += out
+                self.reply_buffer[request_metadata.response_id] = StringIO()
+            self.reply_buffer[request_metadata.response_id].write(out)
 
     def receive_json(self, data):
         """
