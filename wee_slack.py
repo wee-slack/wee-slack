@@ -1353,8 +1353,9 @@ class SlackChannel(object):
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
 
+
     def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, **kwargs):
-        data = "{}\t{}".format(nick, text)
+        data = "{}\t{}".format(format_nick(nick), text)
         ts = SlackTS(timestamp)
         last_read = SlackTS(self.last_read)
         # without this, DMs won't open automatically
@@ -1802,7 +1803,7 @@ class SlackThreadChannel(object):
             w.buffer_set(self.channel_buffer, "hotlist", "-1")
 
     def buffer_prnt(self, nick, text, timestamp, **kwargs):
-        data = "{}\t{}".format(nick, text)
+        data = "{}\t{}".format(format_nick(nick), text)
         ts = SlackTS(timestamp)
         if self.channel_buffer:
             # backlog messages - we will update the read marker as we print these
@@ -2923,6 +2924,17 @@ def modify_print_time(buffer, new_id, time):
             line_pointer = w.hdata_move(struct_hdata_line, line_pointer, -1)
 
     return w.WEECHAT_RC_OK
+
+
+def format_nick(nick):
+    nick_prefix = w.config_string(w.config_get('weechat.look.nick_prefix'))
+    nick_prefix_color_name = w.config_string(w.config_get('weechat.color.chat_nick_prefix'))
+    nick_prefix_color = w.color(nick_prefix_color_name)
+
+    nick_suffix = w.config_string(w.config_get('weechat.look.nick_suffix'))
+    nick_suffix_color_name = w.config_string(w.config_get('weechat.color.chat_nick_prefix'))
+    nick_suffix_color = w.color(nick_suffix_color_name)
+    return nick_prefix_color + nick_prefix + w.color("reset") + nick + nick_suffix_color + nick_suffix + w.color("reset")
 
 
 def tag(tagset, user=None):
