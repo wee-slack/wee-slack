@@ -76,6 +76,10 @@ class FakeWeechat():
         return ""
     def config_get_plugin(self, key):
         return ""
+    def config_get(self, key):
+        return ""
+    def config_string(self, key):
+        return ""
     def color(self, name):
         return ""
     def __getattr__(self, name):
