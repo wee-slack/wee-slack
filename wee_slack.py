@@ -2003,10 +2003,7 @@ class SlackMessage(object):
     def get_sender(self):
         name = ""
         name_plain = ""
-        if self.message_json.get('bot_id') in self.team.bots:
-            name = "{} :]".format(self.team.bots[self.message_json["bot_id"]].formatted_name())
-            name_plain = "{}".format(self.team.bots[self.message_json["bot_id"]].formatted_name(enable_color=False))
-        elif 'user' in self.message_json:
+        if 'user' in self.message_json:
             if self.message_json['user'] == self.team.myidentifier:
                 name = self.team.users[self.team.myidentifier].name
                 name_plain = self.team.users[self.team.myidentifier].name
@@ -2023,6 +2020,9 @@ class SlackMessage(object):
         elif 'service_name' in self.message_json:
             name = "-{}-".format(self.message_json["service_name"])
             name_plain = "{}".format(self.message_json["service_name"])
+        elif self.message_json.get('bot_id') in self.team.bots:
+            name = "{} :]".format(self.team.bots[self.message_json["bot_id"]].formatted_name())
+            name_plain = "{}".format(self.team.bots[self.message_json["bot_id"]].formatted_name(enable_color=False))
         else:
             name = ""
             name_plain = ""
