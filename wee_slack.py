@@ -999,6 +999,9 @@ class SlackTeam(object):
         self.set_highlight_words(kwargs.get('highlight_words', ""))
         self.load_emoji_completions()
 
+    def __repr__(self):
+        return "domain={} nick={}".format(self.subdomain, self.nick)
+
     def __eq__(self, compare_str):
         if compare_str == self.token or compare_str == self.domain or compare_str == self.subdomain:
             return True
