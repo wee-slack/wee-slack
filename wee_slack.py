@@ -2568,7 +2568,7 @@ def process_group_joined(message_json, eventrouter, **kwargs):
 
 
 def process_reaction_added(message_json, eventrouter, **kwargs):
-    channel = kwargs['team'].channels[message_json["item"]["channel"]]
+    channel = kwargs['team'].channels.get(message_json["item"].get("channel"))
     if message_json["item"].get("type") == "message":
         ts = SlackTS(message_json['item']["ts"])
 
@@ -2581,7 +2581,7 @@ def process_reaction_added(message_json, eventrouter, **kwargs):
 
 
 def process_reaction_removed(message_json, eventrouter, **kwargs):
-    channel = kwargs['team'].channels[message_json["item"]["channel"]]
+    channel = kwargs['team'].channels.get(message_json["item"].get("channel"))
     if message_json["item"].get("type") == "message":
         ts = SlackTS(message_json['item']["ts"])
 
