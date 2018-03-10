@@ -230,6 +230,8 @@ class EventRouter(object):
         self.shutting_down = False
         self.recording = False
         self.recording_path = "/tmp"
+        self.handle_next_hook = None
+        self.handle_next_hook_interval = -1
 
     def record(self):
         """
@@ -437,6 +439,16 @@ class EventRouter(object):
         via callback to drain events from the queue. It also attaches
         useful metadata and context to events as they are processed.
         """
+        wanted_interval = 100
+        if len(self.slow_queue) > 0 or len(self.queue) > 0:
+            wanted_interval = 10
+        if self.handle_next_hook is None or wanted_interval != self.handle_next_hook_interval:
+            if self.handle_next_hook:
+                w.unhook(self.handle_next_hook)
+            self.handle_next_hook = w.hook_timer(wanted_interval, 0, 0, "handle_next", "")
+            self.handle_next_hook_interval = wanted_interval
+
+
         if len(self.slow_queue) > 0 and ((self.slow_queue_timer + 1) < time.time()):
             # for q in self.slow_queue[0]:
             dbg("from slow queue", 0)
@@ -3874,5 +3886,4 @@ if __name__ == "__main__":
             if config.record_events:
                 EVENTROUTER.record()
             EVENTROUTER.handle_next()
-            w.hook_timer(10, 0, 0, "handle_next", "")
             # END attach to the weechat hooks we need
