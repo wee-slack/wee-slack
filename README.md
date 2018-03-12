@@ -1,10 +1,5 @@
-
-
 wee-slack
 =========
-
-**News:**
- 1.0-RC1 is here. It is a pretty massive refactor, and fixes many of the current issues listed on github. Because there was no good way to do this, it breaks some/many existing PRs. _(please report bugs in #wee-slack on freenode)_
 
 A WeeChat native client for Slack.com. Provides supplemental features only available in the web/mobile clients such as: synchronizing read markers, typing notification, threads (and more)! Connects via the Slack API, and maintains a persistent websocket for notification of events.
 
@@ -12,19 +7,18 @@ A WeeChat native client for Slack.com. Provides supplemental features only avail
 
 Features
 --------
-  * **New** [Threads](#threads) support!
-  * **New** [Slack Status](#status) support!
-  * Slash commands (including custom ones!)
-  * Upload to slack capabilities!
-  * Emoji reactions!
+  * [Threads](#threads) support
+  * [Slack Status](#status) support
+  * Slash commands (including custom ones)
+  * Upload to slack capabilities
+  * Emoji reactions
   * Edited messages work just like the official clients, where the original message changes and has (edited) appended.
   * Unfurled urls dont generate a new message, but replace the original with more info as it is received.
   * Regex style message editing (s/oldtext/newtext/)
-  * Caches message history, making startup MUCH faster
   * Smarter redraw of dynamic buffer info (much lower CPU %)
   * beta UTF-8 support
   * Doesn't use IRC gateway. Connects directly with Slack via API/Websocket
-  * Multiple Teams supported! Just add multiple api tokens separated by commas
+  * Multiple Teams supported. Just add multiple api tokens separated by commas
   * Replays history automatically during startup. (and sets read marker to the correct position in history)
   * Open channels synchronized with Slack. When you open/close a channel on another client it is reflected in wee-slack
   * Colorized nicks in buffer list when used with buffers.pl
@@ -280,12 +274,19 @@ Show channel name in hotlist after activity
 Development
 -----------------
 
-Enable debug mode and look in `/tmp/weeslack-debug/` for the json dumps from the websockets:
+Enable debug mode and change debug level (default 3, decrease to increase logging and vice versa):
+
 ```
 /set plugins.var.python.slack.record_events true
 ```
 
 To run the tests, create a virtualenv and pip install from the `requirements.txt`. Then `pytest` to run them locally.
+
+
+Dump the JSON responses in `/tmp/weeslack-debug/`. Requires a script reload.
+```
+/set plugins.var.python.slack.record_events true
+```
 
 Support
 --------------
