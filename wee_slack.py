@@ -2132,8 +2132,8 @@ def handle_rtmstart(login_data, eventrouter):
     metadata = pickle.loads(login_data["wee_slack_request_metadata"])
 
     if not login_data["ok"]:
-        w.prnt("", "ERROR: Failed connecting to Slack with token {}: {}"
-            .format(metadata.token, login_data["error"]))
+        w.prnt("", "ERROR: Failed connecting to Slack with token starting with {}: {}"
+            .format(metadata.token[:15], login_data["error"]))
         return
 
     # Let's reuse a team if we have it already.
