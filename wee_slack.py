@@ -2744,6 +2744,8 @@ def unhtmlescape(text):
 
 
 def unwrap_attachments(message_json, text_before):
+    if 'user' in message_json and not config.link_previews:
+        return ''
     text_before_unescaped = unhtmlescape(text_before)
     attachment_texts = []
     a = message_json.get("attachments", None)
@@ -3638,6 +3640,9 @@ class PluginConfig(object):
         'group_name_prefix': Setting(
             default='&',
             desc='The prefix of buffer names for groups (private channels).'),
+        'link_previews': Setting(
+            default='true',
+            desc='Show previews of website content linked by teammates.'),
         'map_underline_to': Setting(
             default='_',
             desc='When sending underlined text to slack, use this formatting'
