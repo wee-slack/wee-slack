@@ -2051,6 +2051,15 @@ class SlackMessage(object):
         if message_json.get('subtype') == 'me_message' and not message_json['text'].startswith(self.sender):
             message_json['text'] = self.sender + ' ' + self.message_json['text']
 
+        # Replace Slack link with direct link to shared file (required if
+        # shared by an external user since only the direct link is accessible)
+        if message_json.get('subtype') == 'file_share':
+            message_json['text'] = re.sub(
+                r'<http.+\|',
+                r'<{}|'.format(message_json['file']['url_private']),
+                message_json['text']
+            )
+
     def __hash__(self):
         return hash(self.ts)
 
