@@ -1,3 +1,4 @@
+from __future__ import print_function
 import glob
 import json
 
@@ -19,17 +20,17 @@ def test_everything(realish_eventrouter, mock_websocket):
 
     datafiles = glob.glob("_pytest/data/websocket/*.json")
 
-    print datafiles
+    print(datafiles)
     #assert False
 
     notimplemented = set()
 
     for fname in datafiles:
         try:
-            print "####################"
+            print("####################")
             data = json.loads(open(fname, 'r').read())
             socket.add(data)
-            print data
+            print(data)
             eventrouter.receive_ws_callback(t)
             eventrouter.handle_next()
         except ProcessNotImplemented as e:
@@ -39,11 +40,11 @@ def test_everything(realish_eventrouter, mock_websocket):
             pass
 
     if len(notimplemented) > 0:
-        print "####################"
-        print sorted(notimplemented)
-        print "####################"
+        print("####################")
+        print(sorted(notimplemented))
+        print("####################")
 
-    print len(eventrouter.queue)
+    print(len(eventrouter.queue))
     #assert False
 
 

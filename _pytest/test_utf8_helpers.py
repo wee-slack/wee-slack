@@ -23,19 +23,23 @@ def test_decode_preserves_iterable_type():
     assert type(value_tuple) == type(decode_from_utf8(value_tuple))
 
 def test_decodes_utf8_string_to_unicode():
-    assert u'æøå' == decode_from_utf8(b'æøå')
+    assert u'æøå' == decode_from_utf8(b'æøå')  # noqa
 
 def test_decodes_utf8_dict_to_unicode():
-    assert {u'æ': u'å', u'ø': u'å'} == decode_from_utf8({b'æ': b'å', b'ø': b'å'})
+    assert {u'æ': u'å', u'ø': u'å'} == decode_from_utf8({b'æ': b'å', b'ø': b'å'})  # noqa
 
 def test_decodes_utf8_list_to_unicode():
-    assert [u'æ', u'ø', u'å'] == decode_from_utf8([b'æ', b'ø', b'å'])
+    assert [u'æ', u'ø', u'å'] == decode_from_utf8([b'æ', b'ø', b'å'])  # noqa
 
 def test_encode_preserves_string_without_utf8():
     assert b'test' == encode_to_utf8(u'test')
 
 def test_encode_preserves_byte_strings():
-    assert b'æøå' == encode_to_utf8(b'æøå')
+    try:
+        unicode        # Python 2
+        assert b'æøå' == encode_to_utf8(b'æøå')  # noqa
+    except NameError:  # Python 3
+        pass
 
 def test_encode_preserves_mapping_type():
     value_dict = {'a': 'x', 'b': 'y', 'c': 'z'}
@@ -50,21 +54,21 @@ def test_encode_preserves_iterable_type():
     assert type(value_tuple) == type(encode_to_utf8(value_tuple))
 
 def test_encodes_utf8_string_to_unicode():
-    assert b'æøå' == encode_to_utf8(u'æøå')
+    assert b'æøå' == encode_to_utf8(u'æøå')  # noqa
 
 def test_encodes_utf8_dict_to_unicode():
-    assert {b'æ': b'å', b'ø': b'å'} == encode_to_utf8({u'æ': u'å', u'ø': u'å'})
+    assert {b'æ': b'å', b'ø': b'å'} == encode_to_utf8({u'æ': u'å', u'ø': u'å'})  # noqa
 
 def test_encodes_utf8_list_to_unicode():
-    assert [b'æ', b'ø', b'å'] == encode_to_utf8([u'æ', u'ø', u'å'])
+    assert [b'æ', b'ø', b'å'] == encode_to_utf8([u'æ', u'ø', u'å'])  # noqa
 
 @utf8_decode
 def method_with_utf8_decode(*args, **kwargs):
     return (args, kwargs)
 
 def test_utf8_decode():
-    args = (b'æ', b'ø', b'å')
-    kwargs = {b'æ': b'å', b'ø': b'å'}
+    args = (b'æ', b'ø', b'å')  # noqa
+    kwargs = {b'æ': b'å', b'ø': b'å'}  # noqa
 
     result_args, result_kwargs = method_with_utf8_decode(*args, **kwargs)
 

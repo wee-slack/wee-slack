@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pytest
 from wee_slack import EventRouter, ProcessNotImplemented, SlackRequest
 
@@ -35,15 +36,15 @@ def test_EventRouterReceivedata(mock_weechat):
 
     e = EventRouter()
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.startold", {"meh": "blah"}))
-    print context
+    print(context)
     e.receive_httprequest_callback(context, 1, -1, ' {"JSON": "MEH", ', 4)
     #print len(e.reply_buffer)
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.startold", {"meh": "blah"}))
-    print context
+    print(context)
     e.receive_httprequest_callback(context, 1, -1, ' "JSON2": "MEH", ', 4)
     #print len(e.reply_buffer)
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.startold", {"meh": "blah"}))
-    print context
+    print(context)
     e.receive_httprequest_callback(context, 1, 0, ' "JSON3": "MEH"}', 4)
     #print len(e.reply_buffer)
     try:
@@ -54,7 +55,7 @@ def test_EventRouterReceivedata(mock_weechat):
     except:
         pass
 
-    print e.context
+    print(e.context)
     #assert False
 
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.start", {"meh": "blah"}))
