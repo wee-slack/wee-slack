@@ -1658,10 +1658,10 @@ class SlackDMChannel(SlackChannel):
             print_color = self.color
         else:
             print_color = ""
-        if not present:
-            prepend = " "
-        else:
+        if present and config.show_user_presence:
             prepend = "+"
+        else:
+            prepend = " "
         select = {
             "default": self.slack_name,
             "sidebar": prepend + self.slack_name,
@@ -3673,6 +3673,9 @@ class PluginConfig(object):
         'show_reaction_nicks': Setting(
             default='false',
             desc='Display the name of the reacting user(s) alongside each reactji.'),
+        'show_user_presence': Setting(
+            default='true',
+            desc='Display a `+` character in the buffer list for present users.'),
         'slack_api_token': Setting(
             default='INSERT VALID KEY HERE!',
             desc='List of Slack API tokens, one per Slack instance you want to'
