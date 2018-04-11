@@ -3413,10 +3413,6 @@ def command_status(data, current_buffer, args):
     if channel:
         team = channel.team
 
-        if args is None:
-            server.buffer_prnt("Usage: /slack status [status emoji] [status text].")
-            return
-
         split_args = args.split(None, 2)
         emoji = split_args[1] if len(split_args) > 1 else ""
         text = split_args[2] if len(split_args) > 2 else ""
