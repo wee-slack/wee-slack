@@ -3398,7 +3398,7 @@ def command_away(data, current_buffer, args):
     /slack away
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
-    s = SlackRequest(team.token, "presence.set", {"presence": "away"}, team_hash=team.team_hash)
+    s = SlackRequest(team.token, "users.setPresence", {"presence": "away"}, team_hash=team.team_hash)
     EVENTROUTER.receive(s)
 
 
@@ -3434,7 +3434,7 @@ def command_back(data, current_buffer, args):
     /slack back
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
-    s = SlackRequest(team.token, "presence.set", {"presence": "active"}, team_hash=team.team_hash)
+    s = SlackRequest(team.token, "users.setPresence", {"presence": "auto"}, team_hash=team.team_hash)
     EVENTROUTER.receive(s)
 
 
