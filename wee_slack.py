@@ -3312,8 +3312,8 @@ def command_slash(data, current_buffer, args):
     if channel:
         team = channel.team
 
-        if args is None:
-            server.buffer_prnt("Usage: /slack slash /someslashcommand [arguments...].")
+        if args == 'slash':
+            w.prnt("", "Usage: /slack slash /someslashcommand [arguments...].")
             return
 
         split_args = args.split(None, 2)
