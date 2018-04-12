@@ -2846,9 +2846,13 @@ def resolve_ref(ref):
 
 
 def create_user_status_string(profile):
+    real_name = profile.get("real_name")
     status_emoji = profile.get("status_emoji")
     status_text = profile.get("status_text")
-    return "[{}] {}".format(status_emoji, status_text)
+    if status_emoji or status_text:
+        return "{} | {} {}".format(real_name, status_emoji, status_text)
+    else:
+        return real_name
 
 
 def create_reaction_string(reactions):
