@@ -1060,6 +1060,12 @@ class SlackTeam(object):
     def buffer_prnt(self, data):
         w.prnt_date_tags(self.channel_buffer, SlackTS().major, tag("team"), data)
 
+    def find_channel_by_members(self, members, channel_type=None):
+        for channel in self.channels.itervalues():
+            if channel.get_members() == members and (
+                    channel_type is None or channel.type == channel_type):
+                return channel
+
     def get_channel_map(self):
         return {v.slack_name: k for k, v in self.channels.iteritems()}
 
@@ -3217,12 +3223,7 @@ def command_talk(data, current_buffer, args):
             else:
                 channel_type = 'im'
 
-            # Try finding the channel by type and members
-            for channel in team.channels.itervalues():
-                if (channel.type == channel_type and
-                        channel.get_members() == users):
-                    chan = channel
-                    break
+            chan = team.find_channel_by_members(users, channel_type=channel_type)
 
             # If the DM or MPDM doesn't exist, create it
             if not chan:
