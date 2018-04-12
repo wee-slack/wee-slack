@@ -2846,8 +2846,8 @@ def resolve_ref(ref):
 
 
 def create_user_status_string(profile):
-    status_emoji = profile.get("status_emoji") if profile.get("status_emoji") else "None"
-    status_text = profile.get("status_text") if profile.get("status_text") else "None"
+    status_emoji = profile.get("status_emoji")
+    status_text = profile.get("status_text")
     return "[{}] {}".format(status_emoji, status_text)
 
 
