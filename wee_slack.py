@@ -1633,6 +1633,7 @@ class SlackDMChannel(SlackChannel):
         self.type = 'im'
         self.update_color()
         self.set_name(self.slack_name)
+        self.topic = create_user_status_string(users[dmuser].profile)
 
     def set_name(self, slack_name):
         self.name = slack_name
@@ -1941,6 +1942,10 @@ class SlackUser(object):
         # colourization.
         self.color_name = get_nick_color_name(self.name)
         self.color = w.color(self.color_name)
+
+    def update_status(self, status_emoji, status_text):
+        self.profile["status_emoji"] = status_emoji
+        self.profile["status_text"] = status_text
 
     def formatted_name(self, prepend="", enable_color=True):
         if enable_color:
@@ -2293,6 +2298,18 @@ def process_pref_change(message_json, eventrouter, **kwargs):
         team.set_highlight_words(message_json['value'])
     else:
         dbg("Preference change not implemented: {}\n".format(message_json['name']))
+
+
+def process_user_change(message_json, eventrouter, **kwargs):
+    """
+    Currently only used to update status, but lots here we could do.
+    """
+    user = message_json['user']
+    profile = user.get("profile")
+    team = kwargs["team"]
+    team.users[user["id"]].update_status(profile.get("status_emoji"), profile.get("status_text"))
+    dmchannel = team.get_channel_map()[user["name"]]
+    team.channels[dmchannel].render_topic(topic=create_user_status_string(profile))
 
 
 def process_user_typing(message_json, eventrouter, **kwargs):
@@ -2819,6 +2836,12 @@ def resolve_ref(ref):
 
         # Something else, just return as-is
     return ref
+
+
+def create_user_status_string(profile):
+    status_emoji = profile.get("status_emoji") if profile.get("status_emoji") else "None"
+    status_text = profile.get("status_text") if profile.get("status_text") else "None"
+    return "[{}] {}".format(status_emoji, status_text)
 
 
 def create_reaction_string(reactions):
