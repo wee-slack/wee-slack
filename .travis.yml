@@ -2,14 +2,22 @@ language: python
 python:
   - "2.7"
   - "3.6"
+cache: pip
 matrix:
   allow_failures:
     - python: "3.6"
 
 install:
-  - 'pip install websocket-client pytest'
+  - pip install flake8 pytest websocket-client
 
-script: python -m pytest
+before_script:
+  # stop the build if there are Python syntax errors or undefined names
+  - flake8 .
+  # exit-zero treats all errors as warnings.
+  - flake8 . --exit-zero --select=C,E,F,W
+
+script:
+  - python -m pytest
 
 notifications:
   irc: "chat.freenode.net#wee-slack-dev"

@@ -3319,8 +3319,8 @@ def command_slash(data, current_buffer, args):
     if channel:
         team = channel.team
 
-        if args is None:
-            server.buffer_prnt("Usage: /slack slash /someslashcommand [arguments...].")
+        if args == 'slash':
+            w.prnt("", "Usage: /slack slash /someslashcommand [arguments...].")
             return
 
         split_args = args.split(None, 2)
@@ -3405,7 +3405,7 @@ def command_away(data, current_buffer, args):
     /slack away
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
-    s = SlackRequest(team.token, "presence.set", {"presence": "away"}, team_hash=team.team_hash)
+    s = SlackRequest(team.token, "users.setPresence", {"presence": "away"}, team_hash=team.team_hash)
     EVENTROUTER.receive(s)
 
 
@@ -3419,10 +3419,6 @@ def command_status(data, current_buffer, args):
     channel = e.weechat_controller.buffers.get(current_buffer, None)
     if channel:
         team = channel.team
-
-        if args is None:
-            server.buffer_prnt("Usage: /slack status [status emoji] [status text].")
-            return
 
         split_args = args.split(None, 2)
         emoji = split_args[1] if len(split_args) > 1 else ""
@@ -3441,7 +3437,7 @@ def command_back(data, current_buffer, args):
     /slack back
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
-    s = SlackRequest(team.token, "presence.set", {"presence": "active"}, team_hash=team.team_hash)
+    s = SlackRequest(team.token, "users.setPresence", {"presence": "auto"}, team_hash=team.team_hash)
     EVENTROUTER.receive(s)
 
 
