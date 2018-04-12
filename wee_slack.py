@@ -2314,8 +2314,9 @@ def process_user_change(message_json, eventrouter, **kwargs):
     profile = user.get("profile")
     team = kwargs["team"]
     team.users[user["id"]].update_status(profile.get("status_emoji"), profile.get("status_text"))
-    dmchannel = team.get_channel_map()[user["name"]]
-    team.channels[dmchannel].render_topic(topic=create_user_status_string(profile))
+    dmchannel = team.find_channel_by_members({user["id"]}, channel_type='im')
+    if dmchannel:
+        dmchannel.set_topic(create_user_status_string(profile))
 
 
 def process_user_typing(message_json, eventrouter, **kwargs):
