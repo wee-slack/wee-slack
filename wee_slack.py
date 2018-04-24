@@ -2851,11 +2851,11 @@ def process_emoji_changed(message_json, eventrouter, **kwargs):
 
 ###### New module/global methods
 def render_formatting(text):
-    text = re.sub(r'(^| )\*([^*]+)\*([^a-zA-Z0-9_]|$)',
+    text = re.sub(r'(^| )\*([^*\n]+)\*([^a-zA-Z0-9_]|$)',
                   r'\1{}\2{}\3'.format(w.color(config.render_bold_as),
                                        w.color('-' + config.render_bold_as)),
                   text)
-    text = re.sub(r'(^| )_([^_]+)_([^a-zA-Z0-9_]|$)',
+    text = re.sub(r'(^| )_([^_\n]+)_([^a-zA-Z0-9_]|$)',
                   r'\1{}\2{}\3'.format(w.color(config.render_italic_as),
                                        w.color('-' + config.render_italic_as)),
                   text)
