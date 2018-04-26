@@ -2938,8 +2938,7 @@ def format_nick(nick):
 
 def tag(tagset, user=None):
     if user:
-        user.replace(" ", "_")
-        default_tag = "nick_" + user
+        default_tag = "nick_" + user.replace(" ", "_")
     else:
         default_tag = 'nick_unknown'
     tagsets = {
