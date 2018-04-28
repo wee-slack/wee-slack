@@ -1060,6 +1060,12 @@ class SlackTeam(object):
     def buffer_prnt(self, data):
         w.prnt_date_tags(self.channel_buffer, SlackTS().major, tag("team"), data)
 
+    def find_channel_by_members(self, members, channel_type=None):
+        for channel in self.channels.itervalues():
+            if channel.get_members() == members and (
+                    channel_type is None or channel.type == channel_type):
+                return channel
+
     def get_channel_map(self):
         return {v.slack_name: k for k, v in self.channels.iteritems()}
 
@@ -1633,6 +1639,7 @@ class SlackDMChannel(SlackChannel):
         self.type = 'im'
         self.update_color()
         self.set_name(self.slack_name)
+        self.topic = create_user_status_string(users[dmuser].profile)
 
     def set_name(self, slack_name):
         self.name = slack_name
@@ -1941,6 +1948,10 @@ class SlackUser(object):
         # colourization.
         self.color_name = get_nick_color_name(self.name)
         self.color = w.color(self.color_name)
+
+    def update_status(self, status_emoji, status_text):
+        self.profile["status_emoji"] = status_emoji
+        self.profile["status_text"] = status_text
 
     def formatted_name(self, prepend="", enable_color=True):
         if enable_color:
@@ -2293,6 +2304,19 @@ def process_pref_change(message_json, eventrouter, **kwargs):
         team.set_highlight_words(message_json['value'])
     else:
         dbg("Preference change not implemented: {}\n".format(message_json['name']))
+
+
+def process_user_change(message_json, eventrouter, **kwargs):
+    """
+    Currently only used to update status, but lots here we could do.
+    """
+    user = message_json['user']
+    profile = user.get("profile")
+    team = kwargs["team"]
+    team.users[user["id"]].update_status(profile.get("status_emoji"), profile.get("status_text"))
+    dmchannel = team.find_channel_by_members({user["id"]}, channel_type='im')
+    if dmchannel:
+        dmchannel.set_topic(create_user_status_string(profile))
 
 
 def process_user_typing(message_json, eventrouter, **kwargs):
@@ -2821,6 +2845,16 @@ def resolve_ref(ref):
     return ref
 
 
+def create_user_status_string(profile):
+    real_name = profile.get("real_name")
+    status_emoji = profile.get("status_emoji")
+    status_text = profile.get("status_text")
+    if status_emoji or status_text:
+        return "{} | {} {}".format(real_name, status_emoji, status_text)
+    else:
+        return real_name
+
+
 def create_reaction_string(reactions):
     count = 0
     if not isinstance(reactions, list):
@@ -3193,12 +3227,7 @@ def command_talk(data, current_buffer, args):
             else:
                 channel_type = 'im'
 
-            # Try finding the channel by type and members
-            for channel in team.channels.itervalues():
-                if (channel.type == channel_type and
-                        channel.get_members() == users):
-                    chan = channel
-                    break
+            chan = team.find_channel_by_members(users, channel_type=channel_type)
 
             # If the DM or MPDM doesn't exist, create it
             if not chan:
