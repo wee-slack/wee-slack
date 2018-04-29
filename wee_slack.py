@@ -1361,6 +1361,7 @@ class SlackChannel(object):
 
 
     def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, **kwargs):
+        text = re.sub(r"```(?!\n)", "```\n", text)
         data = "{}\t{}".format(format_nick(nick), text)
         ts = SlackTS(timestamp)
         last_read = SlackTS(self.last_read)
