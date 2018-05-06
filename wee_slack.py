@@ -1378,7 +1378,7 @@ class SlackChannel(object):
             elif ts <= last_read:
                 tags = tag("backlog", user=tag_nick)
             elif self.type in ["im", "mpdm"]:
-                if nick != self.team.nick:
+                if tag_nick != self.team.nick:
                     tags = tag("dm", user=tag_nick)
                     self.new_messages = True
                 else:
