@@ -1661,12 +1661,21 @@ class SlackDMChannel(SlackChannel):
 
     def __init__(self, eventrouter, users, **kwargs):
         dmuser = kwargs["user"]
-        kwargs["name"] = users[dmuser].name
+        kwargs["name"] = users[dmuser].name if dmuser in users else dmuser
         super(SlackDMChannel, self).__init__(eventrouter, **kwargs)
         self.type = 'im'
         self.update_color()
         self.set_name(self.slack_name)
-        self.topic = create_user_status_string(users[dmuser].profile)
+        if dmuser in users:
+            self.topic = create_user_status_string(users[dmuser].profile)
+
+    def set_related_server(self, team):
+        super(SlackDMChannel, self).set_related_server(team)
+        # If the topic hasn't been set then the user is external and needs to
+        # be fetched
+        if not self.topic:
+            s = SlackRequest(self.team.token, 'users.info', {'user': self.slack_name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+            self.eventrouter.receive(s)
 
     def set_name(self, slack_name):
         self.name = slack_name
@@ -2361,8 +2370,15 @@ def handle_usersinfo(user_json, eventrouter, **kwargs):
     channel = team.channels[request_metadata.channel_identifier]
     user_info = user_json['user']
     user_info.update(is_external=True, deleted=False)
-    team.external_users[user_info['id']] = SlackUser(**user_info)
-    channel.update_nicklist(user_info['id'])
+    user = SlackUser(**user_info)
+    team.external_users[user_info['id']] = user
+
+    if channel.type == 'shared':
+        channel.update_nicklist(user_info['id'])
+    elif channel.type == 'im':
+        channel.slack_name = user.name
+        channel.set_topic(create_user_status_string(user.profile))
+
 
 
 ###### New/converted process_ and subprocess_ methods
