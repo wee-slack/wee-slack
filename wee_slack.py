@@ -1530,7 +1530,7 @@ class SlackChannel(object):
 
     def mark_read(self, ts=None, update_remote=True, force=False):
         if not ts:
-            ts = next(self.main_message_keys_reversed(), SlackTS())
+            ts = next(reversed(self.messages), SlackTS())
         if self.new_messages or force:
             if self.channel_buffer:
                 w.buffer_set(self.channel_buffer, "unread", "")
