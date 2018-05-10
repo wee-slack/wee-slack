@@ -13,7 +13,6 @@ import pickle
 import sha
 import os
 import re
-import urllib
 import sys
 import traceback
 import collections
@@ -28,6 +27,13 @@ except ImportError:
         from cStringIO import StringIO
     except ImportError:
         from StringIO import StringIO
+
+try:
+    from urllib.parse import urlencode
+    from urllib.request import urlopen
+except ImportError:
+    from urllib import urlencode
+    from urllib2 import urlopen
 
 from websocket import create_connection, WebSocketConnectionClosedException
 
@@ -937,7 +943,7 @@ class SlackRequest(object):
         post_data["token"] = token
         self.post_data = post_data
         self.params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
-        self.url = 'https://{}/api/{}?{}'.format(self.domain, request, urllib.urlencode(encode_to_utf8(post_data)))
+        self.url = 'https://{}/api/{}?{}'.format(self.domain, request, urlencode(encode_to_utf8(post_data)))
         self.response_id = sha.sha("{}{}".format(self.url, self.start_time)).hexdigest()
         self.retries = kwargs.get('retries', 3)
 #    def __repr__(self):
@@ -3130,7 +3136,7 @@ def command_register(data, current_buffer, args):
         "https://slack.com/api/oauth.access?"
         "client_id={}&client_secret={}&code={}"
     ).format(CLIENT_ID, CLIENT_SECRET, oauth_code)
-    ret = urllib.urlopen(uri).read()
+    ret = urlopen(uri).read()
     d = json.loads(ret)
     if not d["ok"]:
         w.prnt("",
