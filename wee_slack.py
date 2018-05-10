@@ -13,7 +13,6 @@ import json
 import sha
 import os
 import re
-import urllib
 import sys
 import traceback
 import collections
@@ -22,6 +21,11 @@ import random
 import string
 
 from websocket import create_connection, WebSocketConnectionClosedException
+
+try:
+    from urllib.parse import urlencode
+except ImportError:
+    from urllib import urlencode
 
 # hack to make tests possible.. better way?
 try:
@@ -1014,7 +1018,7 @@ class SlackRequest(object):
         post_data["token"] = token
         self.post_data = post_data
         self.params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
-        self.url = 'https://{}/api/{}?{}'.format(self.domain, request, urllib.urlencode(encode_to_utf8(post_data)))
+        self.url = 'https://{}/api/{}?{}'.format(self.domain, request, urlencode(encode_to_utf8(post_data)))
         self.response_id = sha.sha("{}{}".format(self.url, self.start_time)).hexdigest()
         self.retries = kwargs.get('retries', 3)
 #    def __repr__(self):
