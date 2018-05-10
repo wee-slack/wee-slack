@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 def test_send_message(realish_eventrouter, mock_websocket):
     e = realish_eventrouter
@@ -6,7 +7,7 @@ def test_send_message(realish_eventrouter, mock_websocket):
     #u = e.teams[t].users.keys()[0]
 
     #user = e.teams[t].users[u]
-    #print user
+    #print(user)
 
     socket = mock_websocket
     e.teams[t].ws = socket
@@ -16,6 +17,6 @@ def test_send_message(realish_eventrouter, mock_websocket):
     channel = e.teams[t].channels[c]
     channel.send_message('asdf')
 
-    print c
+    print(c)
 
     #assert False

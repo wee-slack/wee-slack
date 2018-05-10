@@ -4,7 +4,7 @@ def test_SlackTeam():
     e = EventRouter()
     #s = SlackTeam('xoxo')
     #e.register_team(s)
-    #print e.queue
-    #print e.handle_next()
+    #print(e.queue)
+    #print(e.handle_next())
     #assert False
 

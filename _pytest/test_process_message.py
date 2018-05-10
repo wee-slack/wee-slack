@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import json
 
 from wee_slack import render
@@ -10,7 +12,7 @@ def test_process_message(realish_eventrouter, mock_websocket):
     u = e.teams[t].users.keys()[0]
 
     user = e.teams[t].users[u]
-    #print user
+    #print(user)
 
     socket = mock_websocket
     e.teams[t].ws = socket
