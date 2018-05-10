@@ -23,6 +23,12 @@ import string
 from websocket import create_connection, WebSocketConnectionClosedException
 
 try:
+    basestring     # Python 2
+    unicode
+except NameError:  # Python 3
+    basestring = unicode = str
+
+try:
     from urllib.parse import urlencode
 except ImportError:
     from urllib import urlencode
@@ -30,7 +36,7 @@ except ImportError:
 # hack to make tests possible.. better way?
 try:
     import weechat
-except:
+except ImportError:
     pass
 
 SCRIPT_NAME = "slack"
@@ -4218,7 +4224,8 @@ def dbg(message, level=0, main_buffer=False, fout=False):
         global debug_string
         message = "DEBUG: {}".format(message)
         if fout:
-            file('/tmp/debug.log', 'a+').writelines(message + '\n')
+            with open('/tmp/debug.log', 'a+') as log_file:
+                log_file.writelines(message + '\n')
         if main_buffer:
                 # w.prnt("", "---------")
                 w.prnt("", "slack: " + message)
