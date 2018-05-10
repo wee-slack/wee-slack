@@ -54,9 +54,8 @@ class FakeWeechat():
     WEECHAT_RC_ERROR = 0
     WEECHAT_RC_OK = 1
     WEECHAT_RC_OK_EAT = 2
-
     def __init__(self):
-        pass
+        self.config = {}
         #print("INITIALIZE FAKE WEECHAT")
     def prnt(*args):
         output = "("
@@ -77,9 +76,11 @@ class FakeWeechat():
     def prefix(self, type):
         return ""
     def config_get_plugin(self, key):
-        return ""
+        return self.config.get(key, "")
     def config_get(self, key):
         return ""
+    def config_set_plugin(self, key, value):
+        self.config[key] = value
     def config_string(self, key):
         return ""
     def color(self, name):
