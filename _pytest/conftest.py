@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import json
 import pytest
 import sys
@@ -18,7 +20,7 @@ class fakewebsocket(object):
     def recv(self):
         return json.dumps(self.returndata.pop(0))
     def send(self, data):
-        print "websocket received: {}".format(data)
+        print("websocket received: {}".format(data))
         return
 
 @pytest.fixture
@@ -55,13 +57,13 @@ class FakeWeechat():
 
     def __init__(self):
         pass
-        #print "INITIALIZE FAKE WEECHAT"
+        #print("INITIALIZE FAKE WEECHAT")
     def prnt(*args):
         output = "("
         for arg in args:
             if arg != None:
                 output += "{}, ".format(arg)
-        print "w.prnt {}".format(output)
+        print("w.prnt {}".format(output))
     def hdata_get(*args):
         return "0x000001"
     def hdata_pointer(*args):
@@ -85,7 +87,7 @@ class FakeWeechat():
     def __getattr__(self, name):
         def method(*args):
             pass
-            #print "called {}".format(name)
+            #print("called {}".format(name))
             #if args:
             #    print "\twith args: {}".format(args)
         return method

@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import pytest
 from wee_slack import EventRouter, ProcessNotImplemented, SlackRequest
 
@@ -35,17 +37,17 @@ def test_EventRouterReceivedata(mock_weechat):
 
     e = EventRouter()
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.startold", {"meh": "blah"}))
-    print context
+    print(context)
     e.receive_httprequest_callback(context, 1, -1, ' {"JSON": "MEH", ', 4)
-    #print len(e.reply_buffer)
+    #print(len(e.reply_buffer))
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.startold", {"meh": "blah"}))
-    print context
+    print(context)
     e.receive_httprequest_callback(context, 1, -1, ' "JSON2": "MEH", ', 4)
-    #print len(e.reply_buffer)
+    #print(len(e.reply_buffer))
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.startold", {"meh": "blah"}))
-    print context
+    print(context)
     e.receive_httprequest_callback(context, 1, 0, ' "JSON3": "MEH"}', 4)
-    #print len(e.reply_buffer)
+    #print(len(e.reply_buffer))
     try:
         e.handle_next()
         e.handle_next()
@@ -54,7 +56,7 @@ def test_EventRouterReceivedata(mock_weechat):
     except:
         pass
 
-    print e.context
+    print(e.context)
     #assert False
 
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.start", {"meh": "blah"}))
@@ -63,18 +65,18 @@ def test_EventRouterReceivedata(mock_weechat):
     e.receive_httprequest_callback(context, 1, 0, rtmstartdata[5000:], 4)
     e.handle_next()
 
-    #print len(e.reply_buffer)
+    #print(len(e.reply_buffer))
 
-    #print e.teams
+    #print(e.teams)
 
     for t in e.teams:
-        #print vars(e.teams[t])
+        #print(vars(e.teams[t]))
         for c in e.teams[t].channels:
             pass
-            #print c
+            #print(c)
         for u in e.teams[t].users:
             pass
-            #print vars(u)
+            #print(vars(u))
 
 
 #    e = EventRouter()

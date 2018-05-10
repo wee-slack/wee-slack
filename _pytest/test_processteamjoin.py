@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import glob
 import json
 
@@ -11,7 +13,7 @@ def test_process_team_join(mock_websocket, realish_eventrouter):
     #u = eventrouter.teams[t].users.keys()[0]
 
     #user = eventrouter.teams[t].users[u]
-    #print user
+    #print(user)
 
     #delete charles so we can add him
     del eventrouter.teams[t].users['U4096CBHC']
@@ -23,17 +25,17 @@ def test_process_team_join(mock_websocket, realish_eventrouter):
 
     datafiles = glob.glob("_pytest/data/websocket/1485975606.59-team_join.json")
 
-    print datafiles
+    print(datafiles)
     #assert False
 
     notimplemented = set()
 
     for fname in datafiles:
         try:
-            print "####################"
+            print("####################")
             data = json.loads(open(fname, 'r').read())
             socket.add(data)
-            print data
+            print(data)
             eventrouter.receive_ws_callback(t)
             eventrouter.handle_next()
         except ProcessNotImplemented as e:
@@ -43,11 +45,11 @@ def test_process_team_join(mock_websocket, realish_eventrouter):
             pass
 
     if len(notimplemented) > 0:
-        print "####################"
-        print sorted(notimplemented)
-        print "####################"
+        print("####################")
+        print(sorted(notimplemented))
+        print("####################")
 
-    #print len(eventrouter.queue)
+    #print(len(eventrouter.queue))
     assert len(eventrouter.teams[t].users) == 4
 
 
