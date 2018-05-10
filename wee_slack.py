@@ -10,7 +10,7 @@ from itertools import islice, count
 import textwrap
 import time
 import json
-import sha
+import hashlib
 import os
 import re
 import sys
@@ -254,6 +254,8 @@ def get_nick_color_name(nick):
     info_name_prefix = "irc_" if int(weechat_version) < 0x1050000 else ""
     return w.info_get(info_name_prefix + "nick_color_name", nick)
 
+def sha1_hex(s):
+    return hashlib.sha1(s.encode('utf-8')).hexdigest()
 
 def get_functions_with_prefix(prefix):
     return {name[len(prefix):]: ref for name, ref in globals().items()
@@ -1019,7 +1021,7 @@ class SlackRequest(object):
         self.post_data = post_data
         self.params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
         self.url = 'https://{}/api/{}?{}'.format(self.domain, request, urlencode(encode_to_utf8(post_data)))
-        self.response_id = sha.sha("{}{}".format(self.url, self.start_time)).hexdigest()
+        self.response_id = sha1_hex("{}{}".format(self.url, self.start_time))
         self.retries = kwargs.get('retries', 3)
 #    def __repr__(self):
 #        return "URL: {} Tries: {} ID: {}".format(self.url, self.tries, self.response_id)
@@ -1029,7 +1031,7 @@ class SlackRequest(object):
 
     def tried(self):
         self.tries += 1
-        self.response_id = sha.sha("{}{}".format(self.url, time.time())).hexdigest()
+        self.response_id = sha1_hex("{}{}".format(self.url, time.time()))
 
     def should_try(self):
         return self.tries < self.retries
@@ -1194,7 +1196,7 @@ class SlackTeam(object):
 
     @staticmethod
     def generate_team_hash(nick, subdomain):
-        return str(sha.sha("{}{}".format(nick, subdomain)).hexdigest())
+        return str(sha1_hex("{}{}".format(nick, subdomain)))
 
     def refresh(self):
         self.rename()
@@ -1372,7 +1374,7 @@ class SlackChannelCommon(object):
         ts = SlackTS(ts)
 
         def calc_hash(msg):
-            return sha.sha(str(msg.ts)).hexdigest()
+            return sha1_hex(str(msg.ts))
 
         if ts in self.messages and not self.messages[ts].hash:
             message = self.messages[ts]
