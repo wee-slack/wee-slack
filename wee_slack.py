@@ -20,10 +20,14 @@ import collections
 import ssl
 import random
 import string
+
 try:
-    from cStringIO import StringIO
-except:
-    from StringIO import StringIO
+    from io import StringIO
+except ImportError:
+    try:
+        from cStringIO import StringIO
+    except ImportError:
+        from StringIO import StringIO
 
 from websocket import create_connection, WebSocketConnectionClosedException
 
