@@ -3775,17 +3775,20 @@ class PluginConfig(object):
         return w.WEECHAT_RC_OK
 
     def fetch_setting(self, key):
-        if hasattr(self, 'get_' + key):
-            try:
-                return getattr(self, 'get_' + key)(key)
-            except:
-                return self.settings[key]
-        else:
+        try:
+            return getattr(self, 'get_' + key)(key)
+        except AttributeError:
             # Most settings are on/off, so make get_boolean the default
             return self.get_boolean(key)
+        except:
+            # There was setting-specific getter, but it failed.
+            return self.settings[key]
 
     def __getattr__(self, key):
-        return self.settings[key]
+        try:
+            return self.settings[key]
+        except KeyError:
+            raise AttributeError(key)
 
     def get_boolean(self, key):
         return w.config_string_to_boolean(w.config_get_plugin(key))
