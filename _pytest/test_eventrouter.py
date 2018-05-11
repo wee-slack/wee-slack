@@ -38,15 +38,15 @@ def test_EventRouterReceivedata(mock_weechat):
     e = EventRouter()
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.startold", {"meh": "blah"}))
     print(context)
-    e.receive_httprequest_callback(context, 1, -1, ' {"JSON": "MEH", ', 4)
+    e.receive_httprequest_callback(context, 1, -1, u' {"JSON": "MEH", ', 4)
     #print(len(e.reply_buffer))
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.startold", {"meh": "blah"}))
     print(context)
-    e.receive_httprequest_callback(context, 1, -1, ' "JSON2": "MEH", ', 4)
+    e.receive_httprequest_callback(context, 1, -1, u' "JSON2": "MEH", ', 4)
     #print(len(e.reply_buffer))
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.startold", {"meh": "blah"}))
     print(context)
-    e.receive_httprequest_callback(context, 1, 0, ' "JSON3": "MEH"}', 4)
+    e.receive_httprequest_callback(context, 1, 0, u' "JSON3": "MEH"}', 4)
     #print(len(e.reply_buffer))
     try:
         e.handle_next()
@@ -60,7 +60,7 @@ def test_EventRouterReceivedata(mock_weechat):
     #assert False
 
     context = e.store_context(SlackRequest('xoxoxoxox', "rtm.start", {"meh": "blah"}))
-    rtmstartdata = open('_pytest/data/http/rtm.start.json', 'r').read()
+    rtmstartdata = open('_pytest/data/http/rtm.start.json', 'r').read().decode('utf-8')
     e.receive_httprequest_callback(context, 1, -1, rtmstartdata[:5000], 4)
     e.receive_httprequest_callback(context, 1, 0, rtmstartdata[5000:], 4)
     e.handle_next()
