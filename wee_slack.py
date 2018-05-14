@@ -3142,7 +3142,7 @@ def command_register(data, current_buffer, args):
                             ','.join([tok, d['access_token']]))
 
     w.prnt("", "Success! Added team \"%s\"" % (d['team_name'],))
-    w.prnt("", "Please reload wee-slack with: /script reload slack")
+    w.prnt("", "Please reload wee-slack with: /python reload slack")
 
 
 @slack_buffer_or_ignore
