@@ -39,6 +39,8 @@ Dependencies
 ------------
   * WeeChat 1.3+ http://weechat.org/
   * websocket-client https://pypi.python.org/pypi/websocket-client/
+  * Some distributions package weechats plugin functionalities in separate packages
+    make sure your weechat supports python plugins. Under Debian, install ```weechat-python```
 
 Setup
 ------
