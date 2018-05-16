@@ -3164,12 +3164,12 @@ def command_register_callback(data, command, return_code, out, err):
                 w.config_set_plugin('slack_api_token',
                                     ','.join([tok, d['access_token']]))
 
-                w.prnt("", "Success! Added team \"%s\"" % (d['team_name'],))
-                w.prnt("", "Please reload wee-slack with: /script reload slack")
-                return w.WEECHAT_RC_OK_EAT
-           w.prnt("", "ERROR: problem when trying to get Slack OAuth token. Got 0 length answer. Err: ".format(err))
-           w.prnt("", "Check the network or proxy settings")
-           return w.WEECHAT_RC_OK_EAT
+            w.prnt("", "Success! Added team \"%s\"" % (d['team_name'],))
+            w.prnt("", "Please reload wee-slack with: /script reload slack")
+            return w.WEECHAT_RC_OK_EAT
+        w.prnt("", "ERROR: problem when trying to get Slack OAuth token. Got 0 length answer. Err: ".format(err))
+        w.prnt("", "Check the network or proxy settings")
+        return w.WEECHAT_RC_OK_EAT
     w.prnt("", "ERROR: problem when trying to get Slack OAuth token. Got return code {}. Err: ".format(return_code, err))
     w.prnt("", "Check the network or proxy settings")
     return w.WEECHAT_RC_OK_EAT
