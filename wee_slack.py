@@ -1104,15 +1104,15 @@ class SlackTeam(object):
             if self.ws_url:
                 try:
                     # only http proxy is currenlty supported
-                    proxy_name = weechat.config_string(weechat.config_get('weechat.network.proxy_curl'))
+                    proxy_name = w.config_string(weechat.config_get('weechat.network.proxy_curl'))
                     if proxy_name:
                         proxy_string = "weechat.proxy.{}".format(proxy_name)
-                        proxy_type = weechat.config_string(weechat.config_get("{}.type".format(proxy_string)))
+                        proxy_type = w.config_string(weechat.config_get("{}.type".format(proxy_string)))
                         if proxy_type == "http":
-                            proxy_address = weechat.config_string(weechat.config_get("{}.address".format(proxy_string)))
-                            proxy_port = weechat.config_integer(weechat.config_get("{}.port".format(proxy_string)))
-                            proxy_user = weechat.config_string(weechat.config_get("{}.username".format(proxy_string)))
-                            proxy_password = weechat.config_string(weechat.config_get("{}.password".format(proxy_string)))
+                            proxy_address = w.config_string(weechat.config_get("{}.address".format(proxy_string)))
+                            proxy_port = w.config_integer(weechat.config_get("{}.port".format(proxy_string)))
+                            proxy_user = w.config_string(weechat.config_get("{}.username".format(proxy_string)))
+                            proxy_password = w.config_string(weechat.config_get("{}.password".format(proxy_string)))
 
                     if not proxy_name:
                         ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs)
@@ -3434,15 +3434,15 @@ def command_upload(data, current_buffer, args):
 
     # only http proxy is currenlty supported
     proxy = ""
-    proxy_name = proxy = weechat.config_string(weechat.config_get('weechat.network.proxy_curl'))
+    proxy_name = proxy = w.config_string(weechat.config_get('weechat.network.proxy_curl'))
     if not proxy_name:
         proxy_string = "weechat.proxy.{}".format(proxy_name)
-        proxy_type = weechat.config_integer(weechat.config_get("{}.type".format(proxy_string)))
+        proxy_type = w.config_integer(weechat.config_get("{}.type".format(proxy_string)))
         if proxy_type == "http":
-            proxy_address = weechat.config_string(weechat.config_get("{}.address".format(proxy_string)))
-            proxy_port = weechat.config_string(weechat.config_get("{}.port".format(proxy_string)))
-            proxy_user = weechat.config_string(weechat.config_get("{}.username".format(proxy_string)))
-            proxy_password = weechat.config_string(weechat.config_get("{}.password".format(proxy_string)))
+            proxy_address = w.config_string(weechat.config_get("{}.address".format(proxy_string)))
+            proxy_port = w.config_string(weechat.config_get("{}.port".format(proxy_string)))
+            proxy_user = w.config_string(weechat.config_get("{}.username".format(proxy_string)))
+            proxy_password = w.config_string(weechat.config_get("{}.password".format(proxy_string)))
             proxy = "--proxy "
 
             if proxy_user and proxy_password:
