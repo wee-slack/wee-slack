@@ -1103,7 +1103,22 @@ class SlackTeam(object):
             self.connecting = True
             if self.ws_url:
                 try:
-                    ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs)
+                    # only http proxy is currenlty supported
+                    proxy_name = proxy = weechat.config_string(weechat.config_get('weechat.network.proxy_curl'))
+                    if not proxy_name:
+                        proxy_string = "weechat.proxy.{}".format(proxy_name)
+                        proxy_type = weechat.config_string(weechat.config_get("{}.type".format(proxy_string)))
+                        if proxy_type == "http":
+                            proxy_address = weechat.config_string(weechat.config_get("{}.address".format(proxy_string)))
+                            proxy_port = weechat.config_integer(weechat.config_get("{}.port".format(proxy_string)))
+                            proxy_user = weechat.config_string(weechat.config_get("{}.username".format(proxy_string)))
+                            proxy_password = weechat.config_string(weechat.config_get("{}.password".format(proxy_string)))
+
+                            if not proxy_address:
+                                ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs)
+                            else:
+                                ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs, http_proxy_host=proxy_address, http_proxy_port=proxy_port, http_proxy_auth=(proxy_user, proxy_password))
+
                     self.hook = w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
                     ws.sock.setblocking(0)
                     self.ws = ws
@@ -3126,24 +3141,38 @@ def command_register(data, current_buffer, args):
         "https://slack.com/api/oauth.access?"
         "client_id={}&client_secret={}&code={}"
     ).format(CLIENT_ID, CLIENT_SECRET, oauth_code)
-    ret = urllib.urlopen(uri).read()
-    d = json.loads(ret)
-    if not d["ok"]:
-        w.prnt("",
-            "ERROR: Couldn't get Slack OAuth token: {}".format(d['error']))
-        return
+    params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
+    w.hook_process_hashtable('url:', params, config.slack_timeout, "", "")
+    w.hook_process_hashtable("url:{}".format(uri), params, config.slack_timeout, "command_register_callback", "")
+    return
 
-    if config.is_default('slack_api_token'):
-        w.config_set_plugin('slack_api_token', d['access_token'])
-    else:
-        # Add new token to existing set, joined by comma.
-        tok = config.get_string('slack_api_token')
-        w.config_set_plugin('slack_api_token',
-                            ','.join([tok, d['access_token']]))
+@utf8_decode
+def command_register_callback(data, command, return_code, out, err):
+    if return_code == 0:
+        if len(out) > 0:
+            d = json.loads(out)
+            if not d["ok"]:
+                w.prnt("",
+                    "ERROR: Couldn't get Slack OAuth token: {}".format(d['error']))
+                return w.WEECHAT_RC_OK_EAT
 
-    w.prnt("", "Success! Added team \"%s\"" % (d['team_name'],))
-    w.prnt("", "Please reload wee-slack with: /python reload slack")
+            if config.is_default('slack_api_token'):
+                w.config_set_plugin('slack_api_token', d['access_token'])
+            else:
+                # Add new token to existing set, joined by comma.
+                tok = config.get_string('slack_api_token')
+                w.config_set_plugin('slack_api_token',
+                                    ','.join([tok, d['access_token']]))
 
+                w.prnt("", "Success! Added team \"%s\"" % (d['team_name'],))
+                w.prnt("", "Please reload wee-slack with: /script reload slack")
+                return w.WEECHAT_RC_OK_EAT
+           w.prnt("", "ERROR: problem when trying to get Slack OAuth token. Got 0 length answer. Err: ".format(err))
+           w.prnt("", "Check the network or proxy settings")
+           return w.WEECHAT_RC_OK_EAT
+    w.prnt("", "ERROR: problem when trying to get Slack OAuth token. Got return code {}. Err: ".format(return_code, err))
+    w.prnt("", "Check the network or proxy settings")
+    return w.WEECHAT_RC_OK_EAT
 
 @slack_buffer_or_ignore
 @utf8_decode
@@ -3404,9 +3433,27 @@ def command_upload(data, current_buffer, args):
     if ' ' in file_path:
         file_path = file_path.replace(' ', '\ ')
 
-    command = 'curl -F file=@{} -F channels={} -F token={} {}'.format(file_path, channel.identifier, team.token, url)
-    w.hook_process(command, config.slack_timeout, '', '')
+    # only http proxy is currenlty supported
+    proxy = ""
+    proxy_name = proxy = weechat.config_string(weechat.config_get('weechat.network.proxy_curl'))
+    if not proxy_name:
+        proxy_string = "weechat.proxy.{}".format(proxy_name)
+        proxy_type = weechat.config_integer(weechat.config_get("{}.type".format(proxy_string)))
+        if proxy_type == "http":
+            proxy_address = weechat.config_string(weechat.config_get("{}.address".format(proxy_string)))
+            proxy_port = weechat.config_string(weechat.config_get("{}.port".format(proxy_string)))
+            proxy_user = weechat.config_string(weechat.config_get("{}.username".format(proxy_string)))
+            proxy_password = weechat.config_string(weechat.config_get("{}.password".format(proxy_string)))
+            proxy = "--proxy "
 
+            if proxy_user and proxy_password:
+                proxy = "{}{}:{}@".format(proxy,proxy_user,proxy_password)
+                proxy = "{}{}".format(proxy,proxy_address)
+                if proxy_port:
+                    proxy = "{}:{}".format(proxy,proxy_port)
+
+    command = 'curl -F file=@{} -F channels={} -F token={} {} {}'.format(file_path, channel.identifier, team.token, proxy, url)
+    w.hook_process(command, config.slack_timeout, '', '')
 
 @utf8_decode
 def away_command_cb(data, current_buffer, args):
