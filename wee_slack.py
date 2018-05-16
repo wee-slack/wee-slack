@@ -1104,8 +1104,8 @@ class SlackTeam(object):
             if self.ws_url:
                 try:
                     # only http proxy is currenlty supported
-                    proxy_name = proxy = weechat.config_string(weechat.config_get('weechat.network.proxy_curl'))
-                    if not proxy_name:
+                    proxy_name = weechat.config_string(weechat.config_get('weechat.network.proxy_curl'))
+                    if proxy_name:
                         proxy_string = "weechat.proxy.{}".format(proxy_name)
                         proxy_type = weechat.config_string(weechat.config_get("{}.type".format(proxy_string)))
                         if proxy_type == "http":
@@ -1114,11 +1114,10 @@ class SlackTeam(object):
                             proxy_user = weechat.config_string(weechat.config_get("{}.username".format(proxy_string)))
                             proxy_password = weechat.config_string(weechat.config_get("{}.password".format(proxy_string)))
 
-                            if not proxy_address:
-                                ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs)
-                            else:
-                                ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs, http_proxy_host=proxy_address, http_proxy_port=proxy_port, http_proxy_auth=(proxy_user, proxy_password))
-
+                    if not proxy_name:
+                        ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs)
+                    else:
+                        ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs, http_proxy_host=proxy_address, http_proxy_port=proxy_port, http_proxy_auth=(proxy_user, proxy_password))
                     self.hook = w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
                     ws.sock.setblocking(0)
                     self.ws = ws
