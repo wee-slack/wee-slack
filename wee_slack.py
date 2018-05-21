@@ -2144,6 +2144,10 @@ def handle_rtmstart(login_data, eventrouter):
     if not login_data["ok"]:
         w.prnt("", "ERROR: Failed connecting to Slack with token starting with {}: {}"
                .format(metadata.token[:15], login_data["error"]))
+        if not re.match(r"^xo\w\w(-\d+){3}-[0-9a-f]+$", metadata.token):
+            w.prnt("", "ERROR: Token does not look like a valid Slack token. "
+                   "Ensure it is a valid token and not just a OAuth code.")
+
         return
 
     # Let's reuse a team if we have it already.
