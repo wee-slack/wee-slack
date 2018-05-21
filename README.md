@@ -120,7 +120,7 @@ If you don't want to store your API token in plaintext you can use the secure fe
 /set plugins.var.python.slack.slack_api_token ${sec.data.slack_token}
 ```
 
-##### Optional: If you would like to connect to multiple groups, use the above command with multiple tokens separated by commas. (NO SPACES)
+##### Optional: If you would like to connect to multiple groups, use the above command with multiple tokens separated by commas.
 
 ```
 /set plugins.var.python.slack.slack_api_token [token1],[token2],[token3]
