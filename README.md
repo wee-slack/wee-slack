@@ -94,7 +94,7 @@ with Slack. Once you've accomplished this, copy the "code" portion of the URL in
 the browser and pass it to this command:
 
 ```
-/slack register [YOUR_SLACK_TOKEN]
+/slack register [CODE_FROM_URL]
 ```
 
 Your Slack team is now added, and you can complete setup by restarting the
