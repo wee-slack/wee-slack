@@ -271,8 +271,11 @@ Show channel name in hotlist after activity
 ```
 /set weechat.look.hotlist_names_level 14
 ```
+
 Development
 -----------------
+
+To run the tests, create a virtualenv and pip install from the `requirements.txt`. Then `pytest` to run them locally.
 
 Enable debug mode and change debug level (default 3, decrease to increase logging and vice versa):
 
@@ -280,12 +283,10 @@ Enable debug mode and change debug level (default 3, decrease to increase loggin
 /set plugins.var.python.slack.record_events true
 ```
 
-To run the tests, create a virtualenv and pip install from the `requirements.txt`. Then `pytest` to run them locally.
-
-
 Dump the JSON responses in `/tmp/weeslack-debug/`. Requires a script reload.
 ```
-/set plugins.var.python.slack.record_events true
+/set plugins.var.python.slack.debug_mode on
+/set plugins.var.python.slack.debug_level 2
 ```
 
 Support
