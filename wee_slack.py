@@ -3211,7 +3211,7 @@ def command_register_callback(data, command, return_code, out, err):
                             ','.join([tok, d['access_token']]))
 
     w.prnt("", "Success! Added team \"%s\"" % (d['team_name'],))
-    w.prnt("", "Please reload wee-slack with: /script reload slack")
+    w.prnt("", "Please reload wee-slack with: /python reload slack")
     return w.WEECHAT_RC_OK_EAT
 
 
