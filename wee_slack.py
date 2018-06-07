@@ -1184,7 +1184,8 @@ class SlackTeam(object):
         self.send_to_websocket({
             "type": "presence_sub",
             "ids": users,
-            }, expect_reply=False)
+        }, expect_reply=False)
+
 
 class SlackChannel(object):
     """
@@ -1372,7 +1373,6 @@ class SlackChannel(object):
         if update_remote and not self.eventrouter.shutting_down:
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
-
 
     def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, **kwargs):
         data = "{}\t{}".format(format_nick(nick), text)
@@ -1574,10 +1574,10 @@ class SlackChannel(object):
         # if they do, use the existing pointer
         here = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_HERE)
         if not here:
-           here = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
+            here = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_HERE, "weechat.color.nicklist_group", 1)
         afk = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_AWAY)
         if not afk:
-           afk = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
+            afk = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
 
         if user and len(self.members) < 1000:
             user = self.team.users[user]
@@ -2157,7 +2157,11 @@ def handle_rtmstart(login_data, eventrouter):
 
     if not login_data["ok"]:
         w.prnt("", "ERROR: Failed connecting to Slack with token starting with {}: {}"
-            .format(metadata.token[:15], login_data["error"]))
+               .format(metadata.token[:15], login_data["error"]))
+        if not re.match(r"^xo\w\w(-\d+){3}-[0-9a-f]+$", metadata.token):
+            w.prnt("", "ERROR: Token does not look like a valid Slack token. "
+                   "Ensure it is a valid token and not just a OAuth code.")
+
         return
 
     # Let's reuse a team if we have it already.
@@ -2230,6 +2234,7 @@ def handle_channelsinfo(channel_json, eventrouter, **kwargs):
     channel.set_unread_count_display(channel_json['channel']['unread_count_display'])
     channel.set_members(channel_json['channel']['members'])
 
+
 def handle_groupsinfo(group_json, eventrouter, **kwargs):
     request_metadata = pickle.loads(group_json["wee_slack_request_metadata"])
     team = eventrouter.teams[request_metadata.team_hash]
@@ -2237,6 +2242,7 @@ def handle_groupsinfo(group_json, eventrouter, **kwargs):
     unread_count_display = group_json['group']['unread_count_display']
     group_id = group_json['group']['id']
     group.set_unread_count_display(unread_count_display)
+
 
 def handle_conversationsopen(conversation_json, eventrouter, object_name='channel', **kwargs):
     request_metadata = pickle.loads(conversation_json["wee_slack_request_metadata"])
@@ -2284,10 +2290,11 @@ def handle_history(message_json, eventrouter, **kwargs):
     for message in reversed(message_json["messages"]):
         process_message(message, eventrouter, **kwargs)
 
-###### New/converted process_ and subprocess_ methods
 
+###### New/converted process_ and subprocess_ methods
 def process_hello(message_json, eventrouter, **kwargs):
     kwargs['team'].subscribe_users_presence()
+
 
 def process_reconnect_url(message_json, eventrouter, **kwargs):
     kwargs['team'].set_reconnect_url(message_json['url'])
@@ -2635,8 +2642,8 @@ def process_emoji_changed(message_json, eventrouter, **kwargs):
     team = kwargs['team']
     team.load_emoji_completions()
 
-###### New module/global methods
 
+###### New module/global methods
 def render_formatting(text):
     text = re.sub(r'(^| )\*([^*]+)\*([^a-zA-Z0-9_]|$)',
                   r'\1{}\2{}\3'.format(w.color(config.render_bold_as),
@@ -3076,6 +3083,7 @@ def topic_command_cb(data, current_buffer, command):
         EVENTROUTER.receive(s)
     return w.WEECHAT_RC_OK_EAT
 
+
 @slack_buffer_or_ignore
 @utf8_decode
 def whois_command_cb(data, current_buffer, command):
@@ -3104,6 +3112,7 @@ def whois_command_cb(data, current_buffer, command):
     else:
         team.buffer_prnt("[{}]: No such user".format(user))
     return w.WEECHAT_RC_OK_EAT
+
 
 @slack_buffer_or_ignore
 @utf8_decode
@@ -3491,7 +3500,7 @@ def command_status(data, current_buffer, args):
         emoji = split_args[1] if len(split_args) > 1 else ""
         text = split_args[2] if len(split_args) > 2 else ""
 
-        profile = {"status_text":text,"status_emoji":emoji}
+        profile = {"status_text": text, "status_emoji": emoji}
 
         s = SlackRequest(team.token, "users.profile.set", {"profile": profile}, team_hash=team.team_hash)
         EVENTROUTER.receive(s)
@@ -3667,11 +3676,10 @@ def dbg(message, level=0, main_buffer=False, fout=False):
                 # w.prnt(slack_debug, "---------")
                 w.prnt(slack_debug, message)
 
+
 ###### Config code
-
-Setting = collections.namedtuple('Setting', ['default', 'desc'])
-
 class PluginConfig(object):
+    Setting = collections.namedtuple('Setting', ['default', 'desc'])
     # Default settings.
     # These are, initially, each a (default, desc) tuple; the former is the
     # default value of the setting, in the (string) format that weechat
@@ -3900,13 +3908,14 @@ def trace_calls(frame, event, arg):
     f.flush()
     return
 
+
 def initiate_connection(token, retries=3):
     return SlackRequest(token,
-            'rtm.start',
-            {"batch_presence_aware": 1 },
-            retries=retries)
+                        'rtm.start',
+                        {"batch_presence_aware": 1},
+                        retries=retries)
 
-# Main
+
 if __name__ == "__main__":
 
     w = WeechatWrapper(weechat)
@@ -3948,7 +3957,7 @@ if __name__ == "__main__":
 
             # attach to the weechat hooks we need
 
-            tokens = config.slack_api_token.split(',')
+            tokens = map(string.strip, config.slack_api_token.split(','))
             for t in tokens:
                 s = initiate_connection(t)
                 EVENTROUTER.receive(s)

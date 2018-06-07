@@ -39,6 +39,8 @@ Dependencies
 ------------
   * WeeChat 1.3+ http://weechat.org/
   * websocket-client https://pypi.python.org/pypi/websocket-client/
+  * Some distributions package weechat's plugin functionalities in separate packages.
+    Be sure that your weechat supports python plugins. Under Debian, install `weechat-python`
 
 Setup
 ------
@@ -94,7 +96,7 @@ with Slack. Once you've accomplished this, copy the "code" portion of the URL in
 the browser and pass it to this command:
 
 ```
-/slack register [YOUR_SLACK_TOKEN]
+/slack register [CODE_FROM_URL]
 ```
 
 Your Slack team is now added, and you can complete setup by restarting the
@@ -120,7 +122,7 @@ If you don't want to store your API token in plaintext you can use the secure fe
 /set plugins.var.python.slack.slack_api_token ${sec.data.slack_token}
 ```
 
-##### Optional: If you would like to connect to multiple groups, use the above command with multiple tokens separated by commas. (NO SPACES)
+##### Optional: If you would like to connect to multiple groups, use the above command with multiple tokens separated by commas.
 
 ```
 /set plugins.var.python.slack.slack_api_token [token1],[token2],[token3]
