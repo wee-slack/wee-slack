@@ -1097,7 +1097,7 @@ class SlackTeam(object):
 
     def is_user_present(self, user_id):
         user = self.users.get(user_id)
-        if user.presence == 'active':
+        if user and user.presence == 'active':
             return True
         else:
             return False
