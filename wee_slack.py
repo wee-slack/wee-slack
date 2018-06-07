@@ -1970,10 +1970,11 @@ class SlackUser(object):
     """
 
     def __init__(self, **kwargs):
-        # We require these two things for a valid object,
-        # the rest we can just learn from slack
         self.identifier = kwargs["id"]
-        self.profile = {}  # in case it's not in kwargs
+        # These attributes may be missing in the response, so we have to make
+        # sure they're set
+        self.profile = {}
+        self.presence = kwargs.get("presence", "unknown")
         self.is_external = False
         for key, value in kwargs.items():
             setattr(self, key, value)
