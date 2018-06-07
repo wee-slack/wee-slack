@@ -966,7 +966,8 @@ class SlackTeam(object):
     Team object under which users and channels live.. Does lots.
     """
 
-    def __init__(self, eventrouter, token, websocket_url, subdomain, nick, myidentifier, users, bots, channels, **kwargs):
+    def __init__(self, eventrouter, token, websocket_url, team_info, nick, myidentifier, users, bots, channels, **kwargs):
+        self.identifier = team_info["id"]
         self.ws_url = websocket_url
         self.connected = False
         self.connecting = False
@@ -976,8 +977,8 @@ class SlackTeam(object):
         self.eventrouter = eventrouter
         self.token = token
         self.team = self
-        self.subdomain = subdomain
-        self.domain = subdomain + ".slack.com"
+        self.subdomain = team_info["domain"]
+        self.domain = self.subdomain + ".slack.com"
         self.preferred_name = self.domain
         self.nick = nick
         self.myidentifier = myidentifier
@@ -1969,14 +1970,15 @@ class SlackUser(object):
     Represends an individual slack user. Also where you set their name formatting.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, originating_team_id, **kwargs):
         self.identifier = kwargs["id"]
         # These attributes may be missing in the response, so we have to make
         # sure they're set
         self.profile = {}
         self.presence = kwargs.get("presence", "unknown")
         self.deleted = kwargs.get("deleted", False)
-        self.is_external = "is_stranger" in kwargs
+        self.is_external = (not kwargs.get("is_bot") and
+                kwargs.get("team_id") != originating_team_id)
         for key, value in kwargs.items():
             setattr(self, key, value)
 
@@ -2018,8 +2020,8 @@ class SlackBot(SlackUser):
     Basically the same as a user, but split out to identify and for future
     needs
     """
-    def __init__(self, **kwargs):
-        super(SlackBot, self).__init__(**kwargs)
+    def __init__(self, originating_team_id, **kwargs):
+        super(SlackBot, self).__init__(originating_team_id, is_bot=True, **kwargs)
 
 
 class SlackMessage(object):
@@ -2215,11 +2217,11 @@ def handle_rtmstart(login_data, eventrouter):
 
         users = {}
         for item in login_data["users"]:
-            users[item["id"]] = SlackUser(**item)
+            users[item["id"]] = SlackUser(login_data['team']['id'], **item)
 
         bots = {}
         for item in login_data["bots"]:
-            bots[item["id"]] = SlackBot(**item)
+            bots[item["id"]] = SlackBot(login_data['team']['id'], **item)
 
         channels = {}
         for item in login_data["channels"]:
@@ -2241,7 +2243,7 @@ def handle_rtmstart(login_data, eventrouter):
             eventrouter,
             metadata.token,
             login_data['url'],
-            login_data["team"]["domain"],
+            login_data["team"],
             login_data["self"]["name"],
             login_data["self"]["id"],
             users,
@@ -2355,7 +2357,7 @@ def handle_usersinfo(user_json, eventrouter, **kwargs):
     team = eventrouter.teams[request_metadata.team_hash]
     channel = team.channels[request_metadata.channel_identifier]
     user_info = user_json['user']
-    user = SlackUser(**user_info)
+    user = SlackUser(team.identifier, **user_info)
     team.users[user_info['id']] = user
 
     if channel.type == 'shared':
@@ -2426,7 +2428,7 @@ def process_user_typing(message_json, eventrouter, **kwargs):
 def process_team_join(message_json, eventrouter, **kwargs):
     user = message_json['user']
     team = kwargs["team"]
-    team.users[user["id"]] = SlackUser(**user)
+    team.users[user["id"]] = SlackUser(team.identifier, **user)
 
 
 def process_pong(message_json, eventrouter, **kwargs):
