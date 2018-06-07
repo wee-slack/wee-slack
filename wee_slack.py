@@ -190,6 +190,46 @@ class WeechatWrapper(object):
         return self.wrap_for_utf8(self.wrapped_class.prnt_date_tags)(buffer, date, tags, message)
 
 
+class ProxyWrapper(object):
+    def __init__(self):
+        self.proxy_name = w.config_string(weechat.config_get('weechat.network.proxy_curl'))
+        self.proxy_string = ""
+        self.proxy_type = ""
+        self.proxy_address = ""
+        self.proxy_port = ""
+        self.proxy_user = ""
+        self.proxy_password = ""
+        self.has_proxy = False
+        
+        if self.proxy_name:
+            self.proxy_string = "weechat.proxy.{}".format(self.proxy_name)
+            self.proxy_type = w.config_string(weechat.config_get("{}.type".format(self.proxy_string)))
+            if self.proxy_type == "http":
+                self.proxy_address = w.config_string(weechat.config_get("{}.address".format(self.proxy_string)))
+                self.proxy_port = w.config_integer(weechat.config_get("{}.port".format(self.proxy_string)))
+                self.proxy_user = w.config_string(weechat.config_get("{}.username".format(self.proxy_string)))
+                self.proxy_password = w.config_string(weechat.config_get("{}.password".format(self.proxy_string)))
+                self.has_proxy = True
+            else:
+                w.prnt("", "\nWarning: weechat.network.proxy_curl is set to {} (name : {}, conf string : {})type. Only HTTP proxy is supported.\n\n".format(self.proxy_type, self.proxy_name, self.proxy_string))
+        
+        def curl(self):
+            if not self.has_proxy:
+                return ""
+            
+            if self.proxy_user and self.proxy_password:
+                user = "{}:{}@".format(self.proxy_user, self.proxy_password)
+            else:
+                user = ""
+                    
+            if self.proxy_port:
+                port = ":{}".format(self.proxy_port)
+            else:
+                port= ""
+                
+            return "--proxy {}{}{}".format(user, self.proxy_address, port)
+
+
 ##### Helpers
 
 def get_nick_color_name(nick):
@@ -1104,20 +1144,11 @@ class SlackTeam(object):
             if self.ws_url:
                 try:
                     # only http proxy is currenlty supported
-                    proxy_name = w.config_string(weechat.config_get('weechat.network.proxy_curl'))
-                    if proxy_name:
-                        proxy_string = "weechat.proxy.{}".format(proxy_name)
-                        proxy_type = w.config_string(weechat.config_get("{}.type".format(proxy_string)))
-                        if proxy_type == "http":
-                            proxy_address = w.config_string(weechat.config_get("{}.address".format(proxy_string)))
-                            proxy_port = w.config_integer(weechat.config_get("{}.port".format(proxy_string)))
-                            proxy_user = w.config_string(weechat.config_get("{}.username".format(proxy_string)))
-                            proxy_password = w.config_string(weechat.config_get("{}.password".format(proxy_string)))
-
-                    if not proxy_name:
-                        ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs)
+                    if proxy.has_proxy == True:
+                        ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs, http_proxy_host=proxy.proxy_address, http_proxy_port=proxy.proxy_port, http_proxy_auth=(proxy.proxy_user, proxy.proxy_password))
                     else:
-                        ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs, http_proxy_host=proxy_address, http_proxy_port=proxy_port, http_proxy_auth=(proxy_user, proxy_password))
+                        ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs)
+
                     self.hook = w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
                     ws.sock.setblocking(0)
                     self.ws = ws
@@ -3152,35 +3183,37 @@ def command_register(data, current_buffer, args):
     params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
     w.hook_process_hashtable('url:', params, config.slack_timeout, "", "")
     w.hook_process_hashtable("url:{}".format(uri), params, config.slack_timeout, "command_register_callback", "")
-    return
 
 @utf8_decode
 def command_register_callback(data, command, return_code, out, err):
-    if return_code == 0:
-        if len(out) > 0:
-            d = json.loads(out)
-            if not d["ok"]:
-                w.prnt("",
-                    "ERROR: Couldn't get Slack OAuth token: {}".format(d['error']))
-                return w.WEECHAT_RC_OK_EAT
-
-            if config.is_default('slack_api_token'):
-                w.config_set_plugin('slack_api_token', d['access_token'])
-            else:
-                # Add new token to existing set, joined by comma.
-                tok = config.get_string('slack_api_token')
-                w.config_set_plugin('slack_api_token',
-                                    ','.join([tok, d['access_token']]))
-
-            w.prnt("", "Success! Added team \"%s\"" % (d['team_name'],))
-            w.prnt("", "Please reload wee-slack with: /script reload slack")
-            return w.WEECHAT_RC_OK_EAT
+    if return_code != 0:
+        w.prnt("", "ERROR: problem when trying to get Slack OAuth token. Got return code {}. Err: ".format(return_code, err))
+        w.prnt("", "Check the network or proxy settings")
+        return w.WEECHAT_RC_OK_EAT
+    
+    if len(out) <= 0:
         w.prnt("", "ERROR: problem when trying to get Slack OAuth token. Got 0 length answer. Err: ".format(err))
         w.prnt("", "Check the network or proxy settings")
         return w.WEECHAT_RC_OK_EAT
-    w.prnt("", "ERROR: problem when trying to get Slack OAuth token. Got return code {}. Err: ".format(return_code, err))
-    w.prnt("", "Check the network or proxy settings")
+
+    d = json.loads(out)
+    if not d["ok"]:
+        w.prnt("",
+               "ERROR: Couldn't get Slack OAuth token: {}".format(d['error']))
+        return w.WEECHAT_RC_OK_EAT
+
+    if config.is_default('slack_api_token'):
+        w.config_set_plugin('slack_api_token', d['access_token'])
+    else:
+        # Add new token to existing set, joined by comma.
+        tok = config.get_string('slack_api_token')
+        w.config_set_plugin('slack_api_token',
+                            ','.join([tok, d['access_token']]))
+
+    w.prnt("", "Success! Added team \"%s\"" % (d['team_name'],))
+    w.prnt("", "Please reload wee-slack with: /script reload slack")
     return w.WEECHAT_RC_OK_EAT
+
 
 @slack_buffer_or_ignore
 @utf8_decode
@@ -3442,24 +3475,7 @@ def command_upload(data, current_buffer, args):
         file_path = file_path.replace(' ', '\ ')
 
     # only http proxy is currenlty supported
-    proxy = ""
-    proxy_name = proxy = w.config_string(weechat.config_get('weechat.network.proxy_curl'))
-    if not proxy_name:
-        proxy_string = "weechat.proxy.{}".format(proxy_name)
-        proxy_type = w.config_integer(weechat.config_get("{}.type".format(proxy_string)))
-        if proxy_type == "http":
-            proxy_address = w.config_string(weechat.config_get("{}.address".format(proxy_string)))
-            proxy_port = w.config_string(weechat.config_get("{}.port".format(proxy_string)))
-            proxy_user = w.config_string(weechat.config_get("{}.username".format(proxy_string)))
-            proxy_password = w.config_string(weechat.config_get("{}.password".format(proxy_string)))
-            proxy = "--proxy "
-
-            if proxy_user and proxy_password:
-                proxy = "{}{}:{}@".format(proxy,proxy_user,proxy_password)
-                proxy = "{}{}".format(proxy,proxy_address)
-                if proxy_port:
-                    proxy = "{}:{}".format(proxy,proxy_port)
-
+    proxy_string = proxy.curl()
     command = 'curl -F file=@{} -F channels={} -F token={} {} {}'.format(file_path, channel.identifier, team.token, proxy, url)
     w.hook_process(command, config.slack_timeout, '', '')
 
@@ -3922,6 +3938,9 @@ if __name__ == "__main__":
 
     if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
                   SCRIPT_DESC, "script_unloaded", ""):
+
+        global proxy
+        proxy = ProxyWrapper()
 
         weechat_version = w.info_get("version_number", "") or 0
         if int(weechat_version) < 0x1030000:
