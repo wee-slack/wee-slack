@@ -225,7 +225,7 @@ class ProxyWrapper(object):
             if self.proxy_port:
                 port = ":{}".format(self.proxy_port)
             else:
-                port= ""
+                port = ""
                 
             return "--proxy {}{}{}".format(user, self.proxy_address, port)
 
@@ -1143,7 +1143,8 @@ class SlackTeam(object):
             self.connecting = True
             if self.ws_url:
                 try:
-                    # only http proxy is currenlty supported
+                    # only http proxy is currently supported
+                    proxy = ProxyWrapper()
                     if proxy.has_proxy == True:
                         ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs, http_proxy_host=proxy.proxy_address, http_proxy_port=proxy.proxy_port, http_proxy_auth=(proxy.proxy_user, proxy.proxy_password))
                     else:
@@ -3475,8 +3476,9 @@ def command_upload(data, current_buffer, args):
         file_path = file_path.replace(' ', '\ ')
 
     # only http proxy is currenlty supported
+    proxy = ProxyWrapper()
     proxy_string = proxy.curl()
-    command = 'curl -F file=@{} -F channels={} -F token={} {} {}'.format(file_path, channel.identifier, team.token, proxy, url)
+    command = 'curl -F file=@{} -F channels={} -F token={} {} {}'.format(file_path, channel.identifier, team.token, proxy_string, url)
     w.hook_process(command, config.slack_timeout, '', '')
 
 @utf8_decode
@@ -3938,9 +3940,6 @@ if __name__ == "__main__":
 
     if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
                   SCRIPT_DESC, "script_unloaded", ""):
-
-        global proxy
-        proxy = ProxyWrapper()
 
         weechat_version = w.info_get("version_number", "") or 0
         if int(weechat_version) < 0x1030000:
