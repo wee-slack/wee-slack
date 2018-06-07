@@ -989,7 +989,6 @@ class SlackTeam(object):
         except:
             self.channels = channels
         self.users = users
-        self.external_users = {}
         self.bots = bots
         self.team_hash = SlackTeam.generate_team_hash(self.nick, self.subdomain)
         self.name = self.domain
@@ -1079,12 +1078,6 @@ class SlackTeam(object):
 
     def get_username_map(self):
         return {v.name: k for k, v in self.users.iteritems()}
-
-    def get_user(self, user_id):
-        if user_id in self.users:
-            return self.users[user_id]
-        elif user_id in self.external_users:
-            return self.external_users[user_id]
 
     def get_team_hash(self):
         return self.team_hash
@@ -1588,7 +1581,7 @@ class SlackChannel(object):
                 external = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_EXTERNAL, 'weechat.color.nicklist_group', 2)
 
         if user and len(self.members) < 1000:
-            user = self.team.get_user(user)
+            user = self.team.users.get(user)
             # External users that have left shared channels won't exist
             if not user or user.deleted:
                 return
@@ -1609,7 +1602,7 @@ class SlackChannel(object):
             if len(self.members) < 1000:
                 try:
                     for user in self.members:
-                        user = self.team.get_user(user)
+                        user = self.team.users.get(user)
                         if user.deleted:
                             continue
                         nick_group = afk
@@ -1821,8 +1814,7 @@ class SlackSharedChannel(SlackChannel):
 
     def get_history(self, slow_queue=False):
         # Get info for external users in the channel
-        all_users = set(self.team.users.keys()) | set(self.team.external_users.keys())
-        for user in self.members - all_users:
+        for user in self.members - set(self.team.users.keys()):
             s = SlackRequest(self.team.token, 'users.info', {'user': user}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
         super(SlackSharedChannel, self).get_history(slow_queue)
@@ -2092,7 +2084,7 @@ class SlackMessage(object):
             if self.message_json['user'] == self.team.myidentifier:
                 u = self.team.users[self.team.myidentifier]
             else:
-                u = self.team.get_user(self.message_json['user'])
+                u = self.team.users.get(self.message_json['user'])
             name = "{}".format(u.formatted_name())
             name_plain = "{}".format(u.formatted_name(enable_color=False))
             if u.is_external:
@@ -2371,7 +2363,7 @@ def handle_usersinfo(user_json, eventrouter, **kwargs):
     user_info = user_json['user']
     user_info.update(is_external=True, deleted=False)
     user = SlackUser(**user_info)
-    team.external_users[user_info['id']] = user
+    team.users[user_info['id']] = user
 
     if channel.type == 'shared':
         channel.update_nicklist(user_info['id'])
@@ -2939,7 +2931,7 @@ def resolve_ref(ref):
         e = EVENTROUTER
         if ref.startswith('@U') or ref.startswith('@W'):
             for t in e.teams.keys():
-                user = e.teams[t].get_user(ref[1:])
+                user = e.teams[t].users.get(ref[1:])
                 if user:
                     name = '@{}'.format(user.name)
                     if user.is_external:
