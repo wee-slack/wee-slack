@@ -1975,7 +1975,8 @@ class SlackUser(object):
         # sure they're set
         self.profile = {}
         self.presence = kwargs.get("presence", "unknown")
-        self.is_external = False
+        self.deleted = kwargs.get("deleted", False)
+        self.is_external = "is_stranger" in kwargs
         for key, value in kwargs.items():
             setattr(self, key, value)
 
@@ -2360,7 +2361,6 @@ def handle_usersinfo(user_json, eventrouter, **kwargs):
     team = eventrouter.teams[request_metadata.team_hash]
     channel = team.channels[request_metadata.channel_identifier]
     user_info = user_json['user']
-    user_info.update(is_external=True, deleted=False)
     user = SlackUser(**user_info)
     team.users[user_info['id']] = user
 
