@@ -79,6 +79,7 @@ pkg install py27-websocket-client py27-six
 #### 2. copy wee_slack.py to ~/.weechat/python/autoload
 ```
 wget https://raw.githubusercontent.com/wee-slack/wee-slack/master/wee_slack.py
+mkdir -p ~/.weechat/python/autoload
 cp wee_slack.py ~/.weechat/python/autoload
 ```
 
