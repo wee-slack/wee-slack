@@ -1664,9 +1664,7 @@ class SlackDMChannel(SlackChannel):
 
     def set_related_server(self, team):
         super(SlackDMChannel, self).set_related_server(team)
-        # If the topic hasn't been set then the user is external and needs to
-        # be fetched
-        if not self.topic:
+        if self.user not in self.team.users:
             s = SlackRequest(self.team.token, 'users.info', {'user': self.slack_name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
 
