@@ -2080,33 +2080,27 @@ class SlackMessage(object):
     def get_sender(self):
         name = ""
         name_plain = ""
-        if 'user' in self.message_json:
-            if self.message_json['user'] == self.team.myidentifier:
-                u = self.team.users[self.team.myidentifier]
-            else:
-                u = self.team.users.get(self.message_json['user'])
-            name = "{}".format(u.formatted_name())
-            name_plain = "{}".format(u.formatted_name(enable_color=False))
-            if u.is_external:
+        user = self.team.users.get(self.message_json.get('user'))
+        if user:
+            name = "{}".format(user.formatted_name())
+            name_plain = "{}".format(user.formatted_name(enable_color=False))
+            if user.is_external:
                 name += config.external_user_suffix
                 name_plain += config.external_user_suffix
         elif 'username' in self.message_json:
-            u = self.message_json["username"]
+            username = self.message_json["username"]
             if self.message_json.get("subtype") == "bot_message":
-                name = "{} :]".format(u)
-                name_plain = "{}".format(u)
+                name = "{} :]".format(username)
+                name_plain = "{}".format(username)
             else:
-                name = "-{}-".format(u)
-                name_plain = "{}".format(u)
+                name = "-{}-".format(username)
+                name_plain = "{}".format(username)
         elif 'service_name' in self.message_json:
             name = "-{}-".format(self.message_json["service_name"])
             name_plain = "{}".format(self.message_json["service_name"])
         elif self.message_json.get('bot_id') in self.team.bots:
             name = "{} :]".format(self.team.bots[self.message_json["bot_id"]].formatted_name())
             name_plain = "{}".format(self.team.bots[self.message_json["bot_id"]].formatted_name(enable_color=False))
-        else:
-            name = ""
-            name_plain = ""
         return (name, name_plain)
 
     def add_reaction(self, reaction, user):
