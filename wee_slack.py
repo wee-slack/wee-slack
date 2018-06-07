@@ -211,23 +211,23 @@ class ProxyWrapper(object):
                 self.proxy_password = w.config_string(weechat.config_get("{}.password".format(self.proxy_string)))
                 self.has_proxy = True
             else:
-                w.prnt("", "\nWarning: weechat.network.proxy_curl is set to {} (name : {}, conf string : {})type. Only HTTP proxy is supported.\n\n".format(self.proxy_type, self.proxy_name, self.proxy_string))
+                w.prnt("", "\nWarning: weechat.network.proxy_curl is set to {} type (name : {}, conf string : {}). Only HTTP proxy is supported.\n\n".format(self.proxy_type, self.proxy_name, self.proxy_string))
         
-        def curl(self):
-            if not self.has_proxy:
-                return ""
-            
-            if self.proxy_user and self.proxy_password:
-                user = "{}:{}@".format(self.proxy_user, self.proxy_password)
-            else:
-                user = ""
+    def curl(self):
+        if not self.has_proxy:
+            return ""
+        
+        if self.proxy_user and self.proxy_password:
+            user = "{}:{}@".format(self.proxy_user, self.proxy_password)
+        else:
+            user = ""
                     
-            if self.proxy_port:
-                port = ":{}".format(self.proxy_port)
-            else:
-                port = ""
+        if self.proxy_port:
+            port = ":{}".format(self.proxy_port)
+        else:
+            port = ""
                 
-            return "--proxy {}{}{}".format(user, self.proxy_address, port)
+        return "--proxy {}{}{}".format(user, self.proxy_address, port)
 
 
 ##### Helpers
