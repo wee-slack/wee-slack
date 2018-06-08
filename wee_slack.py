@@ -2812,6 +2812,11 @@ def unwrap_attachments(message_json, text_before):
                 tx = re.sub(r' *\n[\n ]+', '\n', atext)
                 t.append(prepend_title_text + tx)
                 prepend_title_text = ''
+
+            image_url = attachment.get('image_url', '')
+            if image_url not in text_before_unescaped and image_url != title_link:
+                t.append(image_url)
+
             fields = attachment.get("fields", None)
             if fields:
                 for f in fields:
