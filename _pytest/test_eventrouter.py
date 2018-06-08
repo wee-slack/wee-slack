@@ -1,5 +1,5 @@
 import pytest
-from wee_slack import EventRouter, ProcessNotImplemented, SlackRequest
+from wee_slack import EventRouter, SlackRequest
 
 def test_EventRouter(mock_weechat):
     # Sending valid json adds to the queue.
@@ -24,12 +24,11 @@ def test_EventRouter(mock_weechat):
     assert len(e.queue) == 0
 
     # Handling an event without an associated processor
-    # raises an exception.
+    # shouldn't raise an exception.
     e = EventRouter()
     # Create a function to test we are called
     e.receive_json('{"type": "testfunc"}')
-    with pytest.raises(ProcessNotImplemented):
-        e.handle_next()
+    e.handle_next()
 
 def test_EventRouterReceivedata(mock_weechat):
 

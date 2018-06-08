@@ -496,7 +496,7 @@ class EventRouter(object):
                     elif function_name in self.handlers:
                         self.handlers[function_name](j, self, **kwargs)
                     else:
-                        raise ProcessNotImplemented(function_name)
+                        dbg("Callback not implemented for event: {}".format(function_name))
 
 
 def handle_next(*args):
@@ -3501,15 +3501,6 @@ def command_p(data, current_buffer, args):
     w.prnt("", "{}".format(eval(args)))
 
 ###### NEW EXCEPTIONS
-
-
-class ProcessNotImplemented(Exception):
-    """
-    Raised when we try to call process_(something), but
-    (something) has not been defined as a function.
-    """
-    def __init__(self, function_name):
-        super(ProcessNotImplemented, self).__init__(function_name)
 
 
 class InvalidType(Exception):
