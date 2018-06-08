@@ -1202,6 +1202,7 @@ class SlackChannel(object):
         self.current_short_name = self.name
         self.set_members(kwargs.get('members', []))
         self.unread_count_display = 0
+        self.last_line_from = None
 
     def __eq__(self, compare_str):
         if compare_str == self.slack_name or compare_str == self.formatted_name() or compare_str == self.formatted_name(style="long_default"):
@@ -1360,7 +1361,8 @@ class SlackChannel(object):
             self.eventrouter.receive(s)
 
     def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, **kwargs):
-        data = "{}\t{}".format(format_nick(nick), text)
+        data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
+        self.last_line_from = nick
         ts = SlackTS(timestamp)
         last_read = SlackTS(self.last_read)
         # without this, DMs won't open automatically
@@ -1787,6 +1789,7 @@ class SlackThreadChannel(object):
         self.label = None
         self.members = self.parent_message.channel.members
         self.team = self.parent_message.team
+        self.last_line_from = None
         # self.set_name(self.slack_name)
     # def set_name(self, slack_name):
     #    self.name = "#" + slack_name
@@ -1809,7 +1812,8 @@ class SlackThreadChannel(object):
             w.buffer_set(self.channel_buffer, "hotlist", "-1")
 
     def buffer_prnt(self, nick, text, timestamp, **kwargs):
-        data = "{}\t{}".format(format_nick(nick), text)
+        data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
+        self.last_line_from = nick
         ts = SlackTS(timestamp)
         if self.channel_buffer:
             # backlog messages - we will update the read marker as we print these
@@ -2965,7 +2969,9 @@ def modify_print_time(buffer, new_id, time):
     return w.WEECHAT_RC_OK
 
 
-def format_nick(nick):
+def format_nick(nick, previous_nick=None):
+    if nick == previous_nick:
+        nick = w.config_string(w.config_get('weechat.look.prefix_same_nick')) or nick
     nick_prefix = w.config_string(w.config_get('weechat.look.nick_prefix'))
     nick_prefix_color_name = w.config_string(w.config_get('weechat.color.chat_nick_prefix'))
     nick_prefix_color = w.color(nick_prefix_color_name)
