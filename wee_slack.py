@@ -1099,7 +1099,7 @@ class SlackTeam(object):
                 w.buffer_merge(self.channel_buffer, w.buffer_search_main())
 
     def set_muted_channels(self, muted_str):
-        self.muted_channels = {x for x in muted_str.split(',')}
+        self.muted_channels = {x for x in muted_str.split(',') if x}
 
     def set_highlight_words(self, highlight_str):
         self.highlight_words = {x for x in highlight_str.split(',')}
