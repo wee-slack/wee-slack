@@ -3426,8 +3426,11 @@ def command_talk(data, current_buffer, args):
 
 
 def command_showmuted(data, current_buffer, args):
-    current = w.current_buffer()
-    w.prnt(EVENTROUTER.weechat_controller.buffers[current].team.channel_buffer, str(EVENTROUTER.weechat_controller.buffers[current].team.muted_channels))
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    muted_channels = [team.channels[key].name
+            for key in team.muted_channels if key in team.channels]
+    team.buffer_prnt("Muted channels: {}".format(', '.join(muted_channels)))
+    return w.WEECHAT_RC_OK_EAT
 
 
 @utf8_decode
