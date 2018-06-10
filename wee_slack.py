@@ -3340,7 +3340,7 @@ def whois_command_cb(data, current_buffer, command):
     if u:
         team.buffer_prnt("[{}]: {}".format(user, u.real_name))
         if u.profile.get("status_text"):
-            team.buffer_prnt("[{}]: {} {}".format(user, u.profile.status_emoji, u.profile.status_text))
+            team.buffer_prnt("[{}]: {} {}".format(user, u.profile.get('status_emoji', ''), u.profile.get('status_text', '')))
         team.buffer_prnt("[{}]: Real name: {}".format(user, u.profile.get('real_name_normalized', '')))
         team.buffer_prnt("[{}]: Title: {}".format(user, u.profile.get('title', '')))
         team.buffer_prnt("[{}]: Email: {}".format(user, u.profile.get('email', '')))
