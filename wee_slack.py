@@ -1469,6 +1469,7 @@ class SlackChannel(object):
 
     def change_message(self, ts, text=None, suffix=None):
         ts = SlackTS(ts)
+        m = None
         if ts in self.messages:
             m = self.messages[ts]
             if text:
@@ -1476,7 +1477,11 @@ class SlackChannel(object):
             if suffix:
                 m.change_suffix(suffix)
             text = m.render(force=True)
-        modify_buffer_line(self.channel_buffer, text, ts.major, ts.minor)
+        extended_result = {}
+        modify_buffer_line(self.channel_buffer, text, ts.major, ts.minor, extended_result)
+        if config.explicit_changes and extended_result['matching_lines'] > 0 and m is not None:
+            self.buffer_print(m.sender, text + (' (mod #%d)' % extended_result['line_number']), ts)
+            
         return True
 
     def edit_nth_previous_message(self, n, old, new, flags):
@@ -2933,7 +2938,7 @@ def create_reaction_string(reactions):
     return reaction_string
 
 
-def modify_buffer_line(buffer, new_line, timestamp, time_id):
+def modify_buffer_line(buffer, new_line, timestamp, time_id, extended_result = {}):
     # get a pointer to this buffer's lines
     own_lines = w.hdata_pointer(w.hdata_get('buffer'), buffer, 'own_lines')
     if own_lines:
@@ -2944,6 +2949,9 @@ def modify_buffer_line(buffer, new_line, timestamp, time_id):
         struct_hdata_line_data = w.hdata_get('line_data')
         # keep track of the number of lines with the matching time and id
         number_of_matching_lines = 0
+        # line_number to return
+        extended_result['line_number'] = 1
+        extended_result['matching_lines'] = 0
 
         while line_pointer:
             # get a pointer to the data in line_pointer via layout of struct_hdata_line
@@ -2955,6 +2963,7 @@ def modify_buffer_line(buffer, new_line, timestamp, time_id):
 
                 if timestamp == int(line_timestamp) and int(time_id) == line_time_id:
                     number_of_matching_lines += 1
+                    extended_result['matching_lines'] = number_of_matching_lines
                 elif number_of_matching_lines > 0:
                     # since number_of_matching_lines is non-zero, we have
                     # already reached the message and can stop traversing
@@ -2965,6 +2974,7 @@ def modify_buffer_line(buffer, new_line, timestamp, time_id):
                 return w.WEECHAT_RC_ERROR
             # move backwards one line and try again - exit the while if you hit the end
             line_pointer = w.hdata_move(struct_hdata_line, line_pointer, -1)
+            extended_result['line_number'] += 1
 
         # split the message into at most the number of existing lines
         lines = new_line.split('\n', number_of_matching_lines - 1)
@@ -3735,6 +3745,10 @@ class PluginConfig(object):
         'distracting_channels': Setting(
             default='',
             desc='List of channels to hide.'),
+        'explicit_changes': Setting(
+            default='false',
+            desc='Explicitly add lines to buffer for all changes (edits,'
+            ' reactions, etc.)  Useful for logging and relay clients.'),
         'group_name_prefix': Setting(
             default='&',
             desc='The prefix of buffer names for groups (private channels).'),
