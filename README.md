@@ -39,6 +39,8 @@ Dependencies
 ------------
   * WeeChat 1.3+ http://weechat.org/
   * websocket-client https://pypi.python.org/pypi/websocket-client/
+  * Some distributions package weechat's plugin functionalities in separate packages.
+    Be sure that your weechat supports python plugins. Under Debian, install `weechat-python`
 
 Setup
 ------
@@ -61,6 +63,12 @@ wee-slack doesn't use the Slack IRC gateway. If you currently connect via the ga
 ##### OSX and Linux
 ```
 pip install websocket-client
+```
+
+Note: If you installed weechat with Homebrew, you will have to locate the python runtime environment used.
+If `--with-python@2` was used, you should use:
+```
+sudo /usr/local/opt/python@2/bin/pip2 install websocket_client
 ```
 
 ##### FreeBSD
@@ -94,7 +102,7 @@ with Slack. Once you've accomplished this, copy the "code" portion of the URL in
 the browser and pass it to this command:
 
 ```
-/slack register [YOUR_SLACK_TOKEN]
+/slack register [CODE_FROM_URL]
 ```
 
 Your Slack team is now added, and you can complete setup by restarting the
@@ -120,7 +128,7 @@ If you don't want to store your API token in plaintext you can use the secure fe
 /set plugins.var.python.slack.slack_api_token ${sec.data.slack_token}
 ```
 
-##### Optional: If you would like to connect to multiple groups, use the above command with multiple tokens separated by commas. (NO SPACES)
+##### Optional: If you would like to connect to multiple groups, use the above command with multiple tokens separated by commas.
 
 ```
 /set plugins.var.python.slack.slack_api_token [token1],[token2],[token3]
@@ -249,6 +257,14 @@ To enable tab completion of emojis, copy or symlink the `weemoji.json` file to y
 /set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(emoji)"
 ```
 
+Removing a team
+---------------
+
+You may remove a team by removing its token from the dedicated comma-separated list:
+```
+/set plugins.var.python.slack.slack_api_token "xoxp-XXXXXXXX,xoxp-XXXXXXXX"
+```
+
 Optional settings
 -----------------
 
@@ -272,10 +288,13 @@ Show channel name in hotlist after activity
 /set weechat.look.hotlist_names_level 14
 ```
 
-Debugging
---------------
+Development
+-----------------
+
+To run the tests, create a virtualenv and pip install from the `requirements.txt`. Then `pytest` to run them locally.
 
 Enable debug mode and change debug level (default 3, decrease to increase logging and vice versa):
+
 ```
 /set plugins.var.python.slack.debug_mode on
 /set plugins.var.python.slack.debug_level 2

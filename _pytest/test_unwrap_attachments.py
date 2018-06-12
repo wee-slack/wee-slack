@@ -32,6 +32,21 @@ import pytest
         'input_message': {'attachments': [{
             'title': 'Title',
             'text': 'Attachment text',
+            'title_link': 'http://title.link',
+            'image_url': 'http://image.url',
+            'fallback': 'Fallback',
+        }]},
+        'input_text_before': "",
+        'output': "\n".join([
+            "Title (http://title.link)",
+            "Attachment text",
+            "http://image.url",
+        ]),
+    },
+    {
+        'input_message': {'attachments': [{
+            'title': 'Title',
+            'text': 'Attachment text',
             'title_link': 'http://link?a=1&b=2',
             'from_url': 'http://link?a=1&b=2',
         }]},
