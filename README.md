@@ -113,18 +113,13 @@ wee-slack plugin.
 ```
 
 Alternatively, you can click the "Request token" button at the
-[Slack legacy token page](https://api.slack.com/custom-integrations/legacy-tokens),
-and paste it directly into your settings:
+[Slack legacy token page](https://api.slack.com/custom-integrations/legacy-tokens).
 
-```
-/set plugins.var.python.slack.slack_api_token [YOUR_SLACK_TOKEN]
-```
-
-If you don't want to store your API token in plaintext you can use the secure features of weechat:
+To access your API tokens in weechat you can use the secure features of weechat:
 
 ```
 /secure passphrase this is a super secret password
-/secure set slack_token [YOUR_SLACK_TOKEN]
+/secure set slack_token [YOUR_SLACK_TOKEN],[YOUR_OTHER_SLACK_TOKEN]
 /set plugins.var.python.slack.slack_api_token ${sec.data.slack_token}
 ```
 
