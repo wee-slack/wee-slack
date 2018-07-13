@@ -91,6 +91,18 @@ SLACK_API_TRANSLATOR = {
 
 ###### Decorators have to be up here
 
+def slack_buffer_force(f):
+    """
+    Force to run in a Slack buffer
+    Uses first we find if current_buffer is not a slack buffer
+    """
+    @wraps(f)
+    def wrapper(data, current_buffer, *args, **kwargs):
+        buffers = EVENTROUTER.weechat_controller.buffers
+        if (current_buffer not in buffers) and (len(buffers) > 0):
+            current_buffer = buffers.keys()[0]
+            return f(data, current_buffer, *args, **kwargs)
+    return wrapper
 
 def slack_buffer_or_ignore(f):
     """
@@ -3595,7 +3607,7 @@ def away_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK
 
 
-@slack_buffer_required
+@slack_buffer_force
 def command_away(data, current_buffer, args):
     """
     Sets your status as 'away'
@@ -3627,7 +3639,7 @@ def command_status(data, current_buffer, args):
         EVENTROUTER.receive(s)
 
 
-@slack_buffer_required
+@slack_buffer_force
 def command_back(data, current_buffer, args):
     """
     Sets your status as 'back'
