@@ -2113,6 +2113,13 @@ class SlackMessage(object):
                 message_json['text']
             )
 
+        if message_json.get('upload'):
+            for f in message_json.get('files', []):
+                message_json['text'] = "{} | ({}) - {}".format(
+                    message_json['text'],
+                    f.get('title'),
+                    f.get('url_private'))
+
     def __hash__(self):
         return hash(self.ts)
 
