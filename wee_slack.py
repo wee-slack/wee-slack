@@ -2608,30 +2608,9 @@ def subprocess_message_replied(message_json, eventrouter, channel, team):
 
 
 def subprocess_message_changed(message_json, eventrouter, channel, team):
-    m = message_json.get("message", None)
-    if m:
-        new_message = m
-        # message = SlackMessage(new_message, team, channel)
-        if "attachments" in m:
-            message_json["attachments"] = m["attachments"]
-        if "text" in m:
-            if "text" in message_json:
-                message_json["text"] += m["text"]
-                dbg("added text!")
-            else:
-                message_json["text"] = m["text"]
-        if "fallback" in m:
-            if "fallback" in message_json:
-                message_json["fallback"] += m["fallback"]
-            else:
-                message_json["fallback"] = m["fallback"]
-
-    new_message["text"] += unwrap_attachments(message_json, new_message["text"])
-    if "edited" in new_message:
-        channel.change_message(new_message["ts"], new_message["text"], ' (edited)')
-    else:
-        channel.change_message(new_message["ts"], new_message["text"])
-
+    new_message = message_json.get("message", None)
+    edited = " (edited)" if "edited" in new_message else None
+    channel.change_message(new_message["ts"], new_message["text"], edited)
 
 def subprocess_message_deleted(message_json, eventrouter, channel, team):
     channel.change_message(message_json["deleted_ts"], "(deleted)", '')
