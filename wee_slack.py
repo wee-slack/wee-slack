@@ -1480,14 +1480,12 @@ class SlackChannel(object):
                 del self.hashed_messages[message_hash]
         self.messages = OrderedDict(messages_to_keep)
 
-    def change_message(self, ts, text=None, suffix=None):
+    def change_message(self, ts, text=None):
         ts = SlackTS(ts)
         if ts in self.messages:
             m = self.messages[ts]
             if text:
                 m.change_text(text)
-            if suffix:
-                m.change_suffix(suffix)
             text = m.render(force=True)
         modify_buffer_line(self.channel_buffer, text, ts.major, ts.minor)
         return True
@@ -1938,14 +1936,11 @@ class SlackThreadChannel(object):
             text = message.render()
             # print text
 
-            suffix = ''
-            if 'edited' in message.message_json:
-                suffix = ' (edited)'
             # try:
             #    channel.unread_count += 1
             # except:
             #    channel.unread_count = 1
-            self.buffer_prnt(message.sender, text + suffix, message.ts)
+            self.buffer_prnt(message.sender, text, message.ts)
 
     def send_message(self, message):
         # team = self.eventrouter.teams[self.team]
@@ -2095,7 +2090,6 @@ class SlackMessage(object):
         else:
             senders = self.get_sender()
             self.sender, self.sender_plain = senders[0], senders[1]
-        self.suffix = ''
         self.ts = SlackTS(message_json['ts'])
         text = self.message_json.get('text')
         if text and text.startswith('_') and text.endswith('_') and 'subtype' not in message_json:
@@ -2108,16 +2102,17 @@ class SlackMessage(object):
         return hash(self.ts)
 
     def render(self, force=False):
+        text = render(self.message_json, self.team, self.channel, force)
         if len(self.submessages) > 0:
-            return "{} {} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix, "{}[ Thread: {} Replies: {} ]".format(w.color(config.thread_suffix_color), self.hash or self.ts, len(self.submessages)))
-        return "{} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix)
+            thread_text = "{}[ Thread: {} Replies: {} ]".format(
+                    w.color(config.thread_suffix_color),
+                    self.hash or self.ts,
+                    len(self.submessages))
+            return "{} {}".format(text, thread_text)
+        return text
 
     def change_text(self, new_text):
         self.message_json["text"] = new_text
-        dbg(self.message_json)
-
-    def change_suffix(self, new_suffix):
-        self.suffix = new_suffix
         dbg(self.message_json)
 
     def get_sender(self):
@@ -2517,14 +2512,11 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
             channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, tag_nick=message.sender_plain, **kwargs)
 
         else:
-            suffix = ''
-            if 'edited' in message_json:
-                suffix = ' (edited)'
             try:
                 channel.unread_count_display += 1
             except:
                 channel.unread_count_display = 1
-            channel.buffer_prnt(message.sender, text + suffix, message.ts, tag_nick=message.sender_plain, **kwargs)
+            channel.buffer_prnt(message.sender, text, message.ts, tag_nick=message.sender_plain, **kwargs)
 
         if store:
             channel.store_message(message, team)
@@ -2592,11 +2584,10 @@ def subprocess_message_replied(message_json, eventrouter, channel, team):
 
 def subprocess_message_changed(message_json, eventrouter, channel, team):
     new_message = message_json.get("message", None)
-    edited = " (edited)" if "edited" in new_message else None
-    channel.change_message(new_message["ts"], new_message["text"], edited)
+    channel.change_message(new_message["ts"], new_message["text"])
 
 def subprocess_message_deleted(message_json, eventrouter, channel, team):
-    channel.change_message(message_json["deleted_ts"], "(deleted)", '')
+    channel.change_message(message_json["deleted_ts"], "(deleted)")
 
 
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
@@ -2771,6 +2762,9 @@ def render(message_json, team, channel, force=False):
             text = ""
 
         text = unfurl_refs(text)
+
+        if "edited" in message_json:
+            text += " (edited)"
 
         text += unfurl_refs(unwrap_attachments(message_json, text))
 
