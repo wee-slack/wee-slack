@@ -2113,14 +2113,6 @@ class SlackMessage(object):
                 message_json['text']
             )
 
-        if message_json.get('upload'):
-            parts = [message_json['text']]
-            for f in message_json.get('files', []):
-                parts.append("({}) - {}".format(
-                    f.get('title'),
-                    f.get('url_private')))
-            message_json['text'] = ' | '.join(p for p in parts if p)
-
     def __hash__(self):
         return hash(self.ts)
 
@@ -2791,6 +2783,8 @@ def render(message_json, team, channel, force=False):
 
         text += unfurl_refs(unwrap_attachments(message_json, text))
 
+        text += unfurl_refs(unwrap_files(message_json, text))
+
         text = text.lstrip()
         text = unhtmlescape(text.replace("\t", "    "))
         if message_json.get('mrkdwn', True):
@@ -2958,6 +2952,14 @@ def unwrap_attachments(message_json, text_before):
                 t.append(fallback)
             attachment_texts.append("\n".join([x.strip() for x in t if x]))
     return "\n".join(attachment_texts)
+
+
+def unwrap_files(message_json, text_before):
+    files_texts = ['{} ({})'.format(f['url_private'], f['title'])
+            for f in message_json.get('files', [])]
+    if text_before:
+        files_texts.insert(0, '')
+    return "\n".join(files_texts)
 
 
 def resolve_ref(ref):
