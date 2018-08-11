@@ -1100,6 +1100,8 @@ class SlackTeam(object):
 
     def set_muted_channels(self, muted_str):
         self.muted_channels = {x for x in muted_str.split(',') if x}
+        for channel in self.channels.itervalues():
+            channel.set_highlights()
 
     def set_highlight_words(self, highlight_str):
         self.highlight_words = {x for x in highlight_str.split(',') if x}
@@ -1303,7 +1305,7 @@ class SlackChannel(object):
     def set_unread_count_display(self, count):
         self.unread_count_display = count
         self.new_messages = bool(self.unread_count_display)
-        if self.muted:
+        if self.muted and config.muted_channels_activity != "all":
             return
         for c in range(self.unread_count_display):
             if self.type in ["im", "mpim"]:
@@ -1378,7 +1380,11 @@ class SlackChannel(object):
         return {'@' + self.team.nick, self.team.myidentifier}
 
     def highlights(self):
-        return self.team.highlight_words.union(self.mentions()).union({"!here", "!channel", "!everyone"})
+        personal_highlights = self.team.highlight_words.union(self.mentions())
+        if self.muted and config.muted_channels_activity == "personal_highlights":
+            return personal_highlights
+        else:
+            return personal_highlights.union({"!here", "!channel", "!everyone"})
 
     def set_highlights(self):
         # highlight my own name and any set highlights
@@ -3151,9 +3157,11 @@ def tag(tagset, user=None, muted=False):
     nick_tag = {"nick_{}".format(user or "unknown").replace(" ", "_")}
     slack_tag = {"slack_{}".format(tagset)}
     tags = nick_tag | slack_tag | tagsets[tagset]
-    if muted:
+    if muted and config.muted_channels_activity != "all":
         tags -= {"notify_highlight", "notify_message", "notify_private"}
-        tags |= {"no_highlight", "notify_none"}
+        tags.add("notify_none")
+        if config.muted_channels_activity == "none":
+            tags.add("no_highlight")
     return ",".join(tags)
 
 ###### New/converted command_ commands
@@ -3845,6 +3853,14 @@ class PluginConfig(object):
             desc='When sending underlined text to slack, use this formatting'
             ' character for it. The default ("_") sends it as italics. Use'
             ' "*" to send bold instead.'),
+        'muted_channels_activity': Setting(
+            default='personal_highlights',
+            desc="Control which activity you see from muted channels, either"
+            " none, personal_highlights, all_highlights or all. none: Don't"
+            " show any activity. personal_highlights: Only show personal"
+            " highlights, i.e. not @channel and @here. all_highlights: Show"
+            " all highlights, but not other messages. all: Show all activity,"
+            " like other channels."),
         'never_away': Setting(
             default='false',
             desc='Poke Slack every five minutes so that it never marks you "away".'),
@@ -3973,6 +3989,7 @@ class PluginConfig(object):
     get_external_user_suffix = get_string
     get_group_name_prefix = get_string
     get_map_underline_to = get_string
+    get_muted_channels_activity = get_string
     get_render_bold_as = get_string
     get_render_italic_as = get_string
     get_shared_name_prefix = get_string
