@@ -1485,15 +1485,15 @@ class SlackChannel(object):
 
     def change_message(self, ts, message_json=None, text=None):
         ts = SlackTS(ts)
-        if ts in self.messages:
-            m = self.messages[ts]
-            if message_json:
-                m.message_json.update(message_json)
-            if text:
-                m.change_text(text)
-            text = m.render(force=True)
-        modify_buffer_line(self.channel_buffer, text, ts.major, ts.minor)
-        return True
+        m = self.messages.get(ts)
+        if not m:
+            return
+        if message_json:
+            m.message_json.update(message_json)
+        if text:
+            m.change_text(text)
+        new_text = m.render(force=True)
+        modify_buffer_line(self.channel_buffer, new_text, ts.major, ts.minor)
 
     def edit_nth_previous_message(self, n, old, new, flags):
         message = self.my_last_message(n)
