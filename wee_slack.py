@@ -1455,7 +1455,7 @@ class SlackChannel(object):
 
                 w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
                 modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
-                if backlog:
+                if backlog or tag_nick == self.team.nick:
                     self.mark_read(ts, update_remote=False, force=True)
             except:
                 dbg("Problem processing buffer_prnt")
@@ -1467,7 +1467,6 @@ class SlackChannel(object):
         request = {"type": "message", "channel": self.identifier, "text": message, "_team": self.team.team_hash, "user": self.team.myidentifier}
         request.update(request_dict_ext)
         self.team.send_to_websocket(request)
-        self.mark_read(update_remote=False, force=True)
 
     def store_message(self, message, team, from_me=False):
         if not self.active:
@@ -1911,7 +1910,7 @@ class SlackThreadChannel(object):
             w.buffer_set(self.channel_buffer, "unread", "")
             w.buffer_set(self.channel_buffer, "hotlist", "-1")
 
-    def buffer_prnt(self, nick, text, timestamp, **kwargs):
+    def buffer_prnt(self, nick, text, timestamp, tag_nick=None, **kwargs):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
         self.last_line_from = nick
         ts = SlackTS(timestamp)
@@ -1929,8 +1928,8 @@ class SlackThreadChannel(object):
             # self.new_messages = True
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
             modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
-            # if backlog:
-            #    self.mark_read(ts, update_remote=False, force=True)
+            if tag_nick == self.team.nick:
+                self.mark_read(ts, update_remote=False, force=True)
 
     def get_history(self):
         self.got_history = True
@@ -1952,7 +1951,6 @@ class SlackThreadChannel(object):
         dbg(message)
         request = {"type": "message", "channel": self.parent_message.channel.identifier, "text": message, "_team": self.team.team_hash, "user": self.team.myidentifier, "thread_ts": str(self.parent_message.ts)}
         self.team.send_to_websocket(request)
-        self.mark_read(update_remote=False, force=True)
 
     def open(self, update_remote=True):
         self.create_buffer()
@@ -2549,7 +2547,7 @@ def subprocess_thread_message(message_json, eventrouter, channel, team):
             text = message.render()
             # channel.buffer_prnt(message.sender, text, message.ts, **kwargs)
             if parent_message.thread_channel:
-                parent_message.thread_channel.buffer_prnt(message.sender, text, message.ts)
+                parent_message.thread_channel.buffer_prnt(message.sender, text, message.ts, tag_nick=message.sender_plain)
 
 #    channel = channels.find(message_json["channel"])
 #    server = channel.server
@@ -2628,7 +2626,6 @@ def process_reply(message_json, eventrouter, **kwargs):
         #        channels.find(message_json["channel"]).buffer_prnt(server.nick, m.render(), m.ts)
 
         process_message(m.message_json, eventrouter, channel=channel, team=team)
-        channel.mark_read(update_remote=True, force=True)
         dbg("REPLY {}".format(message_json))
     except KeyError:
         dbg("Unexpected reply {}".format(message_json))
