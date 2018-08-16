@@ -1405,12 +1405,16 @@ class SlackChannel(object):
                 s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"users": self.user, "return_im": True}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
 
-    def destroy_buffer(self, update_remote):
-        if self.channel_buffer is not None:
-            self.channel_buffer = None
+    def clear_messages(self):
+        w.buffer_clear(self.channel_buffer)
         self.messages = OrderedDict()
         self.hashed_messages = {}
         self.got_history = False
+
+    def destroy_buffer(self, update_remote):
+        self.clear_messages()
+        if self.channel_buffer is not None:
+            self.channel_buffer = None
         # if update_remote and not eventrouter.shutting_down:
         self.active = False
         if update_remote and not self.eventrouter.shutting_down:
@@ -1519,7 +1523,7 @@ class SlackChannel(object):
         if not self.got_history:
             # we have probably reconnected. flush the buffer
             if self.team.connected:
-                w.buffer_clear(self.channel_buffer)
+                self.clear_messages()
             self.buffer_prnt('', 'getting channel history...', tagset='backlog')
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE}, team_hash=self.team.team_hash, channel_identifier=self.identifier, clear=True)
             if not slow_queue:
@@ -3429,8 +3433,7 @@ def thread_command_callback(data, current_buffer, args):
 def rehistory_command_callback(data, current_buffer, args):
     current = w.current_buffer()
     channel = EVENTROUTER.weechat_controller.buffers.get(current)
-    channel.got_history = False
-    w.buffer_clear(channel.channel_buffer)
+    channel.clear_messages()
     channel.get_history()
     return w.WEECHAT_RC_OK_EAT
 
