@@ -1483,10 +1483,12 @@ class SlackChannel(object):
                 del self.hashed_messages[message_hash]
         self.messages = OrderedDict(messages_to_keep)
 
-    def change_message(self, ts, text=None):
+    def change_message(self, ts, message_json=None, text=None):
         ts = SlackTS(ts)
         if ts in self.messages:
             m = self.messages[ts]
+            if message_json:
+                m.message_json.update(message_json)
             if text:
                 m.change_text(text)
             text = m.render(force=True)
@@ -2590,10 +2592,10 @@ def subprocess_message_replied(message_json, eventrouter, channel, team):
 
 def subprocess_message_changed(message_json, eventrouter, channel, team):
     new_message = message_json.get("message", None)
-    channel.change_message(new_message["ts"], new_message["text"])
+    channel.change_message(new_message["ts"], message_json=new_message)
 
 def subprocess_message_deleted(message_json, eventrouter, channel, team):
-    channel.change_message(message_json["deleted_ts"], "(deleted)")
+    channel.change_message(message_json["deleted_ts"], text="(deleted)")
 
 
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
