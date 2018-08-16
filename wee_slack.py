@@ -2478,6 +2478,10 @@ def process_pong(message_json, eventrouter, **kwargs):
 def process_message(message_json, eventrouter, store=True, **kwargs):
     channel = kwargs["channel"]
     team = kwargs["team"]
+
+    if SlackTS(message_json["ts"]) in channel.messages:
+        return
+
     # try:
     #  send these subtype messages elsewhere
     known_subtypes = [
