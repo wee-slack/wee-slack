@@ -1590,12 +1590,14 @@ class SlackChannel(object):
         return typing
 
     def mark_read(self, ts=None, update_remote=True, force=False):
-        if not ts:
-            ts = next(self.main_message_keys_reversed(), SlackTS())
         if self.new_messages or force:
             if self.channel_buffer:
                 w.buffer_set(self.channel_buffer, "unread", "")
                 w.buffer_set(self.channel_buffer, "hotlist", "-1")
+            if not ts:
+                ts = next(self.main_message_keys_reversed(), SlackTS())
+            if ts > self.last_read:
+                self.last_read = ts
             if update_remote:
                 s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": ts}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
