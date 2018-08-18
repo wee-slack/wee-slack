@@ -2373,14 +2373,9 @@ def handle_history(message_json, eventrouter, **kwargs):
     request_metadata = pickle.loads(message_json["wee_slack_request_metadata"])
     kwargs['team'] = eventrouter.teams[request_metadata.team_hash]
     kwargs['channel'] = kwargs['team'].channels[request_metadata.channel_identifier]
-    try:
-        clear = request_metadata.clear
-    except:
-        clear = False
-    dbg(clear)
-    kwargs['output_type'] = "backlog"
-    if clear:
-        w.buffer_clear(kwargs['channel'].channel_buffer)
+    if getattr(request_metadata, 'clear', False):
+        kwargs['channel'].clear_messages()
+    kwargs['channel'].got_history = True
     for message in reversed(message_json["messages"]):
         process_message(message, eventrouter, **kwargs)
 
