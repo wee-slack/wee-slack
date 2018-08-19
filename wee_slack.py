@@ -2492,27 +2492,14 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
     if SlackTS(message_json["ts"]) in channel.messages:
         return
 
-    # try:
-    #  send these subtype messages elsewhere
-    known_subtypes = [
-        'thread_message',
-        'message_replied',
-        'message_changed',
-        'message_deleted',
-        'channel_join',
-        'channel_leave',
-        'channel_topic',
-        # 'group_join',
-        # 'group_leave',
-    ]
     if "thread_ts" in message_json and "reply_count" not in message_json:
         message_json["subtype"] = "thread_message"
 
-    subtype = message_json.get("subtype", None)
-    if subtype and subtype in known_subtypes:
-        f = eval('subprocess_' + subtype)
-        f(message_json, eventrouter, channel, team)
+    subtype = message_json.get("subtype")
+    subtype_functions = get_functions_with_prefix("subprocess_")
 
+    if subtype in subtype_functions:
+        subtype_functions[subtype](message_json, eventrouter, channel, team)
     else:
         message = SlackMessage(message_json, team, channel)
         text = message.render()
@@ -2520,25 +2507,17 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
         dbg("Sender: %s (%s)" % (message.sender, message.sender_plain))
 
         if subtype == 'me_message':
-            try:
-                channel.unread_count_display += 1
-            except:
-                channel.unread_count_display = 1
-            channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, tag_nick=message.sender_plain, **kwargs)
-
+            prefix = w.prefix("action").rstrip()
         else:
-            try:
-                channel.unread_count_display += 1
-            except:
-                channel.unread_count_display = 1
-            channel.buffer_prnt(message.sender, text, message.ts, tag_nick=message.sender_plain, **kwargs)
+            prefix = message.sender
+
+        channel.buffer_prnt(prefix, text, message.ts,
+                tag_nick=message.sender_plain, **kwargs)
+        channel.unread_count_display += 1
 
         if store:
             channel.store_message(message, team)
         dbg("NORMAL REPLY {}".format(message_json))
-    # except:
-    #    channel.buffer_prnt("WEE-SLACK-ERROR", json.dumps(message_json), message_json["ts"], **kwargs)
-    #    traceback.print_exc()
 
 
 def subprocess_thread_message(message_json, eventrouter, channel, team):
