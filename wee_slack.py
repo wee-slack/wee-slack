@@ -2108,10 +2108,6 @@ class SlackMessage(object):
             senders = self.get_sender()
             self.sender, self.sender_plain = senders[0], senders[1]
         self.ts = SlackTS(message_json['ts'])
-        text = self.message_json.get('text')
-        if text and text.startswith('_') and text.endswith('_') and 'subtype' not in message_json:
-            message_json['text'] = text[1:-1]
-            message_json['subtype'] = 'me_message'
 
     def __hash__(self):
         return hash(self.ts)
@@ -2518,10 +2514,7 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
         dbg("Rendered message: %s" % text)
         dbg("Sender: %s (%s)" % (message.sender, message.sender_plain))
 
-        # Handle actions (/me).
-        # We don't use `subtype` here because creating the SlackMessage may
-        # have changed the subtype based on the detected message contents.
-        if message.message_json.get('subtype') == 'me_message':
+        if subtype == 'me_message':
             try:
                 channel.unread_count_display += 1
             except:
