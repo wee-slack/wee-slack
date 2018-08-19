@@ -2592,7 +2592,9 @@ def subprocess_message_changed(message_json, eventrouter, channel, team):
     channel.change_message(new_message["ts"], message_json=new_message)
 
 def subprocess_message_deleted(message_json, eventrouter, channel, team):
-    channel.change_message(message_json["deleted_ts"], text="(deleted)")
+    message = "{}{}{}".format(
+            w.color("red"), '(deleted)', w.color("reset"))
+    channel.change_message(message_json["deleted_ts"], text=message)
 
 
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
@@ -2768,7 +2770,8 @@ def render(message_json, team, channel, force=False):
         text = unfurl_refs(text)
 
         if "edited" in message_json:
-            text += " (edited)"
+            text += "{}{}{}".format(
+                    w.color("095"), ' (edited)', w.color("reset"))
 
         text += unfurl_refs(unwrap_attachments(message_json, text))
 
@@ -2990,9 +2993,10 @@ def create_user_status_string(profile):
 def create_reaction_string(reactions):
     count = 0
     if not isinstance(reactions, list):
-        reaction_string = " [{}]".format(reactions)
+        reaction_string = " {}[{}]{}".format(
+                w.color("darkgray"), reactions, w.color("reset"))
     else:
-        reaction_string = ' ['
+        reaction_string = ' {}['.format(w.color("darkgray"))
         for r in reactions:
             if len(r["users"]) > 0:
                 count += 1
