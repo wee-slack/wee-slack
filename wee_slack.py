@@ -2101,20 +2101,21 @@ class SlackMessage(object):
         if text and text.startswith('_') and text.endswith('_') and 'subtype' not in message_json:
             message_json['text'] = text[1:-1]
             message_json['subtype'] = 'me_message'
-        if message_json.get('subtype') == 'me_message' and not message_json['text'].startswith(self.sender):
-            message_json['text'] = self.sender + ' ' + self.message_json['text']
 
     def __hash__(self):
         return hash(self.ts)
 
     def render(self, force=False):
         text = render(self.message_json, self.team, self.channel, force)
+        if (self.message_json.get('subtype') == 'me_message' and
+                not self.message_json['text'].startswith(self.sender)):
+            text = "{} {}".format(self.sender, text)
         if len(self.submessages) > 0:
-            thread_text = "{}[ Thread: {} Replies: {} ]".format(
+            text = "{} {}[ Thread: {} Replies: {} ]".format(
+                    text,
                     w.color(config.thread_suffix_color),
                     self.hash or self.ts,
                     len(self.submessages))
-            return "{} {}".format(text, thread_text)
         return text
 
     def change_text(self, new_text):
