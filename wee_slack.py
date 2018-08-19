@@ -2061,7 +2061,7 @@ class SlackUser(object):
 
     def formatted_name(self, prepend="", enable_color=True):
         if enable_color:
-            return self.color + prepend + self.name
+            return self.color + prepend + self.name + w.color("reset")
         else:
             return prepend + self.name
 
