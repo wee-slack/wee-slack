@@ -245,6 +245,11 @@ def get_nick_color_name(nick):
     return w.info_get(info_name_prefix + "nick_color_name", nick)
 
 
+def get_functions_with_prefix(prefix):
+    return {name[len(prefix):]: ref for name, ref in globals().items()
+            if name.startswith(prefix)}
+
+
 ##### BEGIN NEW
 
 IGNORED_EVENTS = [
@@ -275,10 +280,10 @@ class EventRouter(object):
         self.weechat_controller = WeechatController(self)
         self.previous_buffer = ""
         self.reply_buffer = {}
-        self.cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
-        self.proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
-        self.handlers = {k[7:]: v for k, v in globals().items() if k.startswith("handle_")}
-        self.local_proc = {k[14:]: v for k, v in globals().items() if k.startswith("local_process_")}
+        self.cmds = get_functions_with_prefix("command_")
+        self.proc = get_functions_with_prefix("process_")
+        self.handlers = get_functions_with_prefix("handle_")
+        self.local_proc = get_functions_with_prefix("local_process_")
         self.shutting_down = False
         self.recording = False
         self.recording_path = "/tmp"
@@ -3692,7 +3697,7 @@ def load_emoji():
 
 
 def setup_hooks():
-    cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
+    cmds = get_functions_with_prefix("command_")
 
     w.bar_item_new('slack_typing_notice', '(extra)typing_bar_item_cb', '')
 
