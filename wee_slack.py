@@ -1460,13 +1460,20 @@ class SlackChannel(object):
             except:
                 dbg("Problem processing buffer_prnt")
 
-    def send_message(self, message, request_dict_ext={}):
-        # team = self.eventrouter.teams[self.team]
+    def send_message(self, message, subtype=None, request_dict_ext={}):
         message = linkify_text(message, self.team, self)
         dbg(message)
-        request = {"type": "message", "channel": self.identifier, "text": message, "_team": self.team.team_hash, "user": self.team.myidentifier}
-        request.update(request_dict_ext)
-        self.team.send_to_websocket(request)
+        if subtype == 'me_message':
+            s = SlackRequest(self.team.token, "chat.meMessage",
+                    {"channel": self.identifier, "text": message},
+                    team_hash=self.team.team_hash,
+                    channel_identifier=self.identifier)
+            self.eventrouter.receive(s)
+        else:
+            request = {"type": "message", "channel": self.identifier,
+                    "text": message}
+            request.update(request_dict_ext)
+            self.team.send_to_websocket(request)
 
     def store_message(self, message, team, from_me=False):
         if not self.active:
@@ -1949,11 +1956,15 @@ class SlackThreadChannel(object):
             #    channel.unread_count = 1
             self.buffer_prnt(message.sender, text, message.ts)
 
-    def send_message(self, message):
-        # team = self.eventrouter.teams[self.team]
+    def send_message(self, message, subtype=None):
+        if subtype == 'me_message':
+            w.prnt("", "ERROR: /me is not supported in threads")
+            return w.WEECHAT_RC_ERROR
         message = linkify_text(message, self.team, self)
         dbg(message)
-        request = {"type": "message", "channel": self.parent_message.channel.identifier, "text": message, "_team": self.team.team_hash, "user": self.team.myidentifier, "thread_ts": str(self.parent_message.ts)}
+        request = {"type": "message", "text": message,
+                "channel": self.parent_message.channel.identifier,
+                "thread_ts": str(self.parent_message.ts)}
         self.team.send_to_websocket(request)
 
     def open(self, update_remote=True):
@@ -3231,8 +3242,9 @@ def whois_command_cb(data, current_buffer, command):
 @slack_buffer_or_ignore
 @utf8_decode
 def me_command_cb(data, current_buffer, args):
-    message = "_{}_".format(args.split(' ', 1)[1])
-    buffer_input_callback("EVENTROUTER", current_buffer, message)
+    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    message = args.split(' ', 1)[1]
+    channel.send_message(message, subtype='me_message')
     return w.WEECHAT_RC_OK_EAT
 
 
