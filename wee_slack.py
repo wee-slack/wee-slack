@@ -1476,7 +1476,7 @@ class SlackChannel(object):
             self.eventrouter.receive(s)
         else:
             request = {"type": "message", "channel": self.identifier,
-                    "text": message}
+                    "text": message, "user": self.team.myidentifier}
             request.update(request_dict_ext)
             self.team.send_to_websocket(request)
 
@@ -1969,7 +1969,8 @@ class SlackThreadChannel(object):
         dbg(message)
         request = {"type": "message", "text": message,
                 "channel": self.parent_message.channel.identifier,
-                "thread_ts": str(self.parent_message.ts)}
+                "thread_ts": str(self.parent_message.ts),
+                "user": self.team.myidentifier}
         self.team.send_to_websocket(request)
 
     def open(self, update_remote=True):
