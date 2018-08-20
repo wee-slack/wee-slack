@@ -114,6 +114,12 @@ class PluginConfig(object):
             desc='When activity occurs on a buffer, unhide it even if it was'
             ' previously hidden (whether by the user or by the'
             ' distracting_channels setting).'),
+        'external_user_suffix': Setting(
+            default='*',
+            desc='The suffix appended to nicks to indicate external users.'),
+        'shared_name_prefix': Setting(
+            default='%',
+            desc='The prefix of buffer names for shared channels.'),
     }
 
     # Set missing settings to their defaults. Load non-missing settings from
@@ -174,10 +180,12 @@ class PluginConfig(object):
         return w.config_get_plugin(key) == default
 
     get_debug_level = get_int
+    get_external_user_suffix = get_string
     get_group_name_prefix = get_string
     get_map_underline_to = get_string
     get_render_bold_as = get_string
     get_render_italic_as = get_string
+    get_shared_name_prefix = get_string
     get_slack_timeout = get_int
     get_thread_suffix_color = get_string
     get_unfurl_auto_link_display = get_string

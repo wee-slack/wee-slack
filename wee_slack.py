@@ -80,6 +80,13 @@ SLACK_API_TRANSLATOR = {
         "mark": "groups.mark",
         "info": "groups.info"
     },
+    "shared": {
+        "history": "conversations.history",
+        "join": "conversations.join",
+        "leave": "conversations.leave",
+        "mark": "channels.mark",
+        "info": "conversations.info",
+    },
     "thread": {
         "history": None,
         "join": None,
@@ -130,6 +137,7 @@ def utf8_decode(f):
 
 NICK_GROUP_HERE = "0|Here"
 NICK_GROUP_AWAY = "1|Away"
+NICK_GROUP_EXTERNAL = "2|External"
 
 sslopt_ca_certs = {}
 if hasattr(ssl, "get_default_verify_paths") and callable(ssl.get_default_verify_paths):
@@ -218,6 +226,11 @@ def get_nick_color_name(nick):
     return w.info_get(info_name_prefix + "nick_color_name", nick)
 
 
+def get_functions_with_prefix(prefix):
+    return {name[len(prefix):]: ref for name, ref in globals().items()
+            if name.startswith(prefix)}
+
+
 ##### BEGIN NEW
 
 IGNORED_EVENTS = [
@@ -248,10 +261,10 @@ class EventRouter(object):
         self.weechat_controller = WeechatController(self)
         self.previous_buffer = ""
         self.reply_buffer = {}
-        self.cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
-        self.proc = {k[8:]: v for k, v in globals().items() if k.startswith("process_")}
-        self.handlers = {k[7:]: v for k, v in globals().items() if k.startswith("handle_")}
-        self.local_proc = {k[14:]: v for k, v in globals().items() if k.startswith("local_process_")}
+        self.cmds = get_functions_with_prefix("command_")
+        self.proc = get_functions_with_prefix("process_")
+        self.handlers = get_functions_with_prefix("handle_")
+        self.local_proc = get_functions_with_prefix("local_process_")
         self.shutting_down = False
         self.recording = False
         self.recording_path = "/tmp"
@@ -979,7 +992,8 @@ class SlackTeam(object):
     Team object under which users and channels live.. Does lots.
     """
 
-    def __init__(self, eventrouter, token, websocket_url, subdomain, nick, myidentifier, users, bots, channels, **kwargs):
+    def __init__(self, eventrouter, token, websocket_url, team_info, nick, myidentifier, users, bots, channels, **kwargs):
+        self.identifier = team_info["id"]
         self.ws_url = websocket_url
         self.connected = False
         self.connecting = False
@@ -989,8 +1003,8 @@ class SlackTeam(object):
         self.eventrouter = eventrouter
         self.token = token
         self.team = self
-        self.subdomain = subdomain
-        self.domain = subdomain + ".slack.com"
+        self.subdomain = team_info["domain"]
+        self.domain = self.subdomain + ".slack.com"
         self.preferred_name = self.domain
         self.nick = nick
         self.myidentifier = myidentifier
@@ -1110,7 +1124,7 @@ class SlackTeam(object):
 
     def is_user_present(self, user_id):
         user = self.users.get(user_id)
-        if user.presence == 'active':
+        if user and user.presence == 'active':
             return True
         else:
             return False
@@ -1276,6 +1290,8 @@ class SlackChannel(object):
             prepend = ">"
         elif self.type == "group":
             prepend = config.group_name_prefix
+        elif self.type == "shared":
+            prepend = config.shared_name_prefix
         else:
             prepend = "#"
         select = {
@@ -1375,12 +1391,16 @@ class SlackChannel(object):
                 s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"users": self.user, "return_im": True}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
 
-    def destroy_buffer(self, update_remote):
-        if self.channel_buffer is not None:
-            self.channel_buffer = None
+    def clear_messages(self):
+        w.buffer_clear(self.channel_buffer)
         self.messages = OrderedDict()
         self.hashed_messages = {}
         self.got_history = False
+
+    def destroy_buffer(self, update_remote):
+        self.clear_messages()
+        if self.channel_buffer is not None:
+            self.channel_buffer = None
         # if update_remote and not eventrouter.shutting_down:
         self.active = False
         if update_remote and not self.eventrouter.shutting_down:
@@ -1421,19 +1441,25 @@ class SlackChannel(object):
 
                 w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
                 modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
-                if backlog:
+                if backlog or tag_nick == self.team.nick:
                     self.mark_read(ts, update_remote=False, force=True)
             except:
                 dbg("Problem processing buffer_prnt")
 
-    def send_message(self, message, request_dict_ext={}):
-        # team = self.eventrouter.teams[self.team]
+    def send_message(self, message, subtype=None, request_dict_ext={}):
         message = linkify_text(message, self.team, self)
         dbg(message)
-        request = {"type": "message", "channel": self.identifier, "text": message, "_team": self.team.team_hash, "user": self.team.myidentifier}
-        request.update(request_dict_ext)
-        self.team.send_to_websocket(request)
-        self.mark_read(update_remote=False, force=True)
+        if subtype == 'me_message':
+            s = SlackRequest(self.team.token, "chat.meMessage",
+                    {"channel": self.identifier, "text": message},
+                    team_hash=self.team.team_hash,
+                    channel_identifier=self.identifier)
+            self.eventrouter.receive(s)
+        else:
+            request = {"type": "message", "channel": self.identifier,
+                    "text": message}
+            request.update(request_dict_ext)
+            self.team.send_to_websocket(request)
 
     def store_message(self, message, team, from_me=False):
         if not self.active:
@@ -1450,17 +1476,17 @@ class SlackChannel(object):
                 del self.hashed_messages[message_hash]
         self.messages = OrderedDict(messages_to_keep)
 
-    def change_message(self, ts, text=None, suffix=None):
+    def change_message(self, ts, message_json=None, text=None):
         ts = SlackTS(ts)
-        if ts in self.messages:
-            m = self.messages[ts]
-            if text:
-                m.change_text(text)
-            if suffix:
-                m.change_suffix(suffix)
-            text = m.render(force=True)
-        modify_buffer_line(self.channel_buffer, text, ts.major, ts.minor)
-        return True
+        m = self.messages.get(ts)
+        if not m:
+            return
+        if message_json:
+            m.message_json.update(message_json)
+        if text:
+            m.change_text(text)
+        new_text = m.render(force=True)
+        modify_buffer_line(self.channel_buffer, new_text, ts.major, ts.minor)
 
     def edit_nth_previous_message(self, n, old, new, flags):
         message = self.my_last_message(n)
@@ -1491,7 +1517,7 @@ class SlackChannel(object):
         if not self.got_history:
             # we have probably reconnected. flush the buffer
             if self.team.connected:
-                w.buffer_clear(self.channel_buffer)
+                self.clear_messages()
             self.buffer_prnt('', 'getting channel history...', tagset='backlog')
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE}, team_hash=self.team.team_hash, channel_identifier=self.identifier, clear=True)
             if not slow_queue:
@@ -1557,12 +1583,14 @@ class SlackChannel(object):
         return typing
 
     def mark_read(self, ts=None, update_remote=True, force=False):
-        if not ts:
-            ts = next(self.main_message_keys_reversed(), SlackTS())
         if self.new_messages or force:
             if self.channel_buffer:
                 w.buffer_set(self.channel_buffer, "unread", "")
                 w.buffer_set(self.channel_buffer, "hotlist", "-1")
+            if not ts:
+                ts = next(self.main_message_keys_reversed(), SlackTS())
+            if ts > self.last_read:
+                self.last_read = ts
             if update_remote:
                 s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": ts}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
@@ -1581,7 +1609,7 @@ class SlackChannel(object):
     def update_nicklist(self, user=None):
         if not self.channel_buffer:
             return
-        if self.type not in ["channel", "group", "mpim"]:
+        if self.type not in ["channel", "group", "mpim", "shared"]:
             return
         w.buffer_set(self.channel_buffer, "nicklist", "1")
         # create nicklists for the current channel if they don't exist
@@ -1593,16 +1621,25 @@ class SlackChannel(object):
         if not afk:
             afk = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_AWAY, "weechat.color.nicklist_group", 1)
 
+        # Add External nicklist group only for shared channels
+        if self.type == 'shared':
+            external = w.nicklist_search_group(self.channel_buffer, '', NICK_GROUP_EXTERNAL)
+            if not external:
+                external = w.nicklist_add_group(self.channel_buffer, '', NICK_GROUP_EXTERNAL, 'weechat.color.nicklist_group', 2)
+
         if user and len(self.members) < 1000:
-            user = self.team.users[user]
-            if user.deleted:
+            user = self.team.users.get(user)
+            # External users that have left shared channels won't exist
+            if not user or user.deleted:
                 return
             nick = w.nicklist_search_nick(self.channel_buffer, "", user.name)
             # since this is a change just remove it regardless of where it is
             w.nicklist_remove_nick(self.channel_buffer, nick)
             # now add it back in to whichever..
             nick_group = afk
-            if self.team.is_user_present(user.identifier):
+            if user.is_external:
+                nick_group = external
+            elif self.team.is_user_present(user.identifier):
                 nick_group = here
             if user.identifier in self.members:
                 w.nicklist_add_nick(self.channel_buffer, nick_group, user.name, user.color_name, "", "", 1)
@@ -1612,11 +1649,13 @@ class SlackChannel(object):
             if len(self.members) < 1000:
                 try:
                     for user in self.members:
-                        user = self.team.users[user]
+                        user = self.team.users.get(user)
                         if user.deleted:
                             continue
                         nick_group = afk
-                        if self.team.is_user_present(user.identifier):
+                        if user.is_external:
+                            nick_group = external
+                        elif self.team.is_user_present(user.identifier):
                             nick_group = here
                         w.nicklist_add_nick(self.channel_buffer, nick_group, user.name, user.color_name, "", "", 1)
                 except Exception as e:
@@ -1662,12 +1701,19 @@ class SlackDMChannel(SlackChannel):
 
     def __init__(self, eventrouter, users, **kwargs):
         dmuser = kwargs["user"]
-        kwargs["name"] = users[dmuser].name
+        kwargs["name"] = users[dmuser].name if dmuser in users else dmuser
         super(SlackDMChannel, self).__init__(eventrouter, **kwargs)
         self.type = 'im'
         self.update_color()
         self.set_name(self.slack_name)
-        self.topic = create_user_status_string(users[dmuser].profile)
+        if dmuser in users:
+            self.topic = create_user_status_string(users[dmuser].profile)
+
+    def set_related_server(self, team):
+        super(SlackDMChannel, self).set_related_server(team)
+        if self.user not in self.team.users:
+            s = SlackRequest(self.team.token, 'users.info', {'user': self.slack_name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+            self.eventrouter.receive(s)
 
     def set_name(self, slack_name):
         self.name = slack_name
@@ -1799,6 +1845,29 @@ class SlackMPDMChannel(SlackChannel):
         pass
 
 
+class SlackSharedChannel(SlackChannel):
+    def __init__(self, eventrouter, **kwargs):
+        super(SlackSharedChannel, self).__init__(eventrouter, **kwargs)
+        self.type = 'shared'
+
+    def set_related_server(self, team):
+        super(SlackSharedChannel, self).set_related_server(team)
+        # Fetch members here (after the team is known) since they aren't
+        # included in rtm.start
+        s = SlackRequest(team.token, 'conversations.members', {'channel': self.identifier}, team_hash=team.team_hash, channel_identifier=self.identifier)
+        self.eventrouter.receive(s)
+
+    def get_history(self, slow_queue=False):
+        # Get info for external users in the channel
+        for user in self.members - set(self.team.users.keys()):
+            s = SlackRequest(self.team.token, 'users.info', {'user': user}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+            self.eventrouter.receive(s)
+        super(SlackSharedChannel, self).get_history(slow_queue)
+
+    def set_name(self, slack_name):
+        self.name = config.shared_name_prefix + slack_name
+
+
 class SlackThreadChannel(object):
     """
     A thread channel is a virtual channel. We don't inherit from
@@ -1838,7 +1907,7 @@ class SlackThreadChannel(object):
             w.buffer_set(self.channel_buffer, "unread", "")
             w.buffer_set(self.channel_buffer, "hotlist", "-1")
 
-    def buffer_prnt(self, nick, text, timestamp, **kwargs):
+    def buffer_prnt(self, nick, text, timestamp, tag_nick=None, **kwargs):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
         self.last_line_from = nick
         ts = SlackTS(timestamp)
@@ -1856,8 +1925,8 @@ class SlackThreadChannel(object):
             # self.new_messages = True
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
             modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
-            # if backlog:
-            #    self.mark_read(ts, update_remote=False, force=True)
+            if tag_nick == self.team.nick:
+                self.mark_read(ts, update_remote=False, force=True)
 
     def get_history(self):
         self.got_history = True
@@ -1867,22 +1936,22 @@ class SlackThreadChannel(object):
             text = message.render()
             # print text
 
-            suffix = ''
-            if 'edited' in message.message_json:
-                suffix = ' (edited)'
             # try:
             #    channel.unread_count += 1
             # except:
             #    channel.unread_count = 1
-            self.buffer_prnt(message.sender, text + suffix, message.ts)
+            self.buffer_prnt(message.sender, text, message.ts)
 
-    def send_message(self, message):
-        # team = self.eventrouter.teams[self.team]
+    def send_message(self, message, subtype=None):
+        if subtype == 'me_message':
+            w.prnt("", "ERROR: /me is not supported in threads")
+            return w.WEECHAT_RC_ERROR
         message = linkify_text(message, self.team, self)
         dbg(message)
-        request = {"type": "message", "channel": self.parent_message.channel.identifier, "text": message, "_team": self.team.team_hash, "user": self.team.myidentifier, "thread_ts": str(self.parent_message.ts)}
+        request = {"type": "message", "text": message,
+                "channel": self.parent_message.channel.identifier,
+                "thread_ts": str(self.parent_message.ts)}
         self.team.send_to_websocket(request)
-        self.mark_read(update_remote=False, force=True)
 
     def open(self, update_remote=True):
         self.create_buffer()
@@ -1949,19 +2018,26 @@ class SlackUser(object):
     Represends an individual slack user. Also where you set their name formatting.
     """
 
-    def __init__(self, **kwargs):
-        # We require these two things for a valid object,
-        # the rest we can just learn from slack
+    def __init__(self, originating_team_id, **kwargs):
         self.identifier = kwargs["id"]
-        self.profile = {}  # in case it's not in kwargs
+        # These attributes may be missing in the response, so we have to make
+        # sure they're set
+        self.profile = {}
+        self.presence = kwargs.get("presence", "unknown")
+        self.deleted = kwargs.get("deleted", False)
+        self.is_external = (not kwargs.get("is_bot") and
+                kwargs.get("team_id") != originating_team_id)
         for key, value in kwargs.items():
             setattr(self, key, value)
 
         if self.profile.get("display_name"):
             self.slack_name = self.profile["display_name"]
             self.name = self.profile["display_name"].replace(' ', '')
+        elif self.profile.get("real_name"):
+            self.slack_name = self.profile["real_name"]
+            self.name = self.profile["real_name"].replace(' ', '')
         else:
-            # No display name set. Fall back to the deprecated username field.
+            # No display or full name set. Fall back to the deprecated username field.
             self.slack_name = kwargs["name"]
             self.name = self.slack_name
         self.update_color()
@@ -1985,7 +2061,7 @@ class SlackUser(object):
 
     def formatted_name(self, prepend="", enable_color=True):
         if enable_color:
-            return self.color + prepend + self.name
+            return self.color + prepend + self.name + w.color("reset")
         else:
             return prepend + self.name
 
@@ -1995,8 +2071,8 @@ class SlackBot(SlackUser):
     Basically the same as a user, but split out to identify and for future
     needs
     """
-    def __init__(self, **kwargs):
-        super(SlackBot, self).__init__(**kwargs)
+    def __init__(self, originating_team_id, **kwargs):
+        super(SlackBot, self).__init__(originating_team_id, is_bot=True, **kwargs)
 
 
 class SlackMessage(object):
@@ -2020,58 +2096,52 @@ class SlackMessage(object):
         else:
             senders = self.get_sender()
             self.sender, self.sender_plain = senders[0], senders[1]
-        self.suffix = ''
         self.ts = SlackTS(message_json['ts'])
-        text = self.message_json.get('text')
-        if text and text.startswith('_') and text.endswith('_') and 'subtype' not in message_json:
-            message_json['text'] = text[1:-1]
-            message_json['subtype'] = 'me_message'
-        if message_json.get('subtype') == 'me_message' and not message_json['text'].startswith(self.sender):
-            message_json['text'] = self.sender + ' ' + self.message_json['text']
 
     def __hash__(self):
         return hash(self.ts)
 
     def render(self, force=False):
+        text = render(self.message_json, self.team, self.channel, force)
+        if (self.message_json.get('subtype') == 'me_message' and
+                not self.message_json['text'].startswith(self.sender)):
+            text = "{} {}".format(self.sender, text)
         if len(self.submessages) > 0:
-            return "{} {} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix, "{}[ Thread: {} Replies: {} ]".format(w.color(config.thread_suffix_color), self.hash or self.ts, len(self.submessages)))
-        return "{} {}".format(render(self.message_json, self.team, self.channel, force), self.suffix)
+            text = "{} {}[ Thread: {} Replies: {} ]".format(
+                    text,
+                    w.color(config.thread_suffix_color),
+                    self.hash or self.ts,
+                    len(self.submessages))
+        return text
 
     def change_text(self, new_text):
         self.message_json["text"] = new_text
         dbg(self.message_json)
 
-    def change_suffix(self, new_suffix):
-        self.suffix = new_suffix
-        dbg(self.message_json)
-
     def get_sender(self):
         name = ""
         name_plain = ""
-        if 'user' in self.message_json:
-            if self.message_json['user'] == self.team.myidentifier:
-                u = self.team.users[self.team.myidentifier]
-            elif self.message_json['user'] in self.team.users:
-                u = self.team.users[self.message_json['user']]
-            name = "{}".format(u.formatted_name())
-            name_plain = "{}".format(u.formatted_name(enable_color=False))
+        user = self.team.users.get(self.message_json.get('user'))
+        if user:
+            name = "{}".format(user.formatted_name())
+            name_plain = "{}".format(user.formatted_name(enable_color=False))
+            if user.is_external:
+                name += config.external_user_suffix
+                name_plain += config.external_user_suffix
         elif 'username' in self.message_json:
-            u = self.message_json["username"]
+            username = self.message_json["username"]
             if self.message_json.get("subtype") == "bot_message":
-                name = "{} :]".format(u)
-                name_plain = "{}".format(u)
+                name = "{} :]".format(username)
+                name_plain = "{}".format(username)
             else:
-                name = "-{}-".format(u)
-                name_plain = "{}".format(u)
+                name = "-{}-".format(username)
+                name_plain = "{}".format(username)
         elif 'service_name' in self.message_json:
             name = "-{}-".format(self.message_json["service_name"])
             name_plain = "{}".format(self.message_json["service_name"])
         elif self.message_json.get('bot_id') in self.team.bots:
             name = "{} :]".format(self.team.bots[self.message_json["bot_id"]].formatted_name())
             name_plain = "{}".format(self.team.bots[self.message_json["bot_id"]].formatted_name(enable_color=False))
-        else:
-            name = ""
-            name_plain = ""
         return (name, name_plain)
 
     def add_reaction(self, reaction, user):
@@ -2186,15 +2256,18 @@ def handle_rtmstart(login_data, eventrouter):
 
         users = {}
         for item in login_data["users"]:
-            users[item["id"]] = SlackUser(**item)
+            users[item["id"]] = SlackUser(login_data['team']['id'], **item)
 
         bots = {}
         for item in login_data["bots"]:
-            bots[item["id"]] = SlackBot(**item)
+            bots[item["id"]] = SlackBot(login_data['team']['id'], **item)
 
         channels = {}
         for item in login_data["channels"]:
-            channels[item["id"]] = SlackChannel(eventrouter, **item)
+            if item["is_shared"]:
+                channels[item["id"]] = SlackSharedChannel(eventrouter, **item)
+            else:
+                channels[item["id"]] = SlackChannel(eventrouter, **item)
 
         for item in login_data["ims"]:
             channels[item["id"]] = SlackDMChannel(eventrouter, users, **item)
@@ -2209,7 +2282,7 @@ def handle_rtmstart(login_data, eventrouter):
             eventrouter,
             metadata.token,
             login_data['url'],
-            login_data["team"]["domain"],
+            login_data["team"],
             login_data["self"]["name"],
             login_data["self"]["id"],
             users,
@@ -2291,20 +2364,42 @@ def handle_mpimhistory(message_json, eventrouter, **kwargs):
     handle_history(message_json, eventrouter, **kwargs)
 
 
+def handle_conversationshistory(message_json, eventrouter, **kwargs):
+    handle_history(message_json, eventrouter, **kwargs)
+
+
 def handle_history(message_json, eventrouter, **kwargs):
     request_metadata = pickle.loads(message_json["wee_slack_request_metadata"])
     kwargs['team'] = eventrouter.teams[request_metadata.team_hash]
     kwargs['channel'] = kwargs['team'].channels[request_metadata.channel_identifier]
-    try:
-        clear = request_metadata.clear
-    except:
-        clear = False
-    dbg(clear)
-    kwargs['output_type'] = "backlog"
-    if clear:
-        w.buffer_clear(kwargs['channel'].channel_buffer)
+    if getattr(request_metadata, 'clear', False):
+        kwargs['channel'].clear_messages()
+    kwargs['channel'].got_history = True
     for message in reversed(message_json["messages"]):
         process_message(message, eventrouter, **kwargs)
+
+
+def handle_conversationsmembers(members_json, eventrouter, **kwargs):
+    request_metadata = pickle.loads(members_json['wee_slack_request_metadata'])
+    team = eventrouter.teams[request_metadata.team_hash]
+    channel = team.channels[request_metadata.channel_identifier]
+    channel.members = set(members_json['members'])
+
+
+def handle_usersinfo(user_json, eventrouter, **kwargs):
+    request_metadata = pickle.loads(user_json['wee_slack_request_metadata'])
+    team = eventrouter.teams[request_metadata.team_hash]
+    channel = team.channels[request_metadata.channel_identifier]
+    user_info = user_json['user']
+    user = SlackUser(team.identifier, **user_info)
+    team.users[user_info['id']] = user
+
+    if channel.type == 'shared':
+        channel.update_nicklist(user_info['id'])
+    elif channel.type == 'im':
+        channel.slack_name = user.name
+        channel.set_topic(create_user_status_string(user.profile))
+
 
 
 ###### New/converted process_ and subprocess_ methods
@@ -2367,7 +2462,7 @@ def process_user_typing(message_json, eventrouter, **kwargs):
 def process_team_join(message_json, eventrouter, **kwargs):
     user = message_json['user']
     team = kwargs["team"]
-    team.users[user["id"]] = SlackUser(**user)
+    team.users[user["id"]] = SlackUser(team.identifier, **user)
 
 
 def process_pong(message_json, eventrouter, **kwargs):
@@ -2377,59 +2472,36 @@ def process_pong(message_json, eventrouter, **kwargs):
 def process_message(message_json, eventrouter, store=True, **kwargs):
     channel = kwargs["channel"]
     team = kwargs["team"]
-    # try:
-    #  send these subtype messages elsewhere
-    known_subtypes = [
-        'thread_message',
-        'message_replied',
-        'message_changed',
-        'message_deleted',
-        'channel_join',
-        'channel_leave',
-        'channel_topic',
-        # 'group_join',
-        # 'group_leave',
-    ]
+
+    if SlackTS(message_json["ts"]) in channel.messages:
+        return
+
     if "thread_ts" in message_json and "reply_count" not in message_json:
         message_json["subtype"] = "thread_message"
 
-    subtype = message_json.get("subtype", None)
-    if subtype and subtype in known_subtypes:
-        f = eval('subprocess_' + subtype)
-        f(message_json, eventrouter, channel, team)
+    subtype = message_json.get("subtype")
+    subtype_functions = get_functions_with_prefix("subprocess_")
 
+    if subtype in subtype_functions:
+        subtype_functions[subtype](message_json, eventrouter, channel, team)
     else:
         message = SlackMessage(message_json, team, channel)
         text = message.render()
         dbg("Rendered message: %s" % text)
         dbg("Sender: %s (%s)" % (message.sender, message.sender_plain))
 
-        # Handle actions (/me).
-        # We don't use `subtype` here because creating the SlackMessage may
-        # have changed the subtype based on the detected message contents.
-        if message.message_json.get('subtype') == 'me_message':
-            try:
-                channel.unread_count_display += 1
-            except:
-                channel.unread_count_display = 1
-            channel.buffer_prnt(w.prefix("action").rstrip(), text, message.ts, tag_nick=message.sender_plain, **kwargs)
-
+        if subtype == 'me_message':
+            prefix = w.prefix("action").rstrip()
         else:
-            suffix = ''
-            if 'edited' in message_json:
-                suffix = ' (edited)'
-            try:
-                channel.unread_count_display += 1
-            except:
-                channel.unread_count_display = 1
-            channel.buffer_prnt(message.sender, text + suffix, message.ts, tag_nick=message.sender_plain, **kwargs)
+            prefix = message.sender
+
+        channel.buffer_prnt(prefix, text, message.ts,
+                tag_nick=message.sender_plain, **kwargs)
+        channel.unread_count_display += 1
 
         if store:
             channel.store_message(message, team)
         dbg("NORMAL REPLY {}".format(message_json))
-    # except:
-    #    channel.buffer_prnt("WEE-SLACK-ERROR", json.dumps(message_json), message_json["ts"], **kwargs)
-    #    traceback.print_exc()
 
 
 def subprocess_thread_message(message_json, eventrouter, channel, team):
@@ -2447,7 +2519,7 @@ def subprocess_thread_message(message_json, eventrouter, channel, team):
             text = message.render()
             # channel.buffer_prnt(message.sender, text, message.ts, **kwargs)
             if parent_message.thread_channel:
-                parent_message.thread_channel.buffer_prnt(message.sender, text, message.ts)
+                parent_message.thread_channel.buffer_prnt(message.sender, text, message.ts, tag_nick=message.sender_plain)
 
 #    channel = channels.find(message_json["channel"])
 #    server = channel.server
@@ -2489,33 +2561,11 @@ def subprocess_message_replied(message_json, eventrouter, channel, team):
 
 
 def subprocess_message_changed(message_json, eventrouter, channel, team):
-    m = message_json.get("message", None)
-    if m:
-        new_message = m
-        # message = SlackMessage(new_message, team, channel)
-        if "attachments" in m:
-            message_json["attachments"] = m["attachments"]
-        if "text" in m:
-            if "text" in message_json:
-                message_json["text"] += m["text"]
-                dbg("added text!")
-            else:
-                message_json["text"] = m["text"]
-        if "fallback" in m:
-            if "fallback" in message_json:
-                message_json["fallback"] += m["fallback"]
-            else:
-                message_json["fallback"] = m["fallback"]
-
-    new_message["text"] += unwrap_attachments(message_json, new_message["text"])
-    if "edited" in new_message:
-        channel.change_message(new_message["ts"], new_message["text"], ' (edited)')
-    else:
-        channel.change_message(new_message["ts"], new_message["text"])
-
+    new_message = message_json.get("message", None)
+    channel.change_message(new_message["ts"], message_json=new_message)
 
 def subprocess_message_deleted(message_json, eventrouter, channel, team):
-    channel.change_message(message_json["deleted_ts"], "(deleted)", '')
+    channel.change_message(message_json["deleted_ts"], text="(deleted)")
 
 
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
@@ -2548,7 +2598,6 @@ def process_reply(message_json, eventrouter, **kwargs):
         #        channels.find(message_json["channel"]).buffer_prnt(server.nick, m.render(), m.ts)
 
         process_message(m.message_json, eventrouter, channel=channel, team=team)
-        channel.mark_read(update_remote=True, force=True)
         dbg("REPLY {}".format(message_json))
     except KeyError:
         dbg("Unexpected reply {}".format(message_json))
@@ -2691,7 +2740,12 @@ def render(message_json, team, channel, force=False):
 
         text = unfurl_refs(text)
 
+        if "edited" in message_json:
+            text += " (edited)"
+
         text += unfurl_refs(unwrap_attachments(message_json, text))
+
+        text += unfurl_refs(unwrap_files(message_json, text))
 
         text = text.lstrip()
         text = unhtmlescape(text.replace("\t", "    "))
@@ -2862,6 +2916,14 @@ def unwrap_attachments(message_json, text_before):
     return "\n".join(attachment_texts)
 
 
+def unwrap_files(message_json, text_before):
+    files_texts = ['{} ({})'.format(f['url_private'], f['title'])
+            for f in message_json.get('files', [])]
+    if text_before:
+        files_texts.insert(0, '')
+    return "\n".join(files_texts)
+
+
 def resolve_ref(ref):
     # TODO: This hack to use eventrouter needs to go
     # this resolver should probably move to the slackteam or eventrouter itself
@@ -2870,11 +2932,12 @@ def resolve_ref(ref):
         e = EVENTROUTER
         if ref.startswith('@U') or ref.startswith('@W'):
             for t in e.teams.keys():
-                if ref[1:] in e.teams[t].users:
-                    # try:
-                    return "@{}".format(e.teams[t].users[ref[1:]].name)
-                    # except:
-                    #    dbg("NAME: {}".format(ref))
+                user = e.teams[t].users.get(ref[1:])
+                if user:
+                    name = '@{}'.format(user.name)
+                    if user.is_external:
+                        name += config.external_user_suffix
+                    return name
         elif ref.startswith('#C'):
             for t in e.teams.keys():
                 if ref[1:] in e.teams[t].channels:
@@ -3140,8 +3203,9 @@ def whois_command_cb(data, current_buffer, command):
 @slack_buffer_or_ignore
 @utf8_decode
 def me_command_cb(data, current_buffer, args):
-    message = "_{}_".format(args.split(' ', 1)[1])
-    buffer_input_callback("EVENTROUTER", current_buffer, message)
+    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    message = args.split(' ', 1)[1]
+    channel.send_message(message, subtype='me_message')
     return w.WEECHAT_RC_OK_EAT
 
 
@@ -3343,8 +3407,7 @@ def thread_command_callback(data, current_buffer, args):
 def rehistory_command_callback(data, current_buffer, args):
     current = w.current_buffer()
     channel = EVENTROUTER.weechat_controller.buffers.get(current)
-    channel.got_history = False
-    w.buffer_clear(channel.channel_buffer)
+    channel.clear_messages()
     channel.get_history()
     return w.WEECHAT_RC_OK_EAT
 
@@ -3578,7 +3641,7 @@ def load_emoji():
 
 
 def setup_hooks():
-    cmds = {k[8:]: v for k, v in globals().items() if k.startswith("command_")}
+    cmds = get_functions_with_prefix("command_")
 
     w.bar_item_new('slack_typing_notice', '(extra)typing_bar_item_cb', '')
 
