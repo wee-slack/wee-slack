@@ -2336,7 +2336,7 @@ def handle_channelsinfo(channel_json, eventrouter, **kwargs):
     request_metadata = pickle.loads(channel_json["wee_slack_request_metadata"])
     team = eventrouter.teams[request_metadata.team_hash]
     channel = team.channels[request_metadata.channel_identifier]
-    channel.set_unread_count_display(channel_json['channel']['unread_count_display'])
+    channel.set_unread_count_display(channel_json['channel'].get('unread_count_display', 0))
     channel.set_members(channel_json['channel']['members'])
 
 
@@ -2344,19 +2344,16 @@ def handle_groupsinfo(group_json, eventrouter, **kwargs):
     request_metadata = pickle.loads(group_json["wee_slack_request_metadata"])
     team = eventrouter.teams[request_metadata.team_hash]
     group = team.channels[request_metadata.channel_identifier]
-    unread_count_display = group_json['group']['unread_count_display']
-    group_id = group_json['group']['id']
-    group.set_unread_count_display(unread_count_display)
+    group.set_unread_count_display(group_json['group'].get('unread_count_display', 0))
 
 
 def handle_conversationsopen(conversation_json, eventrouter, object_name='channel', **kwargs):
     request_metadata = pickle.loads(conversation_json["wee_slack_request_metadata"])
     # Set unread count if the channel isn't new (channel_identifier exists)
     if hasattr(request_metadata, 'channel_identifier'):
-        channel_id = request_metadata.channel_identifier
         team = eventrouter.teams[request_metadata.team_hash]
-        conversation = team.channels[channel_id]
-        unread_count_display = conversation_json[object_name]['unread_count_display']
+        conversation = team.channels[request_metadata.channel_identifier]
+        unread_count_display = conversation_json[object_name].get('unread_count_display', 0)
         conversation.set_unread_count_display(unread_count_display)
 
 
