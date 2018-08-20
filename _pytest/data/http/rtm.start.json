@@ -703,6 +703,7 @@
             "profile": {
                 "first_name": "First",
                 "last_name": "Testuser",
+                "display_name": "alice",
                 "avatar_hash": "gfd0ce7a168d",
                 "real_name": "First Testuser",
                 "real_name_normalized": "First Testuser",
