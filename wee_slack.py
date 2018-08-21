@@ -1194,8 +1194,6 @@ class SlackTeam(object):
         self.ws_url = url
 
     def next_ws_transaction_id(self):
-        if self.ws_counter > 999:
-            self.ws_counter = 0
         self.ws_counter += 1
         return self.ws_counter
 
@@ -2589,31 +2587,16 @@ def subprocess_channel_topic(message_json, eventrouter, channel, team):
 
 
 def process_reply(message_json, eventrouter, **kwargs):
-    dbg('processing reply')
     team = kwargs["team"]
-    identifier = message_json["reply_to"]
-    try:
-        original_message_json = team.ws_replies[identifier]
-        del team.ws_replies[identifier]
-        if "ts" in message_json:
-            original_message_json["ts"] = message_json["ts"]
-        else:
-            dbg("no reply ts {}".format(message_json))
-
-        c = original_message_json.get('channel', None)
-        channel = team.channels[c]
-        m = SlackMessage(original_message_json, team, channel)
-
-        # if "type" in message_json:
-        #    if message_json["type"] == "message" and "channel" in message_json.keys():
-        #        message_json["ts"] = message_json["ts"]
-        #        channels.find(message_json["channel"]).store_message(m, from_me=True)
-
-        #        channels.find(message_json["channel"]).buffer_prnt(server.nick, m.render(), m.ts)
-
-        process_message(m.message_json, eventrouter, channel=channel, team=team)
+    reply_to = int(message_json["reply_to"])
+    original_message_json = team.ws_replies.pop(reply_to, None)
+    if original_message_json:
+        original_message_json.update(message_json)
+        channel = team.channels[original_message_json.get('channel')]
+        process_message(original_message_json, eventrouter,
+                channel=channel, team=team)
         dbg("REPLY {}".format(message_json))
-    except KeyError:
+    else:
         dbg("Unexpected reply {}".format(message_json))
 
 
