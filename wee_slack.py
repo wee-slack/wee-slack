@@ -1113,6 +1113,9 @@ class SlackTeam(object):
     def buffer_prnt(self, data):
         w.prnt_date_tags(self.channel_buffer, SlackTS().major, tag("team"), data)
 
+    def send_message(self, message, subtype=None, request_dict_ext={}):
+        w.prnt("", "ERROR: Sending a message in the team buffer is not supported")
+
     def find_channel_by_members(self, members, channel_type=None):
         for channel in self.channels.itervalues():
             if channel.get_members() == members and (
