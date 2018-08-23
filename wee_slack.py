@@ -2124,9 +2124,13 @@ class SlackMessage(object):
         if (self.message_json.get('subtype') == 'me_message' and
                 not self.message_json['text'].startswith(self.sender)):
             text = "{} {}".format(self.sender, text)
+        if (self.message_json.get('subtype') == 'channel_join' and
+                self.message_json.get('inviter')):
+            inviter_id = self.message_json.get('inviter')
+            inviter_nick = unfurl_refs("<@{}>".format(inviter_id))
+            text += " by invitation from {}".format(inviter_nick)
         if len(self.submessages) > 0:
-            text = "{} {}[ Thread: {} Replies: {} ]".format(
-                    text,
+            text += " {}[ Thread: {} Replies: {} ]".format(
                     w.color(config.thread_suffix_color),
                     self.hash or self.ts,
                     len(self.submessages))
