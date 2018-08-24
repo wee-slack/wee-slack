@@ -1368,11 +1368,16 @@ class SlackChannel(object):
     def set_related_server(self, team):
         self.team = team
 
+    def mentions(self):
+        return {'@' + self.team.nick, self.team.myidentifier}
+
+    def highlights(self):
+        return self.team.highlight_words.union(self.mentions()).union({"!here", "!channel", "!everyone"})
+
     def set_highlights(self):
         # highlight my own name and any set highlights
         if self.channel_buffer:
-            highlights = self.team.highlight_words.union({'@' + self.team.nick, self.team.myidentifier, "!here", "!channel", "!everyone"})
-            h_str = ",".join(highlights)
+            h_str = ",".join(self.highlights())
             w.buffer_set(self.channel_buffer, "highlight_words", h_str)
 
     def create_buffer(self):
