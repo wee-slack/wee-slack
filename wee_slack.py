@@ -2124,6 +2124,12 @@ class SlackMessage(object):
     def __hash__(self):
         return hash(self.ts)
 
+    def open_thread(self, switch=False):
+        self.thread_channel = SlackThreadChannel(EVENTROUTER, self)
+        self.thread_channel.open()
+        if switch:
+            w.buffer_set(self.thread_channel.channel_buffer, "display", "1")
+
     def render(self, force=False):
         text = render(self.message_json, self.team, self.channel, force)
         if (self.message_json.get('subtype') == 'me_message' and
@@ -3398,12 +3404,7 @@ def thread_command_callback(data, current_buffer, args):
                     pm = channel.messages[SlackTS(args[1])]
                 except:
                     pm = channel.hashed_messages[args[1]]
-                tc = SlackThreadChannel(EVENTROUTER, pm)
-                pm.thread_channel = tc
-                tc.open()
-                # tc.create_buffer()
-                if config.switch_buffer_on_join:
-                    w.buffer_set(tc.channel_buffer, "display", "1")
+                pm.open_thread(switch=config.switch_buffer_on_join)
                 return w.WEECHAT_RC_OK_EAT
         elif args[0] == '/reply':
             count = int(args[1])
