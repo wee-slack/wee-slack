@@ -1300,7 +1300,7 @@ class SlackChannel(object):
         self.unread_count_display = count
         self.new_messages = bool(self.unread_count_display)
         for c in range(self.unread_count_display):
-            if self.type == "im":
+            if self.type in ["im", "mpim"]:
                 w.buffer_set(self.channel_buffer, "hotlist", "2")
             else:
                 w.buffer_set(self.channel_buffer, "hotlist", "1")
@@ -1445,7 +1445,7 @@ class SlackChannel(object):
             # we have to infer the tagset because we weren't told
             elif ts <= last_read:
                 tags = tag("backlog", user=tag_nick)
-            elif self.type in ["im", "mpdm"]:
+            elif self.type in ["im", "mpim"]:
                 if tag_nick != self.team.nick:
                     tags = tag("dm", user=tag_nick)
                     self.new_messages = True
