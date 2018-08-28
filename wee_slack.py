@@ -1110,8 +1110,9 @@ class SlackTeam(object):
     def formatted_name(self, **kwargs):
         return self.domain
 
-    def buffer_prnt(self, data):
-        w.prnt_date_tags(self.channel_buffer, SlackTS().major, tag("team"), data)
+    def buffer_prnt(self, data, message=False):
+        tag_name = "team_message" if message else "team_info"
+        w.prnt_date_tags(self.channel_buffer, SlackTS().major, tag(tag_name), data)
 
     def send_message(self, message, subtype=None, request_dict_ext={}):
         w.prnt("", "ERROR: Sending a message in the team buffer is not supported")
@@ -1368,11 +1369,16 @@ class SlackChannel(object):
     def set_related_server(self, team):
         self.team = team
 
+    def mentions(self):
+        return {'@' + self.team.nick, self.team.myidentifier}
+
+    def highlights(self):
+        return self.team.highlight_words.union(self.mentions()).union({"!here", "!channel", "!everyone"})
+
     def set_highlights(self):
         # highlight my own name and any set highlights
         if self.channel_buffer:
-            highlights = self.team.highlight_words.union({'@' + self.team.nick, self.team.myidentifier, "!here", "!channel", "!everyone"})
-            h_str = ",".join(highlights)
+            h_str = ",".join(self.highlights())
             w.buffer_set(self.channel_buffer, "highlight_words", h_str)
 
     def create_buffer(self):
@@ -2119,6 +2125,12 @@ class SlackMessage(object):
     def __hash__(self):
         return hash(self.ts)
 
+    def open_thread(self, switch=False):
+        self.thread_channel = SlackThreadChannel(EVENTROUTER, self)
+        self.thread_channel.open()
+        if switch:
+            w.buffer_set(self.thread_channel.channel_buffer, "display", "1")
+
     def render(self, force=False):
         text = render(self.message_json, self.team, self.channel, force)
         if (self.message_json.get('subtype') == 'me_message' and
@@ -2188,6 +2200,24 @@ class SlackMessage(object):
         else:
             pass
 
+    def has_mention(self):
+        return w.string_has_highlight(self.message_json.get('text'), ",".join(self.channel.mentions()))
+
+    def notify_thread(self, action=None, sender_id=None):
+        if config.auto_open_threads:
+            self.open_thread()
+        elif sender_id != self.team.myidentifier:
+            if action == "mention":
+                template = "You were mentioned in thread {hash}, channel {channel}"
+            elif action == "participant":
+                template = "New message in thread {hash}, channel {channel} in which you participated"
+            elif action == "response":
+                template = "New message in thread {hash} in response to own message in {channel}"
+            else:
+                template = "Notification for message in thread {hash}, channel {channel}"
+            message = template.format(hash=self.hash, channel=self.channel.formatted_name())
+
+            self.team.buffer_prnt(message, message=True)
 
 class SlackThreadMessage(SlackMessage):
 
@@ -2537,8 +2567,10 @@ def subprocess_thread_message(message_json, eventrouter, channel, team):
 
             text = message.render()
             # channel.buffer_prnt(message.sender, text, message.ts, **kwargs)
-            if parent_message.thread_channel:
+            if parent_message.thread_channel and parent_message.thread_channel.active:
                 parent_message.thread_channel.buffer_prnt(message.sender, text, message.ts, tag_nick=message.sender_plain)
+            elif message.ts > channel.last_read and message.has_mention():
+                parent_message.notify_thread(action="mention", sender_id=message_json["user"])
 
 #    channel = channels.find(message_json["channel"])
 #    server = channel.server
@@ -2576,8 +2608,17 @@ def subprocess_channel_leave(message_json, eventrouter, channel, team):
 
 
 def subprocess_message_replied(message_json, eventrouter, channel, team):
-    pass
-
+    parent_ts = message_json["message"].get("thread_ts")
+    parent_message = channel.messages.get(SlackTS(parent_ts))
+    # Thread exists but is not open yet
+    if parent_message is not None \
+            and not (parent_message.thread_channel and parent_message.thread_channel.active):
+        channel.hash_message(parent_ts)
+        last_message = max(message_json["message"]["replies"], key=lambda x: x["ts"])
+        if message_json["message"].get("user") == team.myidentifier:
+            parent_message.notify_thread(action="response", sender_id=last_message["user"])
+        elif any(team.myidentifier == r["user"] for r in message_json["message"]["replies"]):
+            parent_message.notify_thread(action="participant", sender_id=last_message["user"])
 
 def subprocess_message_changed(message_json, eventrouter, channel, team):
     new_message = message_json.get("message", None)
@@ -3092,7 +3133,8 @@ def tag(tagset, user=None):
         default_tag = 'nick_unknown'
     tagsets = {
         # messages in the team/server buffer, e.g. "new channel created"
-        "team": "no_highlight,log3",
+        "team_info": "no_highlight,log3",
+        "team_message": "irc_privmsg,notify_message,log1",
         # when replaying something old
         "backlog": "irc_privmsg,no_highlight,notify_none,logger_backlog",
         # when posting messages to a muted channel
@@ -3393,12 +3435,7 @@ def thread_command_callback(data, current_buffer, args):
                     pm = channel.messages[SlackTS(args[1])]
                 except:
                     pm = channel.hashed_messages[args[1]]
-                tc = SlackThreadChannel(EVENTROUTER, pm)
-                pm.thread_channel = tc
-                tc.open()
-                # tc.create_buffer()
-                if config.switch_buffer_on_join:
-                    w.buffer_set(tc.channel_buffer, "display", "1")
+                pm.open_thread(switch=config.switch_buffer_on_join)
                 return w.WEECHAT_RC_OK_EAT
         elif args[0] == '/reply':
             count = int(args[1])
@@ -3761,6 +3798,10 @@ class PluginConfig(object):
     # Following this procedure, the keys remain the same, but the values are
     # the real (python) values of the settings.
     default_settings = {
+        'auto_open_threads': Setting(
+            default='false',
+            desc='Automatically open threads when mentioned or in'
+            'response to own messages.'),
         'background_load_all_history': Setting(
             default='false',
             desc='Load history for each channel in the background as soon as it'
