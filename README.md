@@ -76,10 +76,18 @@ sudo /usr/local/opt/python@2/bin/pip2 install websocket_client
 pkg install py27-websocket-client py27-six
 ```
 
-#### 2. copy wee_slack.py to ~/.weechat/python/autoload
+#### 2. copy slack.py to ~/.weechat/python/autoload
+
+From source:
 ```
-wget https://raw.githubusercontent.com/wee-slack/wee-slack/master/wee_slack.py
-cp wee_slack.py ~/.weechat/python/autoload
+git clone git@github.com:wee-slack/wee-slack.git
+cd wee-slack
+make enable
+```
+
+From weechat plugin repo:
+```
+/script install slack.py
 ```
 
 #### 3. Start WeeChat
@@ -87,7 +95,7 @@ cp wee_slack.py ~/.weechat/python/autoload
 weechat
 ```
 
-**NOTE:** If weechat is already running, the script can be loaded using ``/python load python/autoload/wee_slack.py``
+**NOTE:** If weechat is already running, the script can be loaded using ``/python load python/autoload/slack.py``
 
 #### 4. Add your Slack API key(s)
 

@@ -27,11 +27,19 @@ except:
 
 from websocket import create_connection, WebSocketConnectionClosedException
 
-# hack to make tests possible.. better way?
-try:
-    import weechat
-except:
-    pass
+WEECHAT_SCRIPT_SPLIT = True
+if WEECHAT_SCRIPT_SPLIT:
+    import os
+    import sys
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+
+from src.debug import dbg
+
+# HACK HACK HACK
+# weechat requires all callbacks to be python globals, so any callback
+# used in any file needs to be imported into wee_slack.py.
+# TODO: figure out a better way to do this.
+from src.debug import closed_slack_debug_buffer_cb
 
 SCRIPT_NAME = "slack"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
@@ -139,34 +147,7 @@ if hasattr(ssl, "get_default_verify_paths") and callable(ssl.get_default_verify_
 
 EMOJI = []
 
-###### Unicode handling
-
-
-def encode_to_utf8(data):
-    if isinstance(data, unicode):
-        return data.encode('utf-8')
-    if isinstance(data, bytes):
-        return data
-    elif isinstance(data, collections.Mapping):
-        return type(data)(map(encode_to_utf8, data.iteritems()))
-    elif isinstance(data, collections.Iterable):
-        return type(data)(map(encode_to_utf8, data))
-    else:
-        return data
-
-
-def decode_from_utf8(data):
-    if isinstance(data, bytes):
-        return data.decode('utf-8')
-    if isinstance(data, unicode):
-        return data
-    elif isinstance(data, collections.Mapping):
-        return type(data)(map(decode_from_utf8, data.iteritems()))
-    elif isinstance(data, collections.Iterable):
-        return type(data)(map(decode_from_utf8, data))
-    else:
-        return data
-
+from src.util import encode_to_utf8,decode_from_utf8
 
 class WeechatWrapper(object):
     def __init__(self, wrapped_class):
@@ -208,7 +189,7 @@ class ProxyWrapper(object):
         self.proxy_user = ""
         self.proxy_password = ""
         self.has_proxy = False
-        
+
         if self.proxy_name:
             self.proxy_string = "weechat.proxy.{}".format(self.proxy_name)
             self.proxy_type = w.config_string(weechat.config_get("{}.type".format(self.proxy_string)))
@@ -220,21 +201,21 @@ class ProxyWrapper(object):
                 self.has_proxy = True
             else:
                 w.prnt("", "\nWarning: weechat.network.proxy_curl is set to {} type (name : {}, conf string : {}). Only HTTP proxy is supported.\n\n".format(self.proxy_type, self.proxy_name, self.proxy_string))
-        
+
     def curl(self):
         if not self.has_proxy:
             return ""
-        
+
         if self.proxy_user and self.proxy_password:
             user = "{}:{}@".format(self.proxy_user, self.proxy_password)
         else:
             user = ""
-                    
+
         if self.proxy_port:
             port = ":{}".format(self.proxy_port)
         else:
             port = ""
-                
+
         return "--proxy {}{}{}".format(user, self.proxy_address, port)
 
 
@@ -2054,8 +2035,11 @@ class SlackUser(object):
         if self.profile.get("display_name"):
             self.slack_name = self.profile["display_name"]
             self.name = self.profile["display_name"].replace(' ', '')
+        elif self.profile.get("real_name"):
+            self.slack_name = self.profile["real_name"]
+            self.name = self.profile["real_name"].replace(' ', '')
         else:
-            # No display name set. Fall back to the deprecated username field.
+            # No display or full name set. Fall back to the deprecated username field.
             self.slack_name = kwargs["name"]
             self.name = self.slack_name
         self.update_color()
@@ -3254,7 +3238,7 @@ def command_register_callback(data, command, return_code, out, err):
         w.prnt("", "ERROR: problem when trying to get Slack OAuth token. Got return code {}. Err: ".format(return_code, err))
         w.prnt("", "Check the network or proxy settings")
         return w.WEECHAT_RC_OK_EAT
-    
+
     if len(out) <= 0:
         w.prnt("", "ERROR: problem when trying to get Slack OAuth token. Got 0 length answer. Err: ".format(err))
         w.prnt("", "Check the network or proxy settings")
@@ -3638,25 +3622,6 @@ class InvalidType(Exception):
     def __init__(self, type_str):
         super(InvalidType, self).__init__(type_str)
 
-###### New but probably old and need to migrate
-
-
-def closed_slack_debug_buffer_cb(data, buffer):
-    global slack_debug
-    slack_debug = None
-    return w.WEECHAT_RC_OK
-
-
-def create_slack_debug_buffer():
-    global slack_debug, debug_string
-    if slack_debug is not None:
-        w.buffer_set(slack_debug, "display", "1")
-    else:
-        debug_string = None
-        slack_debug = w.buffer_new("slack-debug", "", "", "closed_slack_debug_buffer_cb", "")
-        w.buffer_set(slack_debug, "notify", "0")
-
-
 def load_emoji():
     try:
         DIR = w.info_get("weechat_dir", "")
@@ -3727,238 +3692,6 @@ def setup_hooks():
 
 ##### END NEW
 
-
-def dbg(message, level=0, main_buffer=False, fout=False):
-    """
-    send debug output to the slack-debug buffer and optionally write to a file.
-    """
-    # TODO: do this smarter
-    # return
-    if level >= config.debug_level:
-        global debug_string
-        message = "DEBUG: {}".format(message)
-        if fout:
-            file('/tmp/debug.log', 'a+').writelines(message + '\n')
-        if main_buffer:
-                # w.prnt("", "---------")
-                w.prnt("", "slack: " + message)
-        else:
-            if slack_debug and (not debug_string or debug_string in message):
-                # w.prnt(slack_debug, "---------")
-                w.prnt(slack_debug, message)
-
-
-###### Config code
-class PluginConfig(object):
-    Setting = collections.namedtuple('Setting', ['default', 'desc'])
-    # Default settings.
-    # These are, initially, each a (default, desc) tuple; the former is the
-    # default value of the setting, in the (string) format that weechat
-    # expects, and the latter is the user-friendly description of the setting.
-    # At __init__ time these values are extracted, the description is used to
-    # set or update the setting description for use with /help, and the default
-    # value is used to set the default for any settings not already defined.
-    # Following this procedure, the keys remain the same, but the values are
-    # the real (python) values of the settings.
-    default_settings = {
-        'background_load_all_history': Setting(
-            default='false',
-            desc='Load history for each channel in the background as soon as it'
-            ' opens, rather than waiting for the user to look at it.'),
-        'channel_name_typing_indicator': Setting(
-            default='true',
-            desc='Change the prefix of a channel from # to > when someone is'
-            ' typing in it. Note that this will (temporarily) affect the sort'
-            ' order if you sort buffers by name rather than by number.'),
-        'colorize_private_chats': Setting(
-            default='false',
-            desc='Whether to use nick-colors in DM windows.'),
-        'debug_mode': Setting(
-            default='false',
-            desc='Open a dedicated buffer for debug messages and start logging'
-            ' to it. How verbose the logging is depends on log_level.'),
-        'debug_level': Setting(
-            default='3',
-            desc='Show only this level of debug info (or higher) when'
-            ' debug_mode is on. Lower levels -> more messages.'),
-        'distracting_channels': Setting(
-            default='',
-            desc='List of channels to hide.'),
-        'external_user_suffix': Setting(
-            default='*',
-            desc='The suffix appended to nicks to indicate external users.'),
-        'group_name_prefix': Setting(
-            default='&',
-            desc='The prefix of buffer names for groups (private channels).'),
-        'map_underline_to': Setting(
-            default='_',
-            desc='When sending underlined text to slack, use this formatting'
-            ' character for it. The default ("_") sends it as italics. Use'
-            ' "*" to send bold instead.'),
-        'never_away': Setting(
-            default='false',
-            desc='Poke Slack every five minutes so that it never marks you "away".'),
-        'record_events': Setting(
-            default='false',
-            desc='Log all traffic from Slack to disk as JSON.'),
-        'render_bold_as': Setting(
-            default='bold',
-            desc='When receiving bold text from Slack, render it as this in weechat.'),
-        'render_italic_as': Setting(
-            default='italic',
-            desc='When receiving bold text from Slack, render it as this in weechat.'
-            ' If your terminal lacks italic support, consider using "underline" instead.'),
-        'send_typing_notice': Setting(
-            default='true',
-            desc='Alert Slack users when you are typing a message in the input bar '
-            '(Requires reload)'),
-        'server_aliases': Setting(
-            default='',
-            desc='A comma separated list of `subdomain:alias` pairs. The alias'
-            ' will be used instead of the actual name of the slack (in buffer'
-            ' names, logging, etc). E.g `work:no_fun_allowed` would make your'
-            ' work slack show up as `no_fun_allowed` rather than `work.slack.com`.'),
-        'shared_name_prefix': Setting(
-            default='%',
-            desc='The prefix of buffer names for shared channels.'),
-        'short_buffer_names': Setting(
-            default='false',
-            desc='Use `foo.#channel` rather than `foo.slack.com.#channel` as the'
-            ' internal name for Slack buffers. Overrides server_aliases.'),
-        'show_reaction_nicks': Setting(
-            default='false',
-            desc='Display the name of the reacting user(s) alongside each reactji.'),
-        'slack_api_token': Setting(
-            default='INSERT VALID KEY HERE!',
-            desc='List of Slack API tokens, one per Slack instance you want to'
-            ' connect to. See the README for details on how to get these.'),
-        'slack_timeout': Setting(
-            default='20000',
-            desc='How long (ms) to wait when communicating with Slack.'),
-        'switch_buffer_on_join': Setting(
-            default='true',
-            desc='When /joining a channel, automatically switch to it as well.'),
-        'thread_suffix_color': Setting(
-            default='lightcyan',
-            desc='Color to use for the [thread: XXX] suffix on messages that'
-            ' have threads attached to them.'),
-        'unfurl_ignore_alt_text': Setting(
-            default='false',
-            desc='When displaying ("unfurling") links to channels/users/etc,'
-            ' ignore the "alt text" present in the message and instead use the'
-            ' canonical name of the thing being linked to.'),
-        'unfurl_auto_link_display': Setting(
-            default='both',
-            desc='When displaying ("unfurling") links to channels/users/etc,'
-            ' determine what is displayed when the text matches the url'
-            ' without the protocol. This happens when Slack automatically'
-            ' creates links, e.g. from words separated by dots or email'
-            ' addresses. Set it to "text" to only display the text written by'
-            ' the user, "url" to only display the url or "both" (the default)'
-            ' to display both.'),
-        'unhide_buffers_with_activity': Setting(
-            default='false',
-            desc='When activity occurs on a buffer, unhide it even if it was'
-            ' previously hidden (whether by the user or by the'
-            ' distracting_channels setting).'),
-    }
-
-    # Set missing settings to their defaults. Load non-missing settings from
-    # weechat configs.
-    def __init__(self):
-        self.settings = {}
-        # Set all descriptions, replace the values in the dict with the
-        # default setting value rather than the (setting,desc) tuple.
-        # Use items() rather than iteritems() so we don't need to worry about
-        # invalidating the iterator.
-        for key, (default, desc) in self.default_settings.items():
-            w.config_set_desc_plugin(key, desc)
-            self.settings[key] = default
-
-        # Migrate settings from old versions of Weeslack...
-        self.migrate()
-        # ...and then set anything left over from the defaults.
-        for key, default in self.settings.iteritems():
-            if not w.config_get_plugin(key):
-                w.config_set_plugin(key, default)
-        self.config_changed(None, None, None)
-
-    def __str__(self):
-        return "".join([x + "\t" + str(self.settings[x]) + "\n" for x in self.settings.keys()])
-
-    def config_changed(self, data, key, value):
-        for key in self.settings:
-            self.settings[key] = self.fetch_setting(key)
-        if self.debug_mode:
-            create_slack_debug_buffer()
-        return w.WEECHAT_RC_OK
-
-    def fetch_setting(self, key):
-        if hasattr(self, 'get_' + key):
-            try:
-                return getattr(self, 'get_' + key)(key)
-            except:
-                return self.settings[key]
-        else:
-            # Most settings are on/off, so make get_boolean the default
-            return self.get_boolean(key)
-
-    def __getattr__(self, key):
-        return self.settings[key]
-
-    def get_boolean(self, key):
-        return w.config_string_to_boolean(w.config_get_plugin(key))
-
-    def get_string(self, key):
-        return w.config_get_plugin(key)
-
-    def get_int(self, key):
-        return int(w.config_get_plugin(key))
-
-    def is_default(self, key):
-        default = self.default_settings.get(key).default
-        return w.config_get_plugin(key) == default
-
-    get_debug_level = get_int
-    get_external_user_suffix = get_string
-    get_group_name_prefix = get_string
-    get_map_underline_to = get_string
-    get_render_bold_as = get_string
-    get_render_italic_as = get_string
-    get_shared_name_prefix = get_string
-    get_slack_timeout = get_int
-    get_thread_suffix_color = get_string
-    get_unfurl_auto_link_display = get_string
-
-    def get_distracting_channels(self, key):
-        return [x.strip() for x in w.config_get_plugin(key).split(',')]
-
-    def get_server_aliases(self, key):
-        alias_list = w.config_get_plugin(key)
-        if len(alias_list) > 0:
-            return dict(item.split(":") for item in alias_list.split(","))
-
-    def get_slack_api_token(self, key):
-        token = w.config_get_plugin("slack_api_token")
-        if token.startswith('${sec.data'):
-            return w.string_eval_expression(token, {}, {}, {})
-        else:
-            return token
-
-    def migrate(self):
-        """
-        This is to migrate the extension name from slack_extension to slack
-        """
-        if not w.config_get_plugin("migrated"):
-            for k in self.settings.keys():
-                if not w.config_is_set_plugin(k):
-                    p = w.config_get("plugins.var.python.slack_extension.{}".format(k))
-                    data = w.config_string(p)
-                    if data != "":
-                        w.config_set_plugin(k, data)
-            w.config_set_plugin("migrated", "true")
-
-
 # to Trace execution, add `setup_trace()` to startup
 # and  to a function and sys.settrace(trace_calls)  to a function
 def setup_trace():
@@ -3994,11 +3727,12 @@ def initiate_connection(token, retries=3):
                         {"batch_presence_aware": 1},
                         retries=retries)
 
+from src.weechat_wrapper import w
+from src.config import PluginConfig
 
+# WeeSlack initialization function. Responsible for creating globals, setting
+# up initial hooks, etc.
 if __name__ == "__main__":
-
-    w = WeechatWrapper(weechat)
-
     if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
                   SCRIPT_DESC, "script_unloaded", ""):
 
@@ -4014,7 +3748,6 @@ if __name__ == "__main__":
             # WEECHAT_HOME = w.info_get("weechat_dir", "")
 
             # Global var section
-            slack_debug = None
             config = PluginConfig()
             config_changed_cb = config.config_changed
 
