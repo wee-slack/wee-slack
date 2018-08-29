@@ -1247,7 +1247,64 @@ class SlackTeam(object):
         }, expect_reply=False)
 
 
-class SlackChannel(object):
+class SlackChannelCommon(object):
+    def send_add_reaction(self, msg_number, reaction):
+        self.send_change_reaction("reactions.add", msg_number, reaction)
+
+    def send_remove_reaction(self, msg_number, reaction):
+        self.send_change_reaction("reactions.remove", msg_number, reaction)
+
+    def send_change_reaction(self, method, msg_number, reaction):
+        if 0 < msg_number < len(self.messages):
+            keys = self.main_message_keys_reversed()
+            timestamp = next(islice(keys, msg_number - 1, None))
+            data = {"channel": self.identifier, "timestamp": timestamp, "name": reaction}
+            s = SlackRequest(self.team.token, method, data)
+            self.eventrouter.receive(s)
+
+    def edit_nth_previous_message(self, n, old, new, flags):
+        message = self.my_last_message(n)
+        if new == "" and old == "":
+            s = SlackRequest(self.team.token, "chat.delete", {"channel": self.identifier, "ts": message['ts']}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+            self.eventrouter.receive(s)
+        else:
+            num_replace = 1
+            if 'g' in flags:
+                num_replace = 0
+            new_message = re.sub(old, new, message["text"], num_replace)
+            if new_message != message["text"]:
+                s = SlackRequest(self.team.token, "chat.update", {"channel": self.identifier, "ts": message['ts'], "text": new_message}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                self.eventrouter.receive(s)
+
+    def my_last_message(self, msgno):
+        for key in self.main_message_keys_reversed():
+            m = self.messages[key]
+            if "user" in m.message_json and "text" in m.message_json and m.message_json["user"] == self.team.myidentifier:
+                msgno -= 1
+                if msgno == 0:
+                    return m.message_json
+
+    def change_message(self, ts, message_json=None, text=None):
+        ts = SlackTS(ts)
+        m = self.messages.get(ts)
+        if not m:
+            return
+        if message_json:
+            m.message_json.update(message_json)
+        if text:
+            m.change_text(text)
+
+        if type(m) == SlackMessage or config.thread_messages_in_channel:
+            new_text = self.render(m, force=True)
+            modify_buffer_line(self.channel_buffer, new_text, ts.major, ts.minor)
+        if type(m) == SlackThreadMessage:
+            thread_channel = m.parent_message.thread_channel
+            if thread_channel and thread_channel.active:
+                new_text = thread_channel.render(m, force=True)
+                modify_buffer_line(thread_channel.channel_buffer, new_text, ts.major, ts.minor)
+
+
+class SlackChannel(SlackChannelCommon):
     """
     Represents an individual slack channel.
     """
@@ -1526,40 +1583,6 @@ class SlackChannel(object):
                 del self.hashed_messages[message_hash]
         self.messages = OrderedDict(messages_to_keep)
 
-    def change_message(self, ts, message_json=None, text=None):
-        ts = SlackTS(ts)
-        m = self.messages.get(ts)
-        if not m:
-            return
-        if message_json:
-            m.message_json.update(message_json)
-        if text:
-            m.change_text(text)
-        new_text = self.render(m, force=True)
-        modify_buffer_line(self.channel_buffer, new_text, ts.major, ts.minor)
-
-    def edit_nth_previous_message(self, n, old, new, flags):
-        message = self.my_last_message(n)
-        if new == "" and old == "":
-            s = SlackRequest(self.team.token, "chat.delete", {"channel": self.identifier, "ts": message['ts']}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
-            self.eventrouter.receive(s)
-        else:
-            num_replace = 1
-            if 'g' in flags:
-                num_replace = 0
-            new_message = re.sub(old, new, message["text"], num_replace)
-            if new_message != message["text"]:
-                s = SlackRequest(self.team.token, "chat.update", {"channel": self.identifier, "ts": message['ts'], "text": new_message}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
-                self.eventrouter.receive(s)
-
-    def my_last_message(self, msgno):
-        for key in self.main_message_keys_reversed():
-            m = self.messages[key]
-            if "user" in m.message_json and "text" in m.message_json and m.message_json["user"] == self.team.myidentifier:
-                msgno -= 1
-                if msgno == 0:
-                    return m.message_json
-
     def is_visible(self):
         return w.buffer_get_integer(self.channel_buffer, "hidden") == 0
 
@@ -1575,20 +1598,6 @@ class SlackChannel(object):
             else:
                 self.eventrouter.receive_slow(s)
             self.got_history = True
-
-    def send_add_reaction(self, msg_number, reaction):
-        self.send_change_reaction("reactions.add", msg_number, reaction)
-
-    def send_remove_reaction(self, msg_number, reaction):
-        self.send_change_reaction("reactions.remove", msg_number, reaction)
-
-    def send_change_reaction(self, method, msg_number, reaction):
-        if 0 < msg_number < len(self.messages):
-            keys = self.main_message_keys_reversed()
-            timestamp = next(islice(keys, msg_number - 1, None))
-            data = {"channel": self.identifier, "timestamp": timestamp, "name": reaction}
-            s = SlackRequest(self.team.token, method, data)
-            self.eventrouter.receive(s)
 
     def main_message_keys_reversed(self):
         return (key for key in reversed(self.messages)
@@ -1929,7 +1938,7 @@ class SlackSharedChannel(SlackChannel):
         self.name = config.shared_name_prefix + slack_name
 
 
-class SlackThreadChannel(object):
+class SlackThreadChannel(SlackChannelCommon):
     """
     A thread channel is a virtual channel. We don't inherit from
     SlackChannel, because most of how it operates will be different.
@@ -1950,6 +1959,14 @@ class SlackThreadChannel(object):
         # self.set_name(self.slack_name)
     # def set_name(self, slack_name):
     #    self.name = "#" + slack_name
+
+    @property
+    def identifier(self):
+        return self.parent_message.channel.identifier
+
+    @property
+    def messages(self):
+        return self.parent_message.channel.messages
 
     @property
     def muted(self):
@@ -1998,6 +2015,9 @@ class SlackThreadChannel(object):
         for message in self.parent_message.submessages:
             text = self.render(message)
             self.buffer_prnt(message.sender, text, message.ts)
+
+    def main_message_keys_reversed(self):
+        return (message.ts for message in reversed(self.parent_message.submessages))
 
     def send_message(self, message, subtype=None):
         if subtype == 'me_message':
