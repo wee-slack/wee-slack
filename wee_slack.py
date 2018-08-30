@@ -3064,9 +3064,10 @@ def create_reaction_string(reactions):
     count = 0
     if not isinstance(reactions, list):
         reaction_string = " {}[{}]{}".format(
-                w.color("darkgray"), reactions, w.color("reset"))
+                w.color(config.reaction_suffix_color), reactions, w.color("reset"))
+
     else:
-        reaction_string = ' {}['.format(w.color("darkgray"))
+        reaction_string = ' {}['.format(w.color(config.reaction_suffix_color))
         for r in reactions:
             if len(r["users"]) > 0:
                 count += 1
@@ -3908,6 +3909,10 @@ class PluginConfig(object):
         'never_away': Setting(
             default='false',
             desc='Poke Slack every five minutes so that it never marks you "away".'),
+        'reaction_suffix_color': Setting(
+            default='darkgray',
+            desc='Color to use for the [:wave:(@user)] suffix on messages that'
+            ' have reactions attached to them.'),
         'record_events': Setting(
             default='false',
             desc='Log all traffic from Slack to disk as JSON.'),
@@ -4037,6 +4042,7 @@ class PluginConfig(object):
     get_group_name_prefix = get_string
     get_map_underline_to = get_string
     get_muted_channels_activity = get_string
+    get_reaction_suffix_color = get_string
     get_render_bold_as = get_string
     get_render_italic_as = get_string
     get_shared_name_prefix = get_string
