@@ -267,6 +267,24 @@ To enable tab completion of emojis, copy or symlink the `weemoji.json` file to y
 /set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(emoji)"
 ```
 
+#### Cursor and mouse mode
+
+The cursor mode and mouse mode can be used to interact with older messages, for editing, deleting, reacting and replying to a message. The default behavior when right-clicking on a message is to paste its id in the input. It can be used in `/reply`, `s/` substitution/deletion and in `+:emoji:` commands instead of a message number.
+
+In cursor mode, the `M` key achieves the same result (memo: the default for weechat is to paste the message with `m`, `M` simply copies the id).
+In addition, `R` will prepare a `/reply id` and `D` will delete the message (provided it’s yours).
+
+Please see weechat’s documentation about [how to use the cursor mode](https://weechat.org/files/doc/stable/weechat_user.en.html#key_bindings_cursor_context) or [adapt the bindings](https://weechat.org/files/doc/stable/weechat_user.en.html#command_weechat_key) to your preference.
+
+Default:
+```
+/key bindctxt mouse @chat(python.*.slack.com.*):button2 hsignal:slack_mouse
+/key bindctxt cursor @chat(python.*.slack.com.*):M hsignal:slack_cursor_message
+/key bindctxt cursor @chat(python.*.slack.com.*):D hsignal:slack_cursor_delete
+/key bindctxt cursor @chat(python.*.slack.com.*):R hsignal:slack_cursor_reply
+```
+hsignals `slack_mouse` and `slack_cursor_message` currently have the same meaning but may be subject to evolutions.
+
 Removing a team
 ---------------
 
