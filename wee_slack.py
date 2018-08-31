@@ -716,15 +716,24 @@ def buffer_input_callback(signal, buffer_ptr, data):
     if not channel:
         return w.WEECHAT_RC_ERROR
 
-    reaction = re.match("^(\d*)(\+|-):(.*):\s*$", data)
-    substitute = re.match("^(\d*)s/", data)
+    def get_id(message_id):
+        if not message_id:
+            return 1
+        elif message_id[0] == "$":
+            return message_id[1:]
+        else:
+            return int(message_id)
+
+    message_id_regex = "(\d*|\$[0-9a-fA-F]{3,})"
+    reaction = re.match("^{}(\+|-):(.*):\s*$".format(message_id_regex), data)
+    substitute = re.match("^{}s/".format(message_id_regex), data)
     if reaction:
         if reaction.group(2) == "+":
-            channel.send_add_reaction(int(reaction.group(1) or 1), reaction.group(3))
+            channel.send_add_reaction(get_id(reaction.group(1)), reaction.group(3))
         elif reaction.group(2) == "-":
-            channel.send_remove_reaction(int(reaction.group(1) or 1), reaction.group(3))
+            channel.send_remove_reaction(get_id(reaction.group(1)), reaction.group(3))
     elif substitute:
-        msgno = int(substitute.group(1) or 1)
+        msg_id = get_id(substitute.group(1))
         try:
             old, new, flags = re.split(r'(?<!\\)/', data)[1:]
         except ValueError:
@@ -734,7 +743,7 @@ def buffer_input_callback(signal, buffer_ptr, data):
             # rid of escapes.
             new = new.replace(r'\/', '/')
             old = old.replace(r'\/', '/')
-            channel.edit_nth_previous_message(msgno, old, new, flags)
+            channel.edit_nth_previous_message(msg_id, old, new, flags)
     else:
         if data.startswith(('//', ' ')):
             data = data[1:]
@@ -1248,22 +1257,31 @@ class SlackTeam(object):
 
 
 class SlackChannelCommon(object):
-    def send_add_reaction(self, msg_number, reaction):
-        self.send_change_reaction("reactions.add", msg_number, reaction)
+    def send_add_reaction(self, msg_id, reaction):
+        self.send_change_reaction("reactions.add", msg_id, reaction)
 
-    def send_remove_reaction(self, msg_number, reaction):
-        self.send_change_reaction("reactions.remove", msg_number, reaction)
+    def send_remove_reaction(self, msg_id, reaction):
+        self.send_change_reaction("reactions.remove", msg_id, reaction)
 
-    def send_change_reaction(self, method, msg_number, reaction):
-        if 0 < msg_number < len(self.messages):
+    def send_change_reaction(self, method, msg_id, reaction):
+        if type(msg_id) is not int:
+            if msg_id in self.hashed_messages:
+                timestamp = str(self.hashed_messages[msg_id].ts)
+            else:
+                return
+        elif 0 < msg_id <= len(self.messages):
             keys = self.main_message_keys_reversed()
-            timestamp = next(islice(keys, msg_number - 1, None))
-            data = {"channel": self.identifier, "timestamp": timestamp, "name": reaction}
-            s = SlackRequest(self.team.token, method, data)
-            self.eventrouter.receive(s)
+            timestamp = next(islice(keys, msg_id - 1, None))
+        else:
+            return
+        data = {"channel": self.identifier, "timestamp": timestamp, "name": reaction}
+        s = SlackRequest(self.team.token, method, data)
+        self.eventrouter.receive(s)
 
-    def edit_nth_previous_message(self, n, old, new, flags):
-        message = self.my_last_message(n)
+    def edit_nth_previous_message(self, msg_id, old, new, flags):
+        message = self.my_last_message(msg_id)
+        if message is None:
+            return
         if new == "" and old == "":
             s = SlackRequest(self.team.token, "chat.delete", {"channel": self.identifier, "ts": message['ts']}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
@@ -1276,13 +1294,18 @@ class SlackChannelCommon(object):
                 s = SlackRequest(self.team.token, "chat.update", {"channel": self.identifier, "ts": message['ts'], "text": new_message}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
 
-    def my_last_message(self, msgno):
-        for key in self.main_message_keys_reversed():
-            m = self.messages[key]
-            if "user" in m.message_json and "text" in m.message_json and m.message_json["user"] == self.team.myidentifier:
-                msgno -= 1
-                if msgno == 0:
-                    return m.message_json
+    def my_last_message(self, msg_id):
+        if type(msg_id) is not int:
+            m = self.hashed_messages.get(msg_id)
+            if m is not None and m.message_json.get("user") == self.team.myidentifier:
+                return m.message_json
+        else:
+            for key in self.main_message_keys_reversed():
+                m = self.messages[key]
+                if m.message_json.get("user") == self.team.myidentifier:
+                    msg_id -= 1
+                    if msg_id == 0:
+                        return m.message_json
 
     def change_message(self, ts, message_json=None, text=None):
         ts = SlackTS(ts)
@@ -1302,6 +1325,37 @@ class SlackChannelCommon(object):
             if thread_channel and thread_channel.active:
                 new_text = thread_channel.render(m, force=True)
                 modify_buffer_line(thread_channel.channel_buffer, new_text, ts.major, ts.minor)
+
+    def hash_message(self, ts):
+        ts = SlackTS(ts)
+
+        def calc_hash(msg):
+            return sha.sha(str(msg.ts)).hexdigest()
+
+        if ts in self.messages and not self.messages[ts].hash:
+            message = self.messages[ts]
+            tshash = calc_hash(message)
+            hl = 3
+            shorthash = tshash[:hl]
+            while any(x.startswith(shorthash) for x in self.hashed_messages):
+                hl += 1
+                shorthash = tshash[:hl]
+
+            if shorthash[:-1] in self.hashed_messages:
+                col_msg = self.hashed_messages.pop(shorthash[:-1])
+                col_new_hash = calc_hash(col_msg)[:hl]
+                col_msg.hash = col_new_hash
+                self.hashed_messages[col_new_hash] = col_msg
+                self.change_message(str(col_msg.ts))
+                if col_msg.thread_channel:
+                    col_msg.thread_channel.rename()
+
+            self.hashed_messages[shorthash] = message
+            message.hash = shorthash
+            return shorthash
+        elif ts in self.messages:
+            return self.messages[ts].hash
+
 
 
 class SlackChannel(SlackChannelCommon):
@@ -1725,33 +1779,6 @@ class SlackChannel(SlackChannelCommon):
                 for fn in ["1| too", "2| many", "3| users", "4| to", "5| show"]:
                     w.nicklist_add_group(self.channel_buffer, '', fn, w.color('white'), 1)
 
-    def hash_message(self, ts):
-        ts = SlackTS(ts)
-
-        def calc_hash(msg):
-            return sha.sha(str(msg.ts)).hexdigest()
-
-        if ts in self.messages and not self.messages[ts].hash:
-            message = self.messages[ts]
-            tshash = calc_hash(message)
-            hl = 3
-            shorthash = tshash[:hl]
-            while any(x.startswith(shorthash) for x in self.hashed_messages):
-                hl += 1
-                shorthash = tshash[:hl]
-
-            if shorthash[:-1] in self.hashed_messages:
-                col_msg = self.hashed_messages.pop(shorthash[:-1])
-                col_new_hash = calc_hash(col_msg)[:hl]
-                col_msg.hash = col_new_hash
-                self.hashed_messages[col_new_hash] = col_msg
-                self.change_message(str(col_msg.ts))
-                if col_msg.thread_channel:
-                    col_msg.thread_channel.rename()
-
-            self.hashed_messages[shorthash] = message
-            message.hash = shorthash
-
     def render(self, message, force=False):
         text = message.render(force)
         if isinstance(message, SlackThreadMessage):
@@ -1948,6 +1975,7 @@ class SlackThreadChannel(SlackChannelCommon):
     def __init__(self, eventrouter, parent_message):
         self.eventrouter = eventrouter
         self.parent_message = parent_message
+        self.hashed_messages = {}
         self.channel_buffer = None
         # self.identifier = ""
         # self.name = "#" + kwargs['name']
@@ -3508,10 +3536,16 @@ def thread_command_callback(data, current_buffer, args):
                 pm.open_thread(switch=config.switch_buffer_on_join)
                 return w.WEECHAT_RC_OK_EAT
         elif args[0] == '/reply':
-            count = int(args[1])
+            if args[1][0] == "$":
+                if args[1][1:] in channel.hashed_messages:
+                    parent_id = str(channel.hashed_messages[args[1][1:]].ts)
+                else:
+                    return w.WEECHAT_RC_OK_EAT
+            else:
+                count = int(args[1])
+                mkeys = channel.main_message_keys_reversed()
+                parent_id = str(next(islice(mkeys, count - 1, None)))
             msg = " ".join(args[2:])
-            mkeys = channel.main_message_keys_reversed()
-            parent_id = str(next(islice(mkeys, count - 1, None)))
             channel.send_message(msg, request_dict_ext={"thread_ts": parent_id})
             return w.WEECHAT_RC_OK_EAT
         w.prnt(current, "Invalid thread command.")
@@ -3693,6 +3727,30 @@ def command_status(data, current_buffer, args):
         s = SlackRequest(team.token, "users.profile.set", {"profile": profile}, team_hash=team.team_hash)
         EVENTROUTER.receive(s)
 
+@utf8_decode
+def line_event_cb(data, signal, hashtable):
+    buffer_pointer = hashtable["_buffer"]
+    line_timestamp = hashtable["_chat_line_date"]
+    line_time_id = hashtable["_chat_line_date_printed"]
+    channel = EVENTROUTER.weechat_controller.buffers.get(buffer_pointer)
+
+    if line_timestamp and line_time_id and isinstance(channel, SlackChannelCommon):
+        ts = SlackTS("{}.{}".format(line_timestamp, line_time_id))
+
+        message_hash = channel.hash_message(ts)
+        if message_hash is None:
+            return w.WEECHAT_RC_OK
+        message_hash = "$" + message_hash
+
+        if data == "message":
+            w.command(buffer_pointer, "/cursor stop")
+            w.command(buffer_pointer, "/input insert {}".format(message_hash))
+        elif data == "delete":
+            w.command(buffer_pointer, "/input send {}s///".format(message_hash))
+        elif data == "reply":
+            w.command(buffer_pointer, "/cursor stop")
+            w.command(buffer_pointer, "/input insert /reply {}\\x20".format(message_hash))
+    return w.WEECHAT_RC_OK
 
 @slack_buffer_required
 def command_back(data, current_buffer, args):
@@ -3827,6 +3885,20 @@ def setup_hooks():
 
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
+
+    w.key_bind("mouse", {
+        "@chat(python.*.slack.com.*):button2": "hsignal:slack_mouse",
+        })
+    w.key_bind("cursor", {
+        "@chat(python.*.slack.com.*):M": "hsignal:slack_cursor_message",
+        "@chat(python.*.slack.com.*):D": "hsignal:slack_cursor_delete",
+        "@chat(python.*.slack.com.*):R": "hsignal:slack_cursor_reply",
+        })
+
+    w.hook_hsignal("slack_mouse", "line_event_cb", "message")
+    w.hook_hsignal("slack_cursor_delete", "line_event_cb", "delete")
+    w.hook_hsignal("slack_cursor_reply", "line_event_cb", "reply")
+    w.hook_hsignal("slack_cursor_message", "line_event_cb", "message")
 
     # Hooks to fix/implement
     # w.hook_signal('buffer_opened', "buffer_opened_cb", "")
