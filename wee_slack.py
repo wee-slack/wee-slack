@@ -1102,10 +1102,9 @@ class SlackTeam(object):
         self.muted_channels = {x for x in muted_str.split(',') if x}
 
     def set_highlight_words(self, highlight_str):
-        self.highlight_words = {x for x in highlight_str.split(',')}
-        if len(self.highlight_words) > 0:
-            for v in self.channels.itervalues():
-                v.set_highlights()
+        self.highlight_words = {x for x in highlight_str.split(',') if x}
+        for channel in self.channels.itervalues():
+            channel.set_highlights()
 
     def formatted_name(self, **kwargs):
         return self.domain
