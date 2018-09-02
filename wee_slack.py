@@ -2632,7 +2632,7 @@ def subprocess_message_deleted(message_json, eventrouter, channel, team):
 
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
     text = unhtmlescape(unfurl_refs(message_json["text"], ignore_alt_text=False))
-    channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"], tagset="muted")
+    channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"], tagset="topic")
     channel.set_topic(unhtmlescape(message_json["topic"]))
 
 
@@ -3145,6 +3145,7 @@ def tag(tagset, user=None):
         # when this is a join/leave, attach for smart filter ala:
         # if user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]
         "joinleave": "irc_smart_filter,no_highlight,log4",
+        "topic": "irc_topic,no_highlight,log3",
         # catchall ?
         "default": "irc_privmsg,notify_message,log1",
     }
