@@ -1928,6 +1928,10 @@ class SlackThreadChannel(object):
     # def set_name(self, slack_name):
     #    self.name = "#" + slack_name
 
+    @property
+    def muted(self):
+        return self.parent_message.channel.muted
+
     def formatted_name(self, style="default", **kwargs):
         hash_or_ts = self.parent_message.hash or self.parent_message.ts
         styles = {
@@ -1959,7 +1963,7 @@ class SlackThreadChannel(object):
             #    tags = tag("dm")
             #    self.new_messages = True
             # else:
-            tags = tag("default")
+            tags = tag("default", thread=True, muted=self.muted)
             # self.new_messages = True
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
             modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
@@ -3137,7 +3141,7 @@ def format_nick(nick, previous_nick=None):
     return nick_prefix_color + nick_prefix + w.color("reset") + nick + nick_suffix_color + nick_suffix + w.color("reset")
 
 
-def tag(tagset, user=None, muted=False):
+def tag(tagset, user=None, thread=False, muted=False):
     tagsets = {
         # messages in the team/server buffer, e.g. "new channel created"
         "team_info": {"no_highlight", "log3"},
@@ -3157,11 +3161,13 @@ def tag(tagset, user=None, muted=False):
     nick_tag = {"nick_{}".format(user or "unknown").replace(" ", "_")}
     slack_tag = {"slack_{}".format(tagset)}
     tags = nick_tag | slack_tag | tagsets[tagset]
-    if muted and config.muted_channels_activity != "all":
-        tags -= {"notify_highlight", "notify_message", "notify_private"}
-        tags.add("notify_none")
-        if config.muted_channels_activity == "none":
-            tags.add("no_highlight")
+    if muted:
+        tags.add("slack_muted_channel")
+        if not thread and config.muted_channels_activity != "all":
+            tags -= {"notify_highlight", "notify_message", "notify_private"}
+            tags.add("notify_none")
+            if config.muted_channels_activity == "none":
+                tags.add("no_highlight")
     return ",".join(tags)
 
 ###### New/converted command_ commands
