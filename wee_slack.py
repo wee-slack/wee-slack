@@ -3541,15 +3541,16 @@ def command_slash(data, current_buffer, args):
 
 @slack_buffer_required
 def command_mute(data, current_buffer, args):
-    current = w.current_buffer()
-    channel_id = EVENTROUTER.weechat_controller.buffers[current].identifier
-    team = EVENTROUTER.weechat_controller.buffers[current].team
-    if channel_id not in team.muted_channels:
-        team.muted_channels.add(channel_id)
-    else:
-        team.muted_channels.discard(channel_id)
-    s = SlackRequest(team.token, "users.prefs.set", {"name": "muted_channels", "value": ",".join(team.muted_channels)}, team_hash=team.team_hash, channel_identifier=channel_id)
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+    team = channel.team
+    team.muted_channels ^= {channel.identifier}
+    muted_str = "Muted" if channel.identifier in team.muted_channels else "Unmuted"
+    team.buffer_prnt("{} channel {}".format(muted_str, channel.name))
+    s = SlackRequest(team.token, "users.prefs.set",
+            {"name": "muted_channels", "value": ",".join(team.muted_channels)},
+            team_hash=team.team_hash, channel_identifier=channel.identifier)
     EVENTROUTER.receive(s)
+    return w.WEECHAT_RC_OK_EAT
 
 
 @slack_buffer_required
