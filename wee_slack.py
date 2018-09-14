@@ -3460,6 +3460,13 @@ def thread_command_callback(data, current_buffer, args):
                     pm = channel.hashed_messages[args[1]]
                 pm.open_thread(switch=config.switch_buffer_on_join)
                 return w.WEECHAT_RC_OK_EAT
+            elif len(args) >= 3:
+                try:
+                    pm = channel.messages[SlackTS(args[1])]
+                except:
+                    pm = channel.hashed_messages[args[1]]
+                channel.send_message(' '.join(args[2:]), request_dict_ext={"thread_ts": str(pm.ts)})
+                return w.WEECHAT_RC_OK_EAT
         elif args[0] == '/reply':
             count = int(args[1])
             msg = " ".join(args[2:])

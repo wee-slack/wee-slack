@@ -241,6 +241,11 @@ Open an existing thread as a channel. The argument is the thread identifier, whi
 /thread af8
 ```
 
+Reply to an existing thread. The second argument is the thread identifier, which is printed in square brackets with every threaded message in a channel:
+```
+/thread af8 Hello thread!
+```
+
 Label a thread with a memorable name. The above command will open a channel called af8, but perhaps you want to call it "meetingnotes". To do so, select that buffer and type:
 ```
 /label meetingnotes
