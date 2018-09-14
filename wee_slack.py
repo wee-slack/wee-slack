@@ -1099,13 +1099,14 @@ class SlackTeam(object):
                 w.buffer_merge(self.channel_buffer, w.buffer_search_main())
 
     def set_muted_channels(self, muted_str):
-        self.muted_channels = {x for x in muted_str.split(',')}
+        self.muted_channels = {x for x in muted_str.split(',') if x}
+        for channel in self.channels.itervalues():
+            channel.set_highlights()
 
     def set_highlight_words(self, highlight_str):
-        self.highlight_words = {x for x in highlight_str.split(',')}
-        if len(self.highlight_words) > 0:
-            for v in self.channels.itervalues():
-                v.set_highlights()
+        self.highlight_words = {x for x in highlight_str.split(',') if x}
+        for channel in self.channels.itervalues():
+            channel.set_highlights()
 
     def formatted_name(self, **kwargs):
         return self.domain
@@ -1275,6 +1276,10 @@ class SlackChannel(object):
     def __repr__(self):
         return "Name:{} Identifier:{}".format(self.name, self.identifier)
 
+    @property
+    def muted(self):
+        return self.identifier in self.team.muted_channels
+
     def set_name(self, slack_name):
         self.name = "#" + slack_name
 
@@ -1300,6 +1305,8 @@ class SlackChannel(object):
     def set_unread_count_display(self, count):
         self.unread_count_display = count
         self.new_messages = bool(self.unread_count_display)
+        if self.muted and config.muted_channels_activity != "all":
+            return
         for c in range(self.unread_count_display):
             if self.type in ["im", "mpim"]:
                 w.buffer_set(self.channel_buffer, "hotlist", "2")
@@ -1373,7 +1380,11 @@ class SlackChannel(object):
         return {'@' + self.team.nick, self.team.myidentifier}
 
     def highlights(self):
-        return self.team.highlight_words.union(self.mentions()).union({"!here", "!channel", "!everyone"})
+        personal_highlights = self.team.highlight_words.union(self.mentions())
+        if self.muted and config.muted_channels_activity == "personal_highlights":
+            return personal_highlights
+        else:
+            return personal_highlights.union({"!here", "!channel", "!everyone"})
 
     def set_highlights(self):
         # highlight my own name and any set highlights
@@ -1383,7 +1394,6 @@ class SlackChannel(object):
 
     def create_buffer(self):
         """
-        incomplete (muted doesn't work)
         Creates the weechat buffer where the channel magic happens.
         """
         if not self.channel_buffer:
@@ -1445,24 +1455,26 @@ class SlackChannel(object):
             # backlog messages - we will update the read marker as we print these
             backlog = True if ts <= last_read else False
             if tagset:
-                tags = tag(tagset, user=tag_nick)
                 self.new_messages = True
 
             # we have to infer the tagset because we weren't told
             elif ts <= last_read:
-                tags = tag("backlog", user=tag_nick)
+                tagset = "backlog"
             elif self.type in ["im", "mpim"]:
                 if tag_nick != self.team.nick:
-                    tags = tag("dm", user=tag_nick)
+                    tagset = "dm"
                     self.new_messages = True
                 else:
-                    tags = tag("dmfromme")
+                    tagset = "dmfromme"
             else:
-                tags = tag("default", user=tag_nick)
+                tagset = "default"
                 self.new_messages = True
 
+            tags = tag(tagset, user=tag_nick, muted=self.muted)
+
             try:
-                if config.unhide_buffers_with_activity and not self.is_visible() and (self.identifier not in self.team.muted_channels):
+                if (config.unhide_buffers_with_activity
+                        and not self.is_visible() and not self.muted):
                     w.buffer_set(self.channel_buffer, "hidden", "0")
 
                 w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
@@ -1927,6 +1939,10 @@ class SlackThreadChannel(object):
     # def set_name(self, slack_name):
     #    self.name = "#" + slack_name
 
+    @property
+    def muted(self):
+        return self.parent_message.channel.muted
+
     def formatted_name(self, style="default", **kwargs):
         hash_or_ts = self.parent_message.hash or self.parent_message.ts
         styles = {
@@ -1958,7 +1974,7 @@ class SlackThreadChannel(object):
             #    tags = tag("dm")
             #    self.new_messages = True
             # else:
-            tags = tag("default")
+            tags = tag("default", thread=True, muted=self.muted)
             # self.new_messages = True
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
             modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
@@ -2002,7 +2018,6 @@ class SlackThreadChannel(object):
 
     def create_buffer(self):
         """
-        incomplete (muted doesn't work)
         Creates the weechat buffer where the thread magic happens.
         """
         if not self.channel_buffer:
@@ -2641,7 +2656,7 @@ def subprocess_message_deleted(message_json, eventrouter, channel, team):
 
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
     text = unhtmlescape(unfurl_refs(message_json["text"], ignore_alt_text=False))
-    channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"], tagset="muted")
+    channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"], tagset="topic")
     channel.set_topic(unhtmlescape(message_json["topic"]))
 
 
@@ -3131,29 +3146,34 @@ def format_nick(nick, previous_nick=None):
     return nick_prefix_color + nick_prefix + w.color("reset") + nick + nick_suffix_color + nick_suffix + w.color("reset")
 
 
-def tag(tagset, user=None):
-    if user:
-        default_tag = "nick_" + user.replace(" ", "_")
-    else:
-        default_tag = 'nick_unknown'
+def tag(tagset, user=None, thread=False, muted=False):
     tagsets = {
         # messages in the team/server buffer, e.g. "new channel created"
-        "team_info": "no_highlight,log3",
-        "team_message": "irc_privmsg,notify_message,log1",
+        "team_info": {"no_highlight", "log3"},
+        "team_message": {"irc_privmsg", "notify_message", "log1"},
         # when replaying something old
-        "backlog": "irc_privmsg,no_highlight,notify_none,logger_backlog",
-        # when posting messages to a muted channel
-        "muted": "irc_privmsg,no_highlight,notify_none,log1",
+        "backlog": {"irc_privmsg", "no_highlight", "notify_none", "logger_backlog"},
         # when receiving a direct message
-        "dm": "irc_privmsg,notify_private,log1",
-        "dmfromme": "irc_privmsg,no_highlight,notify_none,log1",
+        "dm": {"irc_privmsg", "notify_private", "log1"},
+        "dmfromme": {"irc_privmsg", "no_highlight", "notify_none", "log1"},
         # when this is a join/leave, attach for smart filter ala:
         # if user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]
-        "joinleave": "irc_smart_filter,no_highlight,log4",
+        "joinleave": {"irc_smart_filter", "no_highlight", "log4"},
+        "topic": {"irc_topic", "no_highlight", "log3"},
         # catchall ?
-        "default": "irc_privmsg,notify_message,log1",
+        "default": {"irc_privmsg", "notify_message", "log1"},
     }
-    return "{},slack_{},{}".format(default_tag, tagset, tagsets[tagset])
+    nick_tag = {"nick_{}".format(user or "unknown").replace(" ", "_")}
+    slack_tag = {"slack_{}".format(tagset)}
+    tags = nick_tag | slack_tag | tagsets[tagset]
+    if muted:
+        tags.add("slack_muted_channel")
+        if not thread and config.muted_channels_activity != "all":
+            tags -= {"notify_highlight", "notify_message", "notify_private"}
+            tags.add("notify_none")
+            if config.muted_channels_activity == "none":
+                tags.add("no_highlight")
+    return ",".join(tags)
 
 ###### New/converted command_ commands
 
@@ -3424,8 +3444,11 @@ def command_talk(data, current_buffer, args):
 
 
 def command_showmuted(data, current_buffer, args):
-    current = w.current_buffer()
-    w.prnt(EVENTROUTER.weechat_controller.buffers[current].team.channel_buffer, str(EVENTROUTER.weechat_controller.buffers[current].team.muted_channels))
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    muted_channels = [team.channels[key].name
+            for key in team.muted_channels if key in team.channels]
+    team.buffer_prnt("Muted channels: {}".format(', '.join(muted_channels)))
+    return w.WEECHAT_RC_OK_EAT
 
 
 @utf8_decode
@@ -3529,15 +3552,16 @@ def command_slash(data, current_buffer, args):
 
 @slack_buffer_required
 def command_mute(data, current_buffer, args):
-    current = w.current_buffer()
-    channel_id = EVENTROUTER.weechat_controller.buffers[current].identifier
-    team = EVENTROUTER.weechat_controller.buffers[current].team
-    if channel_id not in team.muted_channels:
-        team.muted_channels.add(channel_id)
-    else:
-        team.muted_channels.discard(channel_id)
-    s = SlackRequest(team.token, "users.prefs.set", {"name": "muted_channels", "value": ",".join(team.muted_channels)}, team_hash=team.team_hash, channel_identifier=channel_id)
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+    team = channel.team
+    team.muted_channels ^= {channel.identifier}
+    muted_str = "Muted" if channel.identifier in team.muted_channels else "Unmuted"
+    team.buffer_prnt("{} channel {}".format(muted_str, channel.name))
+    s = SlackRequest(team.token, "users.prefs.set",
+            {"name": "muted_channels", "value": ",".join(team.muted_channels)},
+            team_hash=team.team_hash, channel_identifier=channel.identifier)
     EVENTROUTER.receive(s)
+    return w.WEECHAT_RC_OK_EAT
 
 
 @slack_buffer_required
@@ -3841,6 +3865,14 @@ class PluginConfig(object):
             desc='When sending underlined text to slack, use this formatting'
             ' character for it. The default ("_") sends it as italics. Use'
             ' "*" to send bold instead.'),
+        'muted_channels_activity': Setting(
+            default='personal_highlights',
+            desc="Control which activity you see from muted channels, either"
+            " none, personal_highlights, all_highlights or all. none: Don't"
+            " show any activity. personal_highlights: Only show personal"
+            " highlights, i.e. not @channel and @here. all_highlights: Show"
+            " all highlights, but not other messages. all: Show all activity,"
+            " like other channels."),
         'never_away': Setting(
             default='false',
             desc='Poke Slack every five minutes so that it never marks you "away".'),
@@ -3972,6 +4004,7 @@ class PluginConfig(object):
     get_external_user_suffix = get_string
     get_group_name_prefix = get_string
     get_map_underline_to = get_string
+    get_muted_channels_activity = get_string
     get_render_bold_as = get_string
     get_render_italic_as = get_string
     get_shared_name_prefix = get_string

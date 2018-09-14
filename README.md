@@ -177,6 +177,16 @@ Set yourself away/back:
 /slack back
 ```
 
+Toggle muting of the current channel:
+```
+/slack mute
+```
+
+List muted channels for the current team:
+```
+/slack showmuted
+```
+
 Modify previous message:
 ```
 s/old text/new text/
