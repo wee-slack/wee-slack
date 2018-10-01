@@ -12,8 +12,10 @@ import json
 import pickle
 import sha
 import os
+import os.path
 import re
 import urllib
+import urlparse
 import sys
 import traceback
 import collections
@@ -3607,10 +3609,13 @@ def command_upload(data, current_buffer, args):
     fname = args.split(' ', 1)
     file_path = os.path.expanduser(fname[1])
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    if re.match("https?:\/\/", file_path):
+        remote_fn = os.path.basename(urlparse.urlparse(file_path).path)
+        file_path, _ = urllib.urlretrieve(file_path, "/tmp/{}".format(remote_fn))
     if ' ' in file_path:
         file_path = file_path.replace(' ', '\ ')
 
-    # only http proxy is currenlty supported
+    # only http proxy is currently supported
     proxy = ProxyWrapper()
     proxy_string = proxy.curl()
     command = 'curl -F file=@{} -F channels={} -F token={} {} {}'.format(file_path, channel.identifier, team.token, proxy_string, url)
