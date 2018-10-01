@@ -217,6 +217,7 @@ Upload a file to the current slack buffer:
 ```
 /slack upload [file_path]
 ```
+`file_path` can be a URL, in which case wee-slack will automatically download it and attach it as if it had been a local file.
 
 Run a Slack slash command. Simply prepend `/slack slash` to what you'd type in the official clients.:
 ```
