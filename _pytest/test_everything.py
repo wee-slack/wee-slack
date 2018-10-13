@@ -12,7 +12,7 @@ def test_everything(realish_eventrouter, mock_websocket):
 
     datafiles = glob.glob("_pytest/data/websocket/*.json")
 
-    for fname in datafiles:
+    for fname in sorted(datafiles):
         data = json.loads(open(fname, 'r').read())
         socket.add(data)
         eventrouter.receive_ws_callback(t)
