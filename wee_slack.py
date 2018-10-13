@@ -819,7 +819,7 @@ def typing_notification_cb(signal, sig_type, data):
         if typing_timer + 4 < now:
             current_buffer = w.current_buffer()
             channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
-            if channel and channel.type != "thread":
+            if channel and hasattr(channel, "type") and channel.type != "thread":
                 identifier = channel.identifier
                 request = {"type": "typing", "channel": identifier}
                 channel.team.send_to_websocket(request, expect_reply=False)
@@ -887,7 +887,7 @@ def nick_completion_cb(data, completion_item, current_buffer, completion):
     current_buffer = w.current_buffer()
     current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
 
-    if current_channel is None or current_channel.members is None:
+    if current_channel is None or getattr(current_channel, "members", None) is None:
         return w.WEECHAT_RC_OK
     for m in current_channel.members:
         u = current_channel.team.users.get(m, None)
