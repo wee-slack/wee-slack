@@ -2992,8 +2992,16 @@ def unwrap_attachments(message_json, text_before):
 
 
 def unwrap_files(message_json, text_before):
-    files_texts = ['{} ({})'.format(f['url_private'], f['title'])
-            for f in message_json.get('files', [])]
+    files_texts = []
+    for f in message_json.get('files', []):
+        if f.get('mode', '') != 'tombstone':
+            text = '{} ({})'.format(f['url_private'], f['title'])
+        else:
+            text = '{}(This file was deleted.){}'.format(
+                w.color("red"),
+                w.color("reset"))
+        files_texts.append(text)
+
     if text_before:
         files_texts.insert(0, '')
     return "\n".join(files_texts)
