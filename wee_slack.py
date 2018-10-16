@@ -2173,6 +2173,19 @@ class SlackMessage(object):
                     w.color(config.thread_suffix_color),
                     self.hash or self.ts,
                     len(self.submessages))
+
+        if self.message_json.get('subtype') == 'thread_broadcast' and 'thread_ts' in self.message_json:
+            parent_message = self.channel.messages.get(
+                SlackTS(self.message_json['thread_ts']), None)
+            if not parent_message:
+                return text
+
+            text = '{}[{}]{} {}'.format(
+                w.color(config.thread_suffix_color),
+                parent_message.hash or parent_message.ts,
+                w.color('reset'),
+                text)
+
         return text
 
     def change_text(self, new_text):
@@ -2552,7 +2565,7 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
     if SlackTS(message_json["ts"]) in channel.messages:
         return
 
-    if "thread_ts" in message_json and "reply_count" not in message_json:
+    if "thread_ts" in message_json and "reply_count" not in message_json and message_json.get("subtype", "") != "thread_broadcast":
         message_json["subtype"] = "thread_message"
 
     subtype = message_json.get("subtype")
