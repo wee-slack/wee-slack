@@ -1391,9 +1391,10 @@ class SlackChannel(SlackChannelCommon):
             prepend = config.shared_name_prefix
         else:
             prepend = "#"
+        sidebar_color = w.color("darkgray") if self.muted else ""
         select = {
             "default": prepend + self.slack_name,
-            "sidebar": prepend + self.slack_name,
+            "sidebar": sidebar_color + prepend + self.slack_name,
             "base": self.slack_name,
             "long_default": "{}.{}{}".format(self.team.preferred_name, prepend, self.slack_name),
             "long_base": "{}.{}".format(self.team.preferred_name, self.slack_name),
