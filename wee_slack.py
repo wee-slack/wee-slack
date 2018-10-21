@@ -1755,7 +1755,7 @@ class SlackChannel(SlackChannelCommon):
         text = message.render(force)
         if isinstance(message, SlackThreadMessage):
             return '{}[{}]{} {}'.format(
-                w.color(config.thread_suffix_color),
+                w.color(config.color_thread_suffix),
                 message.parent_message.hash or message.parent_message.ts,
                 w.color('reset'),
                 text)
@@ -2196,7 +2196,7 @@ class SlackMessage(object):
             text += " by invitation from {}".format(inviter_nick)
         if len(self.submessages) > 0:
             text += " {}[ Thread: {} Replies: {} ]".format(
-                    w.color(config.thread_suffix_color),
+                    w.color(config.color_thread_suffix),
                     self.hash or self.ts,
                     len(self.submessages))
         return text
@@ -3064,10 +3064,10 @@ def create_reaction_string(reactions):
     count = 0
     if not isinstance(reactions, list):
         reaction_string = " {}[{}]{}".format(
-                w.color(config.reaction_suffix_color), reactions, w.color("reset"))
+                w.color(config.color_reaction_suffix), reactions, w.color("reset"))
 
     else:
-        reaction_string = ' {}['.format(w.color(config.reaction_suffix_color))
+        reaction_string = ' {}['.format(w.color(config.color_reaction_suffix))
         for r in reactions:
             if len(r["users"]) > 0:
                 count += 1
@@ -3873,6 +3873,14 @@ class PluginConfig(object):
             desc='Change the prefix of a channel from # to > when someone is'
             ' typing in it. Note that this will (temporarily) affect the sort'
             ' order if you sort buffers by name rather than by number.'),
+        'color_reaction_suffix': Setting(
+            default='darkgray',
+            desc='Color to use for the [:wave:(@user)] suffix on messages that'
+            ' have reactions attached to them.'),
+        'color_thread_suffix': Setting(
+            default='lightcyan',
+            desc='Color to use for the [thread: XXX] suffix on messages that'
+            ' have threads attached to them.'),
         'colorize_private_chats': Setting(
             default='false',
             desc='Whether to use nick-colors in DM windows.'),
@@ -3909,10 +3917,6 @@ class PluginConfig(object):
         'never_away': Setting(
             default='false',
             desc='Poke Slack every five minutes so that it never marks you "away".'),
-        'reaction_suffix_color': Setting(
-            default='darkgray',
-            desc='Color to use for the [:wave:(@user)] suffix on messages that'
-            ' have reactions attached to them.'),
         'record_events': Setting(
             default='false',
             desc='Log all traffic from Slack to disk as JSON.'),
@@ -3956,10 +3960,6 @@ class PluginConfig(object):
         'thread_messages_in_channel': Setting(
             default='false',
             desc='When enabled shows thread messages in the parent channel.'),
-        'thread_suffix_color': Setting(
-            default='lightcyan',
-            desc='Color to use for the [thread: XXX] suffix on messages that'
-            ' have threads attached to them.'),
         'unfurl_ignore_alt_text': Setting(
             default='false',
             desc='When displaying ("unfurling") links to channels/users/etc,'
@@ -4037,17 +4037,17 @@ class PluginConfig(object):
         default = self.default_settings.get(key).default
         return w.config_get_plugin(key) == default
 
+    get_color_reaction_suffix = get_string
+    get_color_thread_suffix = get_string
     get_debug_level = get_int
     get_external_user_suffix = get_string
     get_group_name_prefix = get_string
     get_map_underline_to = get_string
     get_muted_channels_activity = get_string
-    get_reaction_suffix_color = get_string
     get_render_bold_as = get_string
     get_render_italic_as = get_string
     get_shared_name_prefix = get_string
     get_slack_timeout = get_int
-    get_thread_suffix_color = get_string
     get_unfurl_auto_link_display = get_string
 
     def get_distracting_channels(self, key):
@@ -4077,6 +4077,12 @@ class PluginConfig(object):
                     if data != "":
                         w.config_set_plugin(k, data)
             w.config_set_plugin("migrated", "true")
+
+        old_thread_color_config = w.config_get_plugin("thread_suffix_color")
+        new_thread_color_config = w.config_get_plugin("color_thread_suffix")
+        if old_thread_color_config and not new_thread_color_config:
+            w.config_set_plugin("color_thread_suffix", old_thread_color_config)
+
 
 
 # to Trace execution, add `setup_trace()` to startup
