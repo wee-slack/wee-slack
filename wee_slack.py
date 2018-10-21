@@ -2617,6 +2617,23 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
             channel.store_message(message, team)
         dbg("NORMAL REPLY {}".format(message_json))
 
+    download_location = config.get_string('files_download_location')
+    if not download_location:
+        return
+
+    for f in message_json.get('files', []):
+        if f.get('mode', '') == 'tombstone':
+            continue
+
+        file_name = '{}_{}.{}'.format(f['id'], f['title'], f['filetype'])
+        weechat.hook_process_hashtable(
+            "url:" + f['url_private'],
+            {
+                'file_out': os.path.join(download_location, file_name),
+                'httpheader': 'Authorization: Bearer ' + team.token
+            },
+            config.slack_timeout, "", "")
+
 
 def subprocess_thread_message(message_json, eventrouter, channel, team):
     # print ("THREADED: " + str(message_json))
@@ -4066,6 +4083,9 @@ class PluginConfig(object):
         'external_user_suffix': Setting(
             default='*',
             desc='The suffix appended to nicks to indicate external users.'),
+        'files_download_location': Setting(
+            default='',
+            desc='If set, file attachments will be downloaded to this location.'),
         'group_name_prefix': Setting(
             default='&',
             desc='The prefix of buffer names for groups (private channels).'),
