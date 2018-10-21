@@ -1391,7 +1391,7 @@ class SlackChannel(SlackChannelCommon):
             prepend = config.shared_name_prefix
         else:
             prepend = "#"
-        sidebar_color = w.color("darkgray") if self.muted else ""
+        sidebar_color = w.color(config.color_buflist_muted_channels) if self.muted else ""
         select = {
             "default": prepend + self.slack_name,
             "sidebar": sidebar_color + prepend + self.slack_name,
@@ -3874,6 +3874,9 @@ class PluginConfig(object):
             desc='Change the prefix of a channel from # to > when someone is'
             ' typing in it. Note that this will (temporarily) affect the sort'
             ' order if you sort buffers by name rather than by number.'),
+        'color_buflist_muted_channels': Setting(
+            default='darkgray',
+            desc='Color to use for muted channels in the buflist'),
         'color_reaction_suffix': Setting(
             default='darkgray',
             desc='Color to use for the [:wave:(@user)] suffix on messages that'
@@ -4038,6 +4041,7 @@ class PluginConfig(object):
         default = self.default_settings.get(key).default
         return w.config_get_plugin(key) == default
 
+    get_color_buflist_muted_channels = get_string
     get_color_reaction_suffix = get_string
     get_color_thread_suffix = get_string
     get_debug_level = get_int
