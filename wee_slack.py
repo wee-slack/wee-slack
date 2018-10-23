@@ -3205,6 +3205,8 @@ def tag(tagset, user=None, thread=False, muted=False):
         # catchall ?
         "default": {"irc_privmsg", "notify_message", "log1"},
     }
+    if not config.irc_smart_filter:
+        tagsets["joinleave"].remove("irc_smart_filter")
     nick_tag = {"nick_{}".format(user or "unknown").replace(" ", "_")}
     slack_tag = {"slack_{}".format(tagset)}
     tags = nick_tag | slack_tag | tagsets[tagset]
@@ -3913,6 +3915,10 @@ class PluginConfig(object):
         'group_name_prefix': Setting(
             default='&',
             desc='The prefix of buffer names for groups (private channels).'),
+        'irc_smart_filter': Setting(
+            default='true',
+            desc='Whether to use the IRC smart filter (if enabled) for'
+            ' join/leave messages.'),
         'map_underline_to': Setting(
             default='_',
             desc='When sending underlined text to slack, use this formatting'
