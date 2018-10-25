@@ -2814,13 +2814,13 @@ def process_emoji_changed(message_json, eventrouter, **kwargs):
 
 ###### New module/global methods
 def render_formatting(text):
-    text = re.sub(r'(^| )\*([^*]+)\*([^a-zA-Z0-9_]|$)',
-                  r'\1{}\2{}\3'.format(w.color(config.render_bold_as),
-                                       w.color('-' + config.render_bold_as)),
+    text = re.sub(r'\*\b([^*]+)\b\*',
+                  r'{}\1{}'.format(w.color(config.render_bold_as),
+                                   w.color('-' + config.render_bold_as)),
                   text)
-    text = re.sub(r'(^| )_([^_]+)_([^a-zA-Z0-9_]|$)',
-                  r'\1{}\2{}\3'.format(w.color(config.render_italic_as),
-                                       w.color('-' + config.render_italic_as)),
+    text = re.sub(r'\b_([^_]+)_\b',
+                  r'{}\1{}'.format(w.color(config.render_italic_as),
+                                   w.color('-' + config.render_italic_as)),
                   text)
     return text
 
