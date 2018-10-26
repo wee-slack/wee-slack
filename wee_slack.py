@@ -1324,12 +1324,12 @@ class SlackChannelCommon(object):
 
         if type(m) == SlackMessage or config.thread_messages_in_channel:
             new_text = self.render(m, force=True)
-            modify_buffer_line(self.channel_buffer, new_text, ts.major, ts.minor)
+            modify_buffer_line(self.channel_buffer, ts, new_text)
         if type(m) == SlackThreadMessage:
             thread_channel = m.parent_message.thread_channel
             if thread_channel and thread_channel.active:
                 new_text = thread_channel.render(m, force=True)
-                modify_buffer_line(thread_channel.channel_buffer, new_text, ts.major, ts.minor)
+                modify_buffer_line(thread_channel.channel_buffer, ts, new_text)
 
     def hash_message(self, ts):
         ts = SlackTS(ts)
@@ -1607,7 +1607,7 @@ class SlackChannel(SlackChannelCommon):
                     w.buffer_set(self.channel_buffer, "hidden", "0")
 
                 w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
-                modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
+                modify_last_print_time(self.channel_buffer, ts.minor)
                 if backlog or tag_nick == self.team.nick:
                     self.mark_read(ts, update_remote=False, force=True)
             except:
@@ -2040,7 +2040,7 @@ class SlackThreadChannel(SlackChannelCommon):
             tags = tag("default", thread=True, muted=self.muted)
             # self.new_messages = True
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
-            modify_print_time(self.channel_buffer, ts.minorstr(), ts.major)
+            modify_last_print_time(self.channel_buffer, ts.minor)
             if tag_nick == self.team.nick:
                 self.mark_read(ts, update_remote=False, force=True)
 
@@ -3133,79 +3133,61 @@ def create_reaction_string(reactions):
     return reaction_string
 
 
-def modify_buffer_line(buffer, new_line, timestamp, time_id):
-    # get a pointer to this buffer's lines
-    own_lines = w.hdata_pointer(hdata.buffer, buffer, 'own_lines')
-    if own_lines:
-        # get a pointer to the last line
-        line_pointer = w.hdata_pointer(hdata.lines, own_lines, 'last_line')
-        # keep track of the number of lines with the matching time and id
-        number_of_matching_lines = 0
+def hdata_line_ts(line_pointer):
+    data = w.hdata_pointer(hdata.line, line_pointer, 'data')
+    ts_major = w.hdata_time(hdata.line_data, data, 'date')
+    ts_minor = w.hdata_time(hdata.line_data, data, 'date_printed')
+    return (ts_major, ts_minor)
 
-        while line_pointer:
-            # get a pointer to the data in line_pointer via layout of hdata.line
-            data = w.hdata_pointer(hdata.line, line_pointer, 'data')
-            if data:
-                line_timestamp = w.hdata_time(hdata.line_data, data, 'date')
-                line_time_id = w.hdata_integer(hdata.line_data, data, 'date_printed')
-                # prefix = w.hdata_string(hdata.line_data, data, 'prefix')
 
-                if timestamp == int(line_timestamp) and int(time_id) == line_time_id:
-                    number_of_matching_lines += 1
-                elif number_of_matching_lines > 0:
-                    # since number_of_matching_lines is non-zero, we have
-                    # already reached the message and can stop traversing
-                    break
-            else:
-                dbg(('Encountered line without any data while trying to modify '
-                    'line. This is not handled, so aborting modification.'))
-                return w.WEECHAT_RC_ERROR
-            # move backwards one line and try again - exit the while if you hit the end
-            line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
+def modify_buffer_line(buffer_pointer, ts, new_text):
+    own_lines = w.hdata_pointer(hdata.buffer, buffer_pointer, 'own_lines')
+    line_pointer = w.hdata_pointer(hdata.lines, own_lines, 'last_line')
 
-        # split the message into at most the number of existing lines
-        lines = new_line.split('\n', number_of_matching_lines - 1)
-        # updating a line with a string containing newlines causes the lines to
-        # be broken when viewed in bare display mode
-        lines = [line.replace('\n', ' | ') for line in lines]
-        # pad the list with empty strings until the number of elements equals
-        # number_of_matching_lines
-        lines += [''] * (number_of_matching_lines - len(lines))
+    # Find the last line with this ts
+    while line_pointer and hdata_line_ts(line_pointer) != (ts.major, ts.minor):
+        line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
 
-        if line_pointer:
-            for line in lines:
-                line_pointer = w.hdata_move(hdata.line, line_pointer, 1)
-                data = w.hdata_pointer(hdata.line, line_pointer, 'data')
-                w.hdata_update(hdata.line_data, data, {"message": line})
+    # Find all lines for the message
+    pointers = []
+    while line_pointer and hdata_line_ts(line_pointer) == (ts.major, ts.minor):
+        pointers.append(line_pointer)
+        line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
+    pointers.reverse()
+
+    # Split the message into at most the number of existing lines as we can't insert new lines
+    lines = new_text.split('\n', len(pointers) - 1)
+    # Replace newlines to prevent garbled lines in bare display mode
+    lines = [line.replace('\n', ' | ') for line in lines]
+    # Extend lines in case the new message is shorter than the old as we can't delete lines
+    lines += [''] * (len(pointers) - len(lines))
+
+    for pointer, line in zip(pointers, lines):
+        data = w.hdata_pointer(hdata.line, pointer, 'data')
+        w.hdata_update(hdata.line_data, data, {"message": line})
+
     return w.WEECHAT_RC_OK
 
 
-def modify_print_time(buffer, new_id, time):
+def modify_last_print_time(buffer_pointer, ts_minor):
     """
     This overloads the time printed field to let us store the slack
     per message unique id that comes after the "." in a slack ts
     """
 
-    # get a pointer to this buffer's lines
-    own_lines = w.hdata_pointer(hdata.buffer, buffer, 'own_lines')
-    if own_lines:
-        # get a pointer to the last line
-        line_pointer = w.hdata_pointer(hdata.lines, own_lines, 'last_line')
+    own_lines = w.hdata_pointer(hdata.buffer, buffer_pointer, 'own_lines')
+    line_pointer = w.hdata_pointer(hdata.lines, own_lines, 'last_line')
 
-        prefix = ''
-        while not prefix and line_pointer:
-            # get a pointer to the data in line_pointer via layout of hdata.line
-            data = w.hdata_pointer(hdata.line, line_pointer, 'data')
-            if data:
-                prefix = w.hdata_string(hdata.line_data, data, 'prefix')
-                w.hdata_update(hdata.line_data, data, {"date_printed": new_id})
-            else:
-                dbg('Encountered line without any data while setting message id.')
-                return w.WEECHAT_RC_ERROR
-            # move backwards one line and repeat, so all the lines of the message are set
-            # exit when you reach a prefix, which means you have reached the
-            # first line of the message, or if you hit the end
-            line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
+    while line_pointer:
+        data = w.hdata_pointer(hdata.line, line_pointer, 'data')
+        w.hdata_update(hdata.line_data, data, {"date_printed": str(ts_minor)})
+
+        if w.hdata_string(hdata.line_data, data, 'prefix'):
+            # Reached the first line of the message, so stop here
+            break
+
+        # Move one line backwards so all lines of the message are set
+        line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
 
     return w.WEECHAT_RC_OK
 
