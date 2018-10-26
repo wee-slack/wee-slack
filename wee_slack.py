@@ -819,7 +819,7 @@ def typing_notification_cb(signal, sig_type, data):
         if typing_timer + 4 < now:
             current_buffer = w.current_buffer()
             channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
-            if channel and hasattr(channel, "type") and channel.type != "thread":
+            if channel and channel.type != "thread":
                 identifier = channel.identifier
                 request = {"type": "typing", "channel": identifier}
                 channel.team.send_to_websocket(request, expect_reply=False)
@@ -1063,6 +1063,7 @@ class SlackTeam(object):
         # This highlight step must happen after we have set related server
         self.set_highlight_words(kwargs.get('highlight_words', ""))
         self.load_emoji_completions()
+        self.type = "channel"
 
     def __repr__(self):
         return "domain={} nick={}".format(self.subdomain, self.nick)
