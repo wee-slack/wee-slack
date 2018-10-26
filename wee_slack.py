@@ -2325,6 +2325,14 @@ class WeeSlackMetadata(object):
         return self.meta
 
 
+class Hdata(object):
+    def __init__(self, w):
+        self.buffer = w.hdata_get('buffer')
+        self.line = w.hdata_get('line')
+        self.line_data = w.hdata_get('line_data')
+        self.lines = w.hdata_get('lines')
+
+
 class SlackTS(object):
 
     def __init__(self, ts=None):
@@ -3127,23 +3135,20 @@ def create_reaction_string(reactions):
 
 def modify_buffer_line(buffer, new_line, timestamp, time_id):
     # get a pointer to this buffer's lines
-    own_lines = w.hdata_pointer(w.hdata_get('buffer'), buffer, 'own_lines')
+    own_lines = w.hdata_pointer(hdata.buffer, buffer, 'own_lines')
     if own_lines:
         # get a pointer to the last line
-        line_pointer = w.hdata_pointer(w.hdata_get('lines'), own_lines, 'last_line')
-        # hold the structure of a line and of line data
-        struct_hdata_line = w.hdata_get('line')
-        struct_hdata_line_data = w.hdata_get('line_data')
+        line_pointer = w.hdata_pointer(hdata.lines, own_lines, 'last_line')
         # keep track of the number of lines with the matching time and id
         number_of_matching_lines = 0
 
         while line_pointer:
-            # get a pointer to the data in line_pointer via layout of struct_hdata_line
-            data = w.hdata_pointer(struct_hdata_line, line_pointer, 'data')
+            # get a pointer to the data in line_pointer via layout of hdata.line
+            data = w.hdata_pointer(hdata.line, line_pointer, 'data')
             if data:
-                line_timestamp = w.hdata_time(struct_hdata_line_data, data, 'date')
-                line_time_id = w.hdata_integer(struct_hdata_line_data, data, 'date_printed')
-                # prefix = w.hdata_string(struct_hdata_line_data, data, 'prefix')
+                line_timestamp = w.hdata_time(hdata.line_data, data, 'date')
+                line_time_id = w.hdata_integer(hdata.line_data, data, 'date_printed')
+                # prefix = w.hdata_string(hdata.line_data, data, 'prefix')
 
                 if timestamp == int(line_timestamp) and int(time_id) == line_time_id:
                     number_of_matching_lines += 1
@@ -3156,7 +3161,7 @@ def modify_buffer_line(buffer, new_line, timestamp, time_id):
                     'line. This is not handled, so aborting modification.'))
                 return w.WEECHAT_RC_ERROR
             # move backwards one line and try again - exit the while if you hit the end
-            line_pointer = w.hdata_move(struct_hdata_line, line_pointer, -1)
+            line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
 
         # split the message into at most the number of existing lines
         lines = new_line.split('\n', number_of_matching_lines - 1)
@@ -3169,9 +3174,9 @@ def modify_buffer_line(buffer, new_line, timestamp, time_id):
 
         if line_pointer:
             for line in lines:
-                line_pointer = w.hdata_move(struct_hdata_line, line_pointer, 1)
-                data = w.hdata_pointer(struct_hdata_line, line_pointer, 'data')
-                w.hdata_update(struct_hdata_line_data, data, {"message": line})
+                line_pointer = w.hdata_move(hdata.line, line_pointer, 1)
+                data = w.hdata_pointer(hdata.line, line_pointer, 'data')
+                w.hdata_update(hdata.line_data, data, {"message": line})
     return w.WEECHAT_RC_OK
 
 
@@ -3182,28 +3187,25 @@ def modify_print_time(buffer, new_id, time):
     """
 
     # get a pointer to this buffer's lines
-    own_lines = w.hdata_pointer(w.hdata_get('buffer'), buffer, 'own_lines')
+    own_lines = w.hdata_pointer(hdata.buffer, buffer, 'own_lines')
     if own_lines:
         # get a pointer to the last line
-        line_pointer = w.hdata_pointer(w.hdata_get('lines'), own_lines, 'last_line')
-        # hold the structure of a line and of line data
-        struct_hdata_line = w.hdata_get('line')
-        struct_hdata_line_data = w.hdata_get('line_data')
+        line_pointer = w.hdata_pointer(hdata.lines, own_lines, 'last_line')
 
         prefix = ''
         while not prefix and line_pointer:
-            # get a pointer to the data in line_pointer via layout of struct_hdata_line
-            data = w.hdata_pointer(struct_hdata_line, line_pointer, 'data')
+            # get a pointer to the data in line_pointer via layout of hdata.line
+            data = w.hdata_pointer(hdata.line, line_pointer, 'data')
             if data:
-                prefix = w.hdata_string(struct_hdata_line_data, data, 'prefix')
-                w.hdata_update(struct_hdata_line_data, data, {"date_printed": new_id})
+                prefix = w.hdata_string(hdata.line_data, data, 'prefix')
+                w.hdata_update(hdata.line_data, data, {"date_printed": new_id})
             else:
                 dbg('Encountered line without any data while setting message id.')
                 return w.WEECHAT_RC_ERROR
             # move backwards one line and repeat, so all the lines of the message are set
             # exit when you reach a prefix, which means you have reached the
             # first line of the message, or if you hit the end
-            line_pointer = w.hdata_move(struct_hdata_line, line_pointer, -1)
+            line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
 
     return w.WEECHAT_RC_OK
 
@@ -4260,3 +4262,5 @@ if __name__ == "__main__":
                 EVENTROUTER.record()
             EVENTROUTER.handle_next()
             # END attach to the weechat hooks we need
+
+            hdata = Hdata(w)
