@@ -3529,10 +3529,13 @@ def thread_command_callback(data, current_buffer, args):
         args = args.split()
         if args[0] == '/thread':
             if len(args) == 2:
+                thread_id = args[1]
+                if thread_id[0] == "$":
+                    thread_id = thread_id[1:]
                 try:
-                    pm = channel.messages[SlackTS(args[1])]
+                    pm = channel.messages[SlackTS(thread_id)]
                 except:
-                    pm = channel.hashed_messages[args[1]]
+                    pm = channel.hashed_messages[thread_id]
                 pm.open_thread(switch=config.switch_buffer_on_join)
                 return w.WEECHAT_RC_OK_EAT
         elif args[0] == '/reply':
@@ -3750,6 +3753,9 @@ def line_event_cb(data, signal, hashtable):
         elif data == "reply":
             w.command(buffer_pointer, "/cursor stop")
             w.command(buffer_pointer, "/input insert /reply {}\\x20".format(message_hash))
+        elif data == "thread":
+            w.command(buffer_pointer, "/cursor stop")
+            w.command(buffer_pointer, "/thread {}".format(message_hash))
     return w.WEECHAT_RC_OK
 
 @slack_buffer_required
@@ -3893,11 +3899,13 @@ def setup_hooks():
         "@chat(python.*.slack.com.*):M": "hsignal:slack_cursor_message",
         "@chat(python.*.slack.com.*):D": "hsignal:slack_cursor_delete",
         "@chat(python.*.slack.com.*):R": "hsignal:slack_cursor_reply",
+        "@chat(python.*.slack.com.*):T": "hsignal:slack_cursor_thread",
         })
 
     w.hook_hsignal("slack_mouse", "line_event_cb", "message")
     w.hook_hsignal("slack_cursor_delete", "line_event_cb", "delete")
     w.hook_hsignal("slack_cursor_reply", "line_event_cb", "reply")
+    w.hook_hsignal("slack_cursor_thread", "line_event_cb", "thread")
     w.hook_hsignal("slack_cursor_message", "line_event_cb", "message")
 
     # Hooks to fix/implement
