@@ -2861,7 +2861,7 @@ def render(message_json, team, force=False):
         message_json["_rendered_text"] = text
         return text
 
-
+@utf8_decode
 def linkify_text(message, team, channel):
     # The get_username_map function is a bit heavy, but this whole
     # function is only called on message send..
@@ -2869,9 +2869,9 @@ def linkify_text(message, team, channel):
     channels = team.get_channel_map()
     message = (message
         # Replace IRC formatting chars with Slack formatting chars.
-        .replace('\x02', '*')
-        .replace('\x1D', '_')
-        .replace('\x1F', config.map_underline_to)
+        .replace(u'\u0002', '*')
+        .replace(u'\u001D', '_')
+        .replace(u'\u001F', config.map_underline_to)
         # Escape chars that have special meaning to Slack. Note that we do not
         # (and should not) perform full HTML entity-encoding here.
         # See https://api.slack.com/docs/message-formatting for details.
@@ -2880,7 +2880,7 @@ def linkify_text(message, team, channel):
         .replace('>', '&gt;')
         .split(' '))
     for item in enumerate(message):
-        targets = re.match('^\s*([@#])([\w.-]+[\w. -])(\W*)', item[1])
+        targets = re.match('^\s*([@#])([\w\(.-]+[\w\). -])(\W*)', item[1], re.UNICODE)
         if targets and targets.groups()[0] == '@':
             named = targets.groups()
             if named[1] in ["group", "channel", "here"]:
@@ -2900,7 +2900,7 @@ def linkify_text(message, team, channel):
                 message[item[0]] = "#{}{}".format(named[1], named[2])
 
     # dbg(message)
-    return " ".join(message)
+    return encode_to_utf8(" ".join(message))
 
 
 def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
