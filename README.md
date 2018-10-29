@@ -273,6 +273,7 @@ The cursor mode and mouse mode can be used to interact with older messages, for 
 
 In cursor mode, the `M` key achieves the same result (memo: the default for weechat is to paste the message with `m`, `M` simply copies the id).
 In addition, `R` will prepare a `/reply id` and `D` will delete the message (provided it’s yours).
+`T` will open the thread associated to a message, equivalent to `/thread id`
 
 Please see weechat’s documentation about [how to use the cursor mode](https://weechat.org/files/doc/stable/weechat_user.en.html#key_bindings_cursor_context) or [adapt the bindings](https://weechat.org/files/doc/stable/weechat_user.en.html#command_weechat_key) to your preference.
 
@@ -282,6 +283,7 @@ Default:
 /key bindctxt cursor @chat(python.*.slack.com.*):M hsignal:slack_cursor_message
 /key bindctxt cursor @chat(python.*.slack.com.*):D hsignal:slack_cursor_delete
 /key bindctxt cursor @chat(python.*.slack.com.*):R hsignal:slack_cursor_reply
+/key bindctxt cursor @chat(python.*.slack.com.*):T hsignal:slack_cursor_thread
 ```
 hsignals `slack_mouse` and `slack_cursor_message` currently have the same meaning but may be subject to evolutions.
 
