@@ -1,5 +1,9 @@
-from wee_slack import linkify_text
 # -*- coding: utf-8 -*-
+
+from __future__ import unicode_literals
+
+from wee_slack import linkify_text
+
 
 #def test_linkifytext():
 #    linkify_text('@ryan')
@@ -35,7 +39,7 @@ def test_linkifytext_formatting_characters(realish_eventrouter):
     team = realish_eventrouter.teams.values()[0]
     channel = team.channels.values()[0]
 
-    text = linkify_text(u'\u0002\u001Dmy test message\u001D\u0002', team, channel)
+    text = linkify_text('\x02\x1Dmy test message\x1D\x02', team, channel)
 
     assert text == '*_my test message_*'
 
