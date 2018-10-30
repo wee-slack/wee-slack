@@ -887,7 +887,7 @@ def nick_completion_cb(data, completion_item, current_buffer, completion):
     current_buffer = w.current_buffer()
     current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
 
-    if current_channel is None or getattr(current_channel, "members", None) is None:
+    if current_channel is None or current_channel.members is None:
         return w.WEECHAT_RC_OK
     for m in current_channel.members:
         u = current_channel.team.users.get(m, None)
@@ -1063,7 +1063,7 @@ class SlackTeam(object):
         # This highlight step must happen after we have set related server
         self.set_highlight_words(kwargs.get('highlight_words', ""))
         self.load_emoji_completions()
-        self.type = "channel"
+        self.type = "team"
 
     def __repr__(self):
         return "domain={} nick={}".format(self.subdomain, self.nick)
@@ -1073,6 +1073,10 @@ class SlackTeam(object):
             return True
         else:
             return False
+
+    @property
+    def members(self):
+        return self.users
 
     def load_emoji_completions(self):
         self.emoji_completions = list(EMOJI)
