@@ -3826,7 +3826,7 @@ def create_slack_debug_buffer():
 def load_emoji():
     try:
         DIR = w.info_get("weechat_dir", "")
-        with open('{}/weemoji.json'.format(DIR), 'r') as ef:
+        with open('{}/weemoji.json'.format(DIR), 'r', encoding='utf8') as ef:
             return json.loads(ef.read())["emoji"]
     except Exception as e:
         dbg("Couldn't load emoji list: {}".format(e), 5)
