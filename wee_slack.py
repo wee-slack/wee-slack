@@ -1076,7 +1076,7 @@ class SlackTeam(object):
 
     @property
     def members(self):
-        return self.users
+        return self.users.viewkeys()
 
     def load_emoji_completions(self):
         self.emoji_completions = list(EMOJI)
