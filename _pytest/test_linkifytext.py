@@ -43,3 +43,10 @@ def test_linkifytext_formatting_characters(realish_eventrouter):
 
     assert text == '*_my test message_*'
 
+def test_linkifytext_with_many_paranthesis(realish_eventrouter):
+    team = realish_eventrouter.teams.values()[0]
+    channel = team.channels.values()[0]
+
+    text = linkify_text('@k(o(v)a)())s: my(( test) message', team, channel)
+
+    assert text == '@k(o(v)a)())s: my(( test) message'
