@@ -3659,6 +3659,19 @@ def command_openweb(data, current_buffer, args):
         url = "https://{}/archives/{}/p{}000000".format(channel.team.domain, channel.slack_name, now.majorstr())
     w.prnt_date_tags(channel.team.channel_buffer, SlackTS().major, "openweb,logger_backlog_end,notify_none", url)
 
+@slack_buffer_required
+def command_linkarchive(data, current_buffer, args):
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+    message_id = args.split(' ', 1)[1]
+    if message_id[0] == "$":
+        message_id = message_id[1:]
+    if isinstance(channel, SlackChannelCommon) and message_id in channel.hashed_messages:
+        message = channel.hashed_messages[message_id]
+        ts = message.ts
+        url = "https://{}/archives/{}/p{}{:0>6}".format(channel.team.domain, channel.identifier, ts.majorstr(), ts.minorstr())
+        if isinstance(message, SlackThreadMessage):
+            url += "?thread_ts={}&cid={}".format(message.parent_message.ts, channel.identifier)
+        w.command(current_buffer, "/input insert {}".format(url))
 
 def command_nodistractions(data, current_buffer, args):
     global hide_distractions
@@ -3755,6 +3768,9 @@ def line_event_cb(data, signal, hashtable):
             w.command(buffer_pointer, "/input insert {}".format(message_hash))
         elif data == "delete":
             w.command(buffer_pointer, "/input send {}s///".format(message_hash))
+        elif data == "linkarchive":
+            w.command(buffer_pointer, "/cursor stop")
+            w.command(buffer_pointer, "/slack linkarchive {}".format(message_hash[1:]))
         elif data == "reply":
             w.command(buffer_pointer, "/cursor stop")
             w.command(buffer_pointer, "/input insert /reply {}\\x20".format(message_hash))
@@ -3901,17 +3917,19 @@ def setup_hooks():
         "@chat(python.*.slack.com.*):button2": "hsignal:slack_mouse",
         })
     w.key_bind("cursor", {
-        "@chat(python.*.slack.com.*):M": "hsignal:slack_cursor_message",
         "@chat(python.*.slack.com.*):D": "hsignal:slack_cursor_delete",
+        "@chat(python.*.slack.com.*):L": "hsignal:slack_cursor_linkarchive",
+        "@chat(python.*.slack.com.*):M": "hsignal:slack_cursor_message",
         "@chat(python.*.slack.com.*):R": "hsignal:slack_cursor_reply",
         "@chat(python.*.slack.com.*):T": "hsignal:slack_cursor_thread",
         })
 
     w.hook_hsignal("slack_mouse", "line_event_cb", "message")
     w.hook_hsignal("slack_cursor_delete", "line_event_cb", "delete")
+    w.hook_hsignal("slack_cursor_linkarchive", "line_event_cb", "linkarchive")
+    w.hook_hsignal("slack_cursor_message", "line_event_cb", "message")
     w.hook_hsignal("slack_cursor_reply", "line_event_cb", "reply")
     w.hook_hsignal("slack_cursor_thread", "line_event_cb", "thread")
-    w.hook_hsignal("slack_cursor_message", "line_event_cb", "message")
 
     # Hooks to fix/implement
     # w.hook_signal('buffer_opened', "buffer_opened_cb", "")
