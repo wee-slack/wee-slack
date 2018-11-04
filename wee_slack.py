@@ -820,13 +820,12 @@ def quit_notification_callback(signal, sig_type, data):
 
 
 @utf8_decode
-def typing_notification_cb(signal, sig_type, data):
-    msg = w.buffer_get_string(data, "input")
+def typing_notification_cb(data, signal, current_buffer):
+    msg = w.buffer_get_string(current_buffer, "input")
     if len(msg) > 8 and msg[:1] != "/":
         global typing_timer
         now = time.time()
         if typing_timer + 4 < now:
-            current_buffer = w.current_buffer()
             channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
             if channel and channel.type != "thread":
                 identifier = channel.identifier
@@ -893,7 +892,6 @@ def nick_completion_cb(data, completion_item, current_buffer, completion):
     Adds all @-prefixed nicks to completion list
     """
 
-    current_buffer = w.current_buffer()
     current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
 
     if current_channel is None or current_channel.members is None:
@@ -911,7 +909,6 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
     Adds all :-prefixed emoji to completion list
     """
 
-    current_buffer = w.current_buffer()
     current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
 
     if current_channel is None:
@@ -930,7 +927,6 @@ def complete_next_cb(data, current_buffer, command):
 
     """
 
-    current_buffer = w.current_buffer()
     current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
 
     # channel = channels.find(current_buffer)
@@ -3512,8 +3508,7 @@ def command_showmuted(data, current_buffer, args):
 
 @utf8_decode
 def thread_command_callback(data, current_buffer, args):
-    current = w.current_buffer()
-    channel = EVENTROUTER.weechat_controller.buffers.get(current)
+    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
     if channel:
         args = args.split()
         if args[0] == '/thread':
@@ -3546,8 +3541,7 @@ def thread_command_callback(data, current_buffer, args):
 
 @utf8_decode
 def rehistory_command_callback(data, current_buffer, args):
-    current = w.current_buffer()
-    channel = EVENTROUTER.weechat_controller.buffers.get(current)
+    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
     channel.clear_messages()
     channel.get_history()
     return w.WEECHAT_RC_OK_EAT
