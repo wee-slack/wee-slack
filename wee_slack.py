@@ -3521,7 +3521,7 @@ def thread_command_callback(data, current_buffer, args):
                 except:
                     pm = channel.hashed_messages[thread_id]
                 pm.open_thread(switch=config.switch_buffer_on_join)
-                return w.WEECHAT_RC_OK_EAT
+
         elif args[0] == '/reply':
             if args[1][0] == "$":
                 if args[1][1:] in channel.hashed_messages:
@@ -3534,8 +3534,6 @@ def thread_command_callback(data, current_buffer, args):
                 parent_id = str(next(islice(mkeys, count - 1, None)))
             msg = " ".join(args[2:])
             channel.send_message(msg, request_dict_ext={"thread_ts": parent_id})
-            return w.WEECHAT_RC_OK_EAT
-        w.prnt(current, "Invalid thread command.")
         return w.WEECHAT_RC_OK_EAT
 
 
