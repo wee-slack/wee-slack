@@ -2209,8 +2209,9 @@ class SlackMessage(object):
         return hash(self.ts)
 
     def open_thread(self, switch=False):
-        self.thread_channel = SlackThreadChannel(EVENTROUTER, self)
-        self.thread_channel.open()
+        if not self.thread_channel or not self.thread_channel.active:
+            self.thread_channel = SlackThreadChannel(EVENTROUTER, self)
+            self.thread_channel.open()
         if switch:
             w.buffer_set(self.thread_channel.channel_buffer, "display", "1")
 
