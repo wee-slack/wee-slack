@@ -3506,35 +3506,51 @@ def command_showmuted(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 
+def get_msg_from_id(channel, msg_id):
+    if msg_id[0] == '$':
+        msg_id = msg_id[1:]
+    return channel.hashed_messages.get(msg_id)
+
+
+@slack_buffer_required
 @utf8_decode
 def thread_command_callback(data, current_buffer, args):
-    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
-    if channel:
-        args = args.split()
-        if args[0] == '/thread':
-            if len(args) == 2:
-                thread_id = args[1]
-                if thread_id[0] == "$":
-                    thread_id = thread_id[1:]
-                try:
-                    pm = channel.messages[SlackTS(thread_id)]
-                except:
-                    pm = channel.hashed_messages[thread_id]
-                pm.open_thread(switch=config.switch_buffer_on_join)
-
-        elif args[0] == '/reply':
-            if args[1][0] == "$":
-                if args[1][1:] in channel.hashed_messages:
-                    parent_id = str(channel.hashed_messages[args[1][1:]].ts)
-                else:
-                    return w.WEECHAT_RC_OK_EAT
-            else:
-                count = int(args[1])
-                mkeys = channel.main_message_keys_reversed()
-                parent_id = str(next(islice(mkeys, count - 1, None)))
-            msg = " ".join(args[2:])
-            channel.send_message(msg, request_dict_ext={"thread_ts": parent_id})
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+    args = args.split()
+    if len(args) != 2:
+        w.prnt('', 'Usage: /thread <id>')
         return w.WEECHAT_RC_OK_EAT
+
+    msg = get_msg_from_id(channel, args[1])
+    if not msg:
+        w.prnt('', 'ERROR: Invalid id given, must be an existing id')
+        return w.WEECHAT_RC_OK_EAT
+    msg.open_thread(switch=config.switch_buffer_on_join)
+    return w.WEECHAT_RC_OK_EAT
+
+
+@slack_buffer_required
+@utf8_decode
+def reply_command_callback(data, current_buffer, args):
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+    args = args.split()
+    if len(args) != 3:
+        w.prnt('', 'Usage: /reply <count/id> <message>')
+        return w.WEECHAT_RC_OK_EAT
+
+    msg = get_msg_from_id(channel, args[1])
+    if msg:
+        parent_id = str(msg.ts)
+    elif args[1].isdigit() and int(args[1]) >= 1:
+        mkeys = channel.main_message_keys_reversed()
+        parent_id = str(next(islice(mkeys, int(args[1]) - 1, None)))
+    else:
+        w.prnt('', 'ERROR: Invalid id given, must be a number greater than 0 or an existing id')
+        return w.WEECHAT_RC_OK_EAT
+
+    text = ' '.join(args[2:])
+    channel.send_message(text, request_dict_ext={'thread_ts': parent_id})
+    return w.WEECHAT_RC_OK_EAT
 
 
 @utf8_decode
@@ -3875,7 +3891,7 @@ def setup_hooks():
     w.hook_command_run('/leave', 'part_command_cb', '')
     w.hook_command_run('/topic', 'topic_command_cb', '')
     w.hook_command_run('/thread', 'thread_command_callback', '')
-    w.hook_command_run('/reply', 'thread_command_callback', '')
+    w.hook_command_run('/reply', 'reply_command_callback', '')
     w.hook_command_run('/rehistory', 'rehistory_command_callback', '')
     w.hook_command_run('/hide', 'hide_command_callback', '')
     w.hook_command_run('/msg', 'msg_command_cb', '')
