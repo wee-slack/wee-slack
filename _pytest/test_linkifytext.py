@@ -50,3 +50,11 @@ def test_linkifytext_with_many_paranthesis(realish_eventrouter):
     text = linkify_text('@k(o(v)a)())s: my(( test) message', team, channel)
 
     assert text == '@k(o(v)a)())s: my(( test) message'
+
+def test_linkifytext_names_with_apostrophe(realish_eventrouter):
+    team = realish_eventrouter.teams.values()[0]
+    channel = team.channels.values()[0]
+
+    text = linkify_text('@O\'Connor: my test message', team, channel)
+
+    assert text == '@O\'Connor: my test message'
