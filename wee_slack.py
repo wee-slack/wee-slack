@@ -3534,7 +3534,7 @@ def thread_command_callback(data, current_buffer, args):
 @utf8_decode
 def reply_command_callback(data, current_buffer, args):
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    args = args.split()
+    args = args.split(None, 2)
     if len(args) != 3:
         w.prnt('', 'Usage: /reply <count/id> <message>')
         return w.WEECHAT_RC_OK_EAT
@@ -3549,8 +3549,7 @@ def reply_command_callback(data, current_buffer, args):
         w.prnt('', 'ERROR: Invalid id given, must be a number greater than 0 or an existing id')
         return w.WEECHAT_RC_OK_EAT
 
-    text = ' '.join(args[2:])
-    channel.send_message(text, request_dict_ext={'thread_ts': parent_id})
+    channel.send_message(args[2], request_dict_ext={'thread_ts': parent_id})
     return w.WEECHAT_RC_OK_EAT
 
 
