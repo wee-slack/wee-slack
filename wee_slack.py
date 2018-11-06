@@ -3829,10 +3829,6 @@ def set_unread_current_buffer_cb(data, current_buffer, command):
     return w.WEECHAT_RC_OK
 
 
-def command_p(data, current_buffer, args):
-    args = args.split(' ', 1)[1]
-    w.prnt("", "{}".format(eval(args)))
-
 ###### NEW EXCEPTIONS
 
 
