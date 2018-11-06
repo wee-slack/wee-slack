@@ -3663,29 +3663,30 @@ def command_mute(data, current_buffer, args):
 
 
 @slack_buffer_required
-def command_openweb(data, current_buffer, args):
-    # if done from server buffer, open slack for reals
-    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    if isinstance(channel, SlackTeam):
-        url = "https://{}".format(channel.team.domain)
-    else:
-        now = SlackTS()
-        url = "https://{}/archives/{}/p{}000000".format(channel.team.domain, channel.slack_name, now.majorstr())
-    w.prnt_date_tags(channel.team.channel_buffer, SlackTS().major, "openweb,logger_backlog_end,notify_none", url)
-
-@slack_buffer_required
+@utf8_decode
 def command_linkarchive(data, current_buffer, args):
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    message_id = args.split(' ', 1)[1]
-    if message_id[0] == "$":
-        message_id = message_id[1:]
-    if isinstance(channel, SlackChannelCommon) and message_id in channel.hashed_messages:
-        message = channel.hashed_messages[message_id]
-        ts = message.ts
-        url = "https://{}/archives/{}/p{}{:0>6}".format(channel.team.domain, channel.identifier, ts.majorstr(), ts.minorstr())
-        if isinstance(message, SlackThreadMessage):
-            url += "?thread_ts={}&cid={}".format(message.parent_message.ts, channel.identifier)
-        w.command(current_buffer, "/input insert {}".format(url))
+    split_args = args.split()
+    message_id = split_args[1] if len(split_args) > 1 else None
+    url = 'https://{}/'.format(channel.team.domain)
+
+    if isinstance(channel, SlackChannelCommon):
+        url += 'archives/{}/'.format(channel.identifier)
+        if message_id:
+            if message_id[0] == '$':
+                message_id = message_id[1:]
+            message = channel.hashed_messages.get(message_id)
+            if message:
+                url += '{}{:0>6}'.format(message.ts.majorstr(), message.ts.minorstr())
+                if isinstance(message, SlackThreadMessage):
+                    url += "?thread_ts={}&cid={}".format(message.parent_message.ts, channel.identifier)
+            else:
+                w.prnt('', 'ERROR: Invalid id given, must be an existing id')
+                return w.WEECHAT_RC_OK_EAT
+
+    w.command(current_buffer, "/input insert {}".format(url))
+    return w.WEECHAT_RC_OK
+
 
 def command_nodistractions(data, current_buffer, args):
     global hide_distractions
