@@ -3901,13 +3901,11 @@ def setup_hooks():
         '|'.join(EVENTROUTER.cmds.keys()),
         # Function name
         'slack_command_cb', '')
-    # w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
 
     w.hook_command_run('/me', 'me_command_cb', '')
     w.hook_command_run('/query', 'command_talk', '')
     w.hook_command_run('/join', 'command_talk', '')
     w.hook_command_run('/part', 'part_command_cb', '')
-    w.hook_command_run('/leave', 'part_command_cb', '')
     w.hook_command_run('/topic', 'topic_command_cb', '')
     w.hook_command_run('/thread', 'thread_command_callback', '')
     w.hook_command_run('/reply', 'reply_command_callback', '')
