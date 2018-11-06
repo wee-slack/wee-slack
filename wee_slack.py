@@ -1381,7 +1381,11 @@ class SlackChannelCommon(object):
             num_replace = 1
             if 'g' in flags:
                 num_replace = 0
-            new_message = re.sub(old, new, message["text"], num_replace)
+            f = re.UNICODE
+            f |= re.IGNORECASE if 'i' in flags else 0
+            f |= re.MULTILINE if 'm' in flags else 0
+            f |= re.DOTALL if 's' in flags else 0
+            new_message = re.sub(old, new, message["text"], num_replace, f)
             if new_message != message["text"]:
                 s = SlackRequest(self.team.token, "chat.update", {"channel": self.identifier, "ts": message['ts'], "text": new_message}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
