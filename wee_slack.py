@@ -3366,10 +3366,11 @@ def command_register(data, current_buffer, args):
     ).format(CLIENT_ID, CLIENT_SECRET, oauth_code)
     params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
     w.hook_process_hashtable('url:', params, config.slack_timeout, "", "")
-    w.hook_process_hashtable("url:{}".format(uri), params, config.slack_timeout, "command_register_callback", "")
+    w.hook_process_hashtable("url:{}".format(uri), params, config.slack_timeout, "register_callback", "")
+
 
 @utf8_decode
-def command_register_callback(data, command, return_code, out, err):
+def register_callback(data, command, return_code, out, err):
     if return_code != 0:
         w.prnt("", "ERROR: problem when trying to get Slack OAuth token. Got return code {}. Err: ".format(return_code, err))
         w.prnt("", "Check the network or proxy settings")
