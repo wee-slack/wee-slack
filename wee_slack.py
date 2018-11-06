@@ -3337,6 +3337,7 @@ def me_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 
+@utf8_decode
 def command_register(data, current_buffer, args):
     """
     /slack register
@@ -3344,7 +3345,7 @@ def command_register(data, current_buffer, args):
     """
     CLIENT_ID = "2468770254.51917335286"
     CLIENT_SECRET = "dcb7fe380a000cba0cca3169a5fe8d70"  # Not really a secret.
-    if args == 'register':
+    if not args:
         message = textwrap.dedent("""
             #### Retrieving a Slack token via OAUTH ####
             1) Paste this into a browser: https://slack.com/oauth/authorize?client_id=2468770254.51917335286&scope=client
@@ -3355,22 +3356,16 @@ def command_register(data, current_buffer, args):
             5) Return to weechat and run `/slack register [code]`
         """).strip()
         w.prnt("", message)
-        return
-
-    try:
-        _, oauth_code = args.split()
-    except ValueError:
-        w.prnt("",
-               "ERROR: wrong number of arguments given for register command")
-        return
+        return w.WEECHAT_RC_OK_EAT
 
     uri = (
         "https://slack.com/api/oauth.access?"
         "client_id={}&client_secret={}&code={}"
-    ).format(CLIENT_ID, CLIENT_SECRET, oauth_code)
+    ).format(CLIENT_ID, CLIENT_SECRET, args)
     params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
     w.hook_process_hashtable('url:', params, config.slack_timeout, "", "")
     w.hook_process_hashtable("url:{}".format(uri), params, config.slack_timeout, "register_callback", "")
+    return w.WEECHAT_RC_OK_EAT
 
 
 @utf8_decode
@@ -3407,13 +3402,12 @@ def register_callback(data, command, return_code, out, err):
 @slack_buffer_or_ignore
 @utf8_decode
 def msg_command_cb(data, current_buffer, args):
-    dbg("msg_command_cb")
     aargs = args.split(None, 2)
     who = aargs[1]
     if who == "*":
         who = EVENTROUTER.weechat_controller.buffers[current_buffer].slack_name
     else:
-        command_talk(data, current_buffer, "talk " + who)
+        join_query_command_cb(data, current_buffer, '/query ' + who)
 
     if len(aargs) > 2:
         message = aargs[2]
@@ -3457,7 +3451,7 @@ def command_users(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 
-@slack_buffer_or_ignore
+@slack_buffer_required
 @utf8_decode
 def command_talk(data, current_buffer, args):
     """
@@ -3465,8 +3459,13 @@ def command_talk(data, current_buffer, args):
     Open a chat with the specified user(s).
     """
 
-    e = EVENTROUTER
-    team = e.weechat_controller.buffers[current_buffer].team
+    return join_query_command_cb(data, current_buffer, '/query ' + args)
+
+
+@slack_buffer_or_ignore
+@utf8_decode
+def join_query_command_cb(data, current_buffer, args):
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
     channel_name = args.split(' ')[1]
 
     if channel_name.startswith('#'):
@@ -3509,6 +3508,8 @@ def command_talk(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 
+@slack_buffer_required
+@utf8_decode
 def command_showmuted(data, current_buffer, args):
     """
     /slack showmuted
@@ -3605,17 +3606,14 @@ def hide_command_callback(data, current_buffer, args):
 
 @utf8_decode
 def slack_command_cb(data, current_buffer, args):
-    a = args.split(' ', 1)
-    if len(a) > 1:
-        function_name, args = a[0], args
-    else:
-        function_name, args = a[0], args
-
-    try:
-        EVENTROUTER.cmds[function_name]("", current_buffer, args)
-    except KeyError:
-        w.prnt("", "Command not found: " + function_name)
-    return w.WEECHAT_RC_OK
+    split_args = args.split(' ', 1)
+    cmd_name = split_args[0]
+    cmd_args = split_args[1] if len(split_args) > 1 else ''
+    cmd = EVENTROUTER.cmds.get(cmd_name or 'help')
+    if not cmd:
+        w.prnt('', 'Command not found: ' + cmd_name)
+        return w.WEECHAT_RC_OK
+    return cmd(data, current_buffer, cmd_args)
 
 
 @utf8_decode
@@ -3624,13 +3622,12 @@ def command_help(data, current_buffer, args):
     /slack help
     Print help for /slack commands.
     """
-    args = args.split()
-    if len(args) > 1:
-        cmd = EVENTROUTER.cmds.get(args[1])
+    if args:
+        cmd = EVENTROUTER.cmds.get(args)
         if cmd:
-            cmds = {args[1]: cmd}
+            cmds = {args: cmd}
         else:
-            w.prnt('', 'Command not found: ' + args[1])
+            w.prnt('', 'Command not found: ' + args)
             return w.WEECHAT_RC_OK
     else:
         cmds = EVENTROUTER.cmds
@@ -3643,20 +3640,21 @@ def command_help(data, current_buffer, args):
 
 
 @slack_buffer_required
+@utf8_decode
 def command_distracting(data, current_buffer, args):
     """
     /slack distracting
     Add or remove the current channel from distracting channels. You can hide
     or unhide these channels with /slack nodistractions.
     """
-    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
-    if channel:
-        fullname = channel.formatted_name(style="long_default")
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+    fullname = channel.formatted_name(style="long_default")
     if config.distracting_channels.count(fullname) == 0:
         config.distracting_channels.append(fullname)
     else:
         config.distracting_channels.pop(config.distracting_channels.index(fullname))
     save_distracting_channels()
+    return w.WEECHAT_RC_OK_EAT
 
 
 def save_distracting_channels():
@@ -3664,29 +3662,28 @@ def save_distracting_channels():
 
 
 @slack_buffer_required
+@utf8_decode
 def command_slash(data, current_buffer, args):
     """
     /slack slash /customcommand arg1 arg2 arg3
     Run a custom slack command.
     """
-    e = EVENTROUTER
-    channel = e.weechat_controller.buffers.get(current_buffer, None)
-    if channel:
-        team = channel.team
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+    team = channel.team
 
-        if args == 'slash':
-            w.prnt("", "Usage: /slack slash /someslashcommand [arguments...].")
-            return
+    split_args = args.split(' ', 1)
+    command = split_args[0]
+    text = split_args[1] if len(split_args) > 1 else ""
 
-        split_args = args.split(None, 2)
-        command = split_args[1]
-        text = split_args[2] if len(split_args) > 2 else ""
-
-        s = SlackRequest(team.token, "chat.command", {"command": command, "text": text, 'channel': channel.identifier}, team_hash=team.team_hash, channel_identifier=channel.identifier)
-        EVENTROUTER.receive(s)
+    s = SlackRequest(team.token, "chat.command",
+            {"command": command, "text": text, 'channel': channel.identifier},
+            team_hash=team.team_hash, channel_identifier=channel.identifier)
+    EVENTROUTER.receive(s)
+    return w.WEECHAT_RC_OK_EAT
 
 
 @slack_buffer_required
+@utf8_decode
 def command_mute(data, current_buffer, args):
     """
     /slack mute
@@ -3713,15 +3710,15 @@ def command_linkarchive(data, current_buffer, args):
     Use cursor or mouse mode to get the id.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    split_args = args.split()
-    message_id = split_args[1] if len(split_args) > 1 else None
     url = 'https://{}/'.format(channel.team.domain)
 
     if isinstance(channel, SlackChannelCommon):
         url += 'archives/{}/'.format(channel.identifier)
-        if message_id:
-            if message_id[0] == '$':
-                message_id = message_id[1:]
+        if args:
+            if args[0] == '$':
+                message_id = args[1:]
+            else:
+                message_id = args
             message = channel.hashed_messages.get(message_id)
             if message:
                 url += '{}{:0>6}'.format(message.ts.majorstr(), message.ts.minorstr())
@@ -3732,9 +3729,10 @@ def command_linkarchive(data, current_buffer, args):
                 return w.WEECHAT_RC_OK_EAT
 
     w.command(current_buffer, "/input insert {}".format(url))
-    return w.WEECHAT_RC_OK
+    return w.WEECHAT_RC_OK_EAT
 
 
+@utf8_decode
 def command_nodistractions(data, current_buffer, args):
     """
     /slack nodistractions
@@ -3754,27 +3752,29 @@ def command_nodistractions(data, current_buffer, args):
             #    dbg("Can't hide channel {} .. removing..".format(channel), main_buffer=True)
 #                config.distracting_channels.pop(config.distracting_channels.index(channel))
 #                save_distracting_channels()
+    return w.WEECHAT_RC_OK_EAT
 
 
 @slack_buffer_required
+@utf8_decode
 def command_upload(data, current_buffer, args):
     """
     /slack upload <filename>
     Uploads a file to the current buffer.
     """
-    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     url = 'https://slack.com/api/files.upload'
-    fname = args.split(' ', 1)
-    file_path = os.path.expanduser(fname[1])
-    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    file_path = os.path.expanduser(args)
     if ' ' in file_path:
         file_path = file_path.replace(' ', '\ ')
 
     # only http proxy is currenlty supported
     proxy = ProxyWrapper()
     proxy_string = proxy.curl()
-    command = 'curl -F file=@{} -F channels={} -F token={} {} {}'.format(file_path, channel.identifier, team.token, proxy_string, url)
+    command = 'curl -F file=@{} -F channels={} -F token={} {} {}'.format(
+            file_path, channel.identifier, channel.team.token, proxy_string, url)
     w.hook_process(command, config.slack_timeout, '', '')
+    return w.WEECHAT_RC_OK_EAT
 
 
 @utf8_decode
@@ -3789,6 +3789,7 @@ def away_command_cb(data, current_buffer, args):
 
 
 @slack_buffer_required
+@utf8_decode
 def command_away(data, current_buffer, args):
     """
     /slack away
@@ -3797,27 +3798,27 @@ def command_away(data, current_buffer, args):
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
     s = SlackRequest(team.token, "users.setPresence", {"presence": "away"}, team_hash=team.team_hash)
     EVENTROUTER.receive(s)
+    return w.WEECHAT_RC_OK
 
 
 @slack_buffer_required
+@utf8_decode
 def command_status(data, current_buffer, args):
     """
     /slack status [emoji [status_message]]
     Lets you set your Slack Status (not to be confused with away/here).
     """
-    e = EVENTROUTER
-    channel = e.weechat_controller.buffers.get(current_buffer, None)
-    if channel:
-        team = channel.team
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
 
-        split_args = args.split(None, 2)
-        emoji = split_args[1] if len(split_args) > 1 else ""
-        text = split_args[2] if len(split_args) > 2 else ""
+    split_args = args.split(' ', 1)
+    emoji = split_args[0]
+    text = split_args[1] if len(split_args) > 1 else ""
 
-        profile = {"status_text": text, "status_emoji": emoji}
+    profile = {"status_text": text, "status_emoji": emoji}
 
-        s = SlackRequest(team.token, "users.profile.set", {"profile": profile}, team_hash=team.team_hash)
-        EVENTROUTER.receive(s)
+    s = SlackRequest(team.token, "users.profile.set", {"profile": profile}, team_hash=team.team_hash)
+    EVENTROUTER.receive(s)
+    return w.WEECHAT_RC_OK
 
 
 @utf8_decode
@@ -3853,6 +3854,7 @@ def line_event_cb(data, signal, hashtable):
 
 
 @slack_buffer_required
+@utf8_decode
 def command_back(data, current_buffer, args):
     """
     /slack back
@@ -3861,6 +3863,7 @@ def command_back(data, current_buffer, args):
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
     s = SlackRequest(team.token, "users.setPresence", {"presence": "auto"}, team_hash=team.team_hash)
     EVENTROUTER.receive(s)
+    return w.WEECHAT_RC_OK
 
 
 @slack_buffer_required
@@ -3964,8 +3967,8 @@ def setup_hooks():
         'slack_command_cb', '')
 
     w.hook_command_run('/me', 'me_command_cb', '')
-    w.hook_command_run('/query', 'command_talk', '')
-    w.hook_command_run('/join', 'command_talk', '')
+    w.hook_command_run('/query', 'join_query_command_cb', '')
+    w.hook_command_run('/join', 'join_query_command_cb', '')
     w.hook_command_run('/part', 'part_command_cb', '')
     w.hook_command_run('/topic', 'topic_command_cb', '')
     w.hook_command_run('/msg', 'msg_command_cb', '')
