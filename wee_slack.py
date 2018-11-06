@@ -3338,6 +3338,10 @@ def me_command_cb(data, current_buffer, args):
 
 
 def command_register(data, current_buffer, args):
+    """
+    /slack register
+    Register a Slack team in wee-slack.
+    """
     CLIENT_ID = "2468770254.51917335286"
     CLIENT_SECRET = "dcb7fe380a000cba0cca3169a5fe8d70"  # Not really a secret.
     if args == 'register':
@@ -3424,6 +3428,10 @@ def msg_command_cb(data, current_buffer, args):
 @slack_buffer_required
 @utf8_decode
 def command_channels(data, current_buffer, args):
+    """
+    /slack channels
+    List the channels in the current team.
+    """
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
 
@@ -3436,6 +3444,10 @@ def command_channels(data, current_buffer, args):
 @slack_buffer_required
 @utf8_decode
 def command_users(data, current_buffer, args):
+    """
+    /slack users
+    List the users in the current team.
+    """
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
 
@@ -3449,8 +3461,8 @@ def command_users(data, current_buffer, args):
 @utf8_decode
 def command_talk(data, current_buffer, args):
     """
-    Open a chat with the specified user(s)
     /slack talk <user>[,<user2>[,<user3>...]]
+    Open a chat with the specified user(s).
     """
 
     e = EVENTROUTER
@@ -3498,6 +3510,10 @@ def command_talk(data, current_buffer, args):
 
 
 def command_showmuted(data, current_buffer, args):
+    """
+    /slack showmuted
+    List the muted channels in the current team.
+    """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
     muted_channels = [team.channels[key].name
             for key in team.muted_channels if key in team.channels]
@@ -3514,6 +3530,10 @@ def get_msg_from_id(channel, msg_id):
 @slack_buffer_required
 @utf8_decode
 def thread_command_callback(data, current_buffer, args):
+    """
+    /thread <message_id>
+    Open the thread for the message.
+    """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     args = args.split()
     if len(args) != 2:
@@ -3531,6 +3551,11 @@ def thread_command_callback(data, current_buffer, args):
 @slack_buffer_required
 @utf8_decode
 def reply_command_callback(data, current_buffer, args):
+    """
+    /reply <count/message_id> <text>
+    Reply in a thread on the message. Specify either the message id
+    or a count upwards to the message from the last message.
+    """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     args = args.split(None, 2)
     if len(args) != 3:
@@ -3553,6 +3578,10 @@ def reply_command_callback(data, current_buffer, args):
 
 @utf8_decode
 def rehistory_command_callback(data, current_buffer, args):
+    """
+    /rehistory
+    Reload the history in the current channel.
+    """
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
     channel.clear_messages()
     channel.get_history()
@@ -3562,6 +3591,10 @@ def rehistory_command_callback(data, current_buffer, args):
 @slack_buffer_required
 @utf8_decode
 def hide_command_callback(data, current_buffer, args):
+    """
+    /hide
+    Hide the current channel if it is marked as distracting.
+    """
     c = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
     if c:
         name = c.formatted_name(style='long_default')
@@ -3589,7 +3622,7 @@ def slack_command_cb(data, current_buffer, args):
 def command_help(data, current_buffer, args):
     """
     /slack help
-    Print help for /slack commands
+    Print help for /slack commands.
     """
     args = args.split()
     if len(args) > 1:
@@ -3611,6 +3644,11 @@ def command_help(data, current_buffer, args):
 
 @slack_buffer_required
 def command_distracting(data, current_buffer, args):
+    """
+    /slack distracting
+    Add or remove the current channel from distracting channels. You can hide
+    or unhide these channels with /slack nodistractions.
+    """
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
     if channel:
         fullname = channel.formatted_name(style="long_default")
@@ -3628,8 +3666,8 @@ def save_distracting_channels():
 @slack_buffer_required
 def command_slash(data, current_buffer, args):
     """
-    Support for custom slack commands
     /slack slash /customcommand arg1 arg2 arg3
+    Run a custom slack command.
     """
     e = EVENTROUTER
     channel = e.weechat_controller.buffers.get(current_buffer, None)
@@ -3650,6 +3688,10 @@ def command_slash(data, current_buffer, args):
 
 @slack_buffer_required
 def command_mute(data, current_buffer, args):
+    """
+    /slack mute
+    Toggle mute on the current channel.
+    """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     team = channel.team
     team.muted_channels ^= {channel.identifier}
@@ -3665,6 +3707,11 @@ def command_mute(data, current_buffer, args):
 @slack_buffer_required
 @utf8_decode
 def command_linkarchive(data, current_buffer, args):
+    """
+    /slack linkarchive [message_id]
+    Place a link to the channel or message in the input bar.
+    Use cursor or mouse mode to get the id.
+    """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     split_args = args.split()
     message_id = split_args[1] if len(split_args) > 1 else None
@@ -3689,6 +3736,10 @@ def command_linkarchive(data, current_buffer, args):
 
 
 def command_nodistractions(data, current_buffer, args):
+    """
+    /slack nodistractions
+    Hide or unhide all channels marked as distracting.
+    """
     global hide_distractions
     hide_distractions = not hide_distractions
     if config.distracting_channels != ['']:
@@ -3707,6 +3758,10 @@ def command_nodistractions(data, current_buffer, args):
 
 @slack_buffer_required
 def command_upload(data, current_buffer, args):
+    """
+    /slack upload <filename>
+    Uploads a file to the current buffer.
+    """
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
     url = 'https://slack.com/api/files.upload'
     fname = args.split(' ', 1)
@@ -3720,6 +3775,7 @@ def command_upload(data, current_buffer, args):
     proxy_string = proxy.curl()
     command = 'curl -F file=@{} -F channels={} -F token={} {} {}'.format(file_path, channel.identifier, team.token, proxy_string, url)
     w.hook_process(command, config.slack_timeout, '', '')
+
 
 @utf8_decode
 def away_command_cb(data, current_buffer, args):
@@ -3735,8 +3791,8 @@ def away_command_cb(data, current_buffer, args):
 @slack_buffer_required
 def command_away(data, current_buffer, args):
     """
-    Sets your status as 'away'
     /slack away
+    Sets your status as 'away'.
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
     s = SlackRequest(team.token, "users.setPresence", {"presence": "away"}, team_hash=team.team_hash)
@@ -3746,8 +3802,8 @@ def command_away(data, current_buffer, args):
 @slack_buffer_required
 def command_status(data, current_buffer, args):
     """
-    Lets you set your Slack Status (not to be confused with away/here)
-    /slack status [emoji] [status_message]
+    /slack status [emoji [status_message]]
+    Lets you set your Slack Status (not to be confused with away/here).
     """
     e = EVENTROUTER
     channel = e.weechat_controller.buffers.get(current_buffer, None)
@@ -3762,6 +3818,7 @@ def command_status(data, current_buffer, args):
 
         s = SlackRequest(team.token, "users.profile.set", {"profile": profile}, team_hash=team.team_hash)
         EVENTROUTER.receive(s)
+
 
 @utf8_decode
 def line_event_cb(data, signal, hashtable):
@@ -3794,11 +3851,12 @@ def line_event_cb(data, signal, hashtable):
             w.command(buffer_pointer, "/thread {}".format(message_hash))
     return w.WEECHAT_RC_OK
 
+
 @slack_buffer_required
 def command_back(data, current_buffer, args):
     """
-    Sets your status as 'back'
     /slack back
+    Sets your status as 'back'.
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
     s = SlackRequest(team.token, "users.setPresence", {"presence": "auto"}, team_hash=team.team_hash)
@@ -3808,6 +3866,11 @@ def command_back(data, current_buffer, args):
 @slack_buffer_required
 @utf8_decode
 def label_command_cb(data, current_buffer, args):
+    """
+    /label <name>
+    Rename a thread buffer. Note that this is not permanent. It will only last
+    as long as you keep the buffer and wee-slack open.
+    """
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
     if channel and channel.type == 'thread':
         aargs = args.split(None, 2)
