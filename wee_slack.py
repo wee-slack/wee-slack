@@ -3584,6 +3584,30 @@ def slack_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK
 
 
+@utf8_decode
+def command_help(data, current_buffer, args):
+    """
+    /slack help
+    Print help for /slack commands
+    """
+    args = args.split()
+    if len(args) > 1:
+        cmd = EVENTROUTER.cmds.get(args[1])
+        if cmd:
+            cmds = {args[1]: cmd}
+        else:
+            w.prnt('', 'Command not found: ' + args[1])
+            return w.WEECHAT_RC_OK
+    else:
+        cmds = EVENTROUTER.cmds
+        w.prnt('', 'Slack commands:')
+
+    for name, cmd in sorted(cmds.items()):
+        helptext = (cmd.__doc__ or '').rstrip()
+        w.prnt('', '{}:{}'.format(name, helptext))
+    return w.WEECHAT_RC_OK
+
+
 @slack_buffer_required
 def command_distracting(data, current_buffer, args):
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
@@ -3850,8 +3874,6 @@ def load_emoji():
 
 
 def setup_hooks():
-    cmds = get_functions_with_prefix("command_")
-
     w.bar_item_new('slack_typing_notice', '(extra)typing_bar_item_cb', '')
 
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
@@ -3873,10 +3895,10 @@ def setup_hooks():
         '[command] [command options]',
         # Description of arguments
         'Commands:\n' +
-        '\n'.join(cmds.keys()) +
+        '\n'.join(sorted(EVENTROUTER.cmds.keys())) +
         '\nUse /slack help [command] to find out more\n',
         # Completions
-        '|'.join(cmds.keys()),
+        '|'.join(EVENTROUTER.cmds.keys()),
         # Function name
         'slack_command_cb', '')
     # w.hook_command('me', '', 'stuff', 'stuff2', '', 'me_command_cb', '')
