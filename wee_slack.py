@@ -3535,12 +3535,11 @@ def thread_command_callback(data, current_buffer, args):
     Open the thread for the message.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    args = args.split()
-    if len(args) != 2:
+    if not args:
         w.prnt('', 'Usage: /thread <id>')
         return w.WEECHAT_RC_OK_EAT
 
-    msg = get_msg_from_id(channel, args[1])
+    msg = get_msg_from_id(channel, args)
     if not msg:
         w.prnt('', 'ERROR: Invalid id given, must be an existing id')
         return w.WEECHAT_RC_OK_EAT
@@ -3557,32 +3556,34 @@ def reply_command_callback(data, current_buffer, args):
     or a count upwards to the message from the last message.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    args = args.split(None, 2)
-    if len(args) != 3:
+    try:
+        msg_id, text = args.split(None, 1)
+    except ValueError:
         w.prnt('', 'Usage: /reply <count/id> <message>')
         return w.WEECHAT_RC_OK_EAT
 
-    msg = get_msg_from_id(channel, args[1])
+    msg = get_msg_from_id(channel, msg_id)
     if msg:
         parent_id = str(msg.ts)
-    elif args[1].isdigit() and int(args[1]) >= 1:
+    elif msg_id.isdigit() and int(msg_id) >= 1:
         mkeys = channel.main_message_keys_reversed()
-        parent_id = str(next(islice(mkeys, int(args[1]) - 1, None)))
+        parent_id = str(next(islice(mkeys, int(msg_id) - 1, None)))
     else:
         w.prnt('', 'ERROR: Invalid id given, must be a number greater than 0 or an existing id')
         return w.WEECHAT_RC_OK_EAT
 
-    channel.send_message(args[2], request_dict_ext={'thread_ts': parent_id})
+    channel.send_message(text, request_dict_ext={'thread_ts': parent_id})
     return w.WEECHAT_RC_OK_EAT
 
 
+@slack_buffer_required
 @utf8_decode
 def rehistory_command_callback(data, current_buffer, args):
     """
     /rehistory
     Reload the history in the current channel.
     """
-    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     channel.clear_messages()
     channel.get_history()
     return w.WEECHAT_RC_OK_EAT
@@ -3595,11 +3596,10 @@ def hide_command_callback(data, current_buffer, args):
     /hide
     Hide the current channel if it is marked as distracting.
     """
-    c = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
-    if c:
-        name = c.formatted_name(style='long_default')
-        if name in config.distracting_channels:
-            w.buffer_set(c.channel_buffer, "hidden", "1")
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+    name = channel.formatted_name(style='long_default')
+    if name in config.distracting_channels:
+        w.buffer_set(channel.channel_buffer, "hidden", "1")
     return w.WEECHAT_RC_OK_EAT
 
 
@@ -3865,18 +3865,18 @@ def command_back(data, current_buffer, args):
 
 @slack_buffer_required
 @utf8_decode
-def label_command_cb(data, current_buffer, args):
+def label_command_callback(data, current_buffer, args):
     """
     /label <name>
     Rename a thread buffer. Note that this is not permanent. It will only last
     as long as you keep the buffer and wee-slack open.
     """
-    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
-    if channel and channel.type == 'thread':
-        aargs = args.split(None, 2)
-        new_name = " +" + aargs[1]
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+    if channel.type == 'thread':
+        new_name = " +" + args
         channel.label = new_name
         w.buffer_set(channel.channel_buffer, "short_name", new_name)
+    return w.WEECHAT_RC_OK
 
 
 @utf8_decode
@@ -3968,17 +3968,19 @@ def setup_hooks():
     w.hook_command_run('/join', 'command_talk', '')
     w.hook_command_run('/part', 'part_command_cb', '')
     w.hook_command_run('/topic', 'topic_command_cb', '')
-    w.hook_command_run('/thread', 'thread_command_callback', '')
-    w.hook_command_run('/reply', 'reply_command_callback', '')
-    w.hook_command_run('/rehistory', 'rehistory_command_callback', '')
-    w.hook_command_run('/hide', 'hide_command_callback', '')
     w.hook_command_run('/msg', 'msg_command_cb', '')
-    w.hook_command_run('/label', 'label_command_cb', '')
     w.hook_command_run("/input complete_next", "complete_next_cb", "")
     w.hook_command_run("/input set_unread", "set_unread_cb", "")
     w.hook_command_run("/input set_unread_current_buffer", "set_unread_current_buffer_cb", "")
     w.hook_command_run('/away', 'away_command_cb', '')
     w.hook_command_run('/whois', 'whois_command_cb', '')
+
+    for cmd in ['hide', 'label', 'rehistory', 'reply', 'thread']:
+        function_name = cmd + '_command_callback'
+        doc = globals()[function_name].__doc__.strip().split('\n', 1)
+        args = ' '.join(doc[0].split()[1:])
+        description = textwrap.dedent(doc[1])
+        w.hook_command(cmd, description, args, '', '', function_name, '')
 
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
