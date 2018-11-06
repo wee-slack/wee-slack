@@ -3530,7 +3530,7 @@ def get_msg_from_id(channel, msg_id):
 
 @slack_buffer_required
 @utf8_decode
-def thread_command_callback(data, current_buffer, args):
+def command_thread(data, current_buffer, args):
     """
     /thread <message_id>
     Open the thread for the message.
@@ -3550,7 +3550,7 @@ def thread_command_callback(data, current_buffer, args):
 
 @slack_buffer_required
 @utf8_decode
-def reply_command_callback(data, current_buffer, args):
+def command_reply(data, current_buffer, args):
     """
     /reply <count/message_id> <text>
     Reply in a thread on the message. Specify either the message id
@@ -3579,7 +3579,7 @@ def reply_command_callback(data, current_buffer, args):
 
 @slack_buffer_required
 @utf8_decode
-def rehistory_command_callback(data, current_buffer, args):
+def command_rehistory(data, current_buffer, args):
     """
     /rehistory
     Reload the history in the current channel.
@@ -3592,7 +3592,7 @@ def rehistory_command_callback(data, current_buffer, args):
 
 @slack_buffer_required
 @utf8_decode
-def hide_command_callback(data, current_buffer, args):
+def command_hide(data, current_buffer, args):
     """
     /hide
     Hide the current channel if it is marked as distracting.
@@ -3868,7 +3868,7 @@ def command_back(data, current_buffer, args):
 
 @slack_buffer_required
 @utf8_decode
-def label_command_callback(data, current_buffer, args):
+def command_label(data, current_buffer, args):
     """
     /label <name>
     Rename a thread buffer. Note that this is not permanent. It will only last
@@ -3979,11 +3979,10 @@ def setup_hooks():
     w.hook_command_run('/whois', 'whois_command_cb', '')
 
     for cmd in ['hide', 'label', 'rehistory', 'reply', 'thread']:
-        function_name = cmd + '_command_callback'
-        doc = globals()[function_name].__doc__.strip().split('\n', 1)
+        doc = EVENTROUTER.cmds[cmd].__doc__.strip().split('\n', 1)
         args = ' '.join(doc[0].split()[1:])
         description = textwrap.dedent(doc[1])
-        w.hook_command(cmd, description, args, '', '', function_name, '')
+        w.hook_command(cmd, description, args, '', '', 'command_' + cmd, '')
 
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
