@@ -2884,7 +2884,7 @@ def render(message_json, team, force=False):
 
         if "edited" in message_json:
             text += "{}{}{}".format(
-                    w.color("095"), ' (edited)', w.color("reset"))
+                    w.color(config.color_edited_suffix), ' (edited)', w.color("reset"))
 
         text += unfurl_refs(unwrap_attachments(message_json, text))
 
@@ -3980,6 +3980,9 @@ class PluginConfig(object):
         'color_buflist_muted_channels': Setting(
             default='darkgray',
             desc='Color to use for muted channels in the buflist'),
+        'color_edited_suffix': Setting(
+            default='095',
+            desc='Color to use for (edited) suffix on messages that have been edited.'),
         'color_reaction_suffix': Setting(
             default='darkgray',
             desc='Color to use for the [:wave:(@user)] suffix on messages that'
@@ -4145,6 +4148,7 @@ class PluginConfig(object):
         return w.config_get_plugin(key) == default
 
     get_color_buflist_muted_channels = get_string
+    get_color_edited_suffix = get_string
     get_color_reaction_suffix = get_string
     get_color_thread_suffix = get_string
     get_debug_level = get_int
