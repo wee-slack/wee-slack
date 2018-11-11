@@ -3906,14 +3906,14 @@ def setup_hooks():
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
 
     w.key_bind("mouse", {
-        "@chat(python.*.slack.com.*):button2": "hsignal:slack_mouse",
+        "@chat(python.*):button2": "hsignal:slack_mouse",
         })
     w.key_bind("cursor", {
-        "@chat(python.*.slack.com.*):D": "hsignal:slack_cursor_delete",
-        "@chat(python.*.slack.com.*):L": "hsignal:slack_cursor_linkarchive",
-        "@chat(python.*.slack.com.*):M": "hsignal:slack_cursor_message",
-        "@chat(python.*.slack.com.*):R": "hsignal:slack_cursor_reply",
-        "@chat(python.*.slack.com.*):T": "hsignal:slack_cursor_thread",
+        "@chat(python.*):D": "hsignal:slack_cursor_delete",
+        "@chat(python.*):L": "hsignal:slack_cursor_linkarchive",
+        "@chat(python.*):M": "hsignal:slack_cursor_message",
+        "@chat(python.*):R": "hsignal:slack_cursor_reply",
+        "@chat(python.*):T": "hsignal:slack_cursor_thread",
         })
 
     w.hook_hsignal("slack_mouse", "line_event_cb", "message")

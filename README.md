@@ -286,15 +286,18 @@ In addition, `R` will prepare a `/reply id` and `D` will delete the message (pro
 
 Please see weechat’s documentation about [how to use the cursor mode](https://weechat.org/files/doc/stable/weechat_user.en.html#key_bindings_cursor_context) or [adapt the bindings](https://weechat.org/files/doc/stable/weechat_user.en.html#command_weechat_key) to your preference.
 
-Default:
+Default key bindings:
 ```
-/key bindctxt mouse @chat(python.*.slack.com.*):button2 hsignal:slack_mouse
-/key bindctxt cursor @chat(python.*.slack.com.*):D hsignal:slack_cursor_delete
-/key bindctxt cursor @chat(python.*.slack.com.*):L hsignal:slack_cursor_linkarchive
-/key bindctxt cursor @chat(python.*.slack.com.*):M hsignal:slack_cursor_message
-/key bindctxt cursor @chat(python.*.slack.com.*):R hsignal:slack_cursor_reply
-/key bindctxt cursor @chat(python.*.slack.com.*):T hsignal:slack_cursor_thread
+/key bindctxt mouse @chat(python.*):button2 hsignal:slack_mouse
+/key bindctxt cursor @chat(python.*):D hsignal:slack_cursor_delete
+/key bindctxt cursor @chat(python.*):L hsignal:slack_cursor_linkarchive
+/key bindctxt cursor @chat(python.*):M hsignal:slack_cursor_message
+/key bindctxt cursor @chat(python.*):R hsignal:slack_cursor_reply
+/key bindctxt cursor @chat(python.*):T hsignal:slack_cursor_thread
 ```
+
+Note that if these keys are already defined, they will not be overwritten by wee-slack. In that case, you will have to define your own key bindings by running the above commands modified to your liking.
+
 hsignals `slack_mouse` and `slack_cursor_message` currently have the same meaning but may be subject to evolutions.
 
 Removing a team
