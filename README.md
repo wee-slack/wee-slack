@@ -276,7 +276,9 @@ To enable tab completion of emojis, copy or symlink the `weemoji.json` file to y
 
 #### Cursor and mouse mode
 
-The cursor mode and mouse mode can be used to interact with older messages, for editing, deleting, reacting and replying to a message. The default behavior when right-clicking on a message is to paste its id in the input. It can be used in `/reply`, `s/` substitution/deletion and in `+:emoji:` commands instead of a message number.
+The cursor mode and mouse mode can be used to interact with older messages, for editing, deleting, reacting and replying to a message. Mouse mode can be toggled by pressing `Alt`+`m` and cursor mode can be entered by running `/cursor` (see `/help cursor`).
+
+If mouse mode is enabled, the default behavior when right-clicking on a message is to paste its id in the input. It can be used in `/reply`, `s/` substitution/deletion and in `+:emoji:` commands instead of a message number.
 It can also be used as an argument to the `/slack linkarchive` command.
 
 In cursor mode, the `M` key achieves the same result (memo: the default for weechat is to paste the message with `m`, `M` simply copies the id).
