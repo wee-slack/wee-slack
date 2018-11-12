@@ -2,6 +2,8 @@
 
 ## Next version
 
+## 2.2.0 (2018-11-12)
+
 - Print user friendly error when trying to send a message in the team buffer (fixes #543).
 - Show inviter for join events (fixes #538).
 - Don't print whitespace before join/leave messages.
