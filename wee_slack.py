@@ -1373,7 +1373,7 @@ class SlackChannel(SlackChannelCommon):
         self.eventrouter = eventrouter
         self.slack_name = kwargs["name"]
         self.slack_purpose = kwargs.get("purpose", {"value": ""})
-        self.topic = kwargs.get("topic", {}).get("value", "")
+        self.topic = kwargs.get("topic", {"value": ""})
         self.identifier = kwargs["id"]
         self.last_read = SlackTS(kwargs.get("last_read", SlackTS()))
         self.channel_buffer = None
@@ -1458,14 +1458,13 @@ class SlackChannel(SlackChannelCommon):
 
     def render_topic(self):
         if self.channel_buffer:
-            if self.topic != "":
-                topic = self.topic
-            else:
+            topic = self.topic['value']
+            if topic == "":
                 topic = self.slack_purpose['value']
             w.buffer_set(self.channel_buffer, "title", topic)
 
     def set_topic(self, value):
-        self.topic = value
+        self.topic = {"value": value}
         self.render_topic()
 
     def update_from_message_json(self, message_json):
@@ -1806,7 +1805,7 @@ class SlackDMChannel(SlackChannel):
         self.update_color()
         self.set_name(self.slack_name)
         if dmuser in users:
-            self.topic = create_user_status_string(users[dmuser].profile)
+            self.set_topic(create_user_status_string(users[dmuser].profile))
 
     def set_related_server(self, team):
         super(SlackDMChannel, self).set_related_server(team)
