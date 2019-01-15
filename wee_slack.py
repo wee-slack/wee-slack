@@ -1461,6 +1461,7 @@ class SlackChannel(SlackChannelCommon):
             topic = self.topic['value']
             if topic == "":
                 topic = self.slack_purpose['value']
+            topic = unhtmlescape(unfurl_refs(topic, ignore_alt_text=False))
             w.buffer_set(self.channel_buffer, "title", topic)
 
     def set_topic(self, value):
@@ -2727,7 +2728,7 @@ def subprocess_message_deleted(message_json, eventrouter, channel, team):
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
     text = unhtmlescape(unfurl_refs(message_json["text"], ignore_alt_text=False))
     channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"], tagset="topic")
-    channel.set_topic(unhtmlescape(message_json["topic"]))
+    channel.set_topic(message_json["topic"])
 
 
 def process_reply(message_json, eventrouter, **kwargs):
