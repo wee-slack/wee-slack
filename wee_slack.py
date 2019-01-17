@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 
 from collections import OrderedDict
 from functools import wraps
-from itertools import islice
+from itertools import islice, count
 
 import textwrap
 import time
@@ -2490,7 +2490,9 @@ def handle_history(message_json, eventrouter, **kwargs):
         kwargs['channel'].clear_messages()
     kwargs['channel'].got_history = True
     for message in reversed(message_json["messages"]):
-        process_message(message, eventrouter, **kwargs)
+        # Don't download historical files, considering that
+        # background_load_all_history might be on.
+        process_message(message, eventrouter, download=False, **kwargs)
 
 
 def handle_conversationsmembers(members_json, eventrouter, **kwargs):
@@ -2583,7 +2585,7 @@ def process_pong(message_json, eventrouter, **kwargs):
     pass
 
 
-def process_message(message_json, eventrouter, store=True, **kwargs):
+def process_message(message_json, eventrouter, store=True, download=True, **kwargs):
     channel = kwargs["channel"]
     team = kwargs["team"]
 
@@ -2617,22 +2619,44 @@ def process_message(message_json, eventrouter, store=True, **kwargs):
             channel.store_message(message, team)
         dbg("NORMAL REPLY {}".format(message_json))
 
-    download_location = config.get_string('files_download_location')
+    if download:
+        download_files(message_json, **kwargs)
+
+
+def download_files(message_json, **kwargs):
+    team = kwargs["team"]
+    download_location = config.files_download_location
     if not download_location:
         return
+    if not os.path.exists(download_location):
+        try:
+            os.makedirs(download_location)
+        except Exception as e:
+            w.prnt('', 'ERROR: Failed to create directory at files_download_location: {}'.format(e))
+
+    def fileout_iter(path):
+        yield path
+        main, ext = os.path.splitext(path)
+        for i in count(start=1):
+            yield main + "-{}".format(i) + ext
 
     for f in message_json.get('files', []):
-        if f.get('mode', '') == 'tombstone':
+        if f.get('mode') == 'tombstone':
             continue
 
-        file_name = '{}_{}.{}'.format(f['id'], f['title'], f['filetype'])
-        weechat.hook_process_hashtable(
-            "url:" + f['url_private'],
-            {
-                'file_out': os.path.join(download_location, file_name),
-                'httpheader': 'Authorization: Bearer ' + team.token
-            },
-            config.slack_timeout, "", "")
+        filetype = '' if f['title'].endswith(f['filetype']) else '.' + f['filetype']
+        filename = '{}_{}{}'.format(team.preferred_name, f['title'], filetype)
+        for fileout in fileout_iter(os.path.join(download_location, filename)):
+            if os.path.isfile(fileout):
+                continue
+            weechat.hook_process_hashtable(
+                "url:" + f['url_private'],
+                {
+                    'file_out': fileout,
+                    'httpheader': 'Authorization: Bearer ' + team.token
+                },
+                config.slack_timeout, "", "")
+            break
 
 
 def subprocess_thread_message(message_json, eventrouter, channel, team):
@@ -4085,7 +4109,8 @@ class PluginConfig(object):
             desc='The suffix appended to nicks to indicate external users.'),
         'files_download_location': Setting(
             default='',
-            desc='If set, file attachments will be downloaded to this location.'),
+            desc='If set, file attachments will be automatically downloaded'
+            ' to this location.'),
         'group_name_prefix': Setting(
             default='&',
             desc='The prefix of buffer names for groups (private channels).'),
@@ -4234,6 +4259,7 @@ class PluginConfig(object):
     get_color_thread_suffix = get_string
     get_debug_level = get_int
     get_external_user_suffix = get_string
+    get_files_download_location = get_string
     get_group_name_prefix = get_string
     get_map_underline_to = get_string
     get_muted_channels_activity = get_string
