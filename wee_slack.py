@@ -3649,16 +3649,12 @@ def command_distracting(data, current_buffer, args):
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     fullname = channel.formatted_name(style="long_default")
-    if config.distracting_channels.count(fullname) == 0:
-        config.distracting_channels.append(fullname)
+    if fullname in config.distracting_channels:
+        config.distracting_channels.remove(fullname)
     else:
-        config.distracting_channels.pop(config.distracting_channels.index(fullname))
-    save_distracting_channels()
-    return w.WEECHAT_RC_OK_EAT
-
-
-def save_distracting_channels():
+        config.distracting_channels.append(fullname)
     w.config_set_plugin('distracting_channels', ','.join(config.distracting_channels))
+    return w.WEECHAT_RC_OK_EAT
 
 
 @slack_buffer_required
@@ -3740,18 +3736,10 @@ def command_nodistractions(data, current_buffer, args):
     """
     global hide_distractions
     hide_distractions = not hide_distractions
-    if config.distracting_channels != ['']:
-        for channel in config.distracting_channels:
-            dbg('hiding channel {}'.format(channel))
-            # try:
-            for c in EVENTROUTER.weechat_controller.buffers.itervalues():
-                if c == channel:
-                    dbg('found channel {} to hide'.format(channel))
-                    w.buffer_set(c.channel_buffer, "hidden", str(int(hide_distractions)))
-            # except:
-            #    dbg("Can't hide channel {} .. removing..".format(channel), main_buffer=True)
-#                config.distracting_channels.pop(config.distracting_channels.index(channel))
-#                save_distracting_channels()
+    channels = [channel for channel in EVENTROUTER.weechat_controller.buffers.itervalues()
+            if channel in config.distracting_channels]
+    for channel in channels:
+        w.buffer_set(channel.channel_buffer, "hidden", str(int(hide_distractions)))
     return w.WEECHAT_RC_OK_EAT
 
 
@@ -4248,7 +4236,7 @@ class PluginConfig(object):
     get_unfurl_auto_link_display = get_string
 
     def get_distracting_channels(self, key):
-        return [x.strip() for x in w.config_get_plugin(key).split(',')]
+        return [x.strip() for x in w.config_get_plugin(key).split(',') if x]
 
     def get_server_aliases(self, key):
         alias_list = w.config_get_plugin(key)
