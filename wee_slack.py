@@ -250,15 +250,7 @@ def get_functions_with_prefix(prefix):
             if name.startswith(prefix)}
 
 
-##### BEGIN NEW
-
-IGNORED_EVENTS = [
-    # "pref_change",
-    # "reconnect_url",
-]
-
 ###### New central Event router
-
 
 class EventRouter(object):
 
@@ -552,16 +544,15 @@ class EventRouter(object):
                     except:
                         dbg("metadata failure")
 
-                if function_name not in IGNORED_EVENTS:
-                    dbg("running {}".format(function_name))
-                    if function_name.startswith("local_") and function_name in self.local_proc:
-                        self.local_proc[function_name](j, self, **kwargs)
-                    elif function_name in self.proc:
-                        self.proc[function_name](j, self, **kwargs)
-                    elif function_name in self.handlers:
-                        self.handlers[function_name](j, self, **kwargs)
-                    else:
-                        dbg("Callback not implemented for event: {}".format(function_name))
+                dbg("running {}".format(function_name))
+                if function_name.startswith("local_") and function_name in self.local_proc:
+                    self.local_proc[function_name](j, self, **kwargs)
+                elif function_name in self.proc:
+                    self.proc[function_name](j, self, **kwargs)
+                elif function_name in self.handlers:
+                    self.handlers[function_name](j, self, **kwargs)
+                else:
+                    dbg("Callback not implemented for event: {}".format(function_name))
 
 
 def handle_next(*args):
@@ -1478,7 +1469,6 @@ class SlackChannel(SlackChannelCommon):
         self.create_buffer()
         self.active = True
         self.get_history()
-        # self.create_buffer()
 
     def check_should_open(self, force=False):
         if hasattr(self, "is_archived") and self.is_archived:
@@ -1850,7 +1840,6 @@ class SlackDMChannel(SlackChannel):
 
     def open(self, update_remote=True):
         self.create_buffer()
-        # self.active = True
         self.get_history()
         if "info" in SLACK_API_TRANSLATOR[self.type]:
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["info"], {"name": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
@@ -1859,7 +1848,6 @@ class SlackDMChannel(SlackChannel):
             if "join" in SLACK_API_TRANSLATOR[self.type]:
                 s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"users": self.user, "return_im": True}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
                 self.eventrouter.receive(s)
-        self.create_buffer()
 
     def rename(self):
         if self.channel_buffer:
@@ -1913,7 +1901,6 @@ class SlackMPDMChannel(SlackChannel):
         if update_remote and 'join' in SLACK_API_TRANSLATOR[self.type]:
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]['join'], {'users': ','.join(self.members)}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
-        # self.create_buffer()
 
     @staticmethod
     def adjust_name(n):
@@ -2069,7 +2056,6 @@ class SlackThreadChannel(SlackChannelCommon):
         #    if "join" in SLACK_API_TRANSLATOR[self.type]:
         #        s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["join"], {"name": self.name}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
         #        self.eventrouter.receive(s)
-        self.create_buffer()
 
     def rename(self):
         if self.channel_buffer and not self.label:
