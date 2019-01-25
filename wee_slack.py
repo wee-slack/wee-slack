@@ -1658,10 +1658,9 @@ class SlackDMChannel(SlackChannel):
             print_color = self.color
         else:
             print_color = ""
-        if present and config.show_user_presence:
-            prepend = "+"
-        else:
-            prepend = " "
+        prepend = ""
+        if config.show_buflist_presence:
+            prepend = "+" if present else " "
         select = {
             "default": self.slack_name,
             "sidebar": prepend + self.slack_name,
@@ -3670,12 +3669,12 @@ class PluginConfig(object):
             default='false',
             desc='Use `foo.#channel` rather than `foo.slack.com.#channel` as the'
             ' internal name for Slack buffers. Overrides server_aliases.'),
+        'show_buflist_presence': Setting(
+            default='true',
+            desc='Display a `+` character in the buffer list for present users.'),
         'show_reaction_nicks': Setting(
             default='false',
             desc='Display the name of the reacting user(s) alongside each reactji.'),
-        'show_user_presence': Setting(
-            default='true',
-            desc='Display a `+` character in the buffer list for present users.'),
         'slack_api_token': Setting(
             default='INSERT VALID KEY HERE!',
             desc='List of Slack API tokens, one per Slack instance you want to'
