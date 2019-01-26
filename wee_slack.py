@@ -1703,7 +1703,7 @@ class SlackChannel(SlackChannelCommon):
                 w.buffer_set(self.channel_buffer, "unread", "")
                 w.buffer_set(self.channel_buffer, "hotlist", "-1")
             if not ts:
-                ts = next(self.main_message_keys_reversed(), SlackTS())
+                ts = next(reversed(self.messages), SlackTS())
             if ts > self.last_read:
                 self.last_read = ts
             if update_remote:
