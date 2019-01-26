@@ -3445,6 +3445,9 @@ def command_talk(data, current_buffer, args):
     Open a chat with the specified user(s).
     """
 
+    if not args:
+        w.prnt('', 'Usage: /slack talk <user>[,<user2>[,<user3>...]]')
+        return w.WEECHAT_RC_ERROR
     return join_query_command_cb(data, current_buffer, '/query ' + args)
 
 
@@ -3452,7 +3455,12 @@ def command_talk(data, current_buffer, args):
 @utf8_decode
 def join_query_command_cb(data, current_buffer, args):
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
-    query = args.split(' ')[1]
+    split_args = args.split(' ', 1)
+    if len(split_args) < 2 or not split_args[1]:
+        w.prnt('', 'Too few arguments for command "{}" (help on command: /help {})'
+                .format(split_args[0], split_args[0].lstrip('/')))
+        return w.WEECHAT_RC_OK_EAT
+    query = split_args[1]
 
     # Try finding the channel by name
     channel = team.channels.get(team.get_channel_map().get(query.lstrip('#')))
