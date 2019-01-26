@@ -1458,9 +1458,7 @@ class SlackChannel(SlackChannelCommon):
 
     def render_topic(self):
         if self.channel_buffer:
-            topic = self.topic['value']
-            if topic == "":
-                topic = self.slack_purpose['value']
+            topic = self.topic['value'] or self.slack_purpose['value']
             topic = unhtmlescape(unfurl_refs(topic, ignore_alt_text=False))
             w.buffer_set(self.channel_buffer, "title", topic)
 
