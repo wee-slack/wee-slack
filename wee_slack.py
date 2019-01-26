@@ -3452,24 +3452,26 @@ def command_talk(data, current_buffer, args):
 @utf8_decode
 def join_query_command_cb(data, current_buffer, args):
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
-    channel_name = args.split(' ')[1]
-
-    if channel_name.startswith('#'):
-        channel_name = channel_name[1:]
+    query = args.split(' ')[1]
 
     # Try finding the channel by name
-    chan = team.channels.get(team.get_channel_map().get(channel_name))
+    channel = team.channels.get(team.get_channel_map().get(query.lstrip('#')))
 
     # If the channel doesn't exist, try finding a DM or MPDM instead
-    if not chan:
+    if not channel:
+        if query.startswith('#'):
+            w.prnt('', 'ERROR: Unknown channel: {}'.format(query))
+            return w.WEECHAT_RC_OK_EAT
+
         # Get the IDs of the users
-        u = team.get_username_map()
+        all_users = team.get_username_map()
         users = set()
-        for user in channel_name.split(','):
-            if user.startswith('@'):
-                user = user[1:]
-            if user in u:
-                users.add(u[user])
+        for username in query.split(','):
+            user = all_users.get(username.lstrip('@'))
+            if not user:
+                w.prnt('', 'ERROR: Unknown user: {}'.format(username))
+                return w.WEECHAT_RC_OK_EAT
+            users.add(user)
 
         if users:
             if len(users) > 1:
@@ -3479,18 +3481,18 @@ def join_query_command_cb(data, current_buffer, args):
             else:
                 channel_type = 'im'
 
-            chan = team.find_channel_by_members(users, channel_type=channel_type)
+            channel = team.find_channel_by_members(users, channel_type=channel_type)
 
             # If the DM or MPDM doesn't exist, create it
-            if not chan:
-                s = SlackRequest(team.token, SLACK_API_TRANSLATOR[channel_type]['join'], {'users': ','.join(users)}, team_hash=team.team_hash)
+            if not channel:
+                s = SlackRequest(team.token, SLACK_API_TRANSLATOR[channel_type]['join'],
+                        {'users': ','.join(users)}, team_hash=team.team_hash)
                 EVENTROUTER.receive(s)
 
-    if chan:
-        chan.open()
+    if channel:
+        channel.open()
         if config.switch_buffer_on_join:
-            w.buffer_set(chan.channel_buffer, "display", "1")
-        return w.WEECHAT_RC_OK_EAT
+            w.buffer_set(channel.channel_buffer, "display", "1")
     return w.WEECHAT_RC_OK_EAT
 
 
