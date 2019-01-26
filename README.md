@@ -120,7 +120,7 @@ tokens separated by commas.
 Commands and options
 --------------------
 
-See all available options with descriptions:
+For the available options see [docs/Options.md](docs/Options.md) or run this command:
 ```
 /set slack
 ```
@@ -128,15 +128,16 @@ See all available options with descriptions:
 Most options require that you reload the script with `/python reload slack`
 after changing it to take effect.
 
-See all available commands with descriptions:
+For the available commands see [docs/Commands.md](docs/Commands.md) or run this command:
 ```
 /slack help
 ```
 
 In addition to the commands listed with `/slack help`, most normal IRC
 commands, like `/join`, `/part`, `/query`, `/msg`, `/me`, `/topic`, `/away` and
-`/whois` work normally. See WeeChat's documentation or `/help <cmd>` if you are
-unfamiliar with these.
+`/whois` work normally. See [WeeChat's
+documentation](https://weechat.org/files/doc/stable/weechat_user.en.html) or
+`/help <cmd>` if you are unfamiliar with these.
 
 There are also some special messages you can send:
 
