@@ -601,16 +601,12 @@ class WeechatController(object):
         complete
         Adds a weechat buffer to the list of handled buffers for this EventRouter
         """
-        if isinstance(buffer_ptr, basestring):
-            try:
-                self.buffers[buffer_ptr].destroy_buffer(update_remote)
-                if close_buffer:
-                    w.buffer_close(buffer_ptr)
-                del self.buffers[buffer_ptr]
-            except:
-                dbg("Tried to close unknown buffer")
-        else:
-            raise InvalidType(type(buffer_ptr))
+        channel = self.buffers.get(buffer_ptr)
+        if channel:
+            channel.destroy_buffer(update_remote)
+            del self.buffers[buffer_ptr]
+            if close_buffer:
+                w.buffer_close(buffer_ptr)
 
     def get_channel_from_buffer_ptr(self, buffer_ptr):
         return self.buffers.get(buffer_ptr, None)
@@ -684,13 +680,9 @@ def reconnect_callback(*args):
 @utf8_decode
 def buffer_closing_callback(signal, sig_type, data):
     """
-    complete
     Receives a callback from weechat when a buffer is being closed.
-    We pass the eventrouter variable name in as a string, as
-    that is the only way we can do dependency injection via weechat
-    callback, hence the eval.
     """
-    eval(signal).weechat_controller.unregister_buffer(data, True, False)
+    EVENTROUTER.weechat_controller.unregister_buffer(data, True, False)
     return w.WEECHAT_RC_OK
 
 
@@ -1110,6 +1102,9 @@ class SlackTeam(object):
             w.buffer_set(self.channel_buffer, "localvar_set_server", self.preferred_name)
             if w.config_string(w.config_get('irc.look.server_buffer')) == 'merge_with_core':
                 w.buffer_merge(self.channel_buffer, w.buffer_search_main())
+
+    def destroy_buffer(self, update_remote):
+        pass
 
     def set_muted_channels(self, muted_str):
         self.muted_channels = {x for x in muted_str.split(',') if x}
@@ -1548,9 +1543,7 @@ class SlackChannel(SlackChannelCommon):
 
     def destroy_buffer(self, update_remote):
         self.clear_messages()
-        if self.channel_buffer is not None:
-            self.channel_buffer = None
-        # if update_remote and not eventrouter.shutting_down:
+        self.channel_buffer = None
         self.active = False
         if update_remote and not self.eventrouter.shutting_down:
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
@@ -2096,10 +2089,8 @@ class SlackThreadChannel(SlackChannelCommon):
         #    w.buffer_set(self.channel_buffer, "hotlist", "1")
 
     def destroy_buffer(self, update_remote):
-        if self.channel_buffer is not None:
-            self.channel_buffer = None
+        self.channel_buffer = None
         self.got_history = False
-        # if update_remote and not eventrouter.shutting_down:
         self.active = False
 
     def render(self, message, force=False):
@@ -3929,7 +3920,7 @@ def setup_hooks():
     w.hook_timer(3000, 0, 0, "reconnect_callback", "EVENTROUTER")
     w.hook_timer(1000 * 60 * 5, 0, 0, "slack_never_away_cb", "")
 
-    w.hook_signal('buffer_closing', "buffer_closing_callback", "EVENTROUTER")
+    w.hook_signal('buffer_closing', "buffer_closing_callback", "")
     w.hook_signal('buffer_switch', "buffer_switch_callback", "EVENTROUTER")
     w.hook_signal('window_switch', "buffer_switch_callback", "EVENTROUTER")
     w.hook_signal('quit', "quit_notification_callback", "")
