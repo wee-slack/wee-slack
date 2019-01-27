@@ -2778,9 +2778,11 @@ def process_im_open(message_json, eventrouter, **kwargs):
 
 
 def process_im_close(message_json, eventrouter, **kwargs):
-    item = message_json
-    cbuf = kwargs['team'].channels[item["channel"]].channel_buffer
-    eventrouter.weechat_controller.unregister_buffer(cbuf, False, True)
+    channel = kwargs['team'].channels[message_json["channel"]]
+    if channel.channel_buffer:
+        w.prnt(kwargs['team'].channel_buffer,
+                'IM {} closed by another client or the server'.format(channel.name))
+    eventrouter.weechat_controller.unregister_buffer(channel.channel_buffer, False, True)
 
 
 def process_group_joined(message_json, eventrouter, **kwargs):
