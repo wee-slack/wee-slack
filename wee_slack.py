@@ -1087,15 +1087,14 @@ class SlackTeam(object):
 
     def create_buffer(self):
         if not self.channel_buffer:
-            if config.short_buffer_names:
+            alias = config.server_aliases.get(self.subdomain)
+            if alias:
+                self.preferred_name = alias
+            elif config.short_buffer_names:
                 self.preferred_name = self.subdomain
-            elif config.server_aliases not in ['', None]:
-                name = config.server_aliases.get(self.subdomain, None)
-                if name:
-                    self.preferred_name = name
             else:
                 self.preferred_name = self.domain
-            self.channel_buffer = w.buffer_new("{}".format(self.preferred_name), "buffer_input_callback", "EVENTROUTER", "", "")
+            self.channel_buffer = w.buffer_new(self.preferred_name, "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'server')
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.nick)
@@ -4112,7 +4111,7 @@ class PluginConfig(object):
         'short_buffer_names': Setting(
             default='false',
             desc='Use `foo.#channel` rather than `foo.slack.com.#channel` as the'
-            ' internal name for Slack buffers. Overrides server_aliases.'),
+            ' internal name for Slack buffers.'),
         'show_buflist_presence': Setting(
             default='true',
             desc='Display a `+` character in the buffer list for present users.'),
@@ -4229,8 +4228,7 @@ class PluginConfig(object):
 
     def get_server_aliases(self, key):
         alias_list = w.config_get_plugin(key)
-        if len(alias_list) > 0:
-            return dict(item.split(":") for item in alias_list.split(","))
+        return dict(item.split(":") for item in alias_list.split(",") if ':' in item)
 
     def get_slack_api_token(self, key):
         token = w.config_get_plugin("slack_api_token")
