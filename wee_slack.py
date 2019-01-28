@@ -4381,6 +4381,8 @@ if __name__ == "__main__":
             # attach to the weechat hooks we need
 
             tokens = map(string.strip, config.slack_api_token.split(','))
+            w.prnt('', 'Connecting to {} slack team{}.'
+                    .format(len(tokens), '' if len(tokens) == 1 else 's'))
             for t in tokens:
                 s = initiate_connection(t)
                 EVENTROUTER.receive(s)
