@@ -375,9 +375,10 @@ class EventRouter(object):
         the data is valid JSON, add metadata, and place it back
         on the queue for processing as JSON.
         """
+        team = self.teams[team_hash]
         try:
             # Read the data from the websocket associated with this team.
-            data = decode_from_utf8(self.teams[team_hash].ws.recv())
+            data = decode_from_utf8(team.ws.recv())
             message_json = json.loads(data)
             metadata = WeeSlackMetadata({
                 "team": team_hash,
@@ -387,13 +388,17 @@ class EventRouter(object):
                 self.record_event(message_json, 'type', 'websocket')
             self.receive_json(json.dumps(message_json))
         except WebSocketConnectionClosedException:
-            self.teams[team_hash].set_disconnected()
+            w.prnt(team.channel_buffer,
+                    'Lost connection to slack team {} (on receive), reconnecting.'.format(team.domain))
+            dbg('receive_ws_callback failed with exception:\n{}'
+                    .format(traceback.format_exc()), level=5)
+            team.set_disconnected()
             return w.WEECHAT_RC_OK
         except ssl.SSLWantReadError:
             # Expected to happen occasionally on SSL websockets.
             return w.WEECHAT_RC_OK
         except Exception:
-            dbg("socket issue: {}\n".format(traceback.format_exc()))
+            dbg('socket issue:\n{}'.format(traceback.format_exc()), level=5)
             return w.WEECHAT_RC_OK
 
     def receive_httprequest_callback(self, data, command, return_code, out, err):
@@ -1186,8 +1191,11 @@ class SlackTeam(object):
                     # self.attach_websocket(ws)
                     self.set_connected()
                     self.connecting = False
-                except Exception as e:
-                    dbg("websocket connection error: {}".format(decode_from_utf8(e)))
+                except:
+                    w.prnt(self.channel_buffer,
+                            'Failed connecting to slack team {}, retrying.'.format(self.domain))
+                    dbg('connect failed with exception:\n{}'
+                            .format(traceback.format_exc()), level=5)
                     self.connecting = False
                     return False
             else:
@@ -1223,8 +1231,10 @@ class SlackTeam(object):
             self.ws.send(encode_to_utf8(message))
             dbg("Sent {}...".format(message[:100]))
         except:
-            print "WS ERROR"
-            dbg("Unexpected error: {}\nSent: {}".format(sys.exc_info()[0], data))
+            w.prnt(self.channel_buffer,
+                    'Lost connection to slack team {} (on send), reconnecting.'.format(self.domain))
+            dbg('send_to_websocket failed with data: `{}` and exception:\n{}'
+                    .format(message, traceback.format_exc()), level=5)
             self.set_disconnected()
 
     def update_member_presence(self, user, presence):
