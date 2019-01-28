@@ -369,7 +369,6 @@ class EventRouter(object):
 
     def receive_ws_callback(self, team_hash):
         """
-        incomplete (reconnect)
         This is called by the global method of the same name.
         It is triggered when we have incoming data on a websocket,
         which needs to be read. Once it is read, we will ensure
@@ -388,7 +387,6 @@ class EventRouter(object):
                 self.record_event(message_json, 'type', 'websocket')
             self.receive_json(json.dumps(message_json))
         except WebSocketConnectionClosedException:
-            # TODO: handle reconnect here
             self.teams[team_hash].set_disconnected()
             return w.WEECHAT_RC_OK
         except ssl.SSLWantReadError:
@@ -1227,7 +1225,7 @@ class SlackTeam(object):
         except:
             print "WS ERROR"
             dbg("Unexpected error: {}\nSent: {}".format(sys.exc_info()[0], data))
-            self.set_connected()
+            self.set_disconnected()
 
     def update_member_presence(self, user, presence):
         user.presence = presence
