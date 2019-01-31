@@ -94,6 +94,7 @@ class FakeWeechat():
 def mock_weechat():
     wee_slack.w = FakeWeechat()
     wee_slack.config = wee_slack.PluginConfig()
+    wee_slack.hdata = wee_slack.Hdata(wee_slack.w)
     wee_slack.debug_string = None
     wee_slack.slack_debug = "debug_buffer_ptr"
     wee_slack.STOP_TALKING_TO_SLACK = False
