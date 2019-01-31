@@ -3043,9 +3043,7 @@ def unwrap_files(message_json, text_before):
         if f.get('mode', '') == "snippet":
             preview = f.get('preview', '')
             if preview:
-                files_texts.append('``` {}'.format(f.get('filetype', 'unknown_type')))
-                files_texts.append(preview)
-                files_texts.append('...\n```')
+                files_texts.append('```\n{}\n```'.format(preview))
 
     if text_before:
         files_texts.insert(0, '')
