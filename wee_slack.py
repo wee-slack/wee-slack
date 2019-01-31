@@ -1549,7 +1549,6 @@ class SlackChannel(SlackChannelCommon):
             self.eventrouter.receive(s)
 
     def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, **kwargs):
-        text = re.sub(r"```(?!\n)", "```\n", text)
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
         self.last_line_from = nick
         ts = SlackTS(timestamp)
@@ -2191,6 +2190,8 @@ class SlackMessage(object):
 
     def render(self, force=False):
         text = render(self.message_json, self.team, force)
+        # Add a newline between ``` and any non-new-line character
+        text = re.sub(r"(?!!\n)```", "\n```", (re.sub(r"```(?!\n).", "```\n", text)))
         if (self.message_json.get('subtype') == 'me_message' and
                 not self.message_json['text'].startswith(self.sender)):
             text = "{} {}".format(self.sender, text)
