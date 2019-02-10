@@ -378,15 +378,7 @@ class EventRouter(object):
         team = self.teams[team_hash]
         try:
             # Read the data from the websocket associated with this team.
-            data = decode_from_utf8(team.ws.recv())
-            message_json = json.loads(data)
-            metadata = WeeSlackMetadata({
-                "team": team_hash,
-            }).jsonify()
-            message_json["wee_slack_metadata"] = metadata
-            if self.recording:
-                self.record_event(message_json, 'type', 'websocket')
-            self.receive_json(json.dumps(message_json))
+            data = team.ws.recv()
         except WebSocketConnectionClosedException:
             w.prnt(team.channel_buffer,
                     'Lost connection to slack team {} (on receive), reconnecting.'.format(team.domain))
@@ -397,9 +389,15 @@ class EventRouter(object):
         except ssl.SSLWantReadError:
             # Expected to happen occasionally on SSL websockets.
             return w.WEECHAT_RC_OK
-        except Exception:
-            dbg('socket issue:\n{}'.format(traceback.format_exc()), level=5)
-            return w.WEECHAT_RC_OK
+
+        message_json = json.loads(decode_from_utf8(data))
+        metadata = WeeSlackMetadata({
+            "team": team_hash,
+        }).jsonify()
+        message_json["wee_slack_metadata"] = metadata
+        if self.recording:
+            self.record_event(message_json, 'type', 'websocket')
+        self.receive_json(json.dumps(message_json))
 
     def receive_httprequest_callback(self, data, command, return_code, out, err):
         """
