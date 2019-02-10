@@ -2428,14 +2428,8 @@ def handle_rtmstart(login_data, eventrouter):
         t.set_reconnect_url(login_data['url'])
         t.connect()
 
-    t.buffer_prnt('Connected to Slack')
-    t.buffer_prnt('{:<20} {}'.format("Websocket URL", login_data["url"]))
-    t.buffer_prnt('{:<20} {}'.format("User name", login_data["self"]["name"]))
-    t.buffer_prnt('{:<20} {}'.format("User ID", login_data["self"]["id"]))
-    t.buffer_prnt('{:<20} {}'.format("Team name", login_data["team"]["name"]))
-    t.buffer_prnt('{:<20} {}'.format("Team domain", login_data["team"]["domain"]))
-    t.buffer_prnt('{:<20} {}'.format("Team id", login_data["team"]["id"]))
-
+    t.buffer_prnt('Connected to Slack team {} ({}) with username {}'.format(
+        login_data["team"]["name"], t.domain, t.nick))
     dbg("connected to {}".format(t.domain))
 
 
