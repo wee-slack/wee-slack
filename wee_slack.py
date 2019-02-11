@@ -3746,7 +3746,7 @@ def command_linkarchive(data, current_buffer, args):
                 message_id = args
             message = channel.hashed_messages.get(message_id)
             if message:
-                url += '{}{:0>6}'.format(message.ts.majorstr(), message.ts.minorstr())
+                url += 'p{}{:0>6}'.format(message.ts.majorstr(), message.ts.minorstr())
                 if isinstance(message, SlackThreadMessage):
                     url += "?thread_ts={}&cid={}".format(message.parent_message.ts, channel.identifier)
             else:
