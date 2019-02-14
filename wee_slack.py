@@ -828,7 +828,7 @@ def typing_update_cb(data, remaining_calls):
 def slack_never_away_cb(data, remaining_calls):
     if config.never_away:
         for t in EVENTROUTER.teams.values():
-            slackbot = t.get_channel_map()['slackbot']
+            slackbot = t.get_channel_map()['Slackbot']
             channel = t.channels[slackbot]
             request = {"type": "typing", "channel": channel.identifier}
             channel.team.send_to_websocket(request, expect_reply=False)
