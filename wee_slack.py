@@ -240,6 +240,16 @@ class ProxyWrapper(object):
 
 ##### Helpers
 
+
+def format_exc_tb():
+    return decode_from_utf8(traceback.format_exc())
+
+
+def format_exc_only():
+    etype, value, _ = sys.exc_info()
+    return ''.join(decode_from_utf8(traceback.format_exception_only(etype, value)))
+
+
 def get_nick_color_name(nick):
     info_name_prefix = "irc_" if int(weechat_version) < 0x1050000 else ""
     return w.info_get(info_name_prefix + "nick_color_name", nick)
@@ -382,8 +392,7 @@ class EventRouter(object):
         except WebSocketConnectionClosedException:
             w.prnt(team.channel_buffer,
                     'Lost connection to slack team {} (on receive), reconnecting.'.format(team.domain))
-            dbg('receive_ws_callback failed with exception:\n{}'
-                    .format(traceback.format_exc()), level=5)
+            dbg('receive_ws_callback failed with exception:\n{}'.format(format_exc_tb()), level=5)
             team.set_disconnected()
             return w.WEECHAT_RC_OK
         except ssl.SSLWantReadError:
@@ -1192,8 +1201,7 @@ class SlackTeam(object):
                 except:
                     w.prnt(self.channel_buffer,
                             'Failed connecting to slack team {}, retrying.'.format(self.domain))
-                    dbg('connect failed with exception:\n{}'
-                            .format(traceback.format_exc()), level=5)
+                    dbg('connect failed with exception:\n{}'.format(format_exc_tb()), level=5)
                     self.connecting = False
                     return False
             else:
@@ -1232,7 +1240,7 @@ class SlackTeam(object):
             w.prnt(self.channel_buffer,
                     'Lost connection to slack team {} (on send), reconnecting.'.format(self.domain))
             dbg('send_to_websocket failed with data: `{}` and exception:\n{}'
-                    .format(message, traceback.format_exc()), level=5)
+                    .format(message, format_exc_tb()), level=5)
             self.set_disconnected()
 
     def update_member_presence(self, user, presence):
@@ -1766,8 +1774,8 @@ class SlackChannel(SlackChannelCommon):
                         elif self.team.is_user_present(user.identifier):
                             nick_group = here
                         w.nicklist_add_nick(self.channel_buffer, nick_group, user.name, user.color_name, "", "", 1)
-                except Exception as e:
-                    dbg("DEBUG: {} {} {}".format(self.identifier, self.name, decode_from_utf8(e)))
+                except:
+                    dbg("DEBUG: {} {} {}".format(self.identifier, self.name, format_exc_only()))
             else:
                 w.nicklist_remove_all(self.channel_buffer)
                 for fn in ["1| too", "2| many", "3| users", "4| to", "5| show"]:
@@ -2638,8 +2646,9 @@ def download_files(message_json, **kwargs):
     if not os.path.exists(download_location):
         try:
             os.makedirs(download_location)
-        except Exception as e:
-            w.prnt('', 'ERROR: Failed to create directory at files_download_location: {}'.format(e))
+        except:
+            w.prnt('', 'ERROR: Failed to create directory at files_download_location: {}'
+                    .format(format_exc_only()))
 
     def fileout_iter(path):
         yield path
@@ -3956,8 +3965,8 @@ def load_emoji():
         DIR = w.info_get("weechat_dir", "")
         with open('{}/weemoji.json'.format(DIR), 'r') as ef:
             return json.loads(ef.read())["emoji"]
-    except Exception as e:
-        dbg("Couldn't load emoji list: {}".format(e), 5)
+    except:
+        dbg("Couldn't load emoji list: {}".format(format_exc_only()), 5)
     return []
 
 
