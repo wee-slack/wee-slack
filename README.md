@@ -184,6 +184,11 @@ Open an existing thread as a channel. The argument is the thread identifier, whi
 /thread af8
 ```
 
+To access the last thread in a channel a shorthand is available:
+```
+/thread
+```
+
 Label a thread with a memorable name. The above command will open a channel called af8, but perhaps you want to call it "meetingnotes". To do so, select that buffer and type:
 ```
 /label meetingnotes
