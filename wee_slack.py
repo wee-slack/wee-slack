@@ -3577,18 +3577,26 @@ def get_msg_from_id(channel, msg_id):
 @utf8_decode
 def command_thread(data, current_buffer, args):
     """
-    /thread <message_id>
+    /thread [message_id]
     Open the thread for the message.
+    If no message id is specified the last thread in channel will be opened.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    if not args:
-        w.prnt('', 'Usage: /thread <id>')
-        return w.WEECHAT_RC_OK_EAT
 
-    msg = get_msg_from_id(channel, args)
-    if not msg:
-        w.prnt('', 'ERROR: Invalid id given, must be an existing id')
-        return w.WEECHAT_RC_OK_EAT
+    if args:
+        msg = get_msg_from_id(channel, args)
+        if not msg:
+            w.prnt('', 'ERROR: Invalid id given, must be an existing id')
+            return w.WEECHAT_RC_OK_EAT
+    else:
+        for message in reversed(channel.messages.values()):
+            if type(message) == SlackMessage and len(message.submessages) > 0:
+                msg = message
+                break
+        else:
+            w.prnt('', 'ERROR: No threads found in channel')
+            return w.WEECHAT_RC_OK_EAT
+
     msg.open_thread(switch=config.switch_buffer_on_join)
     return w.WEECHAT_RC_OK_EAT
 
