@@ -2574,10 +2574,12 @@ def process_user_change(message_json, eventrouter, **kwargs):
     Currently only used to update status, but lots here we could do.
     """
     user = message_json['user']
-    profile = user.get("profile")
-    team = kwargs["team"]
-    team.users[user["id"]].update_status(profile.get("status_emoji"), profile.get("status_text"))
-    dmchannel = team.find_channel_by_members({user["id"]}, channel_type='im')
+    profile = user.get('profile')
+    team = kwargs['team']
+    team_user = team.users.get(user['id'])
+    if team_user:
+        team_user.update_status(profile.get('status_emoji'), profile.get('status_text'))
+    dmchannel = team.find_channel_by_members({user['id']}, channel_type='im')
     if dmchannel:
         dmchannel.set_topic(create_user_status_string(profile))
 
