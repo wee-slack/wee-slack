@@ -214,7 +214,7 @@ class ProxyWrapper(object):
             self.proxy_type = w.config_string(weechat.config_get("{}.type".format(self.proxy_string)))
             if self.proxy_type == "http":
                 self.proxy_address = w.config_string(weechat.config_get("{}.address".format(self.proxy_string)))
-                self.proxy_port = w.config_integer(weechat.config_get("{}.port".format(self.proxy_string)))
+                elf.proxy_port = w.config_integer(weechat.config_get("{}.port".format(self.proxy_string)))
                 self.proxy_user = w.config_string(weechat.config_get("{}.username".format(self.proxy_string)))
                 self.proxy_password = w.config_string(weechat.config_get("{}.password".format(self.proxy_string)))
                 self.has_proxy = True
@@ -762,23 +762,20 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
     if not message.startswith("/") and "\n" in message:
         buffer_input_callback("EVENTROUTER", current_buffer, message)
         return ""
-    return string
+    return interpolate_handle_cb(data, modifier, current_buffer, string)
 
 # Check if string contains a handle `@` 
 # * if handle references a subteam, transform subteam handle to format !subteam^ID|handle
-@utf8_decode
 def interpolate_handle_cb(data, modifer, current_buffer, message):
-    if current_buffer not in EVENTROUTER.weechat_controller.buffers:
-        return message
     current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
-    found_handle = re.search('@\w+', message) 
+    found_handle = re.search('@\w+', message)
     if found_handle:
         # Get handle without @
         handle = found_handle[0].replace('@', '')
         # Strip out message without handle
         message_without_handle = message.replace(found_handle[0], '').strip()
         subteam_id = current_channel.team.subteam_handles_to_id.get(handle)
-        # build new message for subteam alert message  
+        # build new message for subteam alert message
         if subteam_id:
             subteam_alert_message = '!subteam^{0}|{1} {2}'.format(subteam_id, handle, message_without_handle)
             return subteam_alert_message
@@ -1061,23 +1058,23 @@ class SlackRequest(object):
         return (self.start_time + (self.tries**2)) < time.time()
 
 class SlackSubteam(object):
-    """
-    Represents a slack group or subteam 
-    """
-    def __init__(self, originating_team_id, **kwargs):
-        self.handle = kwargs.get('handle', None)
-        self.identifier = kwargs['id']
-        self.name = kwargs.get('name', None) 
-        self.team_id = originating_team_id 
+   """
+   Represents a slack group or subteam 
+   """
+   def __init__(self, originating_team_id, **kwargs):
+       self.handle = kwargs.get('handle', None)
+       self.identifier = kwargs['id']
+       self.name = kwargs.get('name', None) 
+       self.team_id = originating_team_id 
 
-    def __repr__(self):
-        return "Name:{} Identifier:{}".format(self.name, self.identifier)
+   def __repr__(self):
+       return "Name:{} Identifier:{}".format(self.name, self.identifier)
 
-    def __eq__(self, compare_str):
-        if compare_str == self.subteam_id :
-            return True
-        else:
-            return False
+   def __eq__(self, compare_str):
+       if compare_str == self.subteam_id :
+           return True
+       else:
+           return False
 
 
 
@@ -1087,7 +1084,7 @@ class SlackTeam(object):
     Team object under which users and channels live.. Does lots.
     """
 
-    def __init__(self, eventrouter, token, websocket_url, team_info, subteams, nick, myidentifier, users, bots, channels, **kwargs):
+    def __init__(self, eventrouter, token, websocket_url, team_info, subteams,  nick, myidentifier, users, bots, channels, **kwargs):
         self.identifier = team_info["id"]
         self.ws_url = websocket_url
         self.connected = False
@@ -1098,7 +1095,7 @@ class SlackTeam(object):
         self.eventrouter = eventrouter
         self.token = token
         self.team = self
-        self.subteams = subteams_info
+        self.subteams = subteams
         self.subdomain = team_info["domain"]
         self.domain = self.subdomain + ".slack.com"
         self.preferred_name = self.domain
@@ -2473,7 +2470,7 @@ def handle_rtmstart(login_data, eventrouter):
             bots[item["id"]] = SlackBot(login_data['team']['id'], **item)
 
         subteams = {}
-        for item in login_data["subteams"]:
+        for item in login_data["subteams"]["all"]:
             subteams[item['id']] = SlackSubteam(login_data['team']['id'], **item)
 
         channels = {}
@@ -4106,7 +4103,6 @@ def setup_hooks():
 
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
     w.hook_completion("usergroups", "complete @-usergroups for slack", "usergroups_completion_cb", "")
-
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
 
     w.key_bind("mouse", {
@@ -4479,7 +4475,7 @@ if __name__ == "__main__":
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
             w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
-            w.hook_modifier("weechat_print", "interpolate_handle_cb", "")
+            #w.hook_modifier("weechat_print", "interpolate_handle_cb", "")
 
             EMOJI.extend(load_emoji())
             setup_hooks()
