@@ -764,6 +764,29 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
         return ""
     return string
 
+# Check if string contains a handle `@` 
+# * if handle references a subteam, transform subteam handle to format !subteam^ID|handle
+@utf8_decode
+def interpolate_handle_cb(data, modifer, current_buffer, message):
+    if current_buffer not in EVENTROUTER.weechat_controller.buffers:
+        return string
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
+
+   found_handle = re.search('@\w+', message) 
+   if found_handle:
+       # Get handle without @
+       handle = found_handle[0].replace('@', '')
+       # Strip out message without handle
+       message_without_handle = message.replace(found_handle[0], '').strip()
+       subteam_id = current_channel.team.subteam_handles_to_id.get(handle)
+            # build new message for subteam alert message  
+           if subteam_id:
+               subteam_alert_message = '!subteam^{0}|{1} {2}'.format(subteam_id, handle, message_without_handle)
+               return subteam_alert_message
+           else:
+            return message
+    else:
+        return message
 
 @utf8_decode
 def buffer_switch_callback(signal, sig_type, data):
@@ -917,6 +940,23 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
         w.hook_completion_list_add(completion, ":" + e + ":", 0, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
+@utf8_decode
+def usergroups_completion_cb(data, completion_item, current_buffer, completion):
+    """
+    Adds all :-prefixed usergroups to completion list
+    """
+
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
+
+    if current_channel is None:
+        return w.WEECHAT_RC_OK
+    subteams_ids = current_channel.team.subteams.valuekeys()
+    for subteam_id in subteam_ids 
+        subteam = current_channel.team.subteams.get(subteam_id, None)
+        if subteam:
+            w.hook_completion_list_add(completion, "@" + subteam.handle, 0, w.WEECHAT_LIST_POS_SORT)
+    return w.WEECHAT_RC_OK
+
 
 @utf8_decode
 def complete_next_cb(data, current_buffer, command):
@@ -1021,6 +1061,26 @@ class SlackRequest(object):
     def retry_ready(self):
         return (self.start_time + (self.tries**2)) < time.time()
 
+class SlackSubteam(object):
+    """
+    Represents a slack group or subteam 
+    """
+    def __init__(self, originating_team_id, **kwargs):
+        self.handle = kwargs.get('handle', None)
+        self.identifier = kwargs['id']
+        self.name = kwargs.get('name', None) 
+        self.team_id = originating_team_id 
+
+    def __repr__(self):
+        return "Name:{} Identifier:{}".format(self.name, self.identifier)
+
+    def __eq__(self, compare_str):
+        if compare_str == self.subteam_id :
+            return True
+        else:
+            return False
+
+
 
 class SlackTeam(object):
     """
@@ -1028,7 +1088,7 @@ class SlackTeam(object):
     Team object under which users and channels live.. Does lots.
     """
 
-    def __init__(self, eventrouter, token, websocket_url, team_info, nick, myidentifier, users, bots, channels, **kwargs):
+    def __init__(self, eventrouter, token, websocket_url, team_info, subteams, nick, myidentifier, users, bots, channels, **kwargs):
         self.identifier = team_info["id"]
         self.ws_url = websocket_url
         self.connected = False
@@ -1039,6 +1099,7 @@ class SlackTeam(object):
         self.eventrouter = eventrouter
         self.token = token
         self.team = self
+        self.subteams = subteams_info
         self.subdomain = team_info["domain"]
         self.domain = self.subdomain + ".slack.com"
         self.preferred_name = self.domain
@@ -1062,6 +1123,14 @@ class SlackTeam(object):
         for c in self.channels.keys():
             channels[c].set_related_server(self)
             channels[c].check_should_open()
+
+        # Build mapper between subteam handle and their identifiers 
+        self.subteam_handles_to_id = {}
+        for s in self.subteams.keys():
+            subteam = self.subteams.get(s, None)
+            if subteam:
+                self.subteam_handles_to_id[subteam.handle] = subteam.identifier
+
         #    self.channel_set_related_server(c)
         # Last step is to make sure my nickname is the set color
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
@@ -1082,6 +1151,10 @@ class SlackTeam(object):
     @property
     def members(self):
         return self.users.viewkeys()
+
+    @property
+    def subteam_ids(self):
+        return self.subteams.viewkeys()
 
     def load_emoji_completions(self):
         self.emoji_completions = list(EMOJI)
@@ -2400,6 +2473,10 @@ def handle_rtmstart(login_data, eventrouter):
         for item in login_data["bots"]:
             bots[item["id"]] = SlackBot(login_data['team']['id'], **item)
 
+        subteams = {}
+        for item in login_data["subteams"]:
+            subteams[item['id']] = SlackSubteam(login_data['team']['id'], **item)
+
         channels = {}
         for item in login_data["channels"]:
             if item["is_shared"]:
@@ -2421,6 +2498,7 @@ def handle_rtmstart(login_data, eventrouter):
             metadata.token,
             login_data['url'],
             login_data["team"],
+            subteams,
             login_data["self"]["name"],
             login_data["self"]["id"],
             users,
@@ -4028,6 +4106,8 @@ def setup_hooks():
         w.hook_command(cmd, description, args, '', '', 'command_' + cmd, '')
 
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
+    w.hook_completion("usergroups", "complete @-usergroups for slack", "usergroups_completion_cb", "")
+
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
 
     w.key_bind("mouse", {
@@ -4400,6 +4480,7 @@ if __name__ == "__main__":
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
             w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
+            w.hook_modifier("weechat_print", "interpolate_handle_cb")
 
             EMOJI.extend(load_emoji())
             setup_hooks()

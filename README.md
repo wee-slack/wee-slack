@@ -207,6 +207,15 @@ e.g. like this:
 /set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(emoji)"
 ```
 
+#### User group tab completions
+To enable tab completions for usergroupps append `|%(usergroups)`
+```
+/set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(usergroups)"
+```
+Note: After pressing enter do no be alarm by the sudden change in the usergroup handle.
+The  usergroup handle will appear in the format `!subteam^ID|handle message`. 
+This is the format that Slack will interpret as a usergroup handle
+
 #### Cursor and mouse mode
 
 The cursor mode and mouse mode can be used to interact with older messages, for editing, deleting, reacting and replying to a message. Mouse mode can be toggled by pressing `Alt`+`m` and cursor mode can be entered by running `/cursor` (see `/help cursor`).
