@@ -769,21 +769,20 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
 @utf8_decode
 def interpolate_handle_cb(data, modifer, current_buffer, message):
     if current_buffer not in EVENTROUTER.weechat_controller.buffers:
-        return string
+        return message
     current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
-
-   found_handle = re.search('@\w+', message) 
-   if found_handle:
-       # Get handle without @
-       handle = found_handle[0].replace('@', '')
-       # Strip out message without handle
-       message_without_handle = message.replace(found_handle[0], '').strip()
-       subteam_id = current_channel.team.subteam_handles_to_id.get(handle)
-            # build new message for subteam alert message  
-           if subteam_id:
-               subteam_alert_message = '!subteam^{0}|{1} {2}'.format(subteam_id, handle, message_without_handle)
-               return subteam_alert_message
-           else:
+    found_handle = re.search('@\w+', message) 
+    if found_handle:
+        # Get handle without @
+        handle = found_handle[0].replace('@', '')
+        # Strip out message without handle
+        message_without_handle = message.replace(found_handle[0], '').strip()
+        subteam_id = current_channel.team.subteam_handles_to_id.get(handle)
+        # build new message for subteam alert message  
+        if subteam_id:
+            subteam_alert_message = '!subteam^{0}|{1} {2}'.format(subteam_id, handle, message_without_handle)
+            return subteam_alert_message
+        else:
             return message
     else:
         return message
@@ -951,7 +950,7 @@ def usergroups_completion_cb(data, completion_item, current_buffer, completion):
     if current_channel is None:
         return w.WEECHAT_RC_OK
     subteams_ids = current_channel.team.subteams.valuekeys()
-    for subteam_id in subteam_ids 
+    for subteam_id in subteam_ids:
         subteam = current_channel.team.subteams.get(subteam_id, None)
         if subteam:
             w.hook_completion_list_add(completion, "@" + subteam.handle, 0, w.WEECHAT_LIST_POS_SORT)
@@ -4480,7 +4479,7 @@ if __name__ == "__main__":
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
             w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
-            w.hook_modifier("weechat_print", "interpolate_handle_cb")
+            w.hook_modifier("weechat_print", "interpolate_handle_cb", "")
 
             EMOJI.extend(load_emoji())
             setup_hooks()
