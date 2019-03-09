@@ -4453,7 +4453,6 @@ if __name__ == "__main__":
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
             w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
-            #w.hook_modifier("weechat_print", "interpolate_handle_cb", "")
 
             EMOJI.extend(load_emoji())
             setup_hooks()
