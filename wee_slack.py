@@ -762,7 +762,7 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
     if not message.startswith("/") and "\n" in message:
         buffer_input_callback("EVENTROUTER", current_buffer, message)
         return ""
-    return message 
+    return string 
 
 @utf8_decode
 def buffer_switch_callback(signal, sig_type, data):
