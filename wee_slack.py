@@ -762,27 +762,7 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
     if not message.startswith("/") and "\n" in message:
         buffer_input_callback("EVENTROUTER", current_buffer, message)
         return ""
-    return interpolate_handle_cb(data, modifier, current_buffer, string)
-
-# Check if string contains a handle `@` 
-# * if handle references a subteam, transform subteam handle to format !subteam^ID|handle
-def interpolate_handle_cb(data, modifer, current_buffer, message):
-    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
-    found_handle = re.search('@\w+', message)
-    if found_handle:
-        # Get handle without @
-        handle = found_handle[0].replace('@', '')
-        # Strip out message without handle
-        message_without_handle = message.replace(found_handle[0], '').strip()
-        subteam_id = current_channel.team.subteam_handles_to_id.get(handle)
-        # build new message for subteam alert message
-        if subteam_id:
-            subteam_alert_message = '!subteam^{0}|{1} {2}'.format(subteam_id, handle, message_without_handle)
-            return subteam_alert_message
-        else:
-            return message
-    else:
-        return message
+    return message 
 
 @utf8_decode
 def buffer_switch_callback(signal, sig_type, data):
@@ -946,7 +926,7 @@ def usergroups_completion_cb(data, completion_item, current_buffer, completion):
 
     if current_channel is None:
         return w.WEECHAT_RC_OK
-    subteams_ids = current_channel.team.subteams.valuekeys()
+    subteam_ids = current_channel.team.subteams.viewkeys()
     for subteam_id in subteam_ids:
         subteam = current_channel.team.subteams.get(subteam_id, None)
         if subteam:
@@ -1147,10 +1127,6 @@ class SlackTeam(object):
     @property
     def members(self):
         return self.users.viewkeys()
-
-    @property
-    def subteam_ids(self):
-        return self.subteams.viewkeys()
 
     def load_emoji_completions(self):
         self.emoji_completions = list(EMOJI)
@@ -3031,6 +3007,8 @@ def linkify_text(message, team, channel):
             named = targets.groups()
             if named[1] in ["group", "channel", "here"]:
                 message[item[0]] = "<!{}>".format(named[1])
+            elif named[1] in list(channel.team.subteam_handles_to_id.viewkeys()):
+                message[item[0]] = "<!subteam^{}|{}>".format(channel.team.subteam_handles_to_id[named[1]], named[1])
             else:
                 try:
                     if usernames[named[1]]:
@@ -3045,6 +3023,7 @@ def linkify_text(message, team, channel):
             except:
                 message[item[0]] = "#{}{}".format(named[1], named[2])
 
+    print('messsge {}'.format(message))
     # dbg(message)
     return " ".join(message)
 

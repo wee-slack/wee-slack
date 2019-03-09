@@ -58,3 +58,15 @@ def test_linkifytext_names_with_apostrophe(realish_eventrouter):
     text = linkify_text('@O\'Connor: my test message', team, channel)
 
     assert text == '@O\'Connor: my test message'
+
+def test_linkifytext_names_with_subgroup_notification(realish_eventrouter):
+    subteam_id = "TGX0ALBK3"
+    handle = "test"
+    team = realish_eventrouter.teams.values()[0]
+    channel = team.channels.values()[0]
+
+    message = 'This is a message for the test team'
+    text = linkify_text('@test {}'.format(message), team, channel)
+
+    assert text == '<!subteam^{}|{}> {}'.format(subteam_id, handle, message)
+
