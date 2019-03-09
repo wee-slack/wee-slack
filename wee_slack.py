@@ -3023,7 +3023,6 @@ def linkify_text(message, team, channel):
             except:
                 message[item[0]] = "#{}{}".format(named[1], named[2])
 
-    print('messsge {}'.format(message))
     # dbg(message)
     return " ".join(message)
 
