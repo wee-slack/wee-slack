@@ -214,7 +214,7 @@ class ProxyWrapper(object):
             self.proxy_type = w.config_string(weechat.config_get("{}.type".format(self.proxy_string)))
             if self.proxy_type == "http":
                 self.proxy_address = w.config_string(weechat.config_get("{}.address".format(self.proxy_string)))
-                elf.proxy_port = w.config_integer(weechat.config_get("{}.port".format(self.proxy_string)))
+                self.proxy_port = w.config_integer(weechat.config_get("{}.port".format(self.proxy_string)))
                 self.proxy_user = w.config_string(weechat.config_get("{}.username".format(self.proxy_string)))
                 self.proxy_password = w.config_string(weechat.config_get("{}.password".format(self.proxy_string)))
                 self.has_proxy = True
