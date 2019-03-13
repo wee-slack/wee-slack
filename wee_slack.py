@@ -689,6 +689,14 @@ def receive_ws_callback(*args):
 
 
 @utf8_decode
+def ws_ping_cb(data, remaining_calls):
+    for team in EVENTROUTER.teams.values():
+        if team.ws:
+            team.ws.ping()
+    return w.WEECHAT_RC_OK
+
+
+@utf8_decode
 def reconnect_callback(*args):
     EVENTROUTER.reconnect_if_disconnected()
     return w.WEECHAT_RC_OK
@@ -1033,7 +1041,7 @@ class SlackTeam(object):
         self.ws_url = websocket_url
         self.connected = False
         self.connecting = False
-        # self.ws = None
+        self.ws = None
         self.ws_counter = 0
         self.ws_replies = {}
         self.eventrouter = eventrouter
@@ -3983,6 +3991,7 @@ def load_emoji():
 def setup_hooks():
     w.bar_item_new('slack_typing_notice', '(extra)typing_bar_item_cb', '')
 
+    w.hook_timer(5000, 0, 0, "ws_ping_cb", "")
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
     w.hook_timer(1000, 0, 0, "buffer_list_update_callback", "EVENTROUTER")
     w.hook_timer(3000, 0, 0, "reconnect_callback", "EVENTROUTER")
