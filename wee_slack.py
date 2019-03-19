@@ -3822,8 +3822,18 @@ def command_upload(data, current_buffer, args):
     # only http proxy is currenlty supported
     proxy = ProxyWrapper()
     proxy_string = proxy.curl()
-    command = 'curl -F file=@{} -F channels={} -F token={} {} {}'.format(
-            file_path, channel.identifier, channel.team.token, proxy_string, url)
+
+    form_fields = {
+        'file': '@' + file_path,
+        'channels': channel.identifier,
+        'token': channel.team.token,
+    }
+    if isinstance(channel, SlackThreadChannel):
+        form_fields['thread_ts'] = channel.parent_message.ts
+
+    curl_options = ' '.join(
+        '-F {}={}'.format(*field) for field in form_fields.iteritems())
+    command = 'curl {} {} {}'.format(curl_options, proxy_string, url)
     w.hook_process(command, config.slack_timeout, '', '')
     return w.WEECHAT_RC_OK_EAT
 
