@@ -2222,7 +2222,7 @@ class SlackMessage(object):
         if (self.message_json.get('subtype') == 'me_message' and
                 not self.message_json['text'].startswith(self.sender)):
             text = "{} {}".format(self.sender, text)
-        if (self.message_json.get('subtype') == 'channel_join' and
+        if (self.message_json.get('subtype') in ('channel_join', 'group_join') and
                 self.message_json.get('inviter')):
             inviter_id = self.message_json.get('inviter')
             inviter_nick = unfurl_refs("<@{}>".format(inviter_id))
@@ -2740,6 +2740,10 @@ def subprocess_channel_leave(message_json, eventrouter, channel, team):
     channel.user_left(message_json['user'])
     # channel.update_nicklist(message_json['user'])
     # channel.update_nicklist()
+
+
+subprocess_group_join = subprocess_channel_join
+subprocess_group_leave = subprocess_channel_leave
 
 
 def subprocess_message_replied(message_json, eventrouter, channel, team):
