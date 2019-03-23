@@ -762,7 +762,28 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
     if not message.startswith("/") and "\n" in message:
         buffer_input_callback("EVENTROUTER", current_buffer, message)
         return ""
-    return string 
+    return string
+
+def usergroup_print_cb(data, modifer, modified_data, message):
+    message_has_usergroup = True if message.find('subteam') > -1 else False
+    if message_has_usergroup:
+        # Find index of first occurance of "!subteam"
+        index_of_usergroup = message.find('!subteam')
+        message_substring = message[index_of_usergroup:]
+        # Find usergroup name
+        usergroup = re.match(r"^(!subteam\^[\w]+)+ (\(\w+\))", message_substring.strip())
+        usergroup_name = usergroup.group(2).replace('(', '').replace(')', '')
+        formatted_usergroup_name = '@{}'.format(usergroup_name)
+
+        # Get first part of message before usergroup prefix
+        message_before_usergroup = message[0:index_of_usergroup]
+        # Get last part of message after usergroup prefix
+        index_of_end_of_usergroup = message.find(')')
+        message_after_usergroup = message[index_of_end_of_usergroup+1:]
+        # Combine components
+        new_message = '{}{}{}'.format(message_before_usergroup, formatted_usergroup_name, message_after_usergroup)
+        return new_message
+    return message
 
 @utf8_decode
 def buffer_switch_callback(signal, sig_type, data):
@@ -919,18 +940,16 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
 @utf8_decode
 def usergroups_completion_cb(data, completion_item, current_buffer, completion):
     """
-    Adds all :-prefixed usergroups to completion list
+    Adds all @-prefixed usergroups to completion list
     """
 
     current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
 
     if current_channel is None:
         return w.WEECHAT_RC_OK
-    subteam_ids = current_channel.team.subteams.viewkeys()
-    for subteam_id in subteam_ids:
-        subteam = current_channel.team.subteams.get(subteam_id, None)
+    for subteam in current_channel.team.subteams.values():
         if subteam:
-            w.hook_completion_list_add(completion, "@" + subteam.handle, 0, w.WEECHAT_LIST_POS_SORT)
+            w.hook_completion_list_add(completion, "@" + subteam.handle, 1, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
 
@@ -1047,15 +1066,12 @@ class SlackSubteam(object):
        self.name = kwargs.get('name', None) 
        self.team_id = originating_team_id 
 
+
    def __repr__(self):
        return "Name:{} Identifier:{}".format(self.name, self.identifier)
 
    def __eq__(self, compare_str):
-       if compare_str == self.subteam_id :
-           return True
-       else:
-           return False
-
+       return compare_str == self.subteam_id 
 
 
 class SlackTeam(object):
@@ -1119,10 +1135,7 @@ class SlackTeam(object):
         return "domain={} nick={}".format(self.subdomain, self.nick)
 
     def __eq__(self, compare_str):
-        if compare_str == self.token or compare_str == self.domain or compare_str == self.subdomain:
-            return True
-        else:
-            return False
+         return compare_str == self.token or compare_str == self.domain or compare_str == self.subdomain
 
     @property
     def members(self):
@@ -3293,6 +3306,8 @@ def tag(tagset, user=None, thread=False, muted=False):
         # messages in the team/server buffer, e.g. "new channel created"
         "team_info": {"no_highlight", "log3"},
         "team_message": {"irc_privmsg", "notify_message", "log1"},
+        # messages from a subgroup/usergroup 
+        "usergroup":{"irc_privmsg", "notify_message", "log1"},
         # when replaying something old
         "backlog": {"irc_privmsg", "no_highlight", "notify_none", "logger_backlog"},
         # when receiving a direct message
@@ -4453,6 +4468,7 @@ if __name__ == "__main__":
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
             w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
+            w.hook_modifier("weechat_print", "usergroup_print_cb", "")
 
             EMOJI.extend(load_emoji())
             setup_hooks()
