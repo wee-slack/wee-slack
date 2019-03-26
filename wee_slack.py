@@ -3846,12 +3846,17 @@ def command_upload(data, current_buffer, args):
 
 @utf8_decode
 def away_command_cb(data, current_buffer, args):
-    # TODO: reimplement all.. maybe
-    (all, message) = re.match("^/away(?:\s+(-all))?(?:\s+(.+))?", args).groups()
-    if message is None:
-        command_back(data, current_buffer, args)
+    all_servers, message = re.match('^/away( -all)? ?(.*)', args).groups()
+    if all_servers:
+        team_buffers = [team.channel_buffer for team in EVENTROUTER.teams.values()]
     else:
-        command_away(data, current_buffer, args)
+        team_buffers = [current_buffer]
+
+    for team_buffer in team_buffers:
+        if message:
+            command_away(data, team_buffer, args)
+        else:
+            command_back(data, team_buffer, args)
     return w.WEECHAT_RC_OK
 
 
