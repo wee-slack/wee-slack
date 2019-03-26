@@ -150,7 +150,7 @@ def encode_to_utf8(data):
     if isinstance(data, bytes):
         return data
     elif isinstance(data, collections.Mapping):
-        return type(data)(map(encode_to_utf8, data.iteritems()))
+        return type(data)(map(encode_to_utf8, data.items()))
     elif isinstance(data, collections.Iterable):
         return type(data)(map(encode_to_utf8, data))
     else:
@@ -165,7 +165,7 @@ def decode_from_utf8(data):
     if isinstance(data, unicode):
         return data
     elif isinstance(data, collections.Mapping):
-        return type(data)(map(decode_from_utf8, data.iteritems()))
+        return type(data)(map(decode_from_utf8, data.items()))
     elif isinstance(data, collections.Iterable):
         return type(data)(map(decode_from_utf8, data))
     else:
@@ -379,7 +379,7 @@ class EventRouter(object):
             raise InvalidType(type(team))
 
     def reconnect_if_disconnected(self):
-        for team_id, team in self.teams.iteritems():
+        for team_id, team in self.teams.items():
             if not team.connected:
                 team.connect()
                 dbg("reconnecting {}".format(team))
@@ -1119,7 +1119,7 @@ class SlackTeam(object):
 
     @property
     def members(self):
-        return self.users.viewkeys()
+        return self.users.keys()
 
     def load_emoji_completions(self):
         self.emoji_completions = list(EMOJI)
@@ -1165,12 +1165,12 @@ class SlackTeam(object):
 
     def set_muted_channels(self, muted_str):
         self.muted_channels = {x for x in muted_str.split(',') if x}
-        for channel in self.channels.itervalues():
+        for channel in self.channels.values():
             channel.set_highlights()
 
     def set_highlight_words(self, highlight_str):
         self.highlight_words = {x for x in highlight_str.split(',') if x}
-        for channel in self.channels.itervalues():
+        for channel in self.channels.values():
             channel.set_highlights()
 
     def formatted_name(self, **kwargs):
@@ -1184,16 +1184,16 @@ class SlackTeam(object):
         w.prnt("", "ERROR: Sending a message in the team buffer is not supported")
 
     def find_channel_by_members(self, members, channel_type=None):
-        for channel in self.channels.itervalues():
+        for channel in self.channels.values():
             if channel.get_members() == members and (
                     channel_type is None or channel.type == channel_type):
                 return channel
 
     def get_channel_map(self):
-        return {v.slack_name: k for k, v in self.channels.iteritems()}
+        return {v.slack_name: k for k, v in self.channels.items()}
 
     def get_username_map(self):
-        return {v.name: k for k, v in self.users.iteritems()}
+        return {v.name: k for k, v in self.users.items()}
 
     def get_team_hash(self):
         return self.team_hash
@@ -1719,7 +1719,7 @@ class SlackChannel(SlackChannelCommon):
         returns if any of them is actively typing. If none are,
         nulls the dict and returns false.
         """
-        for user, timestamp in self.typing.iteritems():
+        for user, timestamp in self.typing.items():
             if timestamp + 4 > time.time():
                 return True
         if len(self.typing) > 0:
@@ -1732,7 +1732,7 @@ class SlackChannel(SlackChannelCommon):
         Returns the names of everyone in the channel who is currently typing.
         """
         typing = []
-        for user, timestamp in self.typing.iteritems():
+        for user, timestamp in self.typing.items():
             if timestamp + 4 > time.time():
                 typing.append(user)
             else:
@@ -3054,7 +3054,7 @@ def linkify_text(message, team):
             named = targets.groups()
             if named[1] in ["group", "channel", "here"]:
                 message[item[0]] = "<!{}>{}".format(named[1], named[2])
-            elif named[1] in list(usergroups.viewkeys()):
+            elif named[1] in usergroups.keys():
                 message[item[0]] = "<!subteam^{}|@{}>{}".format(usergroups[named[1]], named[1], named[2])
             else:
                 try:
@@ -3926,7 +3926,7 @@ def command_nodistractions(data, current_buffer, args):
     """
     global hide_distractions
     hide_distractions = not hide_distractions
-    channels = [channel for channel in EVENTROUTER.weechat_controller.buffers.itervalues()
+    channels = [channel for channel in EVENTROUTER.weechat_controller.buffers.values()
             if channel in config.distracting_channels]
     for channel in channels:
         w.buffer_set(channel.channel_buffer, "hidden", str(int(hide_distractions)))
@@ -3959,7 +3959,7 @@ def command_upload(data, current_buffer, args):
         form_fields['thread_ts'] = channel.parent_message.ts
 
     curl_options = ' '.join(
-        '-F {}={}'.format(*field) for field in form_fields.iteritems())
+        '-F {}={}'.format(*field) for field in form_fields.items())
     command = 'curl {} {} {}'.format(curl_options, proxy_string, url)
     w.hook_process(command, config.slack_timeout, '', '')
     return w.WEECHAT_RC_OK_EAT
@@ -4385,8 +4385,6 @@ class PluginConfig(object):
         self.settings = {}
         # Set all descriptions, replace the values in the dict with the
         # default setting value rather than the (setting,desc) tuple.
-        # Use items() rather than iteritems() so we don't need to worry about
-        # invalidating the iterator.
         for key, (default, desc) in self.default_settings.items():
             w.config_set_desc_plugin(key, desc)
             self.settings[key] = default
@@ -4394,7 +4392,7 @@ class PluginConfig(object):
         # Migrate settings from old versions of Weeslack...
         self.migrate()
         # ...and then set anything left over from the defaults.
-        for key, default in self.settings.iteritems():
+        for key, default in self.settings.items():
             if not w.config_get_plugin(key):
                 w.config_set_plugin(key, default)
         self.config_changed(None, None, None)
