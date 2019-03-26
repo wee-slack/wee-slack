@@ -2898,14 +2898,16 @@ def process_emoji_changed(message_json, eventrouter, **kwargs):
 
 ###### New module/global methods
 def render_formatting(text):
-    text = re.sub(r'(^| )\*([^*\n`]+)\*([^a-zA-Z0-9_]|$)',
-                  r'\1{}*\2*{}\3'.format(w.color(config.render_bold_as),
+    text = re.sub(r'(^| )\*([^*\n`]+)\*(?=[^\w]|$)',
+                  r'\1{}*\2*{}'.format(w.color(config.render_bold_as),
                                        w.color('-' + config.render_bold_as)),
-                  text)
-    text = re.sub(r'(^| )_([^_\n`]+)_([^a-zA-Z0-9_]|$)',
-                  r'\1{}_\2_{}\3'.format(w.color(config.render_italic_as),
+                  text,
+                  flags=re.UNICODE)
+    text = re.sub(r'(^| )_([^_\n`]+)_(?=[^\w]|$)',
+                  r'\1{}_\2_{}'.format(w.color(config.render_italic_as),
                                        w.color('-' + config.render_italic_as)),
-                  text)
+                  text,
+                  flags=re.UNICODE)
     return text
 
 
