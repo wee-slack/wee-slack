@@ -143,7 +143,9 @@ EMOJI = []
 
 
 def encode_to_utf8(data):
-    if isinstance(data, unicode):
+    if sys.version_info.major > 2:
+        return data
+    elif isinstance(data, unicode):
         return data.encode('utf-8')
     if isinstance(data, bytes):
         return data
@@ -156,7 +158,9 @@ def encode_to_utf8(data):
 
 
 def decode_from_utf8(data):
-    if isinstance(data, bytes):
+    if sys.version_info.major > 2:
+        return data
+    elif isinstance(data, bytes):
         return data.decode('utf-8')
     if isinstance(data, unicode):
         return data
