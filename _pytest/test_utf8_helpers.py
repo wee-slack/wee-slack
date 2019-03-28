@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function, unicode_literals
+
 from collections import OrderedDict
 from wee_slack import decode_from_utf8, encode_to_utf8, utf8_decode
 

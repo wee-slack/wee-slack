@@ -1,3 +1,4 @@
+from __future__ import print_function, unicode_literals
 
 def test_PresenceChange(realish_eventrouter, mock_websocket):
 

@@ -1,3 +1,5 @@
+from __future__ import print_function, unicode_literals
+
 import wee_slack
 from wee_slack import parse_topic_command, topic_command_cb
 from mock import patch

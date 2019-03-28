@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 def test_send_message(realish_eventrouter, mock_websocket):
     e = realish_eventrouter
