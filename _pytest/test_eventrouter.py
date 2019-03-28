@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 import pytest
 from wee_slack import EventRouter, SlackRequest

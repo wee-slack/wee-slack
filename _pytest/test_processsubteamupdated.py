@@ -1,3 +1,5 @@
+from __future__ import print_function, unicode_literals
+
 import glob
 from mock import patch, call
 from wee_slack import SlackTeam, SlackSubteam
