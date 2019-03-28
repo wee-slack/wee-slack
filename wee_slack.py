@@ -4,6 +4,7 @@ from __future__ import print_function, unicode_literals
 
 from collections import OrderedDict
 from functools import wraps
+from io import StringIO
 from itertools import islice, count
 
 import textwrap
@@ -19,10 +20,6 @@ import collections
 import ssl
 import random
 import string
-try:
-    from cStringIO import StringIO
-except:
-    from StringIO import StringIO
 
 from websocket import create_connection, WebSocketConnectionClosedException
 
