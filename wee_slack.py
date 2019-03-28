@@ -10,7 +10,6 @@ from itertools import islice, count
 import textwrap
 import time
 import json
-import pickle
 import sha
 import os
 import re
@@ -408,7 +407,7 @@ class EventRouter(object):
         message_json["wee_slack_metadata"] = metadata
         if self.recording:
             self.record_event(message_json, 'type', 'websocket')
-        self.receive_json(json.dumps(message_json))
+        self.receive(message_json)
 
     def receive_httprequest_callback(self, data, command, return_code, out, err):
         """
@@ -437,11 +436,11 @@ class EventRouter(object):
                     # dbg("Incomplete json, awaiting more", True)
                 try:
                     j["wee_slack_process_method"] = request_metadata.request_normalized
-                    j["wee_slack_request_metadata"] = pickle.dumps(request_metadata)
+                    j["wee_slack_request_metadata"] = request_metadata
                     self.reply_buffer.pop(request_metadata.response_id)
                     if self.recording:
                         self.record_event(j, 'wee_slack_process_method', 'http')
-                    self.receive_json(json.dumps(j))
+                    self.receive(j)
                     self.delete_context(data)
                 except:
                     dbg("HTTP REQUEST CALLBACK FAILED", True)
@@ -467,16 +466,6 @@ class EventRouter(object):
             if request_metadata.response_id not in self.reply_buffer:
                 self.reply_buffer[request_metadata.response_id] = StringIO()
             self.reply_buffer[request_metadata.response_id].write(out)
-
-    def receive_json(self, data):
-        """
-        complete
-        Receives a raw JSON string from and unmarshals it
-        as dict, then places it back on the queue for processing.
-        """
-        dbg("RECEIVED JSON of len {}".format(len(data)))
-        message_json = json.loads(data)
-        self.queue.append(message_json)
 
     def receive(self, dataobj):
         """
@@ -2423,7 +2412,7 @@ def handle_rtmstart(login_data, eventrouter):
     """
     This handles the main entry call to slack, rtm.start
     """
-    metadata = pickle.loads(login_data["wee_slack_request_metadata"])
+    metadata = login_data["wee_slack_request_metadata"]
 
     if not login_data["ok"]:
         w.prnt("", "ERROR: Failed connecting to Slack with token starting with {}: {}"
@@ -2494,13 +2483,13 @@ def handle_rtmstart(login_data, eventrouter):
 
 def handle_emojilist(emoji_json, eventrouter, **kwargs):
     if emoji_json["ok"]:
-        request_metadata = pickle.loads(emoji_json["wee_slack_request_metadata"])
+        request_metadata = emoji_json["wee_slack_request_metadata"]
         team = eventrouter.teams[request_metadata.team_hash]
         team.emoji_completions.extend(emoji_json["emoji"].keys())
 
 
 def handle_channelsinfo(channel_json, eventrouter, **kwargs):
-    request_metadata = pickle.loads(channel_json["wee_slack_request_metadata"])
+    request_metadata = channel_json["wee_slack_request_metadata"]
     team = eventrouter.teams[request_metadata.team_hash]
     channel = team.channels[request_metadata.channel_identifier]
     channel.set_unread_count_display(channel_json['channel'].get('unread_count_display', 0))
@@ -2508,14 +2497,14 @@ def handle_channelsinfo(channel_json, eventrouter, **kwargs):
 
 
 def handle_groupsinfo(group_json, eventrouter, **kwargs):
-    request_metadata = pickle.loads(group_json["wee_slack_request_metadata"])
+    request_metadata = group_json["wee_slack_request_metadata"]
     team = eventrouter.teams[request_metadata.team_hash]
     group = team.channels[request_metadata.channel_identifier]
     group.set_unread_count_display(group_json['group'].get('unread_count_display', 0))
 
 
 def handle_conversationsopen(conversation_json, eventrouter, object_name='channel', **kwargs):
-    request_metadata = pickle.loads(conversation_json["wee_slack_request_metadata"])
+    request_metadata = conversation_json["wee_slack_request_metadata"]
     # Set unread count if the channel isn't new (channel_identifier exists)
     if hasattr(request_metadata, 'channel_identifier'):
         team = eventrouter.teams[request_metadata.team_hash]
@@ -2549,7 +2538,7 @@ def handle_conversationshistory(message_json, eventrouter, **kwargs):
 
 
 def handle_history(message_json, eventrouter, **kwargs):
-    request_metadata = pickle.loads(message_json["wee_slack_request_metadata"])
+    request_metadata = message_json["wee_slack_request_metadata"]
     kwargs['team'] = eventrouter.teams[request_metadata.team_hash]
     kwargs['channel'] = kwargs['team'].channels[request_metadata.channel_identifier]
     if getattr(request_metadata, 'clear', False):
@@ -2562,14 +2551,14 @@ def handle_history(message_json, eventrouter, **kwargs):
 
 
 def handle_conversationsmembers(members_json, eventrouter, **kwargs):
-    request_metadata = pickle.loads(members_json['wee_slack_request_metadata'])
+    request_metadata = members_json['wee_slack_request_metadata']
     team = eventrouter.teams[request_metadata.team_hash]
     channel = team.channels[request_metadata.channel_identifier]
     channel.members = set(members_json['members'])
 
 
 def handle_usersinfo(user_json, eventrouter, **kwargs):
-    request_metadata = pickle.loads(user_json['wee_slack_request_metadata'])
+    request_metadata = user_json['wee_slack_request_metadata']
     team = eventrouter.teams[request_metadata.team_hash]
     channel = team.channels[request_metadata.channel_identifier]
     user_info = user_json['user']
@@ -2583,7 +2572,7 @@ def handle_usersinfo(user_json, eventrouter, **kwargs):
         channel.set_topic(create_user_status_string(user.profile))
 
 def handle_usergroupsuserslist(users_json, eventrouter, **kwargs):
-    request_metadata = pickle.loads(users_json['wee_slack_request_metadata'])
+    request_metadata = users_json['wee_slack_request_metadata']
     team = eventrouter.teams[request_metadata.team_hash]
     user_identifers = users_json['users']
 
