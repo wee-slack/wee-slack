@@ -1,6 +1,5 @@
 import wee_slack
 from wee_slack import usergroup_print_cb
-from mock import patch
 
 
 def test_format_usergroup(realish_eventrouter):

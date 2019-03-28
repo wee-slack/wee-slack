@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+
 from __future__ import unicode_literals
 
 from collections import OrderedDict
@@ -558,6 +559,8 @@ class EventRouter(object):
                                 kwargs["user"] = self.teams[team].users[j["user"]]
                             if "channel" in j:
                                 kwargs["channel"] = self.teams[team].channels[j["channel"]]
+                            if "subteam" in j:
+                                kwargs["subteam"] = self.teams[team].subteams[j["subteam"]]
                     except:
                         dbg("metadata failure")
 
@@ -765,13 +768,17 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
     return string
 
 def usergroup_print_cb(data, modifer, modified_data, message):
-    message_has_usergroup = True if message.find('subteam') > -1 else False
+    message_has_usergroup = True if message.find('!subteam^') > -1 else False
     if message_has_usergroup:
         # Find index of first occurance of "!subteam"
         index_of_usergroup = message.find('!subteam')
         message_substring = message[index_of_usergroup:]
         # Find usergroup name
         usergroup = re.match(r"^(!subteam\^[\w]+)+ (\(\w+\))", message_substring.strip())
+
+        if usergroup is None:
+            return message
+
         usergroup_name = usergroup.group(2).replace('(', '').replace(')', '')
         formatted_usergroup_name = '@{}'.format(usergroup_name)
 
@@ -1063,8 +1070,9 @@ class SlackSubteam(object):
    def __init__(self, originating_team_id, **kwargs):
        self.handle = kwargs.get('handle', None)
        self.identifier = kwargs['id']
-       self.name = kwargs.get('name', None) 
-       self.team_id = originating_team_id 
+       self.name = kwargs.get('name', None)
+       self.description = kwargs.get('description', None)
+       self.team_id = originating_team_id
 
 
    def __repr__(self):
@@ -1116,14 +1124,13 @@ class SlackTeam(object):
             channels[c].set_related_server(self)
             channels[c].check_should_open()
 
-        # Build mapper between subteam handle and their identifiers 
-        self.subteam_handles_to_id = {}
-        for s in self.subteams.keys():
-            subteam = self.subteams.get(s, None)
-            if subteam:
-                self.subteam_handles_to_id[subteam.handle] = subteam.identifier
+        # Build mapper between subteam handle and their identifiers
+        #for s in self.subteams.keys():
+        #    subteam = self.subteams.get(s, None)
+        #    if subteam:
+        #        self.subteam_handles_to_id[subteam.handle] = subteam.identifier
+        self.generate_usergroup_map()
 
-        #    self.channel_set_related_server(c)
         # Last step is to make sure my nickname is the set color
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
         # This highlight step must happen after we have set related server
@@ -1150,6 +1157,12 @@ class SlackTeam(object):
     def add_channel(self, channel):
         self.channels[channel["id"]] = channel
         channel.set_related_server(self)
+
+    def generate_usergroup_map(self):
+        self.subteam_handles_to_id = {}
+        for subteam in self.subteams.values():
+            if subteam:
+                self.subteam_handles_to_id[subteam.handle] = subteam.identifier
 
     # def connect_request_generate(self):
     #    return SlackRequest(self.token, 'rtm.start', {})
@@ -2595,7 +2608,6 @@ def handle_usersinfo(user_json, eventrouter, **kwargs):
         channel.set_topic(create_user_status_string(user.profile))
 
 
-
 ###### New/converted process_ and subprocess_ methods
 def process_hello(message_json, eventrouter, **kwargs):
     kwargs['team'].subscribe_users_presence()
@@ -2702,6 +2714,35 @@ def process_message(message_json, eventrouter, store=True, download=True, **kwar
     if download:
         download_files(message_json, **kwargs)
 
+def process_subteam_created(subteam_json, eventrouter, **kwargs):
+    request_metadata = subteam_json['wee_slack_metadata']
+    team = eventrouter.teams[request_metadata.get('team')]
+    subteam_json_info = subteam_json['subteam']
+    subteam = SlackSubteam(team.identifier, **subteam_json_info)
+    team.subteams[subteam_json_info['id']] = subteam
+
+
+def process_subteam_self_added(subteam_json, eventrouter, **kwargs):
+    print('xself-added')
+    request_metadata = subteam_json['wee_slack_metadata']
+    team = eventrouter.teams[request_metadata.get('team')]
+    subteam_id = subteam_json['subteam_id']
+    subteam = team.subteams[subteam_id]
+
+
+    template = 'You have been added to usergroup {subteam} ({handle}) in team {team}'
+    message = template.format(subteam=subteam.name, handle=subteam.handle , team=team.preferred_name)
+    team.buffer_prnt(message, message=True)
+
+def process_subteam_self_removed(subteam_json, eventrouter, **kwargs):
+    request_metadata = subteam_json['wee_slack_metadata']
+    team = eventrouter.teams[request_metadata.get('team')]
+    subteam_id = subteam_json['subteam_id']
+    subteam = team.subteams[subteam_id]
+
+    template = 'You have been removed from usergroup {subteam} ({handle}) in team {team}'
+    message = template.format(subteam=subteam.name, handle=subteam.handle , team=team.preferred_name)
+    team.buffer_prnt(message, message=True)
 
 def download_files(message_json, **kwargs):
     team = kwargs["team"]
@@ -3553,6 +3594,23 @@ def command_users(data, current_buffer, args):
     for user in team.users.values():
         team.buffer_prnt("    {:<25}({})".format(user.name, user.presence))
     return w.WEECHAT_RC_OK_EAT
+
+
+@slack_buffer_required
+@utf8_decode
+def command_usergroups(data, current_buffer, args):
+    """
+    /slack usergroups
+    List the usergroups in the current team
+    """
+    e = EVENTROUTER
+    team = e.weechat_controller.buffers[current_buffer].team
+
+    team.buffer_prnt("Usergroups:")
+    for subteam in team.subteams.values():
+        team.buffer_prnt("    {:<25}(@{})".format(subteam.name, subteam.handle))
+    return w.WEECHAT_RC_OK_EAT
+
 
 
 @slack_buffer_required
