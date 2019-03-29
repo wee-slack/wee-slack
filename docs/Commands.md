@@ -173,3 +173,12 @@ Uploads a file to the current buffer.
 
 List the users in the current team.
 
+### usergroups
+
+```
+/slack usergroups
+```
+
+List the usergroups in the current team.
+
+
