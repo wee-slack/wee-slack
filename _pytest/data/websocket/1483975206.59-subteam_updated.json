@@ -1,0 +1,34 @@
+{
+    "type": "subteam_updated",
+    "subteam": {
+       "id": "TGX0ALBK3",
+       "team_id": "T6SH3PWP9",
+       "is_usergroup": true,
+       "name": "Sample Usergroup Modified",
+       "description": "Sample subteam modified",
+       "handle": "test_modified",
+       "is_external": false,
+       "date_create": 1446598059,
+       "date_update": 1446670362,
+       "date_delete": 0,
+       "auto_type": "admin",
+       "created_by": "X786CTH5L",
+       "updated_by": "U060RNRCZ",
+       "deleted_by": null,
+       "prefs": {
+           "channels": [
+
+           ],
+           "groups": [
+
+           ]
+       },
+       "users": [
+           "U060RNRCZ",
+           "U060ULRC0",
+           "U06129G2V",
+           "U061309JM"
+       ],
+       "user_count": "4"
+    }
+}

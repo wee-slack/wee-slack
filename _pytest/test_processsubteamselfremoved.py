@@ -3,7 +3,7 @@ from mock import patch
 from wee_slack import SlackTeam
 import json
 
-def test_process_subteam_self_added(mock_websocket, realish_eventrouter):
+def test_process_subteam_self_removed(mock_websocket, realish_eventrouter):
 
     eventrouter = realish_eventrouter
 

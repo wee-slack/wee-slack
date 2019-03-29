@@ -279,6 +279,7 @@ class EventRouter(object):
         self.slow_queue = []
         self.slow_queue_timer = 0
         self.teams = {}
+        self.subteams = {}
         self.context = {}
         self.weechat_controller = WeechatController(self)
         self.previous_buffer = ""
@@ -767,7 +768,8 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
         return ""
     return string
 
-def usergroup_print_cb(data, modifer, modified_data, message):
+def usergroup_print_cb(data, modifer, modified_data, string):
+    message = decode_from_utf8(string)
     message_has_usergroup = True if message.find('!subteam^') > -1 else False
     if message_has_usergroup:
         # Find index of first occurance of "!subteam"
@@ -2721,9 +2723,37 @@ def process_subteam_created(subteam_json, eventrouter, **kwargs):
     subteam = SlackSubteam(team.identifier, **subteam_json_info)
     team.subteams[subteam_json_info['id']] = subteam
 
+def process_subteam_updated(subteam_json, eventrouter, **kwargs):
+    request_metadata = subteam_json['wee_slack_metadata']
+    team = eventrouter.teams[request_metadata.get('team')]
+    new_subteam_info = subteam_json['subteam']
+    messages = []
+
+    current_subteam_info = team.subteams[new_subteam_info.get('id')]
+
+    if current_subteam_info.name != new_subteam_info['name']:
+        template = "{current_name} has updated its name to {new_name} in team {team}"
+        message = template.format(current_name=current_subteam_info.name,
+                new_name=new_subteam_info['name'], team=team.preferred_name)
+        messages.append(message)
+    if current_subteam_info.description != new_subteam_info['description']:
+        template = "{name} has updated its description to \"{description}\" in team {team}"
+        message = template.format(name=current_subteam_info.name, description=new_subteam_info['description'],
+                team=team.preferred_name)
+        messages.append(message)
+    if current_subteam_info.handle != new_subteam_info['handle']:
+        team.subteam_handles_to_id[new_subteam_info['handle']] = new_subteam_info.get('id')
+        template = '{name} has updated its handle to @{handle} in team {team}'
+        message = template.format(name=current_subteam_info.name, handle=new_subteam_info['handle'],
+                team=team.preferred_name)
+        messages.append(message)
+
+    team.subteams[new_subteam_info.get('id')] = SlackSubteam(team.identifier, **new_subteam_info)
+
+    for message in messages:
+        team.buffer_prnt(message, message=True)
 
 def process_subteam_self_added(subteam_json, eventrouter, **kwargs):
-    print('xself-added')
     request_metadata = subteam_json['wee_slack_metadata']
     team = eventrouter.teams[request_metadata.get('team')]
     subteam_id = subteam_json['subteam_id']
