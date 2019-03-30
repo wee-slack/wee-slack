@@ -2609,6 +2609,15 @@ def handle_usersinfo(user_json, eventrouter, **kwargs):
         channel.slack_name = user.name
         channel.set_topic(create_user_status_string(user.profile))
 
+def handle_usergroupsuserslist(users_json, eventrouter, **kwargs):
+    request_metadata = pickle.loads(users_json['wee_slack_request_metadata'])
+    team = eventrouter.teams[request_metadata.team_hash]
+    user_identifers = users_json['users']
+
+    team.buffer_prnt("Users:")
+    for user_identifier in user_identifers:
+        user = team.users[user_identifier]
+        team.buffer_prnt("    {:<25}({})".format(user.name, user.presence))
 
 ###### New/converted process_ and subprocess_ methods
 def process_hello(message_json, eventrouter, **kwargs):
@@ -3632,15 +3641,26 @@ def command_usergroups(data, current_buffer, args):
     """
     /slack usergroups
     List the usergroups in the current team
+    / slack usergroups <handler>
+    List the users in a usergroup using handler
     """
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
+    if args and args in team.subteam_handles_to_id.keys():
+        subteam_identifer = team.subteam_handles_to_id[args]
+        subteam = team.subteams[subteam_identifer]
+        s = SlackRequest(team.token, "usergroups.users.list", { "usergroup": subteam.identifier }, team_hash=team.team_hash)
+        e.receive(s)
+    elif not args:
+        team.buffer_prnt("Usergroups:")
+        for subteam in team.subteams.values():
+            team.buffer_prnt("    {:<25}(@{})".format(subteam.name, subteam.handle))
+    else:
+        w.prnt('', 'ERROR: Unknown usergroup handler: {}'.format(args))
+        w.prnt('', 'Usage: /slack usergroups <handler>')
+        return w.WEECHAT_RC_ERROR
 
-    team.buffer_prnt("Usergroups:")
-    for subteam in team.subteams.values():
-        team.buffer_prnt("    {:<25}(@{})".format(subteam.name, subteam.handle))
     return w.WEECHAT_RC_OK_EAT
-
 
 
 @slack_buffer_required

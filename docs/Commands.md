@@ -181,4 +181,11 @@ List the users in the current team.
 
 List the usergroups in the current team.
 
+```
+/slack usergroups <handler>
+```
+
+List the users in a usergroup using handler (omit @)
+
+
 
