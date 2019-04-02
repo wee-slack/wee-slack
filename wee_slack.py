@@ -739,8 +739,8 @@ def buffer_input_callback(signal, buffer_ptr, data):
         else:
             return int(message_id)
 
-    message_id_regex = "(\d*|\$[0-9a-fA-F]{3,})"
-    reaction = re.match("^{}(\+|-):(.*):\s*$".format(message_id_regex), data)
+    message_id_regex = r"(\d*|\$[0-9a-fA-F]{3,})"
+    reaction = re.match(r"^{}(\+|-):(.*):\s*$".format(message_id_regex), data)
     substitute = re.match("^{}s/".format(message_id_regex), data)
     if reaction:
         if reaction.group(2) == "+":
@@ -3055,7 +3055,7 @@ def linkify_text(message, team):
         .replace('>', '&gt;')
         .split(' '))
     for item in enumerate(message):
-        targets = re.match('^\s*([@#])([\w\(\)\'.-]+)(\W*)', item[1], re.UNICODE)
+        targets = re.match(r'^\s*([@#])([\w\(\)\'.-]+)(\W*)', item[1], re.UNICODE)
         if targets and targets.groups()[0] == '@':
             named = targets.groups()
             if named[1] in ["group", "channel", "here"]:
@@ -3950,7 +3950,7 @@ def command_upload(data, current_buffer, args):
     url = 'https://slack.com/api/files.upload'
     file_path = os.path.expanduser(args)
     if ' ' in file_path:
-        file_path = file_path.replace(' ', '\ ')
+        file_path = file_path.replace(' ', r'\ ')
 
     # only http proxy is currenlty supported
     proxy = ProxyWrapper()
