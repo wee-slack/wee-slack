@@ -1239,7 +1239,7 @@ class SlackTeam(object):
                     else:
                         ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs)
 
-                    self.hook = w.hook_fd(ws.sock._sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
+                    self.hook = w.hook_fd(ws.sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
                     ws.sock.setblocking(0)
                     self.ws = ws
                     # self.attach_websocket(ws)
@@ -1303,7 +1303,7 @@ class SlackTeam(object):
         # json we can send.
         # We should try to be smarter to fetch the users whom we want to
         # subscribe to.
-        users = self.users.keys()[0:750]
+        users = list(self.users.keys())[0:750]
         self.send_to_websocket({
             "type": "presence_sub",
             "ids": users,
@@ -4570,7 +4570,7 @@ if __name__ == "__main__":
 
             # attach to the weechat hooks we need
 
-            tokens = map(string.strip, config.slack_api_token.split(','))
+            tokens = [token.strip() for token in config.slack_api_token.split(',')]
             w.prnt('', 'Connecting to {} slack team{}.'
                     .format(len(tokens), '' if len(tokens) == 1 else 's'))
             for t in tokens:
