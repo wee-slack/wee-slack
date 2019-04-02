@@ -152,10 +152,11 @@ Open a chat with the specified user(s).
 ### thread
 
 ```
-/thread <message_id>
+/thread [message_id]
 ```
 
 Open the thread for the message.
+If no message id is specified the last thread in channel will be opened.
 
 ### upload
 

@@ -60,7 +60,7 @@ with open('docs/Options.md', 'w') as file_options:
 
         """).lstrip())
 
-    for name, option in options.items():
+    for name, option in sorted(options.items()):
         file_options.write(dedent("""
             ### {}
 
