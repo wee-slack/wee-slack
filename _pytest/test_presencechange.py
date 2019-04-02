@@ -1,32 +1,22 @@
 from __future__ import print_function, unicode_literals
 
-def test_PresenceChange(realish_eventrouter, mock_websocket):
 
-    e = realish_eventrouter
-
-    t = e.teams.keys()[0]
-    u = e.teams[t].users.keys()[0]
-
-    user = e.teams[t].users[u]
-
-    socket = mock_websocket
-    e.teams[t].ws = socket
-
-    socket.add({
+def test_PresenceChange(realish_eventrouter, team, user_alice):
+    team.ws.add({
         "type": "presence_change",
-        "user": user.identifier,
+        "user": user_alice.identifier,
         "presence": "active",
     })
-    socket.add({
+    team.ws.add({
         "type": "presence_change",
-        "user": user.identifier,
+        "user": user_alice.identifier,
         "presence": "away",
     })
 
-    e.receive_ws_callback(t)
-    e.handle_next()
-    assert e.teams[t].users[u].presence == "active"
+    realish_eventrouter.receive_ws_callback(team.team_hash)
+    realish_eventrouter.handle_next()
+    assert user_alice.presence == "active"
 
-    e.receive_ws_callback(t)
-    e.handle_next()
-    assert e.teams[t].users[u].presence == "away"
+    realish_eventrouter.receive_ws_callback(team.team_hash)
+    realish_eventrouter.handle_next()
+    assert user_alice.presence == "away"

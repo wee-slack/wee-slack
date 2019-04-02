@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals
 import pytest
 from wee_slack import EventRouter, SlackRequest
 
+
 def test_EventRouter(mock_weechat):
     # Sending valid object adds to the queue.
     e = EventRouter()

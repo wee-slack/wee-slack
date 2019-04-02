@@ -1,24 +1,15 @@
 from __future__ import print_function, unicode_literals
 
-import glob
 import json
 
-def test_process_subteam_created(mock_websocket, realish_eventrouter):
 
-    eventrouter = realish_eventrouter
+def test_process_subteam_created(realish_eventrouter, team):
+    assert len(team.subteams) == 1
 
-    t = eventrouter.teams.keys()[0]
+    datafile = '_pytest/data/websocket/1483975206.59-subteam_created.json'
+    data = json.loads(open(datafile, 'r').read())
+    team.ws.add(data)
+    realish_eventrouter.receive_ws_callback(team.team_hash)
+    realish_eventrouter.handle_next()
 
-    assert len(eventrouter.teams[t].subteams) == 1
-
-    socket = mock_websocket
-    eventrouter.teams[t].ws = socket
-    datafiles = glob.glob("_pytest/data/websocket/1483975206.59-subteam_created.json")
-
-    for fname in datafiles:
-        data = json.loads(open(fname, 'r').read())
-        socket.add(data)
-        eventrouter.receive_ws_callback(t)
-        eventrouter.handle_next()
-
-    assert len(eventrouter.teams[t].subteams) == 2
+    assert len(team.subteams) == 2

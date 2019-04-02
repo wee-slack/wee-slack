@@ -3,21 +3,14 @@ from __future__ import print_function, unicode_literals
 import glob
 import json
 
-def test_everything(realish_eventrouter, mock_websocket):
 
-    eventrouter = realish_eventrouter
-
-    t = eventrouter.teams.keys()[0]
-
-    socket = mock_websocket
-    eventrouter.teams[t].ws = socket
-
+def test_everything(realish_eventrouter, team):
     datafiles = glob.glob("_pytest/data/websocket/*.json")
 
     for fname in sorted(datafiles):
         data = json.loads(open(fname, 'r').read())
-        socket.add(data)
-        eventrouter.receive_ws_callback(t)
-        eventrouter.handle_next()
+        team.ws.add(data)
+        realish_eventrouter.receive_ws_callback(team.team_hash)
+        realish_eventrouter.handle_next()
 
-    assert len(eventrouter.queue) == 14
+    assert len(realish_eventrouter.queue) == 14
