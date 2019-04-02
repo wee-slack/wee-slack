@@ -1,22 +1,18 @@
 from __future__ import print_function, unicode_literals
 
-def test_send_message(realish_eventrouter, mock_websocket):
-    e = realish_eventrouter
+import json
 
-    t = e.teams.keys()[0]
-    #u = e.teams[t].users.keys()[0]
 
-    #user = e.teams[t].users[u]
-    #print(user)
+def test_send_message(realish_eventrouter, team, channel_general):
+    message_text = 'send message test'
+    channel_general.send_message(message_text)
 
-    socket = mock_websocket
-    e.teams[t].ws = socket
+    sent = json.loads(team.ws.sentdata[0])
 
-    c = e.teams[t].channels.keys()[0]
-
-    channel = e.teams[t].channels[c]
-    channel.send_message('asdf')
-
-    print(c)
-
-    #assert False
+    assert sent == {
+        'text': message_text,
+        'type': 'message',
+        'user': team.myidentifier,
+        'channel': channel_general.id,
+        'id': 1,
+    }

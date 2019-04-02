@@ -48,10 +48,8 @@ def test_parse_topic_with_channel_and_delete():
     assert topic == ''
 
 
-def test_call_topic_without_arguments(realish_eventrouter):
-    team = realish_eventrouter.teams.values()[-1]
-    channel = team.channels.values()[-1]
-    current_buffer = channel.channel_buffer
+def test_call_topic_without_arguments(realish_eventrouter, channel_general):
+    current_buffer = channel_general.channel_buffer
     wee_slack.EVENTROUTER = realish_eventrouter
 
     command = '/topic'
@@ -59,16 +57,14 @@ def test_call_topic_without_arguments(realish_eventrouter):
     with patch('wee_slack.w.prnt') as fake_prnt:
         result = topic_command_cb(None, current_buffer, command)
         fake_prnt.assert_called_with(
-            channel.channel_buffer,
-            'Topic for {} is "{}"'.format(channel.name, channel.topic),
+            channel_general.channel_buffer,
+            'Topic for {} is "{}"'.format(channel_general.name, channel_general.topic),
         )
         assert result == wee_slack.w.WEECHAT_RC_OK_EAT
 
 
-def test_call_topic_with_unknown_channel(realish_eventrouter):
-    team = realish_eventrouter.teams.values()[-1]
-    channel = team.channels.values()[-1]
-    current_buffer = channel.channel_buffer
+def test_call_topic_with_unknown_channel(realish_eventrouter, team, channel_general):
+    current_buffer = channel_general.channel_buffer
     wee_slack.EVENTROUTER = realish_eventrouter
 
     command = '/topic #nonexisting'
@@ -82,10 +78,8 @@ def test_call_topic_with_unknown_channel(realish_eventrouter):
         assert result == wee_slack.w.WEECHAT_RC_OK_EAT
 
 
-def test_call_topic_with_channel_and_string(realish_eventrouter):
-    team = realish_eventrouter.teams.values()[-1]
-    channel = team.channels.values()[-1]
-    current_buffer = channel.channel_buffer
+def test_call_topic_with_channel_and_string(realish_eventrouter, channel_general):
+    current_buffer = channel_general.channel_buffer
     wee_slack.EVENTROUTER = realish_eventrouter
 
     command = '/topic #general new topic'
@@ -94,5 +88,5 @@ def test_call_topic_with_channel_and_string(realish_eventrouter):
     request = realish_eventrouter.queue[-1]
     assert request.request == 'channels.setTopic'
     assert request.post_data == {
-        'channel': 'C407ABS94', 'token': 'xoxoxoxox', 'topic': 'new topic'}
+        'channel': 'C407ABS94', 'token': 'xoxs-token', 'topic': 'new topic'}
     assert result == wee_slack.w.WEECHAT_RC_OK_EAT

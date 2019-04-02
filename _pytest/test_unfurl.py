@@ -3,8 +3,6 @@ from __future__ import print_function, unicode_literals
 import wee_slack
 import pytest
 
-slack = wee_slack
-
 
 @pytest.mark.parametrize('case', (
     {
@@ -70,9 +68,9 @@ slack = wee_slack
     }
 ))
 def test_unfurl_refs(case, realish_eventrouter):
-    slack.EVENTROUTER = realish_eventrouter
+    wee_slack.EVENTROUTER = realish_eventrouter
 
-    result = slack.unfurl_refs(
+    result = wee_slack.unfurl_refs(
         case['input'],
         ignore_alt_text=case.get('ignore_alt_text', False),
         auto_link_display=case.get('auto_link_display', 'both'),
