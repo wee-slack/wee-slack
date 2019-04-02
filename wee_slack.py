@@ -2970,7 +2970,7 @@ def linkify_text(message, team, channel):
         if targets and targets.groups()[0] == '@':
             named = targets.groups()
             if named[1] in ["group", "channel", "here"]:
-                message[item[0]] = "<!{}>".format(named[1])
+                message[item[0]] = "<!{}>{}".format(named[1], named[2])
             else:
                 try:
                     if usernames[named[1]]:
