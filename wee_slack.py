@@ -1619,7 +1619,7 @@ class SlackChannel(SlackChannelCommon):
                 dbg("Problem processing buffer_prnt")
 
     def send_message(self, message, subtype=None, request_dict_ext={}):
-        message = linkify_text(message, self.team, self)
+        message = linkify_text(message, self.team)
         dbg(message)
         if subtype == 'me_message':
             s = SlackRequest(self.team.token, "chat.meMessage",
@@ -2058,7 +2058,7 @@ class SlackThreadChannel(SlackChannelCommon):
         if subtype == 'me_message':
             w.prnt("", "ERROR: /me is not supported in threads")
             return w.WEECHAT_RC_ERROR
-        message = linkify_text(message, self.team, self)
+        message = linkify_text(message, self.team)
         dbg(message)
         request = {"type": "message", "text": message,
                 "channel": self.parent_message.channel.identifier,
@@ -2948,7 +2948,7 @@ def render(message_json, team, force=False):
         return text
 
 
-def linkify_text(message, team, channel):
+def linkify_text(message, team):
     # The get_username_map function is a bit heavy, but this whole
     # function is only called on message send..
     usernames = team.get_username_map()
