@@ -453,9 +453,11 @@ class EventRouter(object):
             self.reply_buffer.pop(request_metadata.response_id, None)
             self.delete_context(data)
             if request_metadata.request == 'rtm.start':
-                w.prnt('', ('Failed connecting to slack team with token starting with {}, ' +
-                        'retrying. If this persists, try increasing slack_timeout.')
-                        .format(request_metadata.token[:15]))
+                retry_text = ('retrying' if request_metadata.should_try() else
+                        'will not retry after too many failed attempts')
+                w.prnt('', ('Failed connecting to slack team with token starting with {}, {}. ' +
+                        'If this persists, try increasing slack_timeout.')
+                        .format(request_metadata.token[:15], retry_text))
                 dbg('rtm.start failed with return_code {}. stack:\n{}'
                         .format(return_code, ''.join(traceback.format_stack())), level=5)
                 self.receive(request_metadata)
