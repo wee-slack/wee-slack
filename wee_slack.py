@@ -4175,6 +4175,7 @@ def create_slack_debug_buffer():
         debug_string = None
         slack_debug = w.buffer_new("slack-debug", "", "", "closed_slack_debug_buffer_cb", "")
         w.buffer_set(slack_debug, "notify", "0")
+        w.buffer_set(slack_debug, "highlight_tags_restrict", "highlight_force")
 
 
 def load_emoji():
