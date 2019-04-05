@@ -1609,6 +1609,17 @@ class SlackChannel(SlackChannelCommon):
             h_str = ",".join(self.highlights())
             w.buffer_set(self.channel_buffer, "highlight_words", h_str)
 
+            if self.muted and config.muted_channels_activity != "all":
+                notify_level = "0" if config.muted_channels_activity == "none" else "1"
+                w.buffer_set(self.channel_buffer, "notify", notify_level)
+            else:
+                w.buffer_set(self.channel_buffer, "notify", "3")
+
+            if self.muted and config.muted_channels_activity == "none":
+                w.buffer_set(self.channel_buffer, "highlight_tags_restrict", "highlight_force")
+            else:
+                w.buffer_set(self.channel_buffer, "highlight_tags_restrict", "")
+
     def create_buffer(self):
         """
         Creates the weechat buffer where the channel magic happens.
@@ -1685,7 +1696,7 @@ class SlackChannel(SlackChannelCommon):
                 tagset = "default"
                 self.new_messages = True
 
-            tags = tag(tagset, user=tag_nick, muted=self.muted)
+            tags = tag(tagset, user=tag_nick)
 
             try:
                 if (config.unhide_buffers_with_activity
@@ -2119,7 +2130,7 @@ class SlackThreadChannel(SlackChannelCommon):
             #    tags = tag("dm")
             #    self.new_messages = True
             # else:
-            tags = tag("default", thread=True, muted=self.muted)
+            tags = tag("default")
             # self.new_messages = True
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
             modify_last_print_time(self.channel_buffer, ts.minor)
@@ -3399,7 +3410,7 @@ def format_nick(nick, previous_nick=None):
     return nick_prefix_color + nick_prefix + w.color("reset") + nick + nick_suffix_color + nick_suffix + w.color("reset")
 
 
-def tag(tagset, user=None, thread=False, muted=False):
+def tag(tagset, user=None):
     tagsets = {
         # messages in the team/server buffer, e.g. "new channel created"
         "team_info": {"no_highlight", "log3"},
@@ -3419,13 +3430,6 @@ def tag(tagset, user=None, thread=False, muted=False):
     nick_tag = {"nick_{}".format(user or "unknown").replace(" ", "_")}
     slack_tag = {"slack_{}".format(tagset)}
     tags = nick_tag | slack_tag | tagsets[tagset]
-    if muted:
-        tags.add("slack_muted_channel")
-        if not thread and config.muted_channels_activity != "all":
-            tags -= {"notify_highlight", "notify_message", "notify_private"}
-            tags.add("notify_none")
-            if config.muted_channels_activity == "none":
-                tags.add("no_highlight")
     return ",".join(tags)
 
 ###### New/converted command_ commands
