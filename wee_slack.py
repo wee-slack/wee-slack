@@ -2130,7 +2130,7 @@ class SlackThreadChannel(SlackChannelCommon):
             #    tags = tag("dm")
             #    self.new_messages = True
             # else:
-            tags = tag("default")
+            tags = tag("default", user=tag_nick)
             # self.new_messages = True
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
             modify_last_print_time(self.channel_buffer, ts.minor)
@@ -2141,7 +2141,7 @@ class SlackThreadChannel(SlackChannelCommon):
         self.got_history = True
         for message in self.parent_message.submessages:
             text = self.render(message)
-            self.buffer_prnt(message.sender, text, message.ts)
+            self.buffer_prnt(message.sender, text, message.ts, tag_nick=message.sender_plain)
 
     def main_message_keys_reversed(self):
         return (message.ts for message in reversed(self.parent_message.submessages))
