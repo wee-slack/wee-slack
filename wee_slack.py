@@ -1680,23 +1680,19 @@ class SlackChannel(SlackChannelCommon):
         if self.channel_buffer:
             # backlog messages - we will update the read marker as we print these
             backlog = True if ts <= last_read else False
-            if tagset:
-                self.new_messages = True
-
-            # we have to infer the tagset because we weren't told
-            elif ts <= last_read:
-                tagset = "backlog"
-            elif self.type in ["im", "mpim"]:
-                if tag_nick != self.team.nick:
+            if not tagset:
+                if ts <= last_read:
+                    tagset = "backlog"
+                elif self.type in ["im", "mpim"]:
                     tagset = "dm"
-                    self.new_messages = True
                 else:
-                    tagset = "dmfromme"
-            else:
-                tagset = "default"
-                self.new_messages = True
+                    tagset = "default"
 
-            tags = tag(tagset, user=tag_nick)
+            self_msg = tag_nick == self.team.nick
+            tags = tag(tagset, user=tag_nick, self_msg=self_msg)
+
+            if not self_msg:
+                self.new_messages = True
 
             try:
                 if (config.unhide_buffers_with_activity
@@ -1705,7 +1701,7 @@ class SlackChannel(SlackChannelCommon):
 
                 w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
                 modify_last_print_time(self.channel_buffer, ts.minor)
-                if backlog or tag_nick == self.team.nick:
+                if backlog or self_msg:
                     self.mark_read(ts, update_remote=False, force=True)
             except:
                 dbg("Problem processing buffer_prnt")
@@ -2125,11 +2121,12 @@ class SlackThreadChannel(SlackChannelCommon):
                 tagset = "dm"
             else:
                 tagset = "default"
-            tags = tag(tagset, user=tag_nick)
+            self_msg = tag_nick == self.team.nick
+            tags = tag(tagset, user=tag_nick, self_msg=self_msg)
 
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
             modify_last_print_time(self.channel_buffer, ts.minor)
-            if tag_nick == self.team.nick:
+            if self_msg:
                 self.mark_read(ts, update_remote=False, force=True)
 
     def get_history(self):
@@ -3405,7 +3402,7 @@ def format_nick(nick, previous_nick=None):
     return nick_prefix_color + nick_prefix + w.color("reset") + nick + nick_suffix_color + nick_suffix + w.color("reset")
 
 
-def tag(tagset, user=None):
+def tag(tagset, user=None, self_msg=False):
     tagsets = {
         # messages in the team/server buffer, e.g. "new channel created"
         "team_info": {"no_highlight", "log3"},
@@ -3414,7 +3411,6 @@ def tag(tagset, user=None):
         "backlog": {"irc_privmsg", "no_highlight", "notify_none", "logger_backlog"},
         # when receiving a direct message
         "dm": {"irc_privmsg", "notify_private", "log1"},
-        "dmfromme": {"irc_privmsg", "no_highlight", "notify_none", "log1"},
         # when this is a join/leave, attach for smart filter ala:
         # if user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]
         "joinleave": {"irc_smart_filter", "no_highlight", "log4"},
@@ -3425,6 +3421,9 @@ def tag(tagset, user=None):
     nick_tag = {"nick_{}".format(user or "unknown").replace(" ", "_")}
     slack_tag = {"slack_{}".format(tagset)}
     tags = nick_tag | slack_tag | tagsets[tagset]
+    if self_msg:
+        tags -= {"notify_highlight", "notify_message", "notify_private"}
+        tags |= {"self_msg", "notify_none", "no_highlight"}
     return ",".join(tags)
 
 ###### New/converted command_ commands
