@@ -2121,17 +2121,12 @@ class SlackThreadChannel(SlackChannelCommon):
         self.last_line_from = nick
         ts = SlackTS(timestamp)
         if self.channel_buffer:
-            # backlog messages - we will update the read marker as we print these
-            # backlog = False
-            # if ts <= SlackTS(self.last_read):
-            #    tags = tag("backlog")
-            #    backlog = True
-            # elif self.type in ["im", "mpdm"]:
-            #    tags = tag("dm")
-            #    self.new_messages = True
-            # else:
-            tags = tag("default", user=tag_nick)
-            # self.new_messages = True
+            if self.parent_message.channel.type in ["im", "mpim"]:
+                tagset = "dm"
+            else:
+                tagset = "default"
+            tags = tag(tagset, user=tag_nick)
+
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
             modify_last_print_time(self.channel_buffer, ts.minor)
             if tag_nick == self.team.nick:
