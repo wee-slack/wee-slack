@@ -22,27 +22,9 @@ def test_process_subteam_self_updated(mock_websocket, realish_eventrouter):
             eventrouter.receive_ws_callback(t)
             eventrouter.handle_next()
         team = eventrouter.teams[t]
-        team.buffer_prnt = fake_buffer_prnt
+        subteam = team.subteams.values()[0] 
 
-        old_rtm = json.loads(open('_pytest/data/http/rtm.start.json', 'r').read())
-        old_subteam_json = old_rtm['subteams']['all'][0]
-        subteam = SlackSubteam(team.identifier, **old_subteam_json)
+        assert data['subteam']['handle'] == subteam.handle
+        assert data['subteam']['description'] == subteam.description
+        assert data['subteam']['name'] == subteam.name
 
-        subteam_name = subteam.name
-        subteam_handle = subteam.handle
-        new_subteam_name = data['subteam']['name']
-        new_subteam_description = data['subteam']['description']
-        new_subteam_handle = data['subteam']['handle']
-
-
-        template_for_name_change = '{current_name} has updated its name to {new_name} in team {team}'
-        message_for_name_change = template_for_name_change.format(current_name=subteam_name, new_name=new_subteam_name, team=team.preferred_name)
-
-        template_for_description_change = '{name} has updated its description to \"{description}\" in team {team}'
-        message_for_description_change = template_for_description_change.format(name=subteam_name, description=new_subteam_description, team=team.preferred_name)
-
-        template_for_handle_change = '{name} has updated its handle to @{handle} in team {team}'
-        message_for_handle_change = template_for_handle_change.format(name=subteam_name, handle=new_subteam_handle , team=team.preferred_name)
-        calls = [call(message_for_name_change, message=True), call(message_for_description_change, message=True), call(message_for_handle_change, message=True)]
-
-        fake_buffer_prnt.assert_has_calls(calls)

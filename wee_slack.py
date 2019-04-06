@@ -2713,27 +2713,15 @@ def process_subteam_updated(subteam_json, eventrouter, **kwargs):
 
     current_subteam_info = team.subteams[new_subteam_info.get('id')]
 
-    if current_subteam_info.name != new_subteam_info['name']:
-        template = "{current_name} has updated its name to {new_name} in team {team}"
-        message = template.format(current_name=current_subteam_info.name,
-                new_name=new_subteam_info['name'], team=team.preferred_name)
-        messages.append(message)
-    if current_subteam_info.description != new_subteam_info['description']:
-        template = "{name} has updated its description to \"{description}\" in team {team}"
-        message = template.format(name=current_subteam_info.name, description=new_subteam_info['description'],
-                team=team.preferred_name)
-        messages.append(message)
-    if current_subteam_info.handle != new_subteam_info['handle']:
+    if config.notify_usergroup_handler_updated and current_subteam_info.handle != new_subteam_info['handle']:
         usergroups[new_subteam_info['handle']] = new_subteam_info.get('id')
         template = '{name} has updated its handle to @{handle} in team {team}'
         message = template.format(name=current_subteam_info.name, handle=new_subteam_info['handle'],
                 team=team.preferred_name)
-        messages.append(message)
+        team.buffer_prnt(message, message=True)
 
     team.subteams[new_subteam_info.get('id')] = SlackSubteam(team.identifier, **new_subteam_info)
 
-    for message in messages:
-        team.buffer_prnt(message, message=True)
 
 def process_subteam_self_added(subteam_json, eventrouter, **kwargs):
     team = kwargs['team']
@@ -3131,8 +3119,14 @@ def unfurl_ref(ref, ignore_alt_text, auto_link_display):
         else:
             if id.startswith("#C"):
                 display_text = "#{}".format(ref.split('|')[1])
-            elif id.startswith("@U") or id.startswith("!subteam"):
+            elif id.startswith("@U"):
                 display_text = ref.split('|')[1]
+            elif id.startswith("!subteam"):
+                if ref.split('|')[1].startswith('@'):
+                    handle = ref.split('|')[1][1:]
+                else:
+                    handle = ref.split('|')[1]
+                display_text = '@{}'.format(handle)
             else:
                 url, desc = ref.split('|', 1)
                 match_url = r"^\w+:(//)?{}$".format(re.escape(desc))
@@ -3622,20 +3616,18 @@ def command_usergroups(data, current_buffer, args):
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
     usergroups = team.generate_usergroup_map()
-    if args and args in usergroups.keys():
-        if usergroups[args].startswith("@"):
-            subteam_identifer = usergroups[args][1:]
-        else:
-            subteam_identifer = usergroups[args]
-        subteam = team.subteams[subteam_identifer]
+    handler = args[1:] if args and args.startswith("@") else args
+
+    if handler and handler in usergroups.keys():
+        subteam = team.subteams[usergroups[handler]]
         s = SlackRequest(team.token, "usergroups.users.list", { "usergroup": subteam.identifier }, team_hash=team.team_hash)
         e.receive(s)
-    elif not args:
+    elif not handler:
         team.buffer_prnt("Usergroups:")
         for subteam in team.subteams.values():
             team.buffer_prnt("    {:<25}(@{})".format(subteam.name, subteam.handle))
     else:
-        w.prnt('', 'ERROR: Unknown usergroup handler: {}'.format(args))
+        w.prnt('', 'ERROR: Unknown usergroup handler: {}'.format(handler))
         return w.WEECHAT_RC_ERROR
 
     return w.WEECHAT_RC_OK_EAT
@@ -4323,6 +4315,10 @@ class PluginConfig(object):
             " highlights, i.e. not @channel and @here. all_highlights: Show"
             " all highlights, but not other messages. all: Show all activity,"
             " like other channels."),
+        'notify_usergroup_handler_updated': Setting(
+            default='false',
+            desc="Control if you want to see notification when a usergroup's" 
+            " handle has changed, either true or false"),
         'never_away': Setting(
             default='false',
             desc='Poke Slack every five minutes so that it never marks you "away".'),
