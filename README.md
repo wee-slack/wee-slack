@@ -213,8 +213,7 @@ To enable tab completions for usergroupps append `|%(usergroups)`
 /set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(usergroups)"
 ```
 Note: After pressing enter do no be alarm by the sudden change in the usergroup handle.
-The  usergroup handle will appear in the format `!subteam^ID|handle message`. 
-This is the format that Slack will interpret as a usergroup handle
+The  usergroup handle will appear in the format `@handle`. 
 
 #### Cursor and mouse mode
 
