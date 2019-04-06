@@ -778,32 +778,6 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
         return ""
     return string
 
-def usergroup_print_cb(data, modifer, modified_data, string):
-    message = decode_from_utf8(string)
-    message_has_usergroup = True if message.find('!subteam^') > -1 else False
-    if message_has_usergroup:
-        # Find index of first occurance of "!subteam"
-        index_of_usergroup = message.find('!subteam')
-        message_substring = message[index_of_usergroup:]
-        # Find usergroup name
-        usergroup = re.match(r"^(!subteam\^[\w]+)+ (\(\w+\))", message_substring.strip())
-
-        if usergroup is None:
-            return message
-
-        usergroup_name = usergroup.group(2).replace('(', '').replace(')', '')
-        formatted_usergroup_name = '@{}'.format(usergroup_name)
-
-        # Get first part of message before usergroup prefix
-        message_before_usergroup = message[0:index_of_usergroup]
-        # Get last part of message after usergroup prefix
-        index_of_end_of_usergroup = message.find(')')
-        message_after_usergroup = message[index_of_end_of_usergroup+1:]
-        # Combine components
-        new_message = '{}{}{}'.format(message_before_usergroup, formatted_usergroup_name, message_after_usergroup)
-        return new_message
-    return message
-
 @utf8_decode
 def buffer_switch_callback(signal, sig_type, data):
     """
@@ -1136,8 +1110,6 @@ class SlackTeam(object):
             channels[c].set_related_server(self)
             channels[c].check_should_open()
 
-        self.generate_usergroup_map()
-
         # Last step is to make sure my nickname is the set color
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
         # This highlight step must happen after we have set related server
@@ -1166,10 +1138,7 @@ class SlackTeam(object):
         channel.set_related_server(self)
 
     def generate_usergroup_map(self):
-        self.subteam_handles_to_id = {}
-        for subteam in self.subteams.values():
-            if subteam:
-                self.subteam_handles_to_id[subteam.handle] = subteam.identifier
+        return { s.handle: s.identifier for s in self.subteams.values()}
 
     # def connect_request_generate(self):
     #    return SlackRequest(self.token, 'rtm.start', {})
@@ -2731,15 +2700,14 @@ def process_message(message_json, eventrouter, store=True, download=True, **kwar
         download_files(message_json, **kwargs)
 
 def process_subteam_created(subteam_json, eventrouter, **kwargs):
-    request_metadata = subteam_json['wee_slack_metadata']
-    team = eventrouter.teams[request_metadata.get('team')]
+    team = kwargs['team']
     subteam_json_info = subteam_json['subteam']
     subteam = SlackSubteam(team.identifier, **subteam_json_info)
     team.subteams[subteam_json_info['id']] = subteam
 
 def process_subteam_updated(subteam_json, eventrouter, **kwargs):
-    request_metadata = subteam_json['wee_slack_metadata']
-    team = eventrouter.teams[request_metadata.get('team')]
+    team = kwargs['team']
+    usergroups = team.generate_usergroup_map()
     new_subteam_info = subteam_json['subteam']
     messages = []
 
@@ -2756,7 +2724,7 @@ def process_subteam_updated(subteam_json, eventrouter, **kwargs):
                 team=team.preferred_name)
         messages.append(message)
     if current_subteam_info.handle != new_subteam_info['handle']:
-        team.subteam_handles_to_id[new_subteam_info['handle']] = new_subteam_info.get('id')
+        usergroups[new_subteam_info['handle']] = new_subteam_info.get('id')
         template = '{name} has updated its handle to @{handle} in team {team}'
         message = template.format(name=current_subteam_info.name, handle=new_subteam_info['handle'],
                 team=team.preferred_name)
@@ -2768,19 +2736,16 @@ def process_subteam_updated(subteam_json, eventrouter, **kwargs):
         team.buffer_prnt(message, message=True)
 
 def process_subteam_self_added(subteam_json, eventrouter, **kwargs):
-    request_metadata = subteam_json['wee_slack_metadata']
-    team = eventrouter.teams[request_metadata.get('team')]
+    team = kwargs['team']
     subteam_id = subteam_json['subteam_id']
     subteam = team.subteams[subteam_id]
-
 
     template = 'You have been added to usergroup {subteam} ({handle}) in team {team}'
     message = template.format(subteam=subteam.name, handle=subteam.handle , team=team.preferred_name)
     team.buffer_prnt(message, message=True)
 
 def process_subteam_self_removed(subteam_json, eventrouter, **kwargs):
-    request_metadata = subteam_json['wee_slack_metadata']
-    team = eventrouter.teams[request_metadata.get('team')]
+    team = kwargs['team']
     subteam_id = subteam_json['subteam_id']
     subteam = team.subteams[subteam_id]
 
@@ -3093,6 +3058,7 @@ def linkify_text(message, team):
     # function is only called on message send..
     usernames = team.get_username_map()
     channels = team.get_channel_map()
+    usergroups = team.generate_usergroup_map()
     message = (message
         # Replace IRC formatting chars with Slack formatting chars.
         .replace('\x02', '*')
@@ -3111,8 +3077,8 @@ def linkify_text(message, team):
             named = targets.groups()
             if named[1] in ["group", "channel", "here"]:
                 message[item[0]] = "<!{}>{}".format(named[1], named[2])
-            elif named[1] in list(channel.team.subteam_handles_to_id.viewkeys()):
-                message[item[0]] = "<!subteam^{}|{}>".format(channel.team.subteam_handles_to_id[named[1]], named[1])
+            elif named[1] in list(usergroups.viewkeys()):
+                message[item[0]] = "<!subteam^{}|{}>".format(usergroups[named[1]], named[1])
             else:
                 try:
                     if usernames[named[1]]:
@@ -3140,6 +3106,7 @@ def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
     #  - <https://example.com|example with spaces>
     #  - <#C2147483705|#otherchannel>
     #  - <@U2147483697|@othernick>
+    #  - <!subteam^U2147483697|@group>
     # Test patterns lives in ./_pytest/test_unfurl.py
 
     if ignore_alt_text is None:
@@ -3147,7 +3114,7 @@ def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
     if auto_link_display is None:
         auto_link_display = config.unfurl_auto_link_display
 
-    matches = re.findall(r"(<[@#]?(?:[^>]*)>)", text)
+    matches = re.findall(r"(<[@#!]?(?:[^>]*)>)", text)
     for m in matches:
         # Replace them with human readable strings
         text = text.replace(
@@ -3164,7 +3131,7 @@ def unfurl_ref(ref, ignore_alt_text, auto_link_display):
         else:
             if id.startswith("#C"):
                 display_text = "#{}".format(ref.split('|')[1])
-            elif id.startswith("@U"):
+            elif id.startswith("@U") or id.startswith("!subteam"):
                 display_text = ref.split('|')[1]
             else:
                 url, desc = ref.split('|', 1)
@@ -3654,8 +3621,12 @@ def command_usergroups(data, current_buffer, args):
     """
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
-    if args and args in team.subteam_handles_to_id.keys():
-        subteam_identifer = team.subteam_handles_to_id[args]
+    usergroups = team.generate_usergroup_map()
+    if args and args in usergroups.keys():
+        if usergroups[args].startswith("@"):
+            subteam_identifer = usergroups[args][1:]
+        else:
+            subteam_identifer = usergroups[args]
         subteam = team.subteams[subteam_identifer]
         s = SlackRequest(team.token, "usergroups.users.list", { "usergroup": subteam.identifier }, team_hash=team.team_hash)
         e.receive(s)
@@ -3665,7 +3636,6 @@ def command_usergroups(data, current_buffer, args):
             team.buffer_prnt("    {:<25}(@{})".format(subteam.name, subteam.handle))
     else:
         w.prnt('', 'ERROR: Unknown usergroup handler: {}'.format(args))
-        w.prnt('', 'Usage: /slack usergroups <handler>')
         return w.WEECHAT_RC_ERROR
 
     return w.WEECHAT_RC_OK_EAT
@@ -4600,7 +4570,6 @@ if __name__ == "__main__":
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
             w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
-            w.hook_modifier("weechat_print", "usergroup_print_cb", "")
 
             EMOJI.extend(load_emoji())
             setup_hooks()
