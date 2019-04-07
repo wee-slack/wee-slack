@@ -2713,7 +2713,7 @@ def process_subteam_updated(subteam_json, eventrouter, **kwargs):
 
     current_subteam_info = team.subteams[new_subteam_info.get('id')]
 
-    if config.notify_usergroup_handler_updated and current_subteam_info.handle != new_subteam_info['handle']:
+    if config.;otify_usergroup_handle_updated and current_subteam_info.handle != new_subteam_info['handle']:
         usergroups[new_subteam_info['handle']] = new_subteam_info.get('id')
         template = '{name} has updated its handle to @{handle} in team {team}'
         message = template.format(name=current_subteam_info.name, handle=new_subteam_info['handle'],
@@ -3609,18 +3609,18 @@ def command_usergroups(data, current_buffer, args):
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team
     usergroups = team.generate_usergroup_map()
-    handler = args[1:] if args and args.startswith("@") else args
+    handle = args[1:] if args and args.startswith("@") else args
 
-    if handler and handler in usergroups.keys():
-        subteam = team.subteams[usergroups[handler]]
+    if handle and handle in usergroups.keys():
+        subteam = team.subteams[usergroups[handle]]
         s = SlackRequest(team.token, "usergroups.users.list", { "usergroup": subteam.identifier }, team_hash=team.team_hash)
         e.receive(s)
-    elif not handler:
+    elif not handle:
         team.buffer_prnt("Usergroups:")
         for subteam in team.subteams.values():
             team.buffer_prnt("    {:<25}(@{})".format(subteam.name, subteam.handle))
     else:
-        w.prnt('', 'ERROR: Unknown usergroup handler: {}'.format(handler))
+        w.prnt('', 'ERROR: Unknown usergroup handle: {}'.format(handle))
         return w.WEECHAT_RC_ERROR
 
     return w.WEECHAT_RC_OK_EAT
@@ -4308,7 +4308,7 @@ class PluginConfig(object):
             " highlights, i.e. not @channel and @here. all_highlights: Show"
             " all highlights, but not other messages. all: Show all activity,"
             " like other channels."),
-        'notify_usergroup_handler_updated': Setting(
+        'notify_usergroup_handle_updated': Setting(
             default='false',
             desc="Control if you want to see notification when a usergroup's" 
             " handle has changed, either true or false"),
