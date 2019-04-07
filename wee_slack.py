@@ -1109,7 +1109,7 @@ class SlackTeam(object):
         for c in self.channels.keys():
             channels[c].set_related_server(self)
             channels[c].check_should_open()
-
+        #  self.channel_set_related_server(c)
         # Last step is to make sure my nickname is the set color
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
         # This highlight step must happen after we have set related server
@@ -2728,18 +2728,10 @@ def process_subteam_self_added(subteam_json, eventrouter, **kwargs):
     subteam_id = subteam_json['subteam_id']
     subteam = team.subteams[subteam_id]
 
-    template = 'You have been added to usergroup {subteam} ({handle}) in team {team}'
-    message = template.format(subteam=subteam.name, handle=subteam.handle , team=team.preferred_name)
-    team.buffer_prnt(message, message=True)
-
 def process_subteam_self_removed(subteam_json, eventrouter, **kwargs):
     team = kwargs['team']
     subteam_id = subteam_json['subteam_id']
     subteam = team.subteams[subteam_id]
-
-    template = 'You have been removed from usergroup {subteam} ({handle}) in team {team}'
-    message = template.format(subteam=subteam.name, handle=subteam.handle , team=team.preferred_name)
-    team.buffer_prnt(message, message=True)
 
 def download_files(message_json, **kwargs):
     team = kwargs["team"]
