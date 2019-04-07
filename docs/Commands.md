@@ -166,15 +166,6 @@ If no message id is specified the last thread in channel will be opened.
 
 Uploads a file to the current buffer.
 
-### usergroups
-
-```
-/slack usergroups [handle]
-```
-
-List the usergroups in the current team
-If handle is given show the members in the usergroup
-
 ### users
 
 ```
