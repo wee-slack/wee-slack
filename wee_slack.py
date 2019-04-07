@@ -2722,17 +2722,6 @@ def process_subteam_updated(subteam_json, eventrouter, **kwargs):
 
     team.subteams[new_subteam_info.get('id')] = SlackSubteam(team.identifier, **new_subteam_info)
 
-
-def process_subteam_self_added(subteam_json, eventrouter, **kwargs):
-    team = kwargs['team']
-    subteam_id = subteam_json['subteam_id']
-    subteam = team.subteams[subteam_id]
-
-def process_subteam_self_removed(subteam_json, eventrouter, **kwargs):
-    team = kwargs['team']
-    subteam_id = subteam_json['subteam_id']
-    subteam = team.subteams[subteam_id]
-
 def download_files(message_json, **kwargs):
     team = kwargs["team"]
     download_location = config.files_download_location
