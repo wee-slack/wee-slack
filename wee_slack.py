@@ -3601,9 +3601,10 @@ def command_users(data, current_buffer, args):
 @utf8_decode
 def command_usergroups(data, current_buffer, args):
     """
-    /slack usergroups [handler]
-    List the usergroup(s) in the current team
 
+    /slack usergroups [handle]
+    List the usergroups in the current team
+    If handle is given show the members in the usergroup 
     """
     e = EVENTROUTER
     team = e.weechat_controller.buffers[current_buffer].team

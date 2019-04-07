@@ -118,6 +118,12 @@ slack` after changing it to take effect.
 
 **Description:** Poke Slack every five minutes so that it never marks you "away".
 
+### notify_usergroup_handler_updated
+
+**Default:** `false`
+
+**Description:** Control if you want to see notification when a usergroup's handle has changed, either true or false
+
 ### record_events
 
 **Default:** `false`
