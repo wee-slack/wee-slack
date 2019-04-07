@@ -208,12 +208,11 @@ e.g. like this:
 ```
 
 #### User group tab completions
-To enable tab completions for usergroupps append `|%(usergroups)`
+To enable tab completions for usergroups append `|%(usergroups)`
 ```
 /set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(usergroups)"
 ```
-Note: After pressing enter do no be alarm by the sudden change in the usergroup handle.
-The  usergroup handle will appear in the format `@handle`. 
+The usergroup will appear in the same formats as nicks like the following `@marketing` where marketing is the handle
 
 #### Cursor and mouse mode
 
