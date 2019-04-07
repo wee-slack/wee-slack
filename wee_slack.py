@@ -2713,7 +2713,7 @@ def process_subteam_updated(subteam_json, eventrouter, **kwargs):
 
     current_subteam_info = team.subteams[new_subteam_info.get('id')]
 
-    if config.;otify_usergroup_handle_updated and current_subteam_info.handle != new_subteam_info['handle']:
+    if config.notify_usergroup_handle_updated and current_subteam_info.handle != new_subteam_info['handle']:
         usergroups[new_subteam_info['handle']] = new_subteam_info.get('id')
         template = '{name} has updated its handle to @{handle} in team {team}'
         message = template.format(name=current_subteam_info.name, handle=new_subteam_info['handle'],
