@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+
 from __future__ import unicode_literals
 
 from collections import OrderedDict
@@ -278,6 +279,7 @@ class EventRouter(object):
         self.slow_queue = []
         self.slow_queue_timer = 0
         self.teams = {}
+        self.subteams = {}
         self.context = {}
         self.weechat_controller = WeechatController(self)
         self.previous_buffer = ""
@@ -560,6 +562,8 @@ class EventRouter(object):
                                 kwargs["user"] = self.teams[team].users[j["user"]]
                             if "channel" in j:
                                 kwargs["channel"] = self.teams[team].channels[j["channel"]]
+                            if "subteam" in j:
+                                kwargs["subteam"] = self.teams[team].subteams[j["subteam"]]
                     except:
                         dbg("metadata failure")
 
@@ -774,7 +778,6 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
         return ""
     return string
 
-
 @utf8_decode
 def buffer_switch_callback(signal, sig_type, data):
     """
@@ -927,6 +930,20 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
         w.hook_completion_list_add(completion, ":" + e + ":", 0, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
+@utf8_decode
+def usergroups_completion_cb(data, completion_item, current_buffer, completion):
+    """
+    Adds all @-prefixed usergroups to completion list
+    """
+
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
+
+    if current_channel is None:
+        return w.WEECHAT_RC_OK
+    for subteam in current_channel.team.subteams.values():
+        w.hook_completion_list_add(completion, "@" + subteam.handle, 1, w.WEECHAT_LIST_POS_SORT)
+    return w.WEECHAT_RC_OK
+
 
 @utf8_decode
 def complete_next_cb(data, current_buffer, command):
@@ -1031,6 +1048,24 @@ class SlackRequest(object):
     def retry_ready(self):
         return (self.start_time + (self.tries**2)) < time.time()
 
+class SlackSubteam(object):
+   """
+   Represents a slack group or subteam 
+   """
+   def __init__(self, originating_team_id, **kwargs):
+       self.handle = kwargs.get('handle', None)
+       self.identifier = kwargs['id']
+       self.name = kwargs.get('name', None)
+       self.description = kwargs.get('description', None)
+       self.team_id = originating_team_id
+
+
+   def __repr__(self):
+       return "Name:{} Identifier:{}".format(self.name, self.identifier)
+
+   def __eq__(self, compare_str):
+       return compare_str == self.subteam_id 
+
 
 class SlackTeam(object):
     """
@@ -1038,7 +1073,7 @@ class SlackTeam(object):
     Team object under which users and channels live.. Does lots.
     """
 
-    def __init__(self, eventrouter, token, websocket_url, team_info, nick, myidentifier, users, bots, channels, **kwargs):
+    def __init__(self, eventrouter, token, websocket_url, team_info, subteams,  nick, myidentifier, users, bots, channels, **kwargs):
         self.identifier = team_info["id"]
         self.ws_url = websocket_url
         self.connected = False
@@ -1049,6 +1084,7 @@ class SlackTeam(object):
         self.eventrouter = eventrouter
         self.token = token
         self.team = self
+        self.subteams = subteams
         self.subdomain = team_info["domain"]
         self.domain = self.subdomain + ".slack.com"
         self.preferred_name = self.domain
@@ -1072,7 +1108,7 @@ class SlackTeam(object):
         for c in self.channels.keys():
             channels[c].set_related_server(self)
             channels[c].check_should_open()
-        #    self.channel_set_related_server(c)
+        #  self.channel_set_related_server(c)
         # Last step is to make sure my nickname is the set color
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
         # This highlight step must happen after we have set related server
@@ -1084,10 +1120,7 @@ class SlackTeam(object):
         return "domain={} nick={}".format(self.subdomain, self.nick)
 
     def __eq__(self, compare_str):
-        if compare_str == self.token or compare_str == self.domain or compare_str == self.subdomain:
-            return True
-        else:
-            return False
+         return compare_str == self.token or compare_str == self.domain or compare_str == self.subdomain
 
     @property
     def members(self):
@@ -1102,6 +1135,9 @@ class SlackTeam(object):
     def add_channel(self, channel):
         self.channels[channel["id"]] = channel
         channel.set_related_server(self)
+
+    def generate_usergroup_map(self):
+        return { s.handle: s.identifier for s in self.subteams.values()}
 
     # def connect_request_generate(self):
     #    return SlackRequest(self.token, 'rtm.start', {})
@@ -2410,6 +2446,10 @@ def handle_rtmstart(login_data, eventrouter):
         for item in login_data["bots"]:
             bots[item["id"]] = SlackBot(login_data['team']['id'], **item)
 
+        subteams = {}
+        for item in login_data["subteams"]["all"]:
+            subteams[item['id']] = SlackSubteam(login_data['team']['id'], **item)
+
         channels = {}
         for item in login_data["channels"]:
             if item["is_shared"]:
@@ -2431,6 +2471,7 @@ def handle_rtmstart(login_data, eventrouter):
             metadata.token,
             login_data['url'],
             login_data["team"],
+            subteams,
             login_data["self"]["name"],
             login_data["self"]["id"],
             users,
@@ -2541,7 +2582,15 @@ def handle_usersinfo(user_json, eventrouter, **kwargs):
         channel.slack_name = user.name
         channel.set_topic(create_user_status_string(user.profile))
 
+def handle_usergroupsuserslist(users_json, eventrouter, **kwargs):
+    request_metadata = pickle.loads(users_json['wee_slack_request_metadata'])
+    team = eventrouter.teams[request_metadata.team_hash]
+    user_identifers = users_json['users']
 
+    team.buffer_prnt("Users:")
+    for user_identifier in user_identifers:
+        user = team.users[user_identifier]
+        team.buffer_prnt("    {:<25}({})".format(user.name, user.presence))
 
 ###### New/converted process_ and subprocess_ methods
 def process_hello(message_json, eventrouter, **kwargs):
@@ -2649,6 +2698,27 @@ def process_message(message_json, eventrouter, store=True, download=True, **kwar
     if download:
         download_files(message_json, **kwargs)
 
+def process_subteam_created(subteam_json, eventrouter, **kwargs):
+    team = kwargs['team']
+    subteam_json_info = subteam_json['subteam']
+    subteam = SlackSubteam(team.identifier, **subteam_json_info)
+    team.subteams[subteam_json_info['id']] = subteam
+
+def process_subteam_updated(subteam_json, eventrouter, **kwargs):
+    team = kwargs['team']
+    usergroups = team.generate_usergroup_map()
+    new_subteam_info = subteam_json['subteam']
+
+    current_subteam_info = team.subteams[new_subteam_info.get('id')]
+
+    if config.notify_usergroup_handle_updated and current_subteam_info.handle != new_subteam_info['handle']:
+        usergroups[new_subteam_info['handle']] = new_subteam_info.get('id')
+        template = 'User group @{old_handle} has updated its handle to @{new_handle} in team {team}'
+        message = template.format(old_handle=current_subteam_info.handle, new_handle=new_subteam_info['handle'],
+                team=team.preferred_name)
+        team.buffer_prnt(message, message=True)
+
+    team.subteams[new_subteam_info.get('id')] = SlackSubteam(team.identifier, **new_subteam_info)
 
 def download_files(message_json, **kwargs):
     team = kwargs["team"]
@@ -2955,6 +3025,7 @@ def linkify_text(message, team):
     # function is only called on message send..
     usernames = team.get_username_map()
     channels = team.get_channel_map()
+    usergroups = team.generate_usergroup_map()
     message = (message
         # Replace IRC formatting chars with Slack formatting chars.
         .replace('\x02', '*')
@@ -2973,6 +3044,8 @@ def linkify_text(message, team):
             named = targets.groups()
             if named[1] in ["group", "channel", "here"]:
                 message[item[0]] = "<!{}>{}".format(named[1], named[2])
+            elif named[1] in list(usergroups.viewkeys()):
+                message[item[0]] = "<!subteam^{}|@{}>{}".format(usergroups[named[1]], named[1], named[2])
             else:
                 try:
                     if usernames[named[1]]:
@@ -3000,6 +3073,7 @@ def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
     #  - <https://example.com|example with spaces>
     #  - <#C2147483705|#otherchannel>
     #  - <@U2147483697|@othernick>
+    #  - <!subteam^U2147483697|@group>
     # Test patterns lives in ./_pytest/test_unfurl.py
 
     if ignore_alt_text is None:
@@ -3007,7 +3081,7 @@ def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
     if auto_link_display is None:
         auto_link_display = config.unfurl_auto_link_display
 
-    matches = re.findall(r"(<[@#]?(?:[^>]*)>)", text)
+    matches = re.findall(r"(<[@#!]?(?:[^>]*)>)", text)
     for m in matches:
         # Replace them with human readable strings
         text = text.replace(
@@ -3026,6 +3100,12 @@ def unfurl_ref(ref, ignore_alt_text, auto_link_display):
                 display_text = "#{}".format(ref.split('|')[1])
             elif id.startswith("@U"):
                 display_text = ref.split('|')[1]
+            elif id.startswith("!subteam"):
+                if ref.split('|')[1].startswith('@'):
+                    handle = ref.split('|')[1][1:]
+                else:
+                    handle = ref.split('|')[1]
+                display_text = '@{}'.format(handle)
             else:
                 url, desc = ref.split('|', 1)
                 match_url = r"^\w+:(//)?{}$".format(re.escape(desc))
@@ -3501,6 +3581,35 @@ def command_users(data, current_buffer, args):
     team.buffer_prnt("Users:")
     for user in team.users.values():
         team.buffer_prnt("    {:<25}({})".format(user.name, user.presence))
+    return w.WEECHAT_RC_OK_EAT
+
+
+@slack_buffer_required
+@utf8_decode
+def command_usergroups(data, current_buffer, args):
+    """
+
+    /slack usergroups [handle]
+    List the usergroups in the current team
+    If handle is given show the members in the usergroup 
+    """
+    e = EVENTROUTER
+    team = e.weechat_controller.buffers[current_buffer].team
+    usergroups = team.generate_usergroup_map()
+    handle = args[1:] if args and args.startswith("@") else args
+
+    if handle and handle in usergroups.keys():
+        subteam = team.subteams[usergroups[handle]]
+        s = SlackRequest(team.token, "usergroups.users.list", { "usergroup": subteam.identifier }, team_hash=team.team_hash)
+        e.receive(s)
+    elif not handle:
+        team.buffer_prnt("Usergroups:")
+        for subteam in team.subteams.values():
+            team.buffer_prnt("    {:<25}(@{})".format(subteam.name, subteam.handle))
+    else:
+        w.prnt('', 'ERROR: Unknown usergroup handle: {}'.format(handle))
+        return w.WEECHAT_RC_ERROR
+
     return w.WEECHAT_RC_OK_EAT
 
 
@@ -4060,6 +4169,7 @@ def setup_hooks():
         w.hook_command(cmd, description, args, '', '', 'command_' + cmd, '')
 
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
+    w.hook_completion("usergroups", "complete @-usergroups for slack", "usergroups_completion_cb", "")
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
 
     w.key_bind("mouse", {
@@ -4185,6 +4295,10 @@ class PluginConfig(object):
             " highlights, i.e. not @channel and @here. all_highlights: Show"
             " all highlights, but not other messages. all: Show all activity,"
             " like other channels."),
+        'notify_usergroup_handle_updated': Setting(
+            default='false',
+            desc="Control if you want to see notification when a usergroup's" 
+            " handle has changed, either true or false"),
         'never_away': Setting(
             default='false',
             desc='Poke Slack every five minutes so that it never marks you "away".'),

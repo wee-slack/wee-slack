@@ -673,8 +673,40 @@
     "read_only_channels": [],
     "can_manage_shared_channels": false,
     "subteams": {
-        "self": [],
-        "all": []
+        "all": [
+          {
+            "auto_provision": false,
+            "auto_type": null,
+            "created_by": "X786CTH5L",
+            "date_create": 1541837133,
+            "date_delete": 0,
+            "date_update": 1511887378,
+            "deleted_by": null,
+            "description": "Sample subteam / subgroup",
+            "enterprise_subteam_id": "S01",
+            "handle": "test",
+            "id": "TGX0ALBK3",
+            "is_external": false,
+            "is_subteam": true,
+            "is_usergroup": true,
+            "name": "Sample Usergroup",
+            "prefs": {
+              "channels": [
+                "A7BC8UX4Z"
+              ],
+              "groups": [
+                "I78T9MC86"
+              ]
+            },
+            "team_id": "T6SH3PWP9",
+            "updated_by": "X786CTH5L",
+            "user_count": 4
+          }
+        ],
+
+        "self": [
+          "TGX0ALBK3"
+        ]
     },
     "dnd": {
         "dnd_enabled": true,

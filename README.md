@@ -207,6 +207,13 @@ e.g. like this:
 /set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(emoji)"
 ```
 
+#### User group tab completions
+To enable tab completions for usergroups append `|%(usergroups)`
+```
+/set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(usergroups)"
+```
+The usergroup will appear in the same formats as nicks like the following `@marketing` where marketing is the handle
+
 #### Cursor and mouse mode
 
 The cursor mode and mouse mode can be used to interact with older messages, for editing, deleting, reacting and replying to a message. Mouse mode can be toggled by pressing `Alt`+`m` and cursor mode can be entered by running `/cursor` (see `/help cursor`).

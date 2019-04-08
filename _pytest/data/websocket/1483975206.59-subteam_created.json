@@ -1,0 +1,24 @@
+{
+    "subteam": {
+        "auto_type": null,
+        "created_by": "U060RNRCZ",
+        "date_create": 1446746793,
+        "date_delete": 0,
+        "date_update": 1446746793,
+        "deleted_by": null,
+        "description": "Marketing gurus, PR experts and product advocates.",
+        "handle": "marketing-team",
+        "id": "S0615G0KT",
+        "is_external": false,
+        "is_usergroup": true,
+        "name": "Marketing Team",
+        "prefs": {
+            "channels": [],
+            "groups": []
+        },
+        "team_id": "T060RNRCH",
+        "updated_by": "U060RNRCZ",
+        "user_count": "0"
+    },
+    "type": "subteam_created"
+}
