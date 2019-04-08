@@ -941,8 +941,7 @@ def usergroups_completion_cb(data, completion_item, current_buffer, completion):
     if current_channel is None:
         return w.WEECHAT_RC_OK
     for subteam in current_channel.team.subteams.values():
-        if subteam:
-            w.hook_completion_list_add(completion, "@" + subteam.handle, 1, w.WEECHAT_LIST_POS_SORT)
+        w.hook_completion_list_add(completion, "@" + subteam.handle, 1, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
 
@@ -2709,14 +2708,13 @@ def process_subteam_updated(subteam_json, eventrouter, **kwargs):
     team = kwargs['team']
     usergroups = team.generate_usergroup_map()
     new_subteam_info = subteam_json['subteam']
-    messages = []
 
     current_subteam_info = team.subteams[new_subteam_info.get('id')]
 
     if config.notify_usergroup_handle_updated and current_subteam_info.handle != new_subteam_info['handle']:
         usergroups[new_subteam_info['handle']] = new_subteam_info.get('id')
-        template = '{name} has updated its handle to @{handle} in team {team}'
-        message = template.format(name=current_subteam_info.name, handle=new_subteam_info['handle'],
+        template = 'User group @{old_handle} has updated its handle to @{new_handle} in team {team}'
+        message = template.format(name=current_subteam_info.handle, handle=new_subteam_info['handle'],
                 team=team.preferred_name)
         team.buffer_prnt(message, message=True)
 
@@ -3047,7 +3045,7 @@ def linkify_text(message, team):
             if named[1] in ["group", "channel", "here"]:
                 message[item[0]] = "<!{}>{}".format(named[1], named[2])
             elif named[1] in list(usergroups.viewkeys()):
-                message[item[0]] = "<!subteam^{}|{}>".format(usergroups[named[1]], named[1])
+                message[item[0]] = "<!subteam^{}|{}>{}".format(usergroups[named[1]], named[1], named[2])
             else:
                 try:
                     if usernames[named[1]]:

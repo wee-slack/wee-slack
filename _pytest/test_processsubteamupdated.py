@@ -15,16 +15,15 @@ def test_process_subteam_self_updated(mock_websocket, realish_eventrouter):
     eventrouter.teams[t].ws = socket
     datafiles = glob.glob("_pytest/data/websocket/1483975206.59-subteam_updated.json")
 
-    with patch('wee_slack.SlackTeam.buffer_prnt') as fake_buffer_prnt:
-        for fname in datafiles:
-            data = json.loads(open(fname, 'r').read())
-            socket.add(data)
-            eventrouter.receive_ws_callback(t)
-            eventrouter.handle_next()
-        team = eventrouter.teams[t]
-        subteam = team.subteams.values()[0] 
+    for fname in datafiles:
+        data = json.loads(open(fname, 'r').read())
+        socket.add(data)
+        eventrouter.receive_ws_callback(t)
+        eventrouter.handle_next()
+    team = eventrouter.teams[t]
+    subteam = team.subteams.values()[0]
 
-        assert data['subteam']['handle'] == subteam.handle
-        assert data['subteam']['description'] == subteam.description
-        assert data['subteam']['name'] == subteam.name
+    assert data['subteam']['handle'] == subteam.handle
+    assert data['subteam']['description'] == subteam.description
+    assert data['subteam']['name'] == subteam.name
 
