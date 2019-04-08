@@ -2714,7 +2714,7 @@ def process_subteam_updated(subteam_json, eventrouter, **kwargs):
     if config.notify_usergroup_handle_updated and current_subteam_info.handle != new_subteam_info['handle']:
         usergroups[new_subteam_info['handle']] = new_subteam_info.get('id')
         template = 'User group @{old_handle} has updated its handle to @{new_handle} in team {team}'
-        message = template.format(name=current_subteam_info.handle, handle=new_subteam_info['handle'],
+        message = template.format(old_handle=current_subteam_info.handle, new_handle=new_subteam_info['handle'],
                 team=team.preferred_name)
         team.buffer_prnt(message, message=True)
 
