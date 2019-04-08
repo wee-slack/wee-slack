@@ -3045,7 +3045,7 @@ def linkify_text(message, team):
             if named[1] in ["group", "channel", "here"]:
                 message[item[0]] = "<!{}>{}".format(named[1], named[2])
             elif named[1] in list(usergroups.viewkeys()):
-                message[item[0]] = "<!subteam^{}|{}>{}".format(usergroups[named[1]], named[1], named[2])
+                message[item[0]] = "<!subteam^{}|@{}>{}".format(usergroups[named[1]], named[1], named[2])
             else:
                 try:
                     if usernames[named[1]]:

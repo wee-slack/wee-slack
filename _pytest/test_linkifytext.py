@@ -62,7 +62,7 @@ def test_linkifytext_names_with_subgroup_notification(realish_eventrouter):
     message = 'This is a message for the test team'
     text = linkify_text('@test: {}'.format(message), team)
 
-    assert text == '<!subteam^{}|{}>: {}'.format(subteam_id, handle, message)
+    assert text == '<!subteam^{}|@{}>: {}'.format(subteam_id, handle, message)
 
 def test_linkifytext_at_channel(realish_eventrouter):
     team = realish_eventrouter.teams.values()[0]
