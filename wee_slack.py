@@ -3275,6 +3275,11 @@ def resolve_ref(ref):
             channel = team.channels.get(ref[1:])
             if channel:
                 return channel.name
+        elif ref.startswith('!subteam'):
+            _, subteam_id = ref.split('^')
+            subteam = team.subteams.get(subteam_id)
+            if subteam:
+                return '@{}'.format(subteam.handle)
 
     # Something else, just return as-is
     return ref
