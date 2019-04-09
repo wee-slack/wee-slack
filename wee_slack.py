@@ -3265,28 +3265,18 @@ def unwrap_files(message_json, text_before):
 
 
 def resolve_ref(ref):
-    # TODO: This hack to use eventrouter needs to go
-    # this resolver should probably move to the slackteam or eventrouter itself
-    # global EVENTROUTER
-    if 'EVENTROUTER' in globals():
-        e = EVENTROUTER
+    for team in EVENTROUTER.teams.values():
         if ref.startswith('@U') or ref.startswith('@W'):
-            for t in e.teams.keys():
-                user = e.teams[t].users.get(ref[1:])
-                if user:
-                    name = '@{}'.format(user.name)
-                    if user.is_external:
-                        name += config.external_user_suffix
-                    return name
+            user = team.users.get(ref[1:])
+            if user:
+                suffix = config.external_user_suffix if user.is_external else ''
+                return '@{}{}'.format(user.name, suffix)
         elif ref.startswith('#C'):
-            for t in e.teams.keys():
-                if ref[1:] in e.teams[t].channels:
-                    # try:
-                    return "{}".format(e.teams[t].channels[ref[1:]].name)
-                    # except:
-                    #    dbg("CHANNEL: {}".format(ref))
+            channel = team.channels.get(ref[1:])
+            if channel:
+                return channel.name
 
-        # Something else, just return as-is
+    # Something else, just return as-is
     return ref
 
 
