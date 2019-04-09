@@ -369,7 +369,7 @@ class EventRouter(object):
         weechat's "callback_data" has a limited size and weechat will crash if you exceed
         this size.
         """
-        data = self.context.get(identifier, None)
+        data = self.context.get(identifier)
         if data:
             # dbg("retrieved context {} ".format(identifier))
             return data
@@ -580,12 +580,12 @@ class EventRouter(object):
                     function_name = "unknown"
 
                 # Here we are passing the actual objects. No more lookups.
-                meta = j.get("wee_slack_metadata", None)
+                meta = j.get("wee_slack_metadata")
                 if meta:
                     try:
                         if isinstance(meta, basestring):
                             dbg("string of metadata")
-                        team = meta.get("team", None)
+                        team = meta.get("team")
                         if team:
                             kwargs["team"] = self.teams[team]
                             if "user" in j:
@@ -662,7 +662,7 @@ class WeechatController(object):
                 w.buffer_close(buffer_ptr)
 
     def get_channel_from_buffer_ptr(self, buffer_ptr):
-        return self.buffers.get(buffer_ptr, None)
+        return self.buffers.get(buffer_ptr)
 
     def get_all(self, buffer_ptr):
         return self.buffers
@@ -812,6 +812,7 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
         return ""
     return string
 
+
 @utf8_decode
 def buffer_switch_callback(signal, sig_type, data):
     """
@@ -869,11 +870,11 @@ def quit_notification_callback(signal, sig_type, data):
 @utf8_decode
 def typing_notification_cb(data, signal, current_buffer):
     msg = w.buffer_get_string(current_buffer, "input")
-    if len(msg) > 8 and msg[:1] != "/":
+    if len(msg) > 8 and msg[0] != "/":
         global typing_timer
         now = time.time()
         if typing_timer + 4 < now:
-            channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
+            channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
             if channel and channel.type != "thread":
                 identifier = channel.identifier
                 request = {"type": "typing", "channel": identifier}
@@ -891,9 +892,9 @@ def typing_update_cb(data, remaining_calls):
 @utf8_decode
 def slack_never_away_cb(data, remaining_calls):
     if config.never_away:
-        for t in EVENTROUTER.teams.values():
-            slackbot = t.get_channel_map()['Slackbot']
-            channel = t.channels[slackbot]
+        for team in EVENTROUTER.teams.values():
+            slackbot = team.get_channel_map()['Slackbot']
+            channel = team.channels[slackbot]
             request = {"type": "typing", "channel": channel.identifier}
             channel.team.send_to_websocket(request, expect_reply=False)
     return w.WEECHAT_RC_OK
@@ -906,7 +907,7 @@ def typing_bar_item_cb(data, item, current_window, current_buffer, extra_info):
     why is typing a DM to you globally.
     """
     typers = []
-    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
 
     # first look for people typing in this channel
     if current_channel:
@@ -919,8 +920,8 @@ def typing_bar_item_cb(data, item, current_window, current_buffer, extra_info):
 
     # here is where we notify you that someone is typing in DM
     # regardless of which buffer you are in currently
-    for t in EVENTROUTER.teams.values():
-        for channel in t.channels.values():
+    for team in EVENTROUTER.teams.values():
+        for channel in team.channels.values():
             if channel.type == "im":
                 if channel.is_someone_typing():
                     typers.append("D/" + channel.slack_name)
@@ -938,15 +939,14 @@ def nick_completion_cb(data, completion_item, current_buffer, completion):
     """
     Adds all @-prefixed nicks to completion list
     """
-
-    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
-
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
     if current_channel is None or current_channel.members is None:
         return w.WEECHAT_RC_OK
-    for m in current_channel.members:
-        u = current_channel.team.users.get(m, None)
-        if u:
-            w.hook_completion_list_add(completion, "@" + u.name, 1, w.WEECHAT_LIST_POS_SORT)
+
+    for member in current_channel.members:
+        user = current_channel.team.users.get(member)
+        if user:
+            w.hook_completion_list_add(completion, "@" + user.name, 1, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
 
@@ -955,25 +955,24 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
     """
     Adds all :-prefixed emoji to completion list
     """
-
-    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
-
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
     if current_channel is None:
         return w.WEECHAT_RC_OK
-    for e in current_channel.team.emoji_completions:
-        w.hook_completion_list_add(completion, ":" + e + ":", 0, w.WEECHAT_LIST_POS_SORT)
+
+    for emoji in current_channel.team.emoji_completions:
+        w.hook_completion_list_add(completion, ":" + emoji + ":", 0, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
+
 
 @utf8_decode
 def usergroups_completion_cb(data, completion_item, current_buffer, completion):
     """
     Adds all @-prefixed usergroups to completion list
     """
-
-    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
-
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
     if current_channel is None:
         return w.WEECHAT_RC_OK
+
     for subteam in current_channel.team.subteams.values():
         w.hook_completion_list_add(completion, "@" + subteam.handle, 1, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
@@ -985,12 +984,8 @@ def complete_next_cb(data, current_buffer, command):
     rely on nick_completion_cb adding the @-prefixed versions to the
     completion lists, then let Weechat's internal completion do its
     thing
-
     """
-
-    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer, None)
-
-    # channel = channels.find(current_buffer)
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
     if not hasattr(current_channel, 'members') or current_channel is None or current_channel.members is None:
         return w.WEECHAT_RC_OK
 
@@ -1015,9 +1010,9 @@ def complete_next_cb(data, current_buffer, command):
             break
     word = line_input[word_start:word_end]
 
-    for m in current_channel.members:
-        u = current_channel.team.users.get(m, None)
-        if u and u.name == word:
+    for member in current_channel.members:
+        user = current_channel.team.users.get(member)
+        if user and user.name == word:
             # Here, we cheat.  Insert a @ in front and rely in the @
             # nicks being in the completion list
             w.buffer_set(current_buffer, "input", line_input[:word_start] + "@" + line_input[word_start:])
@@ -1084,23 +1079,24 @@ class SlackRequest(object):
     def retry_ready(self):
         return (self.start_time + (self.tries**2)) < time.time()
 
+
 class SlackSubteam(object):
    """
-   Represents a slack group or subteam 
+   Represents a slack group or subteam
    """
-   def __init__(self, originating_team_id, **kwargs):
-       self.handle = kwargs.get('handle', None)
-       self.identifier = kwargs['id']
-       self.name = kwargs.get('name', None)
-       self.description = kwargs.get('description', None)
-       self.team_id = originating_team_id
 
+   def __init__(self, originating_team_id, **kwargs):
+       self.handle = kwargs['handle']
+       self.identifier = kwargs['id']
+       self.name = kwargs['name']
+       self.description = kwargs.get('description')
+       self.team_id = originating_team_id
 
    def __repr__(self):
        return "Name:{} Identifier:{}".format(self.name, self.identifier)
 
    def __eq__(self, compare_str):
-       return compare_str == self.subteam_id 
+       return compare_str == self.subteam_id
 
 
 class SlackTeam(object):
@@ -1148,7 +1144,6 @@ class SlackTeam(object):
         for c in self.channels.keys():
             channels[c].set_related_server(self)
             channels[c].check_should_open()
-        #  self.channel_set_related_server(c)
         # Last step is to make sure my nickname is the set color
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
         # This highlight step must happen after we have set related server
@@ -1177,7 +1172,7 @@ class SlackTeam(object):
         channel.set_related_server(self)
 
     def generate_usergroup_map(self):
-        return { s.handle: s.identifier for s in self.subteams.values()}
+        return {s.handle: s.identifier for s in self.subteams.values()}
 
     # def connect_request_generate(self):
     #    return SlackRequest(self.token, 'rtm.start', {})
@@ -1378,9 +1373,7 @@ class SlackChannelCommon(object):
             s = SlackRequest(self.team.token, "chat.delete", {"channel": self.identifier, "ts": message['ts']}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
         else:
-            num_replace = 1
-            if 'g' in flags:
-                num_replace = 0
+            num_replace = 0 if 'g' in flags else 1
             f = re.UNICODE
             f |= re.IGNORECASE if 'i' in flags else 0
             f |= re.MULTILINE if 'm' in flags else 0
@@ -1472,7 +1465,7 @@ class SlackChannel(SlackChannelCommon):
         self.identifier = kwargs["id"]
         self.last_read = SlackTS(kwargs.get("last_read", SlackTS()))
         self.channel_buffer = None
-        self.team = kwargs.get('team', None)
+        self.team = kwargs.get('team')
         self.got_history = False
         self.messages = OrderedDict()
         self.hashed_messages = {}
@@ -1764,7 +1757,7 @@ class SlackChannel(SlackChannelCommon):
 
     def unset_typing(self, user):
         if self.channel_buffer and self.is_visible():
-            u = self.typing.get(user, None)
+            u = self.typing.get(user)
             if u:
                 self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
 
@@ -2349,7 +2342,7 @@ class SlackMessage(object):
         return (name, name_plain)
 
     def add_reaction(self, reaction, user):
-        m = self.message_json.get('reactions', None)
+        m = self.message_json.get('reactions')
         if m:
             found = False
             for r in m:
@@ -2362,13 +2355,11 @@ class SlackMessage(object):
             self.message_json["reactions"] = [{"name": reaction, "users": [user]}]
 
     def remove_reaction(self, reaction, user):
-        m = self.message_json.get('reactions', None)
+        m = self.message_json.get('reactions')
         if m:
             for r in m:
                 if r["name"] == reaction and user in r["users"]:
                     r["users"].remove(user)
-        else:
-            pass
 
     def has_mention(self):
         return w.string_has_highlight(self.message_json.get('text'), ",".join(self.channel.mentions()))
@@ -2834,9 +2825,9 @@ def download_files(message_json, **kwargs):
 
 def subprocess_thread_message(message_json, eventrouter, channel, team):
     # print ("THREADED: " + str(message_json))
-    parent_ts = message_json.get('thread_ts', None)
+    parent_ts = message_json.get('thread_ts')
     if parent_ts:
-        parent_message = channel.messages.get(SlackTS(parent_ts), None)
+        parent_message = channel.messages.get(SlackTS(parent_ts))
         if parent_message:
             message = SlackThreadMessage(
                 parent_message, message_json, team, channel)
@@ -2907,7 +2898,7 @@ def subprocess_message_replied(message_json, eventrouter, channel, team):
             parent_message.notify_thread(action="participant", sender_id=last_message["user"])
 
 def subprocess_message_changed(message_json, eventrouter, channel, team):
-    new_message = message_json.get("message", None)
+    new_message = message_json.get("message")
     channel.change_message(new_message["ts"], message_json=new_message)
 
 def subprocess_message_deleted(message_json, eventrouter, channel, team):
@@ -2941,7 +2932,7 @@ def process_channel_marked(message_json, eventrouter, **kwargs):
     complete
     """
     channel = kwargs["channel"]
-    ts = message_json.get("ts", None)
+    ts = message_json.get("ts")
     if ts:
         channel.mark_read(ts=ts, force=True, update_remote=False)
     else:
@@ -3017,7 +3008,7 @@ def process_reaction_added(message_json, eventrouter, **kwargs):
     if message_json["item"].get("type") == "message":
         ts = SlackTS(message_json['item']["ts"])
 
-        message = channel.messages.get(ts, None)
+        message = channel.messages.get(ts)
         if message:
             message.add_reaction(message_json["reaction"], message_json["user"])
             channel.change_message(ts)
@@ -3030,7 +3021,7 @@ def process_reaction_removed(message_json, eventrouter, **kwargs):
     if message_json["item"].get("type") == "message":
         ts = SlackTS(message_json['item']["ts"])
 
-        message = channel.messages.get(ts, None)
+        message = channel.messages.get(ts)
         if message:
             message.remove_reaction(message_json["reaction"], message_json["user"])
             channel.change_message(ts)
@@ -3205,7 +3196,7 @@ def unhtmlescape(text):
 def unwrap_attachments(message_json, text_before):
     text_before_unescaped = unhtmlescape(text_before)
     attachment_texts = []
-    a = message_json.get("attachments", None)
+    a = message_json.get("attachments")
     if a:
         if text_before:
             attachment_texts.append('')
@@ -3222,7 +3213,7 @@ def unwrap_attachments(message_json, text_before):
                 prepend_title_text = attachment['author_name'] + ": "
             if 'pretext' in attachment:
                 t.append(attachment['pretext'])
-            title = attachment.get('title', None)
+            title = attachment.get('title')
             title_link = attachment.get('title_link', '')
             if title_link in text_before_unescaped:
                 title_link = ''
@@ -3236,7 +3227,7 @@ def unwrap_attachments(message_json, text_before):
             if from_url not in text_before_unescaped and from_url != title_link:
                 t.append(from_url)
 
-            atext = attachment.get("text", None)
+            atext = attachment.get("text")
             if atext:
                 tx = re.sub(r' *\n[\n ]+', '\n', atext)
                 t.append(prepend_title_text + tx)
@@ -3246,14 +3237,14 @@ def unwrap_attachments(message_json, text_before):
             if image_url not in text_before_unescaped and image_url != title_link:
                 t.append(image_url)
 
-            fields = attachment.get("fields", None)
+            fields = attachment.get("fields")
             if fields:
                 for f in fields:
                     if f['title'] != '':
                         t.append('%s %s' % (f['title'], f['value'],))
                     else:
                         t.append(f['value'])
-            fallback = attachment.get("fallback", None)
+            fallback = attachment.get("fallback")
             if t == [] and fallback:
                 t.append(fallback)
             attachment_texts.append("\n".join([x.strip() for x in t if x]))
@@ -3371,7 +3362,6 @@ def modify_last_print_time(buffer_pointer, ts_minor):
     This overloads the time printed field to let us store the slack
     per message unique id that comes after the "." in a slack ts
     """
-
     own_lines = w.hdata_pointer(hdata.buffer, buffer_pointer, 'own_lines')
     line_pointer = w.hdata_pointer(hdata.lines, own_lines, 'last_line')
 
@@ -3475,10 +3465,9 @@ def topic_command_cb(data, current_buffer, command):
     Change the topic of a channel
     /topic [<channel>] [<topic>|-delete]
     """
-
     channel_name, topic = parse_topic_command(command)
-
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+
     if channel_name:
         channel = team.channels.get(team.get_channel_map().get(channel_name))
     else:
@@ -3503,7 +3492,6 @@ def whois_command_cb(data, current_buffer, command):
     Get real name of user
     /whois <display_name>
     """
-
     args = command.split()
     if len(args) < 2:
         w.prnt(current_buffer, "Not enough arguments")
@@ -3529,7 +3517,7 @@ def whois_command_cb(data, current_buffer, command):
 @slack_buffer_or_ignore
 @utf8_decode
 def me_command_cb(data, current_buffer, args):
-    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     message = args.split(' ', 1)[1]
     channel.send_message(message, subtype='me_message')
     return w.WEECHAT_RC_OK_EAT
@@ -3624,8 +3612,7 @@ def command_channels(data, current_buffer, args):
     /slack channels
     List the channels in the current team.
     """
-    e = EVENTROUTER
-    team = e.weechat_controller.buffers[current_buffer].team
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
 
     team.buffer_prnt("Channels:")
     for channel in team.get_channel_map():
@@ -3640,8 +3627,7 @@ def command_users(data, current_buffer, args):
     /slack users
     List the users in the current team.
     """
-    e = EVENTROUTER
-    team = e.weechat_controller.buffers[current_buffer].team
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
 
     team.buffer_prnt("Users:")
     for user in team.users.values():
@@ -3653,20 +3639,18 @@ def command_users(data, current_buffer, args):
 @utf8_decode
 def command_usergroups(data, current_buffer, args):
     """
-
     /slack usergroups [handle]
     List the usergroups in the current team
-    If handle is given show the members in the usergroup 
+    If handle is given show the members in the usergroup
     """
-    e = EVENTROUTER
-    team = e.weechat_controller.buffers[current_buffer].team
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
     usergroups = team.generate_usergroup_map()
     handle = args[1:] if args and args.startswith("@") else args
 
     if handle and handle in usergroups.keys():
         subteam = team.subteams[usergroups[handle]]
         s = SlackRequest(team.token, "usergroups.users.list", { "usergroup": subteam.identifier }, team_hash=team.team_hash)
-        e.receive(s)
+        EVENTROUTER.receive(s)
     elif not handle:
         team.buffer_prnt("Usergroups:")
         for subteam in team.subteams.values():
@@ -3685,7 +3669,6 @@ def command_talk(data, current_buffer, args):
     /slack talk <user>[,<user2>[,<user3>...]]
     Open a chat with the specified user(s).
     """
-
     if not args:
         w.prnt('', 'Usage: /slack talk <user>[,<user2>[,<user3>...]]')
         return w.WEECHAT_RC_ERROR
@@ -4140,7 +4123,7 @@ def set_unread_cb(data, current_buffer, command):
 @slack_buffer_or_ignore
 @utf8_decode
 def set_unread_current_buffer_cb(data, current_buffer, command):
-    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     channel.mark_read()
     return w.WEECHAT_RC_OK
 
@@ -4365,8 +4348,8 @@ class PluginConfig(object):
             " like other channels."),
         'notify_usergroup_handle_updated': Setting(
             default='false',
-            desc="Control if you want to see notification when a usergroup's" 
-            " handle has changed, either true or false"),
+            desc="Control if you want to see notification when a usergroup's"
+            " handle has changed, either true or false."),
         'never_away': Setting(
             default='false',
             desc='Poke Slack every five minutes so that it never marks you "away".'),
