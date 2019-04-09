@@ -3017,19 +3017,14 @@ def process_subteam_created(subteam_json, eventrouter, **kwargs):
 
 def process_subteam_updated(subteam_json, eventrouter, **kwargs):
     team = kwargs['team']
-    usergroups = team.generate_usergroup_map()
-    new_subteam_info = subteam_json['subteam']
+    current_subteam_info = team.subteams[subteam_json['subteam']['id']]
+    new_subteam_info = SlackSubteam(team.identifier, **subteam_json['subteam'])
+    team.subteams[subteam_json['subteam']['id']] = new_subteam_info
 
-    current_subteam_info = team.subteams[new_subteam_info.get('id')]
-
-    if config.notify_usergroup_handle_updated and current_subteam_info.handle != new_subteam_info['handle']:
-        usergroups[new_subteam_info['handle']] = new_subteam_info.get('id')
-        template = 'User group @{old_handle} has updated its handle to @{new_handle} in team {team}'
-        message = template.format(old_handle=current_subteam_info.handle, new_handle=new_subteam_info['handle'],
-                team=team.preferred_name)
+    if config.notify_usergroup_handle_updated and current_subteam_info.handle != new_subteam_info.handle:
+        message = 'User group @{old_handle} has updated its handle to @{new_handle} in team {team}.'.format(
+            name=current_subteam_info.handle, handle=new_subteam_info.handle, team=team.preferred_name)
         team.buffer_prnt(message, message=True)
-
-    team.subteams[new_subteam_info.get('id')] = SlackSubteam(team.identifier, **new_subteam_info)
 
 
 def process_emoji_changed(message_json, eventrouter, **kwargs):
