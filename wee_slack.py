@@ -2293,20 +2293,49 @@ class SlackMessage(object):
             w.buffer_set(self.thread_channel.channel_buffer, "display", "1")
 
     def render(self, force=False):
-        text = render(self.message_json, self.team, force)
+        # If we already have a rendered version in the object, just return that.
+        if not force and self.message_json.get("_rendered_text"):
+            return self.message_json["_rendered_text"]
+
+        if "fallback" in self.message_json:
+            text = self.message_json["fallback"]
+        elif self.message_json.get("text"):
+            text = self.message_json["text"]
+        else:
+            text = ""
+
+        if self.message_json.get('mrkdwn', True):
+            text = render_formatting(text)
+
+        text = unfurl_refs(text)
+
         if (self.message_json.get('subtype') == 'me_message' and
                 not self.message_json['text'].startswith(self.sender)):
             text = "{} {}".format(self.sender, text)
+
         if (self.message_json.get('subtype') in ('channel_join', 'group_join') and
                 self.message_json.get('inviter')):
             inviter_id = self.message_json.get('inviter')
             inviter_nick = unfurl_refs("<@{}>".format(inviter_id))
             text += " by invitation from {}".format(inviter_nick)
+
+        if "edited" in self.message_json:
+            text += "{}{}{}".format(
+                    w.color(config.color_edited_suffix), ' (edited)', w.color("reset"))
+
+        text += unfurl_refs(unwrap_attachments(self.message_json, text))
+        text += unfurl_refs(unwrap_files(self.message_json, text))
+        text = unhtmlescape(text.lstrip().replace("\t", "    "))
+
+        text += create_reaction_string(self.message_json.get("reactions", ""))
+
         if len(self.submessages) > 0:
             text += " {}[ Thread: {} Replies: {} ]".format(
                     w.color(config.color_thread_suffix),
                     self.hash or self.ts,
                     len(self.submessages))
+
+        self.message_json["_rendered_text"] = text
         return text
 
     def change_text(self, new_text):
@@ -3045,43 +3074,6 @@ def render_formatting(text):
                   text,
                   flags=re.UNICODE)
     return text
-
-
-def render(message_json, team, force=False):
-    # If we already have a rendered version in the object, just return that.
-    if not force and message_json.get("_rendered_text", ""):
-        return message_json["_rendered_text"]
-    else:
-        # server = servers.find(message_json["_server"])
-
-        if "fallback" in message_json:
-            text = message_json["fallback"]
-        elif "text" in message_json:
-            if message_json['text'] is not None:
-                text = message_json["text"]
-            else:
-                text = ""
-        else:
-            text = ""
-
-        text = unfurl_refs(text)
-
-        if "edited" in message_json:
-            text += "{}{}{}".format(
-                    w.color(config.color_edited_suffix), ' (edited)', w.color("reset"))
-
-        text += unfurl_refs(unwrap_attachments(message_json, text))
-
-        text += unfurl_refs(unwrap_files(message_json, text))
-
-        text = text.lstrip()
-        text = unhtmlescape(text.replace("\t", "    "))
-        if message_json.get('mrkdwn', True):
-            text = render_formatting(text)
-
-        text += create_reaction_string(message_json.get("reactions", ""))
-        message_json["_rendered_text"] = text
-        return text
 
 
 def linkify_text(message, team):

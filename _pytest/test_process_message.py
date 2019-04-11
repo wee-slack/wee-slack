@@ -2,7 +2,7 @@ from __future__ import print_function, unicode_literals
 
 import json
 
-from wee_slack import render, SlackTS
+from wee_slack import SlackTS
 
 
 def test_process_message(realish_eventrouter, team, user_alice):
