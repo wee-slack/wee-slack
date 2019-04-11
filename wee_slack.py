@@ -2842,19 +2842,19 @@ def subprocess_thread_message(message_json, eventrouter, channel, team):
 
 
 def subprocess_channel_join(message_json, eventrouter, channel, team):
-    joinprefix = w.prefix("join").strip()
-    message = SlackMessage(message_json, team, channel, override_sender=joinprefix)
-    channel.buffer_prnt(joinprefix, channel.render(message), message_json["ts"], tagset='join')
+    prefix_join = w.prefix("join").strip()
+    message = SlackMessage(message_json, team, channel, override_sender=prefix_join)
+    channel.buffer_prnt(prefix_join, channel.render(message), message_json["ts"], tagset='join')
     channel.user_joined(message_json['user'])
+    channel.store_message(message, team)
 
 
 def subprocess_channel_leave(message_json, eventrouter, channel, team):
-    leaveprefix = w.prefix("quit").strip()
-    message = SlackMessage(message_json, team, channel, override_sender=leaveprefix)
-    channel.buffer_prnt(leaveprefix, channel.render(message), message_json["ts"], tagset='leave')
+    prefix_leave = w.prefix("quit").strip()
+    message = SlackMessage(message_json, team, channel, override_sender=prefix_leave)
+    channel.buffer_prnt(prefix_leave, channel.render(message), message_json["ts"], tagset='leave')
     channel.user_left(message_json['user'])
-    # channel.update_nicklist(message_json['user'])
-    # channel.update_nicklist()
+    channel.store_message(message, team)
 
 
 subprocess_group_join = subprocess_channel_join
@@ -2885,9 +2885,11 @@ def subprocess_message_deleted(message_json, eventrouter, channel, team):
 
 
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
-    text = unhtmlescape(unfurl_refs(message_json["text"], ignore_alt_text=False))
-    channel.buffer_prnt(w.prefix("network").rstrip(), text, message_json["ts"], tagset="topic")
+    prefix_topic = w.prefix("network").strip()
+    message = SlackMessage(message_json, team, channel, override_sender=prefix_topic)
+    channel.buffer_prnt(prefix_topic, channel.render(message), message_json["ts"], tagset="topic")
     channel.set_topic(message_json["topic"])
+    channel.store_message(message, team)
 
 
 def process_reply(message_json, eventrouter, **kwargs):
