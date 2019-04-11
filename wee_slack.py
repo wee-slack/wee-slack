@@ -1677,7 +1677,7 @@ class SlackChannel(SlackChannelCommon):
                 if self.type in ["im", "mpim"]:
                     tagset = "dm"
                 else:
-                    tagset = "default"
+                    tagset = "channel"
 
             self_msg = tag_nick == self.team.nick
             tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog)
@@ -1735,7 +1735,7 @@ class SlackChannel(SlackChannelCommon):
             # we have probably reconnected. flush the buffer
             if self.team.connected:
                 self.clear_messages()
-            w.prnt_date_tags(self.channel_buffer, SlackTS().major, tag('default', backlog=True), '\tgetting channel history...')
+            w.prnt_date_tags(self.channel_buffer, SlackTS().major, tag(backlog=True), '\tgetting channel history...')
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE}, team_hash=self.team.team_hash, channel_identifier=self.identifier, clear=True)
             if not slow_queue:
                 self.eventrouter.receive(s)
@@ -2111,7 +2111,7 @@ class SlackThreadChannel(SlackChannelCommon):
             if self.parent_message.channel.type in ["im", "mpim"]:
                 tagset = "dm"
             else:
-                tagset = "default"
+                tagset = "channel"
             self_msg = tag_nick == self.team.nick
             tags = tag(tagset, user=tag_nick, self_msg=self_msg)
 
@@ -3390,7 +3390,7 @@ def format_nick(nick, previous_nick=None):
     return nick_prefix_color + nick_prefix + w.color("reset") + nick + nick_suffix_color + nick_suffix + w.color("reset")
 
 
-def tag(tagset, user=None, self_msg=False, backlog=False):
+def tag(tagset=None, user=None, self_msg=False, backlog=False):
     tagsets = {
         "team_info": {"no_highlight", "log3"},
         "team_message": {"irc_privmsg", "notify_message", "log1"},
@@ -3398,11 +3398,11 @@ def tag(tagset, user=None, self_msg=False, backlog=False):
         "join": {"irc_join", "no_highlight", "log4"},
         "leave": {"irc_part", "no_highlight", "log4"},
         "topic": {"irc_topic", "no_highlight", "log3"},
-        "default": {"irc_privmsg", "notify_message", "log1"},
+        "channel": {"irc_privmsg", "notify_message", "log1"},
     }
     nick_tag = {"nick_{}".format(user or "unknown").replace(" ", "_")}
-    slack_tag = {"slack_{}".format(tagset)}
-    tags = nick_tag | slack_tag | tagsets[tagset]
+    slack_tag = {"slack_{}".format(tagset or "default")}
+    tags = nick_tag | slack_tag | tagsets.get(tagset, set())
     if self_msg or backlog:
         tags -= {"notify_highlight", "notify_message", "notify_private"}
         tags |= {"notify_none", "no_highlight"}
