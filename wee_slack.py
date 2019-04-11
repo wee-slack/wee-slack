@@ -1662,7 +1662,7 @@ class SlackChannel(SlackChannelCommon):
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
 
-    def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, **kwargs):
+    def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, force_backlog=None, **kwargs):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
         self.last_line_from = nick
         ts = SlackTS(timestamp)
@@ -1672,17 +1672,15 @@ class SlackChannel(SlackChannelCommon):
             self.open(update_remote=False)
         if self.channel_buffer:
             # backlog messages - we will update the read marker as we print these
-            backlog = True if ts <= last_read else False
+            backlog = ts <= last_read
             if not tagset:
-                if ts <= last_read:
-                    tagset = "backlog"
-                elif self.type in ["im", "mpim"]:
+                if self.type in ["im", "mpim"]:
                     tagset = "dm"
                 else:
                     tagset = "default"
 
             self_msg = tag_nick == self.team.nick
-            tags = tag(tagset, user=tag_nick, self_msg=self_msg)
+            tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog or force_backlog)
 
             if not self_msg:
                 self.new_messages = True
@@ -1737,7 +1735,7 @@ class SlackChannel(SlackChannelCommon):
             # we have probably reconnected. flush the buffer
             if self.team.connected:
                 self.clear_messages()
-            self.buffer_prnt('', 'getting channel history...', tagset='backlog')
+            self.buffer_prnt('', 'getting channel history...', force_backlog=True)
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE}, team_hash=self.team.team_hash, channel_identifier=self.identifier, clear=True)
             if not slow_queue:
                 self.eventrouter.receive(s)
@@ -3390,13 +3388,11 @@ def format_nick(nick, previous_nick=None):
     return nick_prefix_color + nick_prefix + w.color("reset") + nick + nick_suffix_color + nick_suffix + w.color("reset")
 
 
-def tag(tagset, user=None, self_msg=False):
+def tag(tagset, user=None, self_msg=False, backlog=False):
     tagsets = {
         # messages in the team/server buffer, e.g. "new channel created"
         "team_info": {"no_highlight", "log3"},
         "team_message": {"irc_privmsg", "notify_message", "log1"},
-        # when replaying something old
-        "backlog": {"irc_privmsg", "no_highlight", "notify_none", "logger_backlog"},
         # when receiving a direct message
         "dm": {"irc_privmsg", "notify_private", "log1"},
         # when this is a join/leave, attach for smart filter ala:
@@ -3409,9 +3405,13 @@ def tag(tagset, user=None, self_msg=False):
     nick_tag = {"nick_{}".format(user or "unknown").replace(" ", "_")}
     slack_tag = {"slack_{}".format(tagset)}
     tags = nick_tag | slack_tag | tagsets[tagset]
-    if self_msg:
+    if self_msg or backlog:
         tags -= {"notify_highlight", "notify_message", "notify_private"}
-        tags |= {"self_msg", "notify_none", "no_highlight"}
+        tags |= {"notify_none", "no_highlight"}
+        if self_msg:
+            tags |= {"self_msg"}
+        if backlog:
+            tags |= {"logger_backlog"}
     return ",".join(tags)
 
 ###### New/converted command_ commands
