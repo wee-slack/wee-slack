@@ -2844,14 +2844,14 @@ def subprocess_thread_message(message_json, eventrouter, channel, team):
 def subprocess_channel_join(message_json, eventrouter, channel, team):
     joinprefix = w.prefix("join").strip()
     message = SlackMessage(message_json, team, channel, override_sender=joinprefix)
-    channel.buffer_prnt(joinprefix, channel.render(message), message_json["ts"], tagset='joinleave')
+    channel.buffer_prnt(joinprefix, channel.render(message), message_json["ts"], tagset='join')
     channel.user_joined(message_json['user'])
 
 
 def subprocess_channel_leave(message_json, eventrouter, channel, team):
     leaveprefix = w.prefix("quit").strip()
     message = SlackMessage(message_json, team, channel, override_sender=leaveprefix)
-    channel.buffer_prnt(leaveprefix, channel.render(message), message_json["ts"], tagset='joinleave')
+    channel.buffer_prnt(leaveprefix, channel.render(message), message_json["ts"], tagset='leave')
     channel.user_left(message_json['user'])
     # channel.update_nicklist(message_json['user'])
     # channel.update_nicklist()
@@ -3390,16 +3390,12 @@ def format_nick(nick, previous_nick=None):
 
 def tag(tagset, user=None, self_msg=False, backlog=False):
     tagsets = {
-        # messages in the team/server buffer, e.g. "new channel created"
         "team_info": {"no_highlight", "log3"},
         "team_message": {"irc_privmsg", "notify_message", "log1"},
-        # when receiving a direct message
         "dm": {"irc_privmsg", "notify_private", "log1"},
-        # when this is a join/leave, attach for smart filter ala:
-        # if user in [x.strip() for x in w.prefix("join"), w.prefix("quit")]
-        "joinleave": {"irc_smart_filter", "no_highlight", "log4"},
+        "join": {"irc_join", "no_highlight", "log4"},
+        "leave": {"irc_part", "no_highlight", "log4"},
         "topic": {"irc_topic", "no_highlight", "log3"},
-        # catchall ?
         "default": {"irc_privmsg", "notify_message", "log1"},
     }
     nick_tag = {"nick_{}".format(user or "unknown").replace(" ", "_")}
