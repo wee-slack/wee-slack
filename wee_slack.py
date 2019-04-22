@@ -1101,6 +1101,7 @@ class SlackTeam(object):
         self.token = token
         self.team = self
         self.subteams = subteams
+        self.team_info = team_info
         self.subdomain = team_info["domain"]
         self.domain = self.subdomain + ".slack.com"
         self.preferred_name = self.domain
@@ -1278,6 +1279,9 @@ class SlackTeam(object):
 
     def set_connected(self):
         self.connected = True
+        self.buffer_prnt('Connected to Slack team {} ({}) with username {}'.format(
+            self.team_info["name"], self.domain, self.nick))
+        dbg("connected to {}".format(self.domain))
 
     def set_disconnected(self):
         w.unhook(self.hook)
@@ -2514,10 +2518,6 @@ def handle_rtmstart(login_data, eventrouter):
         t.set_reconnect_url(login_data['url'])
 
     t.connect()
-
-    t.buffer_prnt('Connected to Slack team {} ({}) with username {}'.format(
-        login_data["team"]["name"], t.domain, t.nick))
-    dbg("connected to {}".format(t.domain))
 
 
 def handle_emojilist(emoji_json, eventrouter, **kwargs):
