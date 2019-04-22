@@ -1095,7 +1095,8 @@ class SlackTeam(object):
         self.identifier = team_info["id"]
         self.ws_url = websocket_url
         self.connected = False
-        self.connecting = False
+        self.connecting_rtm = False
+        self.connecting_ws = False
         self.ws = None
         self.ws_counter = 0
         self.ws_replies = {}
@@ -1246,9 +1247,9 @@ class SlackTeam(object):
         pass
 
     def connect(self):
-        if not self.connected and not self.connecting:
-            self.connecting = True
+        if not self.connected and not self.connecting_ws:
             if self.ws_url:
+                self.connecting_ws = True
                 try:
                     # only http proxy is currently supported
                     proxy = ProxyWrapper()
@@ -1260,24 +1261,23 @@ class SlackTeam(object):
                     self.hook = w.hook_fd(ws.sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
                     ws.sock.setblocking(0)
                     self.ws = ws
-                    # self.attach_websocket(ws)
+                    self.set_reconnect_url(None)
                     self.set_connected()
-                    self.connecting = False
+                    self.connecting_ws = False
                 except:
                     w.prnt(self.channel_buffer,
                             'Failed connecting to slack team {}, retrying.'.format(self.domain))
                     dbg('connect failed with exception:\n{}'.format(format_exc_tb()), level=5)
-                    self.connecting = False
+                    self.connecting_ws = False
                     return False
-            else:
+            elif not self.connecting_rtm:
                 # The fast reconnect failed, so start over-ish
                 for chan in self.channels:
                     self.channels[chan].got_history = False
                 s = initiate_connection(self.token, retries=999, team_hash=self.team_hash)
                 self.eventrouter.receive(s)
-                self.connecting = False
+                self.connecting_rtm = True
                 # del self.eventrouter.teams[self.get_team_hash()]
-            self.set_reconnect_url(None)
 
     def set_connected(self):
         self.connected = True
@@ -2518,12 +2518,14 @@ def handle_rtmstart(login_data, eventrouter):
     else:
         t = eventrouter.teams.get(th)
         t.set_reconnect_url(login_data['url'])
+        t.connecting_rtm = False
 
     t.connect()
 
 def handle_rtmconnect(login_data, eventrouter):
     metadata = login_data["wee_slack_request_metadata"]
     team = eventrouter.teams.get(metadata.team_hash)
+    team.connecting_rtm = False
 
     if not login_data["ok"]:
         w.prnt("", "ERROR: Failed reconnecting to Slack with token starting with {}: {}"
