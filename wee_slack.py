@@ -2512,7 +2512,8 @@ def handle_rtmstart(login_data, eventrouter):
     else:
         t = eventrouter.teams.get(th)
         t.set_reconnect_url(login_data['url'])
-        t.connect()
+
+    t.connect()
 
     t.buffer_prnt('Connected to Slack team {} ({}) with username {}'.format(
         login_data["team"]["name"], t.domain, t.nick))
