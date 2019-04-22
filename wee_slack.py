@@ -274,6 +274,19 @@ def get_functions_with_prefix(prefix):
             if name.startswith(prefix)}
 
 
+def handle_socket_error(exception, team, caller_name):
+    if not (isinstance(exception, WebSocketConnectionClosedException) or
+            exception.errno in (errno.EPIPE, errno.ECONNRESET, errno.ETIMEDOUT)):
+        raise
+
+    w.prnt(team.channel_buffer,
+            'Lost connection to slack team {} (on {}), reconnecting.'.format(
+                team.domain, caller_name))
+    dbg('Socket failed on {} with exception:\n{}'.format(
+        caller_name, format_exc_tb()), level=5)
+    team.set_disconnected()
+
+
 ###### New central Event router
 
 class EventRouter(object):
@@ -408,13 +421,7 @@ class EventRouter(object):
             # Expected to happen occasionally on SSL websockets.
             return w.WEECHAT_RC_OK
         except (WebSocketConnectionClosedException, socket.error) as e:
-            if isinstance(e, WebSocketConnectionClosedException) or e.errno in (errno.EPIPE, errno.ECONNRESET, errno.ETIMEDOUT):
-                w.prnt(team.channel_buffer,
-                        'Lost connection to slack team {} (on receive), reconnecting.'.format(team.domain))
-                dbg('receive_ws_callback failed with exception:\n{}'.format(format_exc_tb()), level=5)
-                team.set_disconnected()
-            else:
-                raise
+            handle_socket_error(e, team, 'receive')
             return w.WEECHAT_RC_OK
 
         message_json = json.loads(decode_from_utf8(data))
@@ -1288,12 +1295,8 @@ class SlackTeam(object):
                 self.ws_replies[data["id"]] = data
             self.ws.send(encode_to_utf8(message))
             dbg("Sent {}...".format(message[:100]))
-        except:
-            w.prnt(self.channel_buffer,
-                    'Lost connection to slack team {} (on send), reconnecting.'.format(self.domain))
-            dbg('send_to_websocket failed with data: `{}` and exception:\n{}'
-                    .format(message, format_exc_tb()), level=5)
-            self.set_disconnected()
+        except (WebSocketConnectionClosedException, socket.error) as e:
+            handle_socket_error(e, self, 'send')
 
     def update_member_presence(self, user, presence):
         user.presence = presence
