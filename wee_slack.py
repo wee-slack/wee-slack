@@ -710,8 +710,11 @@ def receive_ws_callback(*args):
 @utf8_decode
 def ws_ping_cb(data, remaining_calls):
     for team in EVENTROUTER.teams.values():
-        if team.ws:
-            team.ws.ping()
+        if team.ws and team.connected:
+            try:
+                team.ws.ping()
+            except (WebSocketConnectionClosedException, socket.error) as e:
+                handle_socket_error(e, team, 'ping')
     return w.WEECHAT_RC_OK
 
 
