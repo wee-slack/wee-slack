@@ -477,7 +477,7 @@ class EventRouter(object):
         elif return_code != -1:
             self.reply_buffer.pop(request_metadata.response_id, None)
             self.delete_context(data)
-            if request_metadata.request == 'rtm.start':
+            if request_metadata.request.startswith('rtm.'):
                 retry_text = ('retrying' if request_metadata.should_try() else
                         'will not retry after too many failed attempts')
                 w.prnt('', ('Failed connecting to slack team with token starting with {}, {}. ' +
@@ -1273,7 +1273,7 @@ class SlackTeam(object):
                 # The fast reconnect failed, so start over-ish
                 for chan in self.channels:
                     self.channels[chan].got_history = False
-                s = initiate_connection(self.token, retries=999)
+                s = initiate_connection(self.token, retries=999, team_hash=self.team_hash)
                 self.eventrouter.receive(s)
                 self.connecting = False
                 # del self.eventrouter.teams[self.get_team_hash()]
@@ -2520,6 +2520,18 @@ def handle_rtmstart(login_data, eventrouter):
         t.set_reconnect_url(login_data['url'])
 
     t.connect()
+
+def handle_rtmconnect(login_data, eventrouter):
+    metadata = login_data["wee_slack_request_metadata"]
+    team = eventrouter.teams.get(metadata.team_hash)
+
+    if not login_data["ok"]:
+        w.prnt("", "ERROR: Failed reconnecting to Slack with token starting with {}: {}"
+               .format(metadata.token[:15], login_data["error"]))
+        return
+
+    team.set_reconnect_url(login_data['url'])
+    team.connect()
 
 
 def handle_emojilist(emoji_json, eventrouter, **kwargs):
@@ -4536,11 +4548,12 @@ def trace_calls(frame, event, arg):
     return
 
 
-def initiate_connection(token, retries=3):
+def initiate_connection(token, retries=3, team_hash=None):
     return SlackRequest(token,
-                        'rtm.start',
+                        'rtm.{}'.format('connect' if team_hash else 'start'),
                         {"batch_presence_aware": 1},
-                        retries=retries)
+                        retries=retries,
+                        team_hash=team_hash)
 
 
 if __name__ == "__main__":
