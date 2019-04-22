@@ -7,6 +7,7 @@ from functools import wraps
 from io import StringIO
 from itertools import islice, count
 
+import errno
 import textwrap
 import time
 import json
@@ -18,6 +19,7 @@ import traceback
 import collections
 import ssl
 import random
+import socket
 import string
 
 from websocket import create_connection, WebSocketConnectionClosedException
@@ -402,14 +404,17 @@ class EventRouter(object):
         try:
             # Read the data from the websocket associated with this team.
             data = team.ws.recv()
-        except WebSocketConnectionClosedException:
-            w.prnt(team.channel_buffer,
-                    'Lost connection to slack team {} (on receive), reconnecting.'.format(team.domain))
-            dbg('receive_ws_callback failed with exception:\n{}'.format(format_exc_tb()), level=5)
-            team.set_disconnected()
-            return w.WEECHAT_RC_OK
         except ssl.SSLWantReadError:
             # Expected to happen occasionally on SSL websockets.
+            return w.WEECHAT_RC_OK
+        except (WebSocketConnectionClosedException, socket.error) as e:
+            if isinstance(e, WebSocketConnectionClosedException) or e.errno in (errno.EPIPE, errno.ECONNRESET, errno.ETIMEDOUT):
+                w.prnt(team.channel_buffer,
+                        'Lost connection to slack team {} (on receive), reconnecting.'.format(team.domain))
+                dbg('receive_ws_callback failed with exception:\n{}'.format(format_exc_tb()), level=5)
+                team.set_disconnected()
+            else:
+                raise
             return w.WEECHAT_RC_OK
 
         message_json = json.loads(decode_from_utf8(data))
