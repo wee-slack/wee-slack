@@ -1021,6 +1021,8 @@ def stop_talking_to_slack():
     buffer is handled
     """
     EVENTROUTER.shutdown()
+    for team in EVENTROUTER.teams.values():
+        team.ws.shutdown()
     return w.WEECHAT_RC_OK
 
 ##### New Classes
