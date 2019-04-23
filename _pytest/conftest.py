@@ -6,6 +6,8 @@ import random
 import string
 import sys
 
+from websocket import ABNF
+
 sys.path.append(".")
 
 import wee_slack
@@ -16,9 +18,11 @@ class fakewebsocket(object):
         self.returndata = []
         self.sentdata = []
     def add(self, data):
-        self.returndata.append(data)
+        self.returndata.append(json.dumps(data).encode('utf-8'))
     def recv(self):
-        return json.dumps(self.returndata.pop(0))
+        return self.recv_data()[1].decode('utf-8')
+    def recv_data(self, control_frame=False):
+        return ABNF.OPCODE_TEXT, self.returndata.pop(0)
     def send(self, data):
         self.sentdata.append(data)
 

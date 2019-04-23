@@ -22,7 +22,7 @@ import random
 import socket
 import string
 
-from websocket import create_connection, WebSocketConnectionClosedException
+from websocket import ABNF, create_connection, WebSocketConnectionClosedException
 
 try:
     basestring     # Python 2
@@ -400,7 +400,12 @@ class EventRouter(object):
             raise InvalidType(type(team))
 
     def reconnect_if_disconnected(self):
-        for team_id, team in self.teams.items():
+        for team in self.teams.values():
+            if team.connected and time.time() - team.last_pong_time > 12:
+                w.prnt(team.channel_buffer,
+                        'Lost connection to slack team {} (no pong), reconnecting.'.format(
+                            team.domain))
+                team.set_disconnected()
             if not team.connected:
                 team.connect()
                 dbg("reconnecting {}".format(team))
@@ -416,7 +421,7 @@ class EventRouter(object):
         team = self.teams[team_hash]
         try:
             # Read the data from the websocket associated with this team.
-            data = team.ws.recv()
+            opcode, data = team.ws.recv_data(control_frame=True)
         except ssl.SSLWantReadError:
             # Expected to happen occasionally on SSL websockets.
             return w.WEECHAT_RC_OK
@@ -424,7 +429,13 @@ class EventRouter(object):
             handle_socket_error(e, team, 'receive')
             return w.WEECHAT_RC_OK
 
-        message_json = json.loads(decode_from_utf8(data))
+        if opcode == ABNF.OPCODE_PONG:
+            team.last_pong_time = time.time()
+            return w.WEECHAT_RC_OK
+        elif opcode != ABNF.OPCODE_TEXT:
+            return w.WEECHAT_RC_OK
+
+        message_json = json.loads(data.decode('utf-8'))
         metadata = WeeSlackMetadata({
             "team": team_hash,
         }).jsonify()
@@ -1100,6 +1111,7 @@ class SlackTeam(object):
         self.ws = None
         self.ws_counter = 0
         self.ws_replies = {}
+        self.last_pong_time = time.time()
         self.eventrouter = eventrouter
         self.token = token
         self.team = self
@@ -1281,6 +1293,7 @@ class SlackTeam(object):
 
     def set_connected(self):
         self.connected = True
+        self.last_pong_time = time.time()
         self.buffer_prnt('Connected to Slack team {} ({}) with username {}'.format(
             self.team_info["name"], self.domain, self.nick))
         dbg("connected to {}".format(self.domain))
@@ -2702,7 +2715,8 @@ def process_team_join(message_json, eventrouter, **kwargs):
 
 
 def process_pong(message_json, eventrouter, **kwargs):
-    pass
+    team = kwargs["team"]
+    team.last_pong_time = time.time()
 
 
 def process_message(message_json, eventrouter, store=True, download=True, **kwargs):
