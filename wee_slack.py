@@ -419,30 +419,31 @@ class EventRouter(object):
         on the queue for processing as JSON.
         """
         team = self.teams[team_hash]
-        try:
-            # Read the data from the websocket associated with this team.
-            opcode, data = team.ws.recv_data(control_frame=True)
-        except ssl.SSLWantReadError:
-            # Expected to happen occasionally on SSL websockets.
-            return w.WEECHAT_RC_OK
-        except (WebSocketConnectionClosedException, socket.error) as e:
-            handle_socket_error(e, team, 'receive')
-            return w.WEECHAT_RC_OK
+        while True:
+            try:
+                # Read the data from the websocket associated with this team.
+                opcode, data = team.ws.recv_data(control_frame=True)
+            except ssl.SSLWantReadError:
+                # No more data to read at this time.
+                return w.WEECHAT_RC_OK
+            except (WebSocketConnectionClosedException, socket.error) as e:
+                handle_socket_error(e, team, 'receive')
+                return w.WEECHAT_RC_OK
 
-        if opcode == ABNF.OPCODE_PONG:
-            team.last_pong_time = time.time()
-            return w.WEECHAT_RC_OK
-        elif opcode != ABNF.OPCODE_TEXT:
-            return w.WEECHAT_RC_OK
+            if opcode == ABNF.OPCODE_PONG:
+                team.last_pong_time = time.time()
+                return w.WEECHAT_RC_OK
+            elif opcode != ABNF.OPCODE_TEXT:
+                return w.WEECHAT_RC_OK
 
-        message_json = json.loads(data.decode('utf-8'))
-        metadata = WeeSlackMetadata({
-            "team": team_hash,
-        }).jsonify()
-        message_json["wee_slack_metadata"] = metadata
-        if self.recording:
-            self.record_event(message_json, 'type', 'websocket')
-        self.receive(message_json)
+            message_json = json.loads(data.decode('utf-8'))
+            metadata = WeeSlackMetadata({
+                "team": team_hash,
+            }).jsonify()
+            message_json["wee_slack_metadata"] = metadata
+            if self.recording:
+                self.record_event(message_json, 'type', 'websocket')
+            self.receive(message_json)
 
     def receive_httprequest_callback(self, data, command, return_code, out, err):
         """
