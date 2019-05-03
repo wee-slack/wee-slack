@@ -401,7 +401,9 @@ class EventRouter(object):
 
     def reconnect_if_disconnected(self):
         for team in self.teams.values():
-            if team.connected and time.time() - team.last_pong_time > 12:
+            time_since_last_ping = time.time() - team.last_ping_time
+            time_since_last_pong = time.time() - team.last_pong_time
+            if team.connected and time_since_last_ping < 5 and time_since_last_pong > 12:
                 w.prnt(team.channel_buffer,
                         'Lost connection to slack team {} (no pong), reconnecting.'.format(
                             team.domain))
@@ -725,6 +727,7 @@ def ws_ping_cb(data, remaining_calls):
         if team.ws and team.connected:
             try:
                 team.ws.ping()
+                team.last_ping_time = time.time()
             except (WebSocketConnectionClosedException, socket.error) as e:
                 handle_socket_error(e, team, 'ping')
     return w.WEECHAT_RC_OK
@@ -1112,6 +1115,7 @@ class SlackTeam(object):
         self.ws = None
         self.ws_counter = 0
         self.ws_replies = {}
+        self.last_ping_time = 0
         self.last_pong_time = time.time()
         self.eventrouter = eventrouter
         self.token = token
