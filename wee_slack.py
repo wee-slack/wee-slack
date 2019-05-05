@@ -403,7 +403,7 @@ class EventRouter(object):
         for team in self.teams.values():
             time_since_last_ping = time.time() - team.last_ping_time
             time_since_last_pong = time.time() - team.last_pong_time
-            if team.connected and time_since_last_ping < 5 and time_since_last_pong > 12:
+            if team.connected and time_since_last_ping < 5 and time_since_last_pong > 30:
                 w.prnt(team.channel_buffer,
                         'Lost connection to slack team {} (no pong), reconnecting.'.format(
                             team.domain))
