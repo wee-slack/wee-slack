@@ -23,17 +23,9 @@ def test_process_message(realish_eventrouter, team, user_alice):
 
     realish_eventrouter.receive_ws_callback(team.team_hash)
     realish_eventrouter.handle_next()
-
-    realish_eventrouter.receive_ws_callback(team.team_hash)
     realish_eventrouter.handle_next()
-
-    realish_eventrouter.receive_ws_callback(team.team_hash)
     realish_eventrouter.handle_next()
-
-    realish_eventrouter.receive_ws_callback(team.team_hash)
     realish_eventrouter.handle_next()
-
-    realish_eventrouter.receive_ws_callback(team.team_hash)
     realish_eventrouter.handle_next()
 
     assert sum([len(channel.messages) for channel in team.channels.values()]) == 3

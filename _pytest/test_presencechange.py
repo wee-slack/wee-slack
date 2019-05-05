@@ -12,11 +12,10 @@ def test_PresenceChange(realish_eventrouter, team, user_alice):
         "user": user_alice.identifier,
         "presence": "away",
     })
-
     realish_eventrouter.receive_ws_callback(team.team_hash)
+
     realish_eventrouter.handle_next()
     assert user_alice.presence == "active"
 
-    realish_eventrouter.receive_ws_callback(team.team_hash)
     realish_eventrouter.handle_next()
     assert user_alice.presence == "away"
