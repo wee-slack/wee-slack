@@ -1,4 +1,7 @@
-# -*- coding: utf-8 -*-
+# Copyright (c) 2014-2016 Ryan Huber <rhuber@gmail.com>
+# Copyright (c) 2015-2018 Tollef Fog Heen <tfheen@err.no>
+# Copyright (c) 2015-2019 Trygve Aaberge <trygveaa@gmail.com>
+# Released under the MIT license.
 
 from __future__ import print_function, unicode_literals
 
