@@ -1,6 +1,27 @@
 # Changelog
 
-## Next version
+## 2.3.0 (2019-05-05)
+
+- Python 3 support. Python 2 will continue to be supported at least until the end of 2019 (fixes #258, fixes #331, fixes #555, fixes #576, fixes #598).
+- Improve detection of connection loss to the server, and improve reconnection (fixes #238, fixes #480, fixes #561, fixes #687).
+- Add option `files_download_location` to download uploaded files automatically (fixes #562, PR #666).
+- Add option `show_buflist_presence` to show/hide presence from buflist (PR #558).
+- Add command `/help` and add descriptions for all commands (fixes #363).
+- Remove command `/leave` (weechat aliases it to `/part` by default so we don't need to implement it specifically).
+- Remove command `/slack p` (only used for debugging).
+- Remove command `/slack openweb`, use `/slack linkarchive` instead.
+- Make command `/thread` open last thread in channel when called without arguments (PR #677).
+- Support command `/away -all` for marking you away on all servers/teams (fixes #596).
+- Show human readable names for user groups properly (PR #680).
+- Add tab completion of user groups (PR #680).
+- Support uploading files to threads (fixes #672, PR #683).
+- Include threads when marking latest message as read (PR #653).
+- Some fixes for formatting of messages (bold/italic) (PR #567).
+- Show human readable references (e.g. user names) instead of ids in topic (PR #665).
+- Show join/leave correctly in private channels (fixes #625, PR #684).
+- Print error if user/channel is not found when querying/joining (fixes #597).
+- Print a message when another client or the server closes an IM.
+- Various small bug fixes.
 
 ## 2.2.0 (2018-11-12)
 
