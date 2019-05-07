@@ -54,6 +54,11 @@ sudo /usr/local/opt/python@2/bin/pip2 install websocket_client
 pkg install py27-websocket-client py27-six
 ```
 
+##### OpenBSD
+```
+pkg_add py-websocket-client weechat-python
+```
+
 #### 2. copy wee_slack.py to ~/.weechat/python
 ```
 cd ~/.weechat/python
