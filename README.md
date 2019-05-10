@@ -156,9 +156,12 @@ Modify 3rd previous message using regex:
 3s/old text/new text/
 ```
 
-Replace all instances of text in previous message using regex:
+The regex also supports the flags `g` for replacing all instances, `i` for
+ignoring case, `m` for making `^` and `$` match the start/end of each line and
+`s` for making `.` match a newline too. Use them by appending one or more of
+them to the regex:
 ```
-s/old text/new text/g
+s/old text/new text/gi
 ```
 
 Delete previous message:
@@ -227,11 +230,11 @@ If mouse mode is enabled, the default behavior when right-clicking on a message 
 It can also be used as an argument to the `/slack linkarchive` command.
 
 In cursor mode, the `M` key achieves the same result (memo: the default for weechat is to paste the message with `m`, `M` simply copies the id).
-In addition, `R` will prepare a `/reply id` and `D` will delete the message (provided it’s yours).
+In addition, `R` will prepare a `/reply id` and `D` will delete the message (provided it's yours).
 `T` will open the thread associated to a message, equivalent to `/thread id`
 `L` will call the `/slack linkarchive` command behind the hood and paste it to the current input.
 
-Please see weechat’s documentation about [how to use the cursor mode](https://weechat.org/files/doc/stable/weechat_user.en.html#key_bindings_cursor_context) or [adapt the bindings](https://weechat.org/files/doc/stable/weechat_user.en.html#command_weechat_key) to your preference.
+Please see weechat's documentation about [how to use the cursor mode](https://weechat.org/files/doc/stable/weechat_user.en.html#key_bindings_cursor_context) or [adapt the bindings](https://weechat.org/files/doc/stable/weechat_user.en.html#command_weechat_key) to your preference.
 
 Default key bindings:
 ```
