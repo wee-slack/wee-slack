@@ -3409,7 +3409,7 @@ def tag(tagset, user=None, self_msg=False, backlog=False):
         if self_msg:
             tags |= {"self_msg"}
         if backlog:
-            tags |= {"logger_backlog"}
+            tags |= {"logger_backlog", "no_log"}
     return ",".join(tags)
 
 ###### New/converted command_ commands
