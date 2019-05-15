@@ -2844,7 +2844,7 @@ def subprocess_thread_message(message_json, eventrouter, channel, team):
 def subprocess_channel_join(message_json, eventrouter, channel, team):
     prefix_join = w.prefix("join").strip()
     message = SlackMessage(message_json, team, channel, override_sender=prefix_join)
-    channel.buffer_prnt(prefix_join, channel.render(message), message_json["ts"], tagset='join')
+    channel.buffer_prnt(prefix_join, channel.render(message), message_json["ts"], tagset='join', tag_nick=message.get_sender()[1])
     channel.user_joined(message_json['user'])
     channel.store_message(message, team)
 
@@ -2852,7 +2852,7 @@ def subprocess_channel_join(message_json, eventrouter, channel, team):
 def subprocess_channel_leave(message_json, eventrouter, channel, team):
     prefix_leave = w.prefix("quit").strip()
     message = SlackMessage(message_json, team, channel, override_sender=prefix_leave)
-    channel.buffer_prnt(prefix_leave, channel.render(message), message_json["ts"], tagset='leave')
+    channel.buffer_prnt(prefix_leave, channel.render(message), message_json["ts"], tagset='leave', tag_nick=message.get_sender()[1])
     channel.user_left(message_json['user'])
     channel.store_message(message, team)
 
@@ -2887,7 +2887,7 @@ def subprocess_message_deleted(message_json, eventrouter, channel, team):
 def subprocess_channel_topic(message_json, eventrouter, channel, team):
     prefix_topic = w.prefix("network").strip()
     message = SlackMessage(message_json, team, channel, override_sender=prefix_topic)
-    channel.buffer_prnt(prefix_topic, channel.render(message), message_json["ts"], tagset="topic")
+    channel.buffer_prnt(prefix_topic, channel.render(message), message_json["ts"], tagset="topic", tag_nick=message.get_sender()[1])
     channel.set_topic(message_json["topic"])
     channel.store_message(message, team)
 
