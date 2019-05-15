@@ -3400,7 +3400,7 @@ def tag(tagset=None, user=None, self_msg=False, backlog=False):
         "topic": {"irc_topic", "no_highlight", "log3"},
         "channel": {"irc_privmsg", "notify_message", "log1"},
     }
-    nick_tag = {"nick_{}".format(user or "unknown").replace(" ", "_")}
+    nick_tag = {"nick_{}".format(user).replace(" ", "_")} if user else set()
     slack_tag = {"slack_{}".format(tagset or "default")}
     tags = nick_tag | slack_tag | tagsets.get(tagset, set())
     if self_msg or backlog:
