@@ -1662,7 +1662,7 @@ class SlackChannel(SlackChannelCommon):
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
 
-    def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, **kwargs):
+    def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, extra_tags=[], **kwargs):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
         self.last_line_from = nick
         ts = SlackTS(timestamp)
@@ -1680,7 +1680,7 @@ class SlackChannel(SlackChannelCommon):
                     tagset = "channel"
 
             self_msg = tag_nick == self.team.nick
-            tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog)
+            tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, extra_tags=extra_tags)
 
             if not self_msg:
                 self.new_messages = True
@@ -2849,7 +2849,12 @@ def subprocess_thread_message(message_json, eventrouter, channel, team):
 
             if config.thread_messages_in_channel:
                 channel.buffer_prnt(
-                    message.sender, channel.render(message), message.ts, tag_nick=message.sender_plain)
+                    message.sender,
+                    channel.render(message),
+                    message.ts,
+                    tag_nick=message.sender_plain,
+                    extra_tags=["thread_message"],
+                )
 
 #    channel = channels.find(message_json["channel"])
 #    server = channel.server
@@ -3382,7 +3387,7 @@ def format_nick(nick, previous_nick=None):
     return nick_prefix_color + nick_prefix + w.color("reset") + nick + nick_suffix_color + nick_suffix + w.color("reset")
 
 
-def tag(tagset=None, user=None, self_msg=False, backlog=False):
+def tag(tagset=None, user=None, self_msg=False, backlog=False, extra_tags=[]):
     tagsets = {
         "team_info": {"no_highlight", "log3"},
         "team_message": {"irc_privmsg", "notify_message", "log1"},
@@ -3402,6 +3407,7 @@ def tag(tagset=None, user=None, self_msg=False, backlog=False):
             tags |= {"self_msg"}
         if backlog:
             tags |= {"logger_backlog", "no_log"}
+    tags |= set(extra_tags)
     return ",".join(tags)
 
 ###### New/converted command_ commands
