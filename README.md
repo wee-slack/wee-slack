@@ -63,7 +63,9 @@ pkg_add py-websocket-client weechat-python
 ```
 cd ~/.weechat/python
 wget https://raw.githubusercontent.com/wee-slack/wee-slack/master/wee_slack.py
-ln -s ../wee_slack.py autoload
+
+cd ~/.weechat/python/autoload
+ln -s ../wee_slack.py
 ```
 
 #### 3. Start WeeChat
