@@ -491,7 +491,11 @@ class EventRouter(object):
                 dbg("length was zero, probably a bug..")
                 self.delete_context(data)
                 self.receive(request_metadata)
-        elif return_code != -1:
+        elif return_code == -1:
+            if request_metadata.response_id not in self.reply_buffer:
+                self.reply_buffer[request_metadata.response_id] = StringIO()
+            self.reply_buffer[request_metadata.response_id].write(out)
+        else:
             self.reply_buffer.pop(request_metadata.response_id, None)
             self.delete_context(data)
             if request_metadata.request.startswith('rtm.'):
@@ -503,10 +507,6 @@ class EventRouter(object):
                 dbg('rtm.start failed with return_code {}. stack:\n{}'
                         .format(return_code, ''.join(traceback.format_stack())), level=5)
                 self.receive(request_metadata)
-        else:
-            if request_metadata.response_id not in self.reply_buffer:
-                self.reply_buffer[request_metadata.response_id] = StringIO()
-            self.reply_buffer[request_metadata.response_id].write(out)
 
     def receive(self, dataobj):
         """
