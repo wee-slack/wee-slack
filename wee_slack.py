@@ -477,10 +477,10 @@ class EventRouter(object):
                     # dbg("Incomplete json, awaiting more", True)
                 try:
                     j["wee_slack_process_method"] = request_metadata.request_normalized
-                    j["wee_slack_request_metadata"] = request_metadata
-                    self.reply_buffer.pop(request_metadata.response_id)
                     if self.recording:
                         self.record_event(j, 'wee_slack_process_method', 'http')
+                    j["wee_slack_request_metadata"] = request_metadata
+                    self.reply_buffer.pop(request_metadata.response_id)
                     self.receive(j)
                     self.delete_context(data)
                 except:
