@@ -2795,6 +2795,8 @@ def download_files(message_json, **kwargs):
     download_location = config.files_download_location
     if not download_location:
         return
+    download_location = download_location.replace("%h", w.info_get("weechat_dir", ""))
+
     if not os.path.exists(download_location):
         try:
             os.makedirs(download_location)
@@ -4344,7 +4346,8 @@ class PluginConfig(object):
         'files_download_location': Setting(
             default='',
             desc='If set, file attachments will be automatically downloaded'
-            ' to this location.'),
+            ' to this location. "%h" will be replaced by WeeChat home,'
+            ' "~/.weechat" by default.'),
         'group_name_prefix': Setting(
             default='&',
             desc='The prefix of buffer names for groups (private channels).'),
