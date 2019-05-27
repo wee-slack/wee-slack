@@ -3489,7 +3489,7 @@ def topic_command_cb(data, current_buffer, command):
         return w.WEECHAT_RC_OK_EAT
 
     if topic is None:
-        w.prnt(channel.channel_buffer, 'Topic for {} is "{}"'.format(channel.name, channel.topic))
+        w.prnt(channel.channel_buffer, 'Topic for {} is "{}"'.format(channel.name, channel.topic['value']))
     else:
         s = SlackRequest(team.token, "channels.setTopic", {"channel": channel.identifier, "topic": topic}, team_hash=team.team_hash)
         EVENTROUTER.receive(s)
