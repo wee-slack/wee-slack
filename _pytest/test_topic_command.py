@@ -58,7 +58,7 @@ def test_call_topic_without_arguments(realish_eventrouter, channel_general):
         result = topic_command_cb(None, current_buffer, command)
         fake_prnt.assert_called_with(
             channel_general.channel_buffer,
-            'Topic for {} is "{}"'.format(channel_general.name, channel_general.topic),
+            'Topic for {} is "{}"'.format(channel_general.name, channel_general.topic['value']),
         )
         assert result == wee_slack.w.WEECHAT_RC_OK_EAT
 
