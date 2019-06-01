@@ -2217,13 +2217,7 @@ class SlackUser(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-        if self.profile.get("display_name"):
-            self.slack_name = self.profile["display_name"]
-            self.name = self.profile["display_name"].replace(' ', '')
-        else:
-            # No display name set. Fall back to the deprecated username field.
-            self.slack_name = kwargs["name"]
-            self.name = self.slack_name
+        self.name = nick_from_profile(self.profile, kwargs["name"])
         self.update_color()
 
     def __repr__(self):
@@ -2545,13 +2539,20 @@ def handle_rtmstart(login_data, eventrouter):
             else:
                 channels[item["id"]] = SlackGroupChannel(eventrouter, **item)
 
+        self_profile = next(
+            user["profile"]
+            for user in login_data["users"]
+            if user["id"] == login_data["self"]["id"]
+        )
+        self_nick = nick_from_profile(self_profile, login_data["self"]["name"])
+
         t = SlackTeam(
             eventrouter,
             metadata.token,
             login_data['url'],
             login_data["team"],
             subteams,
-            login_data["self"]["name"],
+            self_nick,
             login_data["self"]["id"],
             users,
             bots,
@@ -3372,6 +3373,11 @@ def modify_last_print_time(buffer_pointer, ts_minor):
         line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
 
     return w.WEECHAT_RC_OK
+
+
+def nick_from_profile(profile, username):
+    nick = profile.get('display_name') or username
+    return nick.replace(' ', '')
 
 
 def format_nick(nick, previous_nick=None):
