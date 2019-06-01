@@ -122,6 +122,8 @@ def slack_buffer_required(f):
     @wraps(f)
     def wrapper(data, current_buffer, *args, **kwargs):
         if current_buffer not in EVENTROUTER.weechat_controller.buffers:
+            command_name = f.__name__.replace('command_', '', 1)
+            w.prnt('', 'slack: command "{}" must be executed on slack buffer'.format(command_name))
             return w.WEECHAT_RC_ERROR
         return f(data, current_buffer, *args, **kwargs)
     return wrapper
