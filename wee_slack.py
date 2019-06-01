@@ -4038,18 +4038,25 @@ def command_away(data, current_buffer, args):
 @utf8_decode
 def command_status(data, current_buffer, args):
     """
-    /slack status [emoji [status_message]]
+    /slack status [<emoji> [<status_message>]|-delete]
     Lets you set your Slack Status (not to be confused with away/here).
+    Prints current status if no arguments are given, unsets the status if -delete is given.
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
 
-    split_args = args.split(' ', 1)
-    emoji = split_args[0]
+    split_args = args.split(" ", 1)
+    if not split_args[0]:
+        profile = team.users[team.myidentifier].profile
+        team.buffer_prnt("Status: {} {}".format(
+            profile.get("status_emoji", ""),
+            profile.get("status_text", "")))
+        return w.WEECHAT_RC_OK
+
+    emoji = "" if split_args[0] == "-delete" else split_args[0]
     text = split_args[1] if len(split_args) > 1 else ""
+    new_profile = {"status_text": text, "status_emoji": emoji}
 
-    profile = {"status_text": text, "status_emoji": emoji}
-
-    s = SlackRequest(team.token, "users.profile.set", {"profile": profile}, team_hash=team.team_hash)
+    s = SlackRequest(team.token, "users.profile.set", {"profile": new_profile}, team_hash=team.team_hash)
     EVENTROUTER.receive(s)
     return w.WEECHAT_RC_OK
 
