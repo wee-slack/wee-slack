@@ -2679,6 +2679,12 @@ def handle_usergroupsuserslist(users_json, eventrouter, **kwargs):
         user = team.users[user_identifier]
         team.buffer_prnt("    {:<25}({})".format(user.name, user.presence))
 
+
+def handle_usersprofileset(json, eventrouter, **kwargs):
+    if not json['ok']:
+        w.prnt('', 'ERROR: Failed to set profile: {}'.format(json['error']))
+
+
 ###### New/converted process_ and subprocess_ methods
 def process_hello(message_json, eventrouter, **kwargs):
     kwargs['team'].subscribe_users_presence()
