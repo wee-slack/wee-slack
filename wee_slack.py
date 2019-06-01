@@ -3492,7 +3492,7 @@ def topic_command_cb(data, current_buffer, command):
 def whois_command_cb(data, current_buffer, command):
     """
     Get real name of user
-    /whois <display_name>
+    /whois <nick>
     """
     args = command.split()
     if len(args) < 2:
@@ -3505,9 +3505,10 @@ def whois_command_cb(data, current_buffer, command):
     u = team.users.get(team.get_username_map().get(user))
     if u:
         team.buffer_prnt("[{}]: {}".format(user, u.real_name))
-        if u.profile.get("status_text"):
-            team.buffer_prnt("[{}]: {} {}".format(user, u.profile.get('status_emoji', ''), u.profile.get('status_text', '')))
-        team.buffer_prnt("[{}]: Real name: {}".format(user, u.profile.get('real_name_normalized', '')))
+        status_emoji = u.profile.get("status_emoji", "")
+        status_text = u.profile.get("status_text", "")
+        if status_emoji or status_text:
+            team.buffer_prnt("[{}]: {} {}".format(user, status_emoji, status_text))
         team.buffer_prnt("[{}]: Title: {}".format(user, u.profile.get('title', '')))
         team.buffer_prnt("[{}]: Email: {}".format(user, u.profile.get('email', '')))
         team.buffer_prnt("[{}]: Phone: {}".format(user, u.profile.get('phone', '')))
