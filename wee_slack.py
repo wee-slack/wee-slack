@@ -1985,10 +1985,9 @@ class SlackMPDMChannel(SlackChannel):
     We change the name to look less terrible in weechat.
     """
 
-    def __init__(self, eventrouter, **kwargs):
+    def __init__(self, eventrouter, team_users, **kwargs):
+        kwargs["name"] = ','.join(team_users[x].name for x in kwargs["members"])
         super(SlackMPDMChannel, self).__init__(eventrouter, **kwargs)
-        n = kwargs.get('name')
-        self.set_name(n)
         self.type = "mpim"
 
     def open(self, update_remote=True):
@@ -2002,25 +2001,20 @@ class SlackMPDMChannel(SlackChannel):
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]['join'], {'users': ','.join(self.members)}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
 
-    @staticmethod
-    def adjust_name(n):
-        return "|".join("-".join(n.split("-")[1:-1]).split("--"))
-
-    def set_name(self, n):
-        self.name = self.adjust_name(n)
+    def set_name(self, slack_name):
+        self.name = slack_name
 
     def formatted_name(self, style="default", typing=False, **kwargs):
-        adjusted_name = self.adjust_name(self.slack_name)
         if typing and config.channel_name_typing_indicator:
             prepend = ">"
         else:
             prepend = "@"
         select = {
-            "default": adjusted_name,
-            "sidebar": prepend + adjusted_name,
-            "base": adjusted_name,
-            "long_default": "{}.{}".format(self.team.preferred_name, adjusted_name),
-            "long_base": "{}.{}".format(self.team.preferred_name, adjusted_name),
+            "default": self.name,
+            "sidebar": prepend + self.name,
+            "base": self.name,
+            "long_default": "{}.{}".format(self.team.preferred_name, self.name),
+            "long_base": "{}.{}".format(self.team.preferred_name, self.name),
         }
         return select[style]
 
@@ -2535,7 +2529,7 @@ def handle_rtmstart(login_data, eventrouter):
 
         for item in login_data["groups"]:
             if item["name"].startswith('mpdm-'):
-                channels[item["id"]] = SlackMPDMChannel(eventrouter, **item)
+                channels[item["id"]] = SlackMPDMChannel(eventrouter, users, **item)
             else:
                 channels[item["id"]] = SlackGroupChannel(eventrouter, **item)
 
@@ -3010,7 +3004,7 @@ def process_im_close(message_json, eventrouter, **kwargs):
 def process_group_joined(message_json, eventrouter, **kwargs):
     item = message_json["channel"]
     if item["name"].startswith("mpdm-"):
-        c = SlackMPDMChannel(eventrouter, team=kwargs["team"], **item)
+        c = SlackMPDMChannel(eventrouter, kwargs["team"].users, team=kwargs["team"], **item)
     else:
         c = SlackGroupChannel(eventrouter, team=kwargs["team"], **item)
     kwargs['team'].channels[item["id"]] = c
