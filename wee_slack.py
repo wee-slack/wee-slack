@@ -941,7 +941,6 @@ def channel_completion_cb(data, completion_item, current_buffer, completion):
     """
     Adds all channels on all teams to completion list
     """
-
     for team in EVENTROUTER.teams.values():
         for channel in team.channels.values():
             if channel.active:
@@ -976,6 +975,40 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
 
     for emoji in current_channel.team.emoji_completions:
         w.hook_completion_list_add(completion, ":" + emoji + ":", 0, w.WEECHAT_LIST_POS_SORT)
+    return w.WEECHAT_RC_OK
+
+
+@utf8_decode
+def thread_completion_cb(data, completion_item, current_buffer, completion):
+    """
+    Adds all $-prefixed thread ids to completion list
+    """
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    if current_channel is None or not hasattr(current_channel, 'hashed_messages'):
+        return w.WEECHAT_RC_OK
+
+    threads = current_channel.hashed_messages.items()
+    for thread_id, message in sorted(threads, key=lambda item: item[1].ts):
+        if message.submessages:
+            w.hook_completion_list_add(completion, "$" + thread_id, 0, w.WEECHAT_LIST_POS_BEGINNING)
+    return w.WEECHAT_RC_OK
+
+
+@utf8_decode
+def topic_completion_cb(data, completion_item, current_buffer, completion):
+    """
+    Adds topic for current channel to completion list
+    """
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    if current_channel is None:
+        return w.WEECHAT_RC_OK
+
+    topic = current_channel.render_topic()
+    channel_names = [channel.name for channel in current_channel.team.channels.values()]
+    if topic.split(' ', 1)[0] in channel_names:
+        topic = '{} {}'.format(current_channel.name, topic)
+
+    w.hook_completion_list_add(completion, topic, 0, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
 
@@ -3547,7 +3580,7 @@ def me_command_cb(data, current_buffer, args):
 @utf8_decode
 def command_register(data, current_buffer, args):
     """
-    /slack register
+    /slack register [code]
     Register a Slack team in wee-slack.
     """
     CLIENT_ID = "2468770254.51917335286"
@@ -3682,6 +3715,8 @@ def command_usergroups(data, current_buffer, args):
 
     return w.WEECHAT_RC_OK_EAT
 
+command_usergroups.completion = '%(usergroups)'
+
 
 @slack_buffer_required
 @utf8_decode
@@ -3694,6 +3729,8 @@ def command_talk(data, current_buffer, args):
         w.prnt('', 'Usage: /slack talk <user>[,<user2>[,<user3>...]]')
         return w.WEECHAT_RC_ERROR
     return join_query_command_cb(data, current_buffer, '/query ' + args)
+
+command_talk.completion = '%(nicks)'
 
 
 @slack_buffer_or_ignore
@@ -3796,6 +3833,7 @@ def command_thread(data, current_buffer, args):
     msg.open_thread(switch=config.switch_buffer_on_join)
     return w.WEECHAT_RC_OK_EAT
 
+command_thread.completion = '%(threads)'
 
 @slack_buffer_required
 @utf8_decode
@@ -3824,6 +3862,8 @@ def command_reply(data, current_buffer, args):
 
     channel.send_message(text, request_dict_ext={'thread_ts': parent_id})
     return w.WEECHAT_RC_OK_EAT
+
+command_reply.completion = '%(threads)'
 
 
 @slack_buffer_required
@@ -3868,7 +3908,7 @@ def slack_command_cb(data, current_buffer, args):
 @utf8_decode
 def command_help(data, current_buffer, args):
     """
-    /slack help
+    /slack help [command]
     Print help for /slack commands.
     """
     if args:
@@ -3976,6 +4016,8 @@ def command_linkarchive(data, current_buffer, args):
     w.command(current_buffer, "/input insert {}".format(url))
     return w.WEECHAT_RC_OK_EAT
 
+command_linkarchive.completion = '%(threads)'
+
 
 @utf8_decode
 def command_nodistractions(data, current_buffer, args):
@@ -4022,6 +4064,8 @@ def command_upload(data, current_buffer, args):
     command = 'curl {} {} {}'.format(curl_options, proxy_string, url)
     w.hook_process(command, config.slack_timeout, '', '')
     return w.WEECHAT_RC_OK_EAT
+
+command_upload.completion = '%(filename)'
 
 
 @utf8_decode
@@ -4078,6 +4122,8 @@ def command_status(data, current_buffer, args):
     s = SlackRequest(team.token, "users.profile.set", {"profile": new_profile}, team_hash=team.team_hash)
     EVENTROUTER.receive(s)
     return w.WEECHAT_RC_OK
+
+command_status.completion = "-delete|%(emoji)"
 
 
 @utf8_decode
@@ -4213,17 +4259,22 @@ def setup_hooks():
     if config.send_typing_notice:
         w.hook_signal('input_text_changed', "typing_notification_cb", "")
 
+    command_help.completion = '|'.join(EVENTROUTER.cmds.keys())
+    completions = '||'.join(
+            '{} {}'.format(name, getattr(cmd, 'completion', ''))
+            for name, cmd in EVENTROUTER.cmds.items())
+
     w.hook_command(
         # Command name and description
         'slack', 'Plugin to allow typing notification and sync of read markers for slack.com',
         # Usage
-        '[command] [command options]',
+        '<command> [<command options>]',
         # Description of arguments
         'Commands:\n' +
         '\n'.join(sorted(EVENTROUTER.cmds.keys())) +
-        '\nUse /slack help [command] to find out more\n',
+        '\nUse /slack help <command> to find out more\n',
         # Completions
-        '|'.join(EVENTROUTER.cmds.keys()),
+        completions,
         # Function name
         'slack_command_cb', '')
 
@@ -4243,10 +4294,13 @@ def setup_hooks():
         doc = EVENTROUTER.cmds[cmd].__doc__.strip().split('\n', 1)
         args = ' '.join(doc[0].split()[1:])
         description = textwrap.dedent(doc[1])
-        w.hook_command(cmd, description, args, '', '', 'command_' + cmd, '')
+        completion = getattr(EVENTROUTER.cmds[cmd], 'completion', '')
+        w.hook_command(cmd, description, args, '', completion, 'command_' + cmd, '')
 
+    w.hook_completion("irc_channel_topic", "complete topic for slack", "topic_completion_cb", "")
     w.hook_completion("irc_channels", "complete channels for slack", "channel_completion_cb", "")
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
+    w.hook_completion("threads", "complete thread ids for slack", "thread_completion_cb", "")
     w.hook_completion("usergroups", "complete @-usergroups for slack", "usergroups_completion_cb", "")
     w.hook_completion("emoji", "complete :emoji: for slack", "emoji_completion_cb", "")
 
