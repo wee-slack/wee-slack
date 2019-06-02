@@ -1559,15 +1559,18 @@ class SlackChannel(SlackChannelCommon):
         }
         return select[style]
 
-    def render_topic(self):
-        if self.channel_buffer:
-            topic = self.topic['value'] or self.slack_purpose['value']
-            topic = unhtmlescape(unfurl_refs(topic, ignore_alt_text=False))
-            w.buffer_set(self.channel_buffer, "title", topic)
+    def render_topic(self, fallback_to_purpose=False):
+        topic = self.topic['value']
+        if not topic and fallback_to_purpose:
+            topic = self.slack_purpose['value']
+        return unhtmlescape(unfurl_refs(topic, ignore_alt_text=False))
 
-    def set_topic(self, value):
-        self.topic = {"value": value}
-        self.render_topic()
+    def set_topic(self, value=None):
+        if value is not None:
+            self.topic = {"value": value}
+        if self.channel_buffer:
+            topic = self.render_topic(fallback_to_purpose=True)
+            w.buffer_set(self.channel_buffer, "title", topic)
 
     def update_from_message_json(self, message_json):
         for key, value in message_json.items():
@@ -1643,7 +1646,7 @@ class SlackChannel(SlackChannelCommon):
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
-            self.render_topic()
+            self.set_topic()
             self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
             if self.channel_buffer:
                 # if self.team.server_alias:
@@ -3493,9 +3496,11 @@ def topic_command_cb(data, current_buffer, command):
         return w.WEECHAT_RC_OK_EAT
 
     if topic is None:
-        w.prnt(channel.channel_buffer, 'Topic for {} is "{}"'.format(channel.name, channel.topic['value']))
+        w.prnt(channel.channel_buffer,
+                'Topic for {} is "{}"'.format(channel.name, channel.render_topic()))
     else:
-        s = SlackRequest(team.token, "channels.setTopic", {"channel": channel.identifier, "topic": topic}, team_hash=team.team_hash)
+        s = SlackRequest(team.token, "channels.setTopic", {"channel": channel.identifier,
+                "topic": linkify_text(topic, team)}, team_hash=team.team_hash)
         EVENTROUTER.receive(s)
     return w.WEECHAT_RC_OK_EAT
 
