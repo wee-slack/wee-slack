@@ -973,8 +973,13 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
     if current_channel is None:
         return w.WEECHAT_RC_OK
 
+    line_input = w.buffer_get_string(current_buffer, "input")
+    current_pos = w.buffer_get_integer(current_buffer, "input_pos")
+    current_word_match = re.search(r'[^: ]*:', line_input[:current_pos].split()[-1])
+    prefix = current_word_match.group(0) if current_word_match else ':'
+
     for emoji in current_channel.team.emoji_completions:
-        w.hook_completion_list_add(completion, ":" + emoji + ":", 0, w.WEECHAT_LIST_POS_SORT)
+        w.hook_completion_list_add(completion, prefix + emoji + ":", 0, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
 
