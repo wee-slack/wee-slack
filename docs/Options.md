@@ -122,7 +122,7 @@ slack` after changing it to take effect.
 
 **Default:** `false`
 
-**Description:** Control if you want to see notification when a usergroup's handle has changed, either true or false
+**Description:** Control if you want to see notification when a usergroup's handle has changed, either true or false.
 
 ### record_events
 
