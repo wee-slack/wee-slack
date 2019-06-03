@@ -2609,7 +2609,7 @@ def handle_rtmstart(login_data, eventrouter):
             channels[item["id"]] = SlackDMChannel(eventrouter, users, **item)
 
         for item in login_data["groups"]:
-            if item["name"].startswith('mpdm-'):
+            if item["is_mpim"]:
                 channels[item["id"]] = SlackMPDMChannel(eventrouter, users, **item)
             else:
                 channels[item["id"]] = SlackGroupChannel(eventrouter, **item)
