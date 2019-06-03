@@ -1743,7 +1743,7 @@ class SlackChannel(SlackChannelCommon):
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["leave"], {"channel": self.identifier}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
             self.eventrouter.receive(s)
 
-    def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, extra_tags=[], **kwargs):
+    def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, history_message=False, extra_tags=None, **kwargs):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
         self.last_line_from = nick
         ts = SlackTS(timestamp)
@@ -1759,6 +1759,11 @@ class SlackChannel(SlackChannelCommon):
                     tagset = "dm"
                 else:
                     tagset = "channel"
+
+            if history_message and backlog:
+                if extra_tags is None:
+                    extra_tags = []
+                extra_tags.append("no_log")
 
             self_msg = tag_nick == self.team.nick
             tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, extra_tags=extra_tags)
@@ -1816,7 +1821,8 @@ class SlackChannel(SlackChannelCommon):
             # we have probably reconnected. flush the buffer
             if self.team.connected:
                 self.clear_messages()
-            w.prnt_date_tags(self.channel_buffer, SlackTS().major, tag(backlog=True), '\tgetting channel history...')
+            w.prnt_date_tags(self.channel_buffer, SlackTS().major,
+                    tag(backlog=True, extra_tags=['no_log']), '\tgetting channel history...')
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE}, team_hash=self.team.team_hash, channel_identifier=self.identifier, clear=True)
             if not slow_queue:
                 self.eventrouter.receive(s)
@@ -2722,9 +2728,7 @@ def handle_history(message_json, eventrouter, **kwargs):
         kwargs['channel'].clear_messages()
     kwargs['channel'].got_history = True
     for message in reversed(message_json["messages"]):
-        # Don't download historical files, considering that
-        # background_load_all_history might be on.
-        process_message(message, eventrouter, download=False, **kwargs)
+        process_message(message, eventrouter, history_message=True, **kwargs)
 
 
 def handle_conversationsmembers(members_json, eventrouter, **kwargs):
@@ -2834,7 +2838,7 @@ def process_pong(message_json, eventrouter, **kwargs):
     team.last_pong_time = time.time()
 
 
-def process_message(message_json, eventrouter, store=True, download=True, **kwargs):
+def process_message(message_json, eventrouter, store=True, history_message=False, **kwargs):
     channel = kwargs["channel"]
     team = kwargs["team"]
 
@@ -2848,7 +2852,10 @@ def process_message(message_json, eventrouter, store=True, download=True, **kwar
     subtype_functions = get_functions_with_prefix("subprocess_")
 
     if subtype in subtype_functions:
-        subtype_functions[subtype](message_json, eventrouter, channel, team)
+        subtype_kwargs = {}
+        if message_json["subtype"] == "thread_message":
+            subtype_kwargs["history_message"] = history_message
+        subtype_functions[subtype](message_json, eventrouter, channel, team, **subtype_kwargs)
     else:
         message = SlackMessage(message_json, team, channel)
         text = channel.render(message)
@@ -2860,15 +2867,14 @@ def process_message(message_json, eventrouter, store=True, download=True, **kwar
         else:
             prefix = message.sender
 
-        channel.buffer_prnt(prefix, text, message.ts,
-                tag_nick=message.sender_plain, **kwargs)
+        channel.buffer_prnt(prefix, text, message.ts, tag_nick=message.sender_plain, history_message=history_message, **kwargs)
         channel.unread_count_display += 1
 
         if store:
             channel.store_message(message, team)
         dbg("NORMAL REPLY {}".format(message_json))
 
-    if download:
+    if not history_message:
         download_files(message_json, **kwargs)
 
 
@@ -2911,7 +2917,7 @@ def download_files(message_json, **kwargs):
             break
 
 
-def subprocess_thread_message(message_json, eventrouter, channel, team):
+def subprocess_thread_message(message_json, eventrouter, channel, team, history_message):
     # print ("THREADED: " + str(message_json))
     parent_ts = message_json.get('thread_ts')
     if parent_ts:
@@ -2925,7 +2931,7 @@ def subprocess_thread_message(message_json, eventrouter, channel, team):
             channel.change_message(parent_ts)
 
             if parent_message.thread_channel and parent_message.thread_channel.active:
-                parent_message.thread_channel.buffer_prnt(message.sender, parent_message.thread_channel.render(message), message.ts, tag_nick=message.sender_plain)
+                parent_message.thread_channel.buffer_prnt(message.sender, parent_message.thread_channel.render(message), message.ts, tag_nick=message.sender_plain, history_message=history_message)
             elif message.ts > channel.last_read and message.has_mention():
                 parent_message.notify_thread(action="mention", sender_id=message_json["user"])
 
@@ -2935,6 +2941,7 @@ def subprocess_thread_message(message_json, eventrouter, channel, team):
                     channel.render(message),
                     message.ts,
                     tag_nick=message.sender_plain,
+                    history_message=history_message,
                     extra_tags=["thread_message"],
                 )
 
@@ -3474,7 +3481,7 @@ def format_nick(nick, previous_nick=None):
     return nick_prefix_color + nick_prefix + w.color("reset") + nick + nick_suffix_color + nick_suffix + w.color("reset")
 
 
-def tag(tagset=None, user=None, self_msg=False, backlog=False, extra_tags=[]):
+def tag(tagset=None, user=None, self_msg=False, backlog=False, extra_tags=None):
     tagsets = {
         "team_info": {"no_highlight", "log3"},
         "team_message": {"irc_privmsg", "notify_message", "log1"},
@@ -3493,8 +3500,9 @@ def tag(tagset=None, user=None, self_msg=False, backlog=False, extra_tags=[]):
         if self_msg:
             tags |= {"self_msg"}
         if backlog:
-            tags |= {"logger_backlog", "no_log"}
-    tags |= set(extra_tags)
+            tags |= {"logger_backlog"}
+    if extra_tags:
+        tags |= set(extra_tags)
     return ",".join(tags)
 
 ###### New/converted command_ commands
