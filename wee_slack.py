@@ -941,10 +941,22 @@ def channel_completion_cb(data, completion_item, current_buffer, completion):
     """
     Adds all channels on all teams to completion list
     """
-    for team in EVENTROUTER.teams.values():
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    should_include_channel = lambda channel: channel.active and channel.type in ['channel', 'group', 'shared']
+
+    other_teams = [team for team in EVENTROUTER.teams.values() if not current_channel or team != current_channel.team]
+    for team in other_teams:
         for channel in team.channels.values():
-            if channel.active and channel.type in ['channel', 'group', 'shared']:
+            if should_include_channel(channel):
                 w.hook_completion_list_add(completion, channel.name, 0, w.WEECHAT_LIST_POS_SORT)
+
+    if current_channel:
+        for channel in sorted(current_channel.team.channels.values(), key=lambda channel: channel.name, reverse=True):
+            if should_include_channel(channel):
+                w.hook_completion_list_add(completion, channel.name, 0, w.WEECHAT_LIST_POS_BEGINNING)
+
+        if should_include_channel(current_channel):
+            w.hook_completion_list_add(completion, current_channel.name, 0, w.WEECHAT_LIST_POS_BEGINNING)
     return w.WEECHAT_RC_OK
 
 
@@ -1172,6 +1184,7 @@ class SlackTeam(object):
 
     def __init__(self, eventrouter, token, websocket_url, team_info, subteams,  nick, myidentifier, users, bots, channels, **kwargs):
         self.identifier = team_info["id"]
+        self.active = True
         self.ws_url = websocket_url
         self.connected = False
         self.connecting_rtm = False
