@@ -943,7 +943,19 @@ def channel_completion_cb(data, completion_item, current_buffer, completion):
     """
     for team in EVENTROUTER.teams.values():
         for channel in team.channels.values():
-            if channel.active:
+            if channel.active and channel.type in ['channel', 'group', 'shared']:
+                w.hook_completion_list_add(completion, channel.name, 0, w.WEECHAT_LIST_POS_SORT)
+    return w.WEECHAT_RC_OK
+
+
+@utf8_decode
+def dm_completion_cb(data, completion_item, current_buffer, completion):
+    """
+    Adds all dms/mpdms on all teams to completion list
+    """
+    for team in EVENTROUTER.teams.values():
+        for channel in team.channels.values():
+            if channel.active and channel.type in ['im', 'mpim']:
                 w.hook_completion_list_add(completion, channel.name, 0, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
@@ -4304,6 +4316,7 @@ def setup_hooks():
 
     w.hook_completion("irc_channel_topic", "complete topic for slack", "topic_completion_cb", "")
     w.hook_completion("irc_channels", "complete channels for slack", "channel_completion_cb", "")
+    w.hook_completion("irc_privates", "complete dms/mpdms for slack", "dm_completion_cb", "")
     w.hook_completion("nicks", "complete @-nicks for slack", "nick_completion_cb", "")
     w.hook_completion("threads", "complete thread ids for slack", "thread_completion_cb", "")
     w.hook_completion("usergroups", "complete @-usergroups for slack", "usergroups_completion_cb", "")
