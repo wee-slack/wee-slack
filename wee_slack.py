@@ -4090,7 +4090,8 @@ def command_upload(data, current_buffer, args):
     Uploads a file to the current buffer.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    file_path = os.path.expanduser(args)
+    weechat_dir = w.info_get("weechat_dir", "")
+    file_path = os.path.join(weechat_dir, os.path.expanduser(args))
 
     if channel.type == 'team':
         w.prnt('', "ERROR: Can't upload a file to the team buffer")
