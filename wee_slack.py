@@ -1125,7 +1125,9 @@ class SlackRequest(object):
     makes a SHA of the requst url and current time so we can re-tag this on the way back through.
     """
 
-    def __init__(self, token, request, post_data={}, **kwargs):
+    def __init__(self, token, request, post_data=None, **kwargs):
+        if post_data is None:
+            post_data = {}
         for key, value in kwargs.items():
             setattr(self, key, value)
         self.tries = 0
