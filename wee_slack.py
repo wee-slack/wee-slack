@@ -38,6 +38,11 @@ try:
 except ImportError:
     from urllib import urlencode
 
+try:
+    from json import JSONDecodeError
+except:
+    JSONDecodeError = ValueError
+
 # hack to make tests possible.. better way?
 try:
     import weechat
@@ -4087,6 +4092,13 @@ def command_upload(data, current_buffer, args):
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     file_path = os.path.expanduser(args)
 
+    if channel.type == 'team':
+        w.prnt('', "ERROR: Can't upload a file to the team buffer")
+        return w.WEECHAT_RC_ERROR
+
+    if not os.path.isfile(file_path):
+        w.prnt('', 'ERROR: Could not find file: {}'.format(file_path))
+        return w.WEECHAT_RC_ERROR
 
     post_data = {
         'channels': channel.identifier,
@@ -4106,10 +4118,27 @@ def command_upload(data, current_buffer, args):
         options.append(proxy_string)
 
     options_hashtable = {'arg{}'.format(i + 1): arg for i, arg in enumerate(options)}
-    w.hook_process_hashtable('curl', options_hashtable, config.slack_timeout, '', '')
+    w.hook_process_hashtable('curl', options_hashtable, config.slack_timeout, 'upload_callback', '')
     return w.WEECHAT_RC_OK_EAT
 
 command_upload.completion = '%(filename)'
+
+
+@utf8_decode
+def upload_callback(data, command, return_code, out, err):
+    if return_code != 0:
+        w.prnt("", "ERROR: Couldn't upload file. Got return code {}. Error: {}".format(return_code, err))
+        return w.WEECHAT_RC_OK_EAT
+
+    try:
+        response = json.loads(out)
+    except JSONDecodeError:
+        w.prnt("", "ERROR: Couldn't process response from file upload. Got: {}".format(out))
+        return w.WEECHAT_RC_OK_EAT
+
+    if not response["ok"]:
+        w.prnt("", "ERROR: Couldn't upload file. Error: {}".format(response["error"]))
+    return w.WEECHAT_RC_OK_EAT
 
 
 @utf8_decode
