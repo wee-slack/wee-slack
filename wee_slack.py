@@ -4097,8 +4097,12 @@ def command_upload(data, current_buffer, args):
         return w.WEECHAT_RC_ERROR
 
     if not os.path.isfile(file_path):
-        w.prnt('', 'ERROR: Could not find file: {}'.format(file_path))
-        return w.WEECHAT_RC_ERROR
+        unescaped_file_path = file_path.replace(r'\ ', ' ')
+        if os.path.isfile(unescaped_file_path):
+            file_path = unescaped_file_path
+        else:
+            w.prnt('', 'ERROR: Could not find file: {}'.format(file_path))
+            return w.WEECHAT_RC_ERROR
 
     post_data = {
         'channels': channel.identifier,
