@@ -252,7 +252,7 @@ class ProxyWrapper(object):
         else:
             port = ""
 
-        return "--proxy {}{}{}".format(user, self.proxy_address, port)
+        return "-x{}{}{}".format(user, self.proxy_address, port)
 
 
 ##### Helpers
@@ -4085,27 +4085,28 @@ def command_upload(data, current_buffer, args):
     Uploads a file to the current buffer.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    url = 'https://slack.com/api/files.upload'
     file_path = os.path.expanduser(args)
-    if ' ' in file_path:
-        file_path = file_path.replace(' ', r'\ ')
 
-    # only http proxy is currenlty supported
-    proxy = ProxyWrapper()
-    proxy_string = proxy.curl()
 
-    form_fields = {
-        'file': '@' + file_path,
+    post_data = {
         'channels': channel.identifier,
-        'token': channel.team.token,
     }
     if isinstance(channel, SlackThreadChannel):
-        form_fields['thread_ts'] = channel.parent_message.ts
+        post_data['thread_ts'] = channel.parent_message.ts
 
-    curl_options = ' '.join(
-        '-F {}={}'.format(*field) for field in form_fields.items())
-    command = 'curl {} {} {}'.format(curl_options, proxy_string, url)
-    w.hook_process(command, config.slack_timeout, '', '')
+    url = SlackRequest(channel.team.token, 'files.upload', post_data).request_string()
+    options = [
+        '-s',
+        '-Ffile=@{}'.format(file_path),
+        url
+    ]
+
+    proxy_string = ProxyWrapper().curl()
+    if proxy_string:
+        options.append(proxy_string)
+
+    options_hashtable = {'arg{}'.format(i + 1): arg for i, arg in enumerate(options)}
+    w.hook_process_hashtable('curl', options_hashtable, config.slack_timeout, '', '')
     return w.WEECHAT_RC_OK_EAT
 
 command_upload.completion = '%(filename)'
