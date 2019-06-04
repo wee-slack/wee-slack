@@ -2893,7 +2893,7 @@ def download_files(message_json, **kwargs):
     download_location = config.files_download_location
     if not download_location:
         return
-    download_location = download_location.replace("%h", w.info_get("weechat_dir", ""))
+    download_location = w.string_eval_path_home(download_location, {}, {}, {})
 
     if not os.path.exists(download_location):
         try:
