@@ -25,6 +25,11 @@ import random
 import socket
 import string
 
+# Prevent websocket from using numpy (it's an optional dependency). We do this
+# because numpy causes python (and thus weechat) to crash when it's reloaded.
+# See https://github.com/numpy/numpy/issues/11925
+sys.modules["numpy"] = None
+
 from websocket import ABNF, create_connection, WebSocketConnectionClosedException
 
 try:
