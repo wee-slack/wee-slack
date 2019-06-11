@@ -1775,13 +1775,9 @@ class SlackChannel(SlackChannelCommon):
                 else:
                     tagset = "channel"
 
-            if history_message and backlog:
-                if extra_tags is None:
-                    extra_tags = []
-                extra_tags.append("no_log")
-
+            no_log = history_message and backlog
             self_msg = tag_nick == self.team.nick
-            tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, extra_tags=extra_tags)
+            tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, no_log=no_log, extra_tags=extra_tags)
 
             try:
                 if (config.unhide_buffers_with_activity
@@ -1834,7 +1830,7 @@ class SlackChannel(SlackChannelCommon):
             if self.team.connected:
                 self.clear_messages()
             w.prnt_date_tags(self.channel_buffer, SlackTS().major,
-                    tag(backlog=True, extra_tags=['no_log']), '\tgetting channel history...')
+                    tag(backlog=True, no_log=True), '\tgetting channel history...')
             s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["history"], {"channel": self.identifier, "count": BACKLOG_SIZE}, team_hash=self.team.team_hash, channel_identifier=self.identifier, clear=True)
             if not slow_queue:
                 self.eventrouter.receive(s)
@@ -3493,7 +3489,7 @@ def format_nick(nick, previous_nick=None):
     return nick_prefix_color + nick_prefix + w.color("reset") + nick + nick_suffix_color + nick_suffix + w.color("reset")
 
 
-def tag(tagset=None, user=None, self_msg=False, backlog=False, extra_tags=None):
+def tag(tagset=None, user=None, self_msg=False, backlog=False, no_log=False, extra_tags=None):
     tagsets = {
         "team_info": {"no_highlight", "log3"},
         "team_message": {"irc_privmsg", "notify_message", "log1"},
@@ -3513,6 +3509,9 @@ def tag(tagset=None, user=None, self_msg=False, backlog=False, extra_tags=None):
             tags |= {"self_msg"}
         if backlog:
             tags |= {"logger_backlog"}
+    if no_log:
+        tags |= {"no_log"}
+        tags = {tag for tag in tags if not tag.startswith("log")}
     if extra_tags:
         tags |= set(extra_tags)
     return ",".join(tags)
