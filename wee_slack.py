@@ -2781,6 +2781,18 @@ def handle_usersprofileset(json, eventrouter, **kwargs):
         w.prnt('', 'ERROR: Failed to set profile: {}'.format(json['error']))
 
 
+def handle_conversationsinvite(json, eventrouter, **kwargs):
+    request_metadata = json['wee_slack_request_metadata']
+    team = eventrouter.teams[request_metadata.team_hash]
+    nicks = ', '.join(request_metadata.nicks)
+    if json['ok']:
+        channel = team.channels.get(json['channel']['id'], request_metadata.channel)
+        w.prnt(team.channel_buffer, 'Invited {} to {}'.format(nicks, channel.name))
+    else:
+        w.prnt(team.channel_buffer, 'ERROR: Couldn\'t invite {} to {}. Error: {}'
+                .format(nicks, request_metadata.channel.name, json['error']))
+
+
 def handle_chatcommand(json, eventrouter, **kwargs):
     request_metadata = json['wee_slack_request_metadata']
     team = eventrouter.teams[request_metadata.team_hash]
@@ -3528,6 +3540,41 @@ def tag(tagset=None, user=None, self_msg=False, backlog=False, no_log=False, ext
     return ",".join(tags)
 
 ###### New/converted command_ commands
+
+
+@slack_buffer_or_ignore
+@utf8_decode
+def invite_command_cb(data, current_buffer, args):
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    split_args = args.split()[1:]
+    if not split_args:
+        w.prnt('', 'Too few arguments for command "/invite" (help on command: /help invite)')
+        return w.WEECHAT_RC_OK_EAT
+
+    if split_args[-1].startswith("#") or split_args[-1].startswith(config.group_name_prefix):
+        nicks = split_args[:-1]
+        channel = team.channels.get(team.get_channel_map().get(split_args[-1]))
+        if not nicks or not channel:
+            w.prnt('', '{}: No such nick/channel'.format(split_args[-1]))
+            return w.WEECHAT_RC_OK_EAT
+    else:
+        nicks = split_args
+        channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+
+    all_users = team.get_username_map()
+    users = set()
+    for nick in nicks:
+        user = all_users.get(nick.lstrip('@'))
+        if not user:
+            w.prnt('', 'ERROR: Unknown user: {}'.format(nick))
+            return w.WEECHAT_RC_OK_EAT
+        users.add(user)
+
+    s = SlackRequest(team.token, "conversations.invite",
+            {"channel": channel.identifier, "users": ",".join(users)}, team_hash=team.team_hash,
+            channel=channel, nicks=nicks)
+    EVENTROUTER.receive(s)
+    return w.WEECHAT_RC_OK_EAT
 
 
 @slack_buffer_or_ignore
@@ -4396,6 +4443,7 @@ def setup_hooks():
     w.hook_command_run('/part', 'part_command_cb', '')
     w.hook_command_run('/topic', 'topic_command_cb', '')
     w.hook_command_run('/msg', 'msg_command_cb', '')
+    w.hook_command_run('/invite', 'invite_command_cb', '')
     w.hook_command_run("/input complete_next", "complete_next_cb", "")
     w.hook_command_run("/input set_unread", "set_unread_cb", "")
     w.hook_command_run("/input set_unread_current_buffer", "set_unread_current_buffer_cb", "")
