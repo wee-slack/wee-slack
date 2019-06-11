@@ -2781,6 +2781,20 @@ def handle_usersprofileset(json, eventrouter, **kwargs):
         w.prnt('', 'ERROR: Failed to set profile: {}'.format(json['error']))
 
 
+def handle_chatcommand(json, eventrouter, **kwargs):
+    request_metadata = json['wee_slack_request_metadata']
+    team = eventrouter.teams[request_metadata.team_hash]
+    command = '{} {}'.format(request_metadata.command, request_metadata.command_args).rstrip()
+    response = unfurl_refs(json['response']) if 'response' in json else ''
+    if json['ok']:
+        response_text = 'Response: {}'.format(response) if response else 'No response'
+        w.prnt(team.channel_buffer, 'Ran command "{}". {}' .format(command, response_text))
+    else:
+        response_text = '. Response: {}'.format(response) if response else ''
+        w.prnt(team.channel_buffer, 'ERROR: Couldn\'t run command "{}". Error: {}{}'
+                .format(command, json['error'], response_text))
+
+
 ###### New/converted process_ and subprocess_ methods
 def process_hello(message_json, eventrouter, **kwargs):
     kwargs['team'].subscribe_users_presence()
@@ -4026,7 +4040,8 @@ def command_slash(data, current_buffer, args):
 
     s = SlackRequest(team.token, "chat.command",
             {"command": command, "text": text, 'channel': channel.identifier},
-            team_hash=team.team_hash, channel_identifier=channel.identifier)
+            team_hash=team.team_hash, channel_identifier=channel.identifier,
+            command=command, command_args=text)
     EVENTROUTER.receive(s)
     return w.WEECHAT_RC_OK_EAT
 
