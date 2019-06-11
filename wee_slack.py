@@ -1000,6 +1000,7 @@ def nick_completion_cb(data, completion_item, current_buffer, completion):
     for member in members:
         user = current_channel.team.users.get(member)
         if user and not user.deleted:
+            w.hook_completion_list_add(completion, user.name, 1, w.WEECHAT_LIST_POS_SORT)
             w.hook_completion_list_add(completion, "@" + user.name, 1, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
