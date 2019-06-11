@@ -1766,6 +1766,9 @@ class SlackChannel(SlackChannelCommon):
         if self.channel_buffer:
             # backlog messages - we will update the read marker as we print these
             backlog = ts <= last_read
+            if not backlog:
+                self.new_messages = True
+
             if not tagset:
                 if self.type in ["im", "mpim"]:
                     tagset = "dm"
@@ -1779,9 +1782,6 @@ class SlackChannel(SlackChannelCommon):
 
             self_msg = tag_nick == self.team.nick
             tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, extra_tags=extra_tags)
-
-            if not self_msg:
-                self.new_messages = True
 
             try:
                 if (config.unhide_buffers_with_activity
