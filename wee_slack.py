@@ -3710,7 +3710,7 @@ def register_callback(data, command, return_code, out, err):
 @utf8_decode
 def msg_command_cb(data, current_buffer, args):
     aargs = args.split(None, 2)
-    who = aargs[1]
+    who = aargs[1].lstrip('@')
     if who == "*":
         who = EVENTROUTER.weechat_controller.buffers[current_buffer].slack_name
     else:
