@@ -2867,10 +2867,7 @@ def process_message(message_json, eventrouter, store=True, history_message=False
     subtype_functions = get_functions_with_prefix("subprocess_")
 
     if subtype in subtype_functions:
-        subtype_kwargs = {}
-        if message_json["subtype"] == "thread_message":
-            subtype_kwargs["history_message"] = history_message
-        subtype_functions[subtype](message_json, eventrouter, channel, team, **subtype_kwargs)
+        subtype_functions[subtype](message_json, eventrouter, channel, team, history_message)
     else:
         message = SlackMessage(message_json, team, channel)
         text = channel.render(message)
@@ -2979,18 +2976,18 @@ def subprocess_thread_message(message_json, eventrouter, channel, team, history_
     # channel.become_thread(message_json["item"]["ts"], message_json)
 
 
-def subprocess_channel_join(message_json, eventrouter, channel, team):
+def subprocess_channel_join(message_json, eventrouter, channel, team, history_message):
     prefix_join = w.prefix("join").strip()
     message = SlackMessage(message_json, team, channel, override_sender=prefix_join)
-    channel.buffer_prnt(prefix_join, channel.render(message), message_json["ts"], tagset='join', tag_nick=message.get_sender()[1])
+    channel.buffer_prnt(prefix_join, channel.render(message), message_json["ts"], tagset='join', tag_nick=message.get_sender()[1], history_message=history_message)
     channel.user_joined(message_json['user'])
     channel.store_message(message, team)
 
 
-def subprocess_channel_leave(message_json, eventrouter, channel, team):
+def subprocess_channel_leave(message_json, eventrouter, channel, team, history_message):
     prefix_leave = w.prefix("quit").strip()
     message = SlackMessage(message_json, team, channel, override_sender=prefix_leave)
-    channel.buffer_prnt(prefix_leave, channel.render(message), message_json["ts"], tagset='leave', tag_nick=message.get_sender()[1])
+    channel.buffer_prnt(prefix_leave, channel.render(message), message_json["ts"], tagset='leave', tag_nick=message.get_sender()[1], history_message=history_message)
     channel.user_left(message_json['user'])
     channel.store_message(message, team)
 
@@ -2999,7 +2996,7 @@ subprocess_group_join = subprocess_channel_join
 subprocess_group_leave = subprocess_channel_leave
 
 
-def subprocess_message_replied(message_json, eventrouter, channel, team):
+def subprocess_message_replied(message_json, eventrouter, channel, team, history_message):
     parent_ts = message_json["message"].get("thread_ts")
     parent_message = channel.messages.get(SlackTS(parent_ts))
     # Thread exists but is not open yet
@@ -3012,20 +3009,20 @@ def subprocess_message_replied(message_json, eventrouter, channel, team):
         elif any(team.myidentifier == r["user"] for r in message_json["message"]["replies"]):
             parent_message.notify_thread(action="participant", sender_id=last_message["user"])
 
-def subprocess_message_changed(message_json, eventrouter, channel, team):
+def subprocess_message_changed(message_json, eventrouter, channel, team, history_message):
     new_message = message_json.get("message")
     channel.change_message(new_message["ts"], message_json=new_message)
 
-def subprocess_message_deleted(message_json, eventrouter, channel, team):
+def subprocess_message_deleted(message_json, eventrouter, channel, team, history_message):
     message = "{}{}{}".format(
             w.color("red"), '(deleted)', w.color("reset"))
     channel.change_message(message_json["deleted_ts"], text=message)
 
 
-def subprocess_channel_topic(message_json, eventrouter, channel, team):
+def subprocess_channel_topic(message_json, eventrouter, channel, team, history_message):
     prefix_topic = w.prefix("network").strip()
     message = SlackMessage(message_json, team, channel, override_sender=prefix_topic)
-    channel.buffer_prnt(prefix_topic, channel.render(message), message_json["ts"], tagset="topic", tag_nick=message.get_sender()[1])
+    channel.buffer_prnt(prefix_topic, channel.render(message), message_json["ts"], tagset="topic", tag_nick=message.get_sender()[1], history_message=history_message)
     channel.set_topic(message_json["topic"])
     channel.store_message(message, team)
 
