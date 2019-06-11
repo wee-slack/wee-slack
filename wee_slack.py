@@ -991,7 +991,13 @@ def nick_completion_cb(data, completion_item, current_buffer, completion):
     if current_channel is None or current_channel.members is None:
         return w.WEECHAT_RC_OK
 
-    for member in current_channel.members:
+    base_command = w.hook_completion_get_string(completion, "base_command")
+    if base_command in ['invite', 'msg', 'query', 'whois']:
+        members = current_channel.team.members
+    else:
+        members = current_channel.members
+
+    for member in members:
         user = current_channel.team.users.get(member)
         if user and not user.deleted:
             w.hook_completion_list_add(completion, "@" + user.name, 1, w.WEECHAT_LIST_POS_SORT)
