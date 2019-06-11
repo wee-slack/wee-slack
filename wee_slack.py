@@ -3195,7 +3195,7 @@ def render_formatting(text):
     return text
 
 
-def linkify_text(message, team):
+def linkify_text(message, team, only_users=False):
     # The get_username_map function is a bit heavy, but this whole
     # function is only called on message send..
     usernames = team.get_username_map()
@@ -3223,7 +3223,7 @@ def linkify_text(message, team):
                 return "<@{}>".format(usernames[name])
             elif word in usergroups.keys():
                 return "<!subteam^{}|{}>".format(usergroups[word], word)
-        elif prefix == "#":
+        elif prefix == "#" and not only_users:
             if word in channels:
                 return "<#{}|{}>".format(channels[word], name)
         return word
@@ -4037,9 +4037,10 @@ def command_slash(data, current_buffer, args):
     split_args = args.split(' ', 1)
     command = split_args[0]
     text = split_args[1] if len(split_args) > 1 else ""
+    text_linkified = linkify_text(text, team, only_users=True)
 
     s = SlackRequest(team.token, "chat.command",
-            {"command": command, "text": text, 'channel': channel.identifier},
+            {"command": command, "text": text_linkified, 'channel': channel.identifier},
             team_hash=team.team_hash, channel_identifier=channel.identifier,
             command=command, command_args=text)
     EVENTROUTER.receive(s)
