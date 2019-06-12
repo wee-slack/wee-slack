@@ -51,7 +51,7 @@ sudo /usr/local/opt/python@2/bin/pip2 install websocket_client
 
 ##### FreeBSD
 ```
-pkg install py27-websocket-client py27-six
+pkg install py36-websocket-client
 ```
 
 ##### OpenBSD
