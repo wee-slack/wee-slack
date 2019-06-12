@@ -3476,7 +3476,11 @@ def modify_last_print_time(buffer_pointer, ts_minor):
 
 
 def nick_from_profile(profile, username):
-    nick = profile.get('display_name') or profile.get('real_name') or username
+    full_name = profile.get('real_name') or username
+    if config.use_full_names:
+        nick = full_name
+    else:
+        nick = profile.get('display_name') or full_name
     return nick.replace(' ', '')
 
 
@@ -4597,6 +4601,11 @@ class PluginConfig(object):
             desc='When activity occurs on a buffer, unhide it even if it was'
             ' previously hidden (whether by the user or by the'
             ' distracting_channels setting).'),
+        'use_full_names': Setting(
+            default='false',
+            desc='Use full names as the nicks for all users. When this is'
+            ' false (the default), display names will be used if set, with a'
+            ' fallback to the full name if display name is not set.'),
     }
 
     # Set missing settings to their defaults. Load non-missing settings from
