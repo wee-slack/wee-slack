@@ -36,7 +36,7 @@ Dependencies
 Setup
 -----
 
-#### 1. Install dependencies
+### 1. Install dependencies
 
 **Arch Linux**: `pacman -S python2-websocket-client`
 
@@ -53,7 +53,7 @@ Setup
 Note for **macOS**: If you installed weechat with Homebrew, you will have to locate the python runtime environment used.
 If `--with-python@2` was used, you should use: `sudo /usr/local/opt/python@2/bin/pip2 install websocket_client`
 
-#### 2. Download wee\_slack.py to ~/.weechat/python
+### 2. Download wee\_slack.py to ~/.weechat/python
 
 If you don't want wee\_slack to start automatically when weechat starts, you can skip the last command.
 
@@ -64,14 +64,14 @@ curl -O https://raw.githubusercontent.com/wee-slack/wee-slack/master/wee_slack.p
 ln -s ../wee_slack.py autoload
 ```
 
-#### 3. Start WeeChat
+### 3. Start WeeChat
 ```
 weechat
 ```
 
 **NOTE:** If weechat is already running, the script can be loaded using `/python load wee_slack.py`.
 
-#### 4. Add your Slack API key(s)
+### 4. Add your Slack API key(s)
 
 Log in to Slack:
 
@@ -110,7 +110,7 @@ If you don't want to store your API token in plaintext you can use the secure fe
 /set plugins.var.python.slack.slack_api_token ${sec.data.slack_token}
 ```
 
-##### Optional: Connecting to multiple teams
+#### Optional: Connecting to multiple teams
 
 You can run the register command multiple times to connect to multiple teams.
 If you set the token yourself, you can use the above command with multiple
@@ -178,7 +178,7 @@ To send a command as a normal message instead of performing the action, prefix i
  s/a/b/
 ```
 
-#### Threads
+### Threads
 
 Start a new thread on the most recent message The number indicates which message in the buffer to reply to, in reverse time order:
 ```
@@ -201,7 +201,7 @@ Label a thread with a memorable name. The above command will open a channel call
 ```
 _Note: labels do not persist once a thread buffer is closed_
 
-#### Emoji tab completions
+### Emoji tab completions
 
 To enable tab completion of emojis, copy or symlink the `weemoji.json` file to
 your weechat config directory (e.g. `~/.weechat`). If doing this after starting
@@ -213,14 +213,14 @@ e.g. like this:
 /set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(emoji)"
 ```
 
-#### User group tab completions
+### User group tab completions
 To enable tab completions for usergroups append `|%(usergroups)`
 ```
 /set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(usergroups)"
 ```
 The usergroup will appear in the same formats as nicks like the following `@marketing` where marketing is the handle
 
-#### Cursor and mouse mode
+### Cursor and mouse mode
 
 The cursor mode and mouse mode can be used to interact with older messages, for editing, deleting, reacting and replying to a message. Mouse mode can be toggled by pressing `Alt`+`m` and cursor mode can be entered by running `/cursor` (see `/help cursor`).
 
@@ -270,7 +270,7 @@ Show channel name in hotlist after activity
 ```
 
 Development
------------------
+-----------
 
 To run the tests, create a virtualenv and pip install from the `requirements.txt`. Then `pytest` to run them locally.
 
@@ -287,6 +287,6 @@ Dump the JSON responses in `/tmp/weeslack-debug/`. Requires a script reload.
 ```
 
 Support
---------------
+-------
 
 wee-slack is provided without any warranty whatsoever, but you are welcome to ask questions in #wee-slack on freenode.
