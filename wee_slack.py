@@ -3476,7 +3476,7 @@ def modify_last_print_time(buffer_pointer, ts_minor):
 
 
 def nick_from_profile(profile, username):
-    nick = profile.get('display_name') or username
+    nick = profile.get('display_name') or profile.get('real_name') or username
     return nick.replace(' ', '')
 
 

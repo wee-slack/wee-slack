@@ -738,6 +738,8 @@
                 "avatar_hash": "gfd0ce7a168d",
                 "real_name": "First Testuser",
                 "real_name_normalized": "First Testuser",
+                "display_name": "alice",
+                "display_name_normalized": "alice",
                 "email": "redacted1@gmail.com",
                 "image_24": "https:\/\/secure.gravatar.com\/avatar\/fd0ce7a168dc2235d21c53c2c1cfee0c.jpg?s=24&d=https%3A%2F%2Fa.slack-edge.com%2F66f9%2Fimg%2Favatars%2Fava_0024-24.png",
                 "image_32": "https:\/\/secure.gravatar.com\/avatar\/fd0ce7a168dc2235d21c53c2c1cfee0c.jpg?s=32&d=https%3A%2F%2Fa.slack-edge.com%2F66f9%2Fimg%2Favatars%2Fava_0024-32.png",
