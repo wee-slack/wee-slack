@@ -38,25 +38,22 @@ Setup
 
 #### 1. Install dependencies
 
-##### OSX and Linux
-```
-pip install websocket-client
-```
+Arch Linux: `pacman -S python2-websocket-client`
 
-Note: If you installed weechat with Homebrew, you will have to locate the python runtime environment used.
+Debian/Ubuntu: `apt install weechat-python python-websocket`
+
+Fedora: `dnf install python3-websocket-client`
+
+FreeBSD: `pkg install py36-websocket-client`
+
+OpenBSD: `pkg_add weechat-python py-websocket-client`
+
+Other: `pip install websocket-client`
+
+Note for macOS: If you installed weechat with Homebrew, you will have to locate the python runtime environment used.
 If `--with-python@2` was used, you should use:
 ```
 sudo /usr/local/opt/python@2/bin/pip2 install websocket_client
-```
-
-##### FreeBSD
-```
-pkg install py36-websocket-client
-```
-
-##### OpenBSD
-```
-pkg_add py-websocket-client weechat-python
 ```
 
 #### 2. Download wee\_slack.py to ~/.weechat/python
