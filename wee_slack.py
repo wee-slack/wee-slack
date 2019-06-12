@@ -2080,10 +2080,11 @@ class SlackMPDMChannel(SlackChannel):
     We change the name to look less terrible in weechat.
     """
 
-    def __init__(self, eventrouter, team_users, **kwargs):
+    def __init__(self, eventrouter, team_users, myidentifier, **kwargs):
         kwargs["name"] = ','.join(
                 getattr(team_users.get(user_id), 'name', user_id)
                 for user_id in kwargs["members"]
+                if user_id != myidentifier
         )
         super(SlackMPDMChannel, self).__init__(eventrouter, **kwargs)
         self.type = "mpim"
@@ -2627,7 +2628,7 @@ def handle_rtmstart(login_data, eventrouter):
 
         for item in login_data["groups"]:
             if item["is_mpim"]:
-                channels[item["id"]] = SlackMPDMChannel(eventrouter, users, **item)
+                channels[item["id"]] = SlackMPDMChannel(eventrouter, users, login_data["self"]["id"], **item)
             else:
                 channels[item["id"]] = SlackGroupChannel(eventrouter, **item)
 
@@ -3107,7 +3108,7 @@ def process_im_close(message_json, eventrouter, **kwargs):
 def process_group_joined(message_json, eventrouter, **kwargs):
     item = message_json["channel"]
     if item["name"].startswith("mpdm-"):
-        c = SlackMPDMChannel(eventrouter, kwargs["team"].users, team=kwargs["team"], **item)
+        c = SlackMPDMChannel(eventrouter, kwargs["team"].users, kwargs["team"].myidentifier, team=kwargs["team"], **item)
     else:
         c = SlackGroupChannel(eventrouter, team=kwargs["team"], **item)
     kwargs['team'].channels[item["id"]] = c
