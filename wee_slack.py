@@ -2988,8 +2988,17 @@ def subprocess_channel_leave(message_json, eventrouter, channel, team, history_m
     channel.store_message(message, team)
 
 
+def subprocess_channel_topic(message_json, eventrouter, channel, team, history_message):
+    prefix_topic = w.prefix("network").strip()
+    message = SlackMessage(message_json, team, channel, override_sender=prefix_topic)
+    channel.buffer_prnt(prefix_topic, channel.render(message), message_json["ts"], tagset="topic", tag_nick=message.get_sender()[1], history_message=history_message)
+    channel.set_topic(message_json["topic"])
+    channel.store_message(message, team)
+
+
 subprocess_group_join = subprocess_channel_join
 subprocess_group_leave = subprocess_channel_leave
+subprocess_group_topic = subprocess_channel_topic
 
 
 def subprocess_message_replied(message_json, eventrouter, channel, team, history_message):
@@ -3013,14 +3022,6 @@ def subprocess_message_deleted(message_json, eventrouter, channel, team, history
     message = "{}{}{}".format(
             w.color("red"), '(deleted)', w.color("reset"))
     channel.change_message(message_json["deleted_ts"], text=message)
-
-
-def subprocess_channel_topic(message_json, eventrouter, channel, team, history_message):
-    prefix_topic = w.prefix("network").strip()
-    message = SlackMessage(message_json, team, channel, override_sender=prefix_topic)
-    channel.buffer_prnt(prefix_topic, channel.render(message), message_json["ts"], tagset="topic", tag_nick=message.get_sender()[1], history_message=history_message)
-    channel.set_topic(message_json["topic"])
-    channel.store_message(message, team)
 
 
 def process_reply(message_json, eventrouter, **kwargs):
@@ -3581,7 +3582,7 @@ def topic_command_cb(data, current_buffer, command):
         w.prnt(channel.channel_buffer,
                 'Topic for {} is "{}"'.format(channel.name, channel.render_topic()))
     else:
-        s = SlackRequest(team.token, "channels.setTopic", {"channel": channel.identifier,
+        s = SlackRequest(team.token, "conversations.setTopic", {"channel": channel.identifier,
                 "topic": linkify_text(topic, team)}, team_hash=team.team_hash)
         EVENTROUTER.receive(s)
     return w.WEECHAT_RC_OK_EAT
