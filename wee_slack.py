@@ -2081,11 +2081,11 @@ class SlackMPDMChannel(SlackChannel):
     """
 
     def __init__(self, eventrouter, team_users, myidentifier, **kwargs):
-        kwargs["name"] = ','.join(
+        kwargs["name"] = ','.join(sorted(
                 getattr(team_users.get(user_id), 'name', user_id)
                 for user_id in kwargs["members"]
                 if user_id != myidentifier
-        )
+        ))
         super(SlackMPDMChannel, self).__init__(eventrouter, **kwargs)
         self.type = "mpim"
 
