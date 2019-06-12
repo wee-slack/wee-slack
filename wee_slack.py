@@ -2310,6 +2310,7 @@ class SlackUser(object):
             setattr(self, key, value)
 
         self.name = nick_from_profile(self.profile, kwargs["name"])
+        self.username = kwargs["name"]
         self.update_color()
 
     def __repr__(self):
@@ -3604,14 +3605,25 @@ def whois_command_cb(data, current_buffer, command):
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
     u = team.users.get(team.get_username_map().get(user))
     if u:
+        def print_profile(field):
+            value = u.profile.get(field)
+            if value:
+                team.buffer_prnt("[{}]: {}: {}".format(user, field, value))
+
         team.buffer_prnt("[{}]: {}".format(user, u.real_name))
         status_emoji = u.profile.get("status_emoji", "")
         status_text = u.profile.get("status_text", "")
         if status_emoji or status_text:
             team.buffer_prnt("[{}]: {} {}".format(user, status_emoji, status_text))
-        team.buffer_prnt("[{}]: Title: {}".format(user, u.profile.get('title', '')))
-        team.buffer_prnt("[{}]: Email: {}".format(user, u.profile.get('email', '')))
-        team.buffer_prnt("[{}]: Phone: {}".format(user, u.profile.get('phone', '')))
+
+        team.buffer_prnt("[{}]: username: {}".format(user, u.username))
+        team.buffer_prnt("[{}]: id: {}".format(user, u.identifier))
+
+        print_profile('title')
+        print_profile('email')
+        print_profile('phone')
+        print_profile('skype')
+        print_profile('fields')
     else:
         team.buffer_prnt("[{}]: No such user".format(user))
     return w.WEECHAT_RC_OK_EAT
