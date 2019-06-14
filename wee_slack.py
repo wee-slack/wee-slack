@@ -4154,8 +4154,10 @@ def away_command_cb(data, current_buffer, args):
     all_servers, message = re.match('^/away( -all)? ?(.*)', args).groups()
     if all_servers:
         team_buffers = [team.channel_buffer for team in EVENTROUTER.teams.values()]
-    else:
+    elif current_buffer in EVENTROUTER.weechat_controller.buffers:
         team_buffers = [current_buffer]
+    else:
+        return w.WEECHAT_RC_OK
 
     for team_buffer in team_buffers:
         if message:
