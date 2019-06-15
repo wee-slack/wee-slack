@@ -3623,7 +3623,6 @@ def whois_command_cb(data, current_buffer, command):
         print_profile('email')
         print_profile('phone')
         print_profile('skype')
-        print_profile('fields')
     else:
         team.buffer_prnt("[{}]: No such user".format(user))
     return w.WEECHAT_RC_OK_EAT
