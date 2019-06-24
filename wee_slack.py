@@ -8,7 +8,7 @@ from __future__ import print_function, unicode_literals
 from collections import OrderedDict
 from functools import wraps
 from io import StringIO
-from itertools import islice, count
+from itertools import islice, count, chain
 
 import errno
 import textwrap
@@ -62,6 +62,7 @@ SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
 BACKLOG_SIZE = 200
 SCROLLBACK_SIZE = 500
+PRESENCE_SUBSCRIBE_SIZE = 750
 
 RECORD_DIR = "/tmp/weeslack-debug"
 
@@ -1422,11 +1423,37 @@ class SlackTeam(object):
                 c.update_nicklist(user.id)
 
     def subscribe_users_presence(self):
-        # FIXME: There is a limitation in the API to the size of the
-        # json we can send.
-        # We should try to be smarter to fetch the users whom we want to
-        # subscribe to.
-        users = list(self.users.keys())[0:750]
+        """
+        Subscribe to the presence of users in this order (restricted by the
+        API JSON size limit):
+
+        1. Current user
+        2. Users in DMs
+        3. Users in MPDMs
+        4. Users in private groups
+        5. Users in public channels
+        """
+        dm_users, mpdm_users, group_users, channel_users = set(), set(), set(), set()
+        for channel in self.channels.values():
+            if getattr(channel, "is_open", False):
+                if channel.type == "im":
+                    dm_users.add(channel.user)
+                elif channel.type == "mpim":
+                    mpdm_users.update(channel.members)
+                elif channel.type == "group":
+                    group_users.update(channel.members)
+            elif getattr(channel, "is_member", False):
+                if channel.type == "channel":
+                    channel_users.update(channel.members)
+
+        users, all_users = [self.myidentifier], {self.myidentifier}
+        for user in chain(dm_users, mpdm_users, group_users, channel_users):
+            if len(users) >= PRESENCE_SUBSCRIBE_SIZE:
+                break
+            if user not in all_users:
+                users.append(user)
+                all_users.add(user)
+
         self.send_to_websocket({
             "type": "presence_sub",
             "ids": users,
