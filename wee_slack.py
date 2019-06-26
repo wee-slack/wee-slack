@@ -1423,15 +1423,26 @@ class SlackTeam(object):
                 c.update_nicklist(user.id)
 
     def subscribe_users_presence(self):
+        if len(self.users) <= PRESENCE_SUBSCRIBE_SIZE:
+            users = list(self.users.keys())
+        else:
+            users = self.get_users_by_presence_order()
+
+        self.send_to_websocket({
+            "type": "presence_sub",
+            "ids": users,
+        }, expect_reply=False)
+
+    def get_users_by_presence_order(self):
         """
-        Subscribe to the presence of users in this order (restricted by the
-        API JSON size limit):
+        Get users in this order (restricted by the API JSON size limit):
 
         1. Current user
         2. Users in DMs
         3. Users in MPDMs
         4. Users in private groups
-        5. Users in public channels
+        5. Users in public channels (excluding the "general" channel)
+        6. Users in the "general" channel
         """
         dm_users, mpdm_users, group_users, channel_users = set(), set(), set(), set()
         for channel in self.channels.values():
@@ -1443,21 +1454,17 @@ class SlackTeam(object):
                 elif channel.type == "group":
                     group_users.update(channel.members)
             elif getattr(channel, "is_member", False):
-                if channel.type == "channel":
+                if channel.type == "channel" and not channel.is_general:
                     channel_users.update(channel.members)
 
-        users, all_users = [self.myidentifier], {self.myidentifier}
-        for user in chain(dm_users, mpdm_users, group_users, channel_users):
-            if len(users) >= PRESENCE_SUBSCRIBE_SIZE:
-                break
-            if user not in all_users:
-                users.append(user)
-                all_users.add(user)
-
-        self.send_to_websocket({
-            "type": "presence_sub",
-            "ids": users,
-        }, expect_reply=False)
+        return list(islice(chain(
+            {self.myidentifier},
+            dm_users,
+            mpdm_users,
+            group_users,
+            channel_users,
+            self.users.keys(),
+        ), PRESENCE_SUBSCRIBE_SIZE))
 
 
 class SlackChannelCommon(object):
