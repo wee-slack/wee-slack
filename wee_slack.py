@@ -8,7 +8,7 @@ from __future__ import print_function, unicode_literals
 from collections import OrderedDict
 from functools import wraps
 from io import StringIO
-from itertools import islice, count, chain
+from itertools import islice, count
 
 import errno
 import textwrap
@@ -1442,29 +1442,26 @@ class SlackTeam(object):
         3. Users in MPDMs
         4. Users in private groups
         5. Users in public channels (excluding the "general" channel)
-        6. Users in the "general" channel
         """
-        dm_users, mpdm_users, group_users, channel_users = set(), set(), set(), set()
+        users = {
+            channel_type: set() for channel_type in
+            ("im", "mpim", "group", "channel", "shared")
+        }
         for channel in self.channels.values():
-            if getattr(channel, "is_open", False):
-                if channel.type == "im":
-                    dm_users.add(channel.user)
-                elif channel.type == "mpim":
-                    mpdm_users.update(channel.members)
-                elif channel.type == "group":
-                    group_users.update(channel.members)
-            elif getattr(channel, "is_member", False):
-                if channel.type == "channel" and not channel.is_general:
-                    channel_users.update(channel.members)
+            if (
+                getattr(channel, "is_open", False)
+                or getattr(channel, "is_member", False)
+                and not getattr(channel, "is_general", False)
+            ):
+                users[channel.type].update(channel.get_members())
 
-        return list(islice(chain(
-            {self.myidentifier},
-            dm_users,
-            mpdm_users,
-            group_users,
-            channel_users,
-            self.users.keys(),
-        ), PRESENCE_SUBSCRIBE_SIZE))
+        user_set = {self.myidentifier}
+        for channel_type in ("im", "mpim", "group", "channel"):
+            for user in users[channel_type]:
+                if len(user_set) >= PRESENCE_SUBSCRIBE_SIZE:
+                    return list(user_set)
+                user_set.add(user)
+        return list(user_set)
 
 
 class SlackChannelCommon(object):
