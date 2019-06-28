@@ -1448,10 +1448,8 @@ class SlackTeam(object):
             ("im", "mpim", "group", "channel", "shared")
         }
         for channel in self.channels.values():
-            if (
-                getattr(channel, "is_open", False)
-                or getattr(channel, "is_member", False)
-                and not getattr(channel, "is_general", False)
+            if getattr(channel, "is_open", False) or (
+                getattr(channel, "is_member", False) and not channel.is_general
             ):
                 users[channel.type].update(channel.get_members())
 
