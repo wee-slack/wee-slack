@@ -3336,7 +3336,7 @@ def unwrap_attachments(message_json, text_before):
             fields = attachment.get("fields")
             if fields:
                 for f in fields:
-                    if f['title'] != '':
+                    if f.get('title'):
                         t.append('%s %s' % (f['title'], f['value'],))
                     else:
                         t.append(f['value'])
