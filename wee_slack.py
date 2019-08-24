@@ -2766,15 +2766,13 @@ def handle_usersinfo(user_json, eventrouter, **kwargs):
         channel.slack_name = user.name
         channel.set_topic(create_user_status_string(user.profile))
 
+
 def handle_usergroupsuserslist(users_json, eventrouter, **kwargs):
     request_metadata = users_json['wee_slack_request_metadata']
     team = eventrouter.teams[request_metadata.team_hash]
-    user_identifers = users_json['users']
-
-    team.buffer_prnt("Users in @{}:".format(request_metadata.usergroup_handle))
-    for user_identifier in user_identifers:
-        user = team.users[user_identifier]
-        team.buffer_prnt("    {:<25}({})".format(user.name, user.presence))
+    header = 'Users in @{}'.format(request_metadata.usergroup_handle)
+    users = [team.users[key] for key in users_json['users']]
+    return print_team_items_info(team, header, users, lambda user: user.presence)
 
 
 def handle_usersprofileset(json, eventrouter, **kwargs):
@@ -3726,6 +3724,16 @@ def msg_command_cb(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 
+def print_team_items_info(team, header, items, extra_info_function):
+    team.buffer_prnt("{}:".format(header))
+    if items:
+        max_name_length = max(len(item.name) for item in items)
+        for item in sorted(items, key=lambda item: item.name.lower()):
+            extra_info = extra_info_function(item)
+            team.buffer_prnt("    {:<{}}({})".format(item.name, max_name_length + 2, extra_info))
+    return w.WEECHAT_RC_OK_EAT
+
+
 @slack_buffer_required
 @utf8_decode
 def command_channels(data, current_buffer, args):
@@ -3734,17 +3742,14 @@ def command_channels(data, current_buffer, args):
     List the channels in the current team.
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
-
-    team.buffer_prnt("Channels:")
-    for channel in team.channels.values():
+    def extra_info_function(channel):
         if channel.active:
-            status = "member"
+            return "member"
         elif getattr(channel, "is_archived", None):
-            status = "archived"
+            return "archived"
         else:
-            status = "not a member"
-        team.buffer_prnt("    {:<40}({})".format(channel.name, status))
-    return w.WEECHAT_RC_OK_EAT
+            return "not a member"
+    return print_team_items_info(team, "Channels", team.channels.values(), extra_info_function)
 
 
 @slack_buffer_required
@@ -3755,11 +3760,7 @@ def command_users(data, current_buffer, args):
     List the users in the current team.
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
-
-    team.buffer_prnt("Users:")
-    for user in team.users.values():
-        team.buffer_prnt("    {:<25}({})".format(user.name, user.presence))
-    return w.WEECHAT_RC_OK_EAT
+    return print_team_items_info(team, "Users", team.users.values(), lambda user: user.presence)
 
 
 @slack_buffer_required
@@ -3779,9 +3780,8 @@ def command_usergroups(data, current_buffer, args):
         s = SlackRequest(team.token, "usergroups.users.list", { "usergroup": subteam.identifier }, team_hash=team.team_hash, usergroup_handle=handle)
         EVENTROUTER.receive(s)
     elif not handle:
-        team.buffer_prnt("Usergroups:")
-        for subteam in team.subteams.values():
-            team.buffer_prnt("    {:<25}(@{})".format(subteam.name, subteam.handle))
+        extra_info_function = lambda usergroup: '@{}'.format(usergroup.handle)
+        return print_team_items_info(team, "Usergroups", team.subteams.values(), extra_info_function)
     else:
         w.prnt('', 'ERROR: Unknown usergroup handle: {}'.format(handle))
         return w.WEECHAT_RC_ERROR
