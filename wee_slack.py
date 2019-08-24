@@ -1061,7 +1061,7 @@ def usergroups_completion_cb(data, completion_item, current_buffer, completion):
         return w.WEECHAT_RC_OK
 
     for subteam in current_channel.team.subteams.values():
-        w.hook_completion_list_add(completion, "@" + subteam.handle, 1, w.WEECHAT_LIST_POS_SORT)
+        w.hook_completion_list_add(completion, subteam.handle, 1, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
 
@@ -1175,7 +1175,7 @@ class SlackSubteam(object):
    """
 
    def __init__(self, originating_team_id, **kwargs):
-       self.handle = kwargs['handle']
+       self.handle = '@{}'.format(kwargs['handle'])
        self.identifier = kwargs['id']
        self.name = kwargs['name']
        self.description = kwargs.get('description')
@@ -2770,7 +2770,7 @@ def handle_usersinfo(user_json, eventrouter, **kwargs):
 def handle_usergroupsuserslist(users_json, eventrouter, **kwargs):
     request_metadata = users_json['wee_slack_request_metadata']
     team = eventrouter.teams[request_metadata.team_hash]
-    header = 'Users in @{}'.format(request_metadata.usergroup_handle)
+    header = 'Users in {}'.format(request_metadata.usergroup_handle)
     users = [team.users[key] for key in users_json['users']]
     return print_team_items_info(team, header, users, lambda user: user.presence)
 
@@ -3155,7 +3155,7 @@ def process_subteam_updated(subteam_json, eventrouter, **kwargs):
     team.subteams[subteam_json['subteam']['id']] = new_subteam_info
 
     if config.notify_usergroup_handle_updated and current_subteam_info.handle != new_subteam_info.handle:
-        message = 'User group @{old_handle} has updated its handle to @{new_handle} in team {team}.'.format(
+        message = 'User group {old_handle} has updated its handle to {new_handle} in team {team}.'.format(
             name=current_subteam_info.handle, handle=new_subteam_info.handle, team=team.preferred_name)
         team.buffer_prnt(message, message=True)
 
@@ -3204,8 +3204,8 @@ def linkify_text(message, team):
             named = targets.groups()
             if named[1] in ["group", "channel", "here"]:
                 message[item[0]] = "<!{}>{}".format(named[1], named[2])
-            elif named[1] in usergroups.keys():
-                message[item[0]] = "<!subteam^{}|@{}>{}".format(usergroups[named[1]], named[1], named[2])
+            elif named[0] + named[1] in usergroups.keys():
+                message[item[0]] = "<!subteam^{}|@{}>{}".format(usergroups[named[0] + named[1]], named[1], named[2])
             else:
                 try:
                     if usernames[named[1]]:
@@ -3376,7 +3376,7 @@ def resolve_ref(ref):
             _, subteam_id = ref.split('^')
             subteam = team.subteams.get(subteam_id)
             if subteam:
-                return '@{}'.format(subteam.handle)
+                return subteam.handle
 
     # Something else, just return as-is
     return ref
@@ -3773,19 +3773,17 @@ def command_usergroups(data, current_buffer, args):
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
     usergroups = team.generate_usergroup_map()
-    handle = args[1:] if args and args.startswith("@") else args
+    usergroup_key = usergroups.get(args)
 
-    if handle and handle in usergroups.keys():
-        subteam = team.subteams[usergroups[handle]]
-        s = SlackRequest(team.token, "usergroups.users.list", { "usergroup": subteam.identifier }, team_hash=team.team_hash, usergroup_handle=handle)
+    if usergroup_key:
+        s = SlackRequest(team.token, "usergroups.users.list",
+                {"usergroup": usergroup_key}, team_hash=team.team_hash, usergroup_handle=args)
         EVENTROUTER.receive(s)
-    elif not handle:
-        extra_info_function = lambda usergroup: '@{}'.format(usergroup.handle)
-        return print_team_items_info(team, "Usergroups", team.subteams.values(), extra_info_function)
-    else:
-        w.prnt('', 'ERROR: Unknown usergroup handle: {}'.format(handle))
+    elif args:
+        w.prnt('', 'ERROR: Unknown usergroup handle: {}'.format(args))
         return w.WEECHAT_RC_ERROR
-
+    else:
+        return print_team_items_info(team, "Usergroups", team.subteams.values(), lambda subteam: subteam.handle)
     return w.WEECHAT_RC_OK_EAT
 
 command_usergroups.completion = '%(usergroups)'

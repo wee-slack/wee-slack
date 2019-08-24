@@ -13,6 +13,6 @@ def test_process_subteam_self_updated(realish_eventrouter, team):
     realish_eventrouter.handle_next()
     subteam = team.subteams['TGX0ALBK3']
 
-    assert data['subteam']['handle'] == subteam.handle
+    assert '@{}'.format(data['subteam']['handle']) == subteam.handle
     assert data['subteam']['description'] == subteam.description
     assert data['subteam']['name'] == subteam.name

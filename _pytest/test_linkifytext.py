@@ -40,9 +40,9 @@ def test_linkifytext_names_with_apostrophe(team):
 def test_linkifytext_names_with_subgroup_notification(team):
     subteam = team.subteams['TGX0ALBK3']
     message = 'This is a message for a subteam'
-    text = linkify_text('@{}: {}'.format(subteam.handle, message), team)
+    text = linkify_text('{}: {}'.format(subteam.handle, message), team)
 
-    assert text == '<!subteam^{}|@{}>: {}'.format(subteam.identifier, subteam.handle, message)
+    assert text == '<!subteam^{}|{}>: {}'.format(subteam.identifier, subteam.handle, message)
 
 def test_linkifytext_at_channel(team):
     text = linkify_text('@channel: my test message', team)
