@@ -49,6 +49,11 @@ def test_linkifytext_at_channel(team):
 
     assert text == '<!channel>: my test message'
 
+def test_linkifytext_at_everyone(team):
+    text = linkify_text('@everyone: my test message', team)
+
+    assert text == '<!everyone>: my test message'
+
 def test_linkifytext_at_group(team):
     text = linkify_text('@group: my test message', team)
 

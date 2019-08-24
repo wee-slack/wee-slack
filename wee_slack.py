@@ -3203,7 +3203,7 @@ def linkify_text(message, team):
         targets = re.match(r'^\s*([@#])([\w\(\)\'.-]+)(\W*)', item[1], re.UNICODE)
         if targets and targets.groups()[0] == '@':
             named = targets.groups()
-            if named[1] in ["group", "channel", "here"]:
+            if named[1] in ["channel", "everyone", "group", "here"]:
                 message[item[0]] = "<!{}>{}".format(named[1], named[2])
             elif named[0] + named[1] in usergroups.keys():
                 message[item[0]] = "<!subteam^{}|@{}>{}".format(usergroups[named[0] + named[1]], named[1], named[2])
