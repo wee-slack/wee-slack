@@ -3737,7 +3737,13 @@ def command_channels(data, current_buffer, args):
 
     team.buffer_prnt("Channels:")
     for channel in team.channels.values():
-        team.buffer_prnt("    {}".format(channel.name))
+        if channel.active:
+            status = "member"
+        elif getattr(channel, "is_archived", None):
+            status = "archived"
+        else:
+            status = "not a member"
+        team.buffer_prnt("    {:<40}({})".format(channel.name, status))
     return w.WEECHAT_RC_OK_EAT
 
 
