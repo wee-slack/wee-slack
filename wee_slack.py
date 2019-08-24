@@ -2771,7 +2771,7 @@ def handle_usergroupsuserslist(users_json, eventrouter, **kwargs):
     team = eventrouter.teams[request_metadata.team_hash]
     user_identifers = users_json['users']
 
-    team.buffer_prnt("Users:")
+    team.buffer_prnt("Users in @{}:".format(request_metadata.usergroup_handle))
     for user_identifier in user_identifers:
         user = team.users[user_identifier]
         team.buffer_prnt("    {:<25}({})".format(user.name, user.presence))
@@ -3776,7 +3776,7 @@ def command_usergroups(data, current_buffer, args):
 
     if handle and handle in usergroups.keys():
         subteam = team.subteams[usergroups[handle]]
-        s = SlackRequest(team.token, "usergroups.users.list", { "usergroup": subteam.identifier }, team_hash=team.team_hash)
+        s = SlackRequest(team.token, "usergroups.users.list", { "usergroup": subteam.identifier }, team_hash=team.team_hash, usergroup_handle=handle)
         EVENTROUTER.receive(s)
     elif not handle:
         team.buffer_prnt("Usergroups:")
