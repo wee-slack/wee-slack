@@ -1687,7 +1687,7 @@ class SlackChannel(SlackChannelCommon):
         if self.muted and config.muted_channels_activity == "personal_highlights":
             return personal_highlights
         else:
-            return personal_highlights.union({"!here", "!channel", "!everyone"})
+            return personal_highlights.union({"@channel", "@everyone", "@group", "@here"})
 
     def set_highlights(self):
         # highlight my own name and any set highlights
@@ -3363,7 +3363,9 @@ def unwrap_files(message_json, text_before):
 
 def resolve_ref(ref):
     for team in EVENTROUTER.teams.values():
-        if ref.startswith('@U') or ref.startswith('@W'):
+        if ref in ['!channel', '!everyone', '!group', '!here']:
+            return ref.replace('!', '@')
+        elif ref.startswith('@U') or ref.startswith('@W'):
             user = team.users.get(ref[1:])
             if user:
                 suffix = config.external_user_suffix if user.is_external else ''

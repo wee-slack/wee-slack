@@ -10,6 +10,22 @@ import pytest
         'output': "foo",
     },
     {
+        'input': "<!channel>",
+        'output': "@channel",
+    },
+    {
+        'input': "<!everyone>",
+        'output': "@everyone",
+    },
+    {
+        'input': "<!group>",
+        'output': "@group",
+    },
+    {
+        'input': "<!here>",
+        'output': "@here",
+    },
+    {
         'input': "<@U407ABLLW|@othernick>: foo",
         'output': "@alice: foo",
         'ignore_alt_text': True,
