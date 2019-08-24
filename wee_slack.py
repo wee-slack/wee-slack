@@ -3187,7 +3187,7 @@ def linkify_text(message, team):
     usernames = team.get_username_map()
     channels = team.get_channel_map()
     usergroups = team.generate_usergroup_map()
-    message = (message
+    message_escaped = (message
         # Replace IRC formatting chars with Slack formatting chars.
         .replace('\x02', '*')
         .replace('\x1D', '_')
@@ -3197,32 +3197,25 @@ def linkify_text(message, team):
         # See https://api.slack.com/docs/message-formatting for details.
         .replace('&', '&amp;')
         .replace('<', '&lt;')
-        .replace('>', '&gt;')
-        .split(' '))
-    for item in enumerate(message):
-        targets = re.match(r'^\s*([@#])([\w\(\)\'.-]+)(\W*)', item[1], re.UNICODE)
-        if targets and targets.groups()[0] == '@':
-            named = targets.groups()
-            if named[1] in ["channel", "everyone", "group", "here"]:
-                message[item[0]] = "<!{}>{}".format(named[1], named[2])
-            elif named[0] + named[1] in usergroups.keys():
-                message[item[0]] = "<!subteam^{}|@{}>{}".format(usergroups[named[0] + named[1]], named[1], named[2])
-            else:
-                try:
-                    if usernames[named[1]]:
-                        message[item[0]] = "<@{}>{}".format(usernames[named[1]], named[2])
-                except:
-                    message[item[0]] = "@{}{}".format(named[1], named[2])
-        if targets and targets.groups()[0] == '#':
-            named = targets.groups()
-            try:
-                if channels[named[0] + named[1]]:
-                    message[item[0]] = "<#{}|{}>{}".format(channels[named[0] + named[1]], named[1], named[2])
-            except:
-                message[item[0]] = "#{}{}".format(named[1], named[2])
+        .replace('>', '&gt;'))
 
-    # dbg(message)
-    return " ".join(message)
+    def linkify_word(match):
+        word = match.group(0)
+        prefix, name = match.groups()
+        if prefix == "@":
+            if name in ["channel", "everyone", "group", "here"]:
+                return "<!{}>".format(name)
+            elif name in usernames:
+                return "<@{}>".format(usernames[name])
+            elif word in usergroups.keys():
+                return "<!subteam^{}|{}>".format(usergroups[word], word)
+        elif prefix == "#":
+            if word in channels:
+                return "<#{}|{}>".format(channels[word], name)
+        return word
+
+    linkify_regex = r'(?:^|(?<=\s))([@#])([\w\(\)\'.-]+)'
+    return re.sub(linkify_regex, linkify_word, message_escaped, re.UNICODE)
 
 
 def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):

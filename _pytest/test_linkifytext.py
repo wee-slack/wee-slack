@@ -86,3 +86,8 @@ def test_linkifytext_not_dm(team, channel_dm):
     text = linkify_text('#{}: my test message'.format(channel_dm.name), team)
 
     assert text == '#{}: my test message'.format(channel_dm.name)
+
+def test_linkifytext_not_mpdm(team, channel_mpdm):
+    text = linkify_text('#{}: my test message'.format(channel_mpdm.name), team)
+
+    assert text == '#{}: my test message'.format(channel_mpdm.name)
