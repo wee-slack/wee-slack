@@ -1060,8 +1060,9 @@ def usergroups_completion_cb(data, completion_item, current_buffer, completion):
     if current_channel is None:
         return w.WEECHAT_RC_OK
 
-    for subteam in current_channel.team.subteams.values():
-        w.hook_completion_list_add(completion, subteam.handle, 1, w.WEECHAT_LIST_POS_SORT)
+    subteam_handles = [subteam.handle for subteam in current_channel.team.subteams.values()]
+    for group in subteam_handles + ["@channel", "@everyone", "@here"]:
+        w.hook_completion_list_add(completion, group, 1, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
 
