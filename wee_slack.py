@@ -3243,9 +3243,9 @@ def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
             if ignore_alt_text:
                 display_text = resolve_ref(id)
             else:
-                if id.startswith("#C"):
+                if id.startswith("#"):
                     display_text = "#{}".format(ref.split('|')[1])
-                elif id.startswith("@U"):
+                elif id.startswith("@"):
                     display_text = ref.split('|')[1]
                 elif id.startswith("!subteam"):
                     if ref.split('|')[1].startswith('@'):
@@ -3354,12 +3354,12 @@ def resolve_ref(ref):
     for team in EVENTROUTER.teams.values():
         if ref in ['!channel', '!everyone', '!group', '!here']:
             return ref.replace('!', '@')
-        elif ref.startswith('@U') or ref.startswith('@W'):
+        elif ref.startswith('@'):
             user = team.users.get(ref[1:])
             if user:
                 suffix = config.external_user_suffix if user.is_external else ''
                 return '@{}{}'.format(user.name, suffix)
-        elif ref.startswith('#C'):
+        elif ref.startswith('#'):
             channel = team.channels.get(ref[1:])
             if channel:
                 return channel.name
