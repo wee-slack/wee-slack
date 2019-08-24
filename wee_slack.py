@@ -3242,44 +3242,39 @@ def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
     if auto_link_display is None:
         auto_link_display = config.unfurl_auto_link_display
 
-    matches = re.findall(r"(<[@#!]?(?:[^>]*)>)", text)
-    for m in matches:
-        # Replace them with human readable strings
-        text = text.replace(
-            m, unfurl_ref(m[1:-1], ignore_alt_text, auto_link_display))
-    return text
-
-
-def unfurl_ref(ref, ignore_alt_text, auto_link_display):
-    id = ref.split('|')[0]
-    display_text = ref
-    if ref.find('|') > -1:
-        if ignore_alt_text:
-            display_text = resolve_ref(id)
-        else:
-            if id.startswith("#C"):
-                display_text = "#{}".format(ref.split('|')[1])
-            elif id.startswith("@U"):
-                display_text = ref.split('|')[1]
-            elif id.startswith("!subteam"):
-                if ref.split('|')[1].startswith('@'):
-                    handle = ref.split('|')[1][1:]
-                else:
-                    handle = ref.split('|')[1]
-                display_text = '@{}'.format(handle)
+    def unfurl_ref(match):
+        ref = match.group(1)
+        id = ref.split('|')[0]
+        display_text = ref
+        if ref.find('|') > -1:
+            if ignore_alt_text:
+                display_text = resolve_ref(id)
             else:
-                url, desc = ref.split('|', 1)
-                match_url = r"^\w+:(//)?{}$".format(re.escape(desc))
-                url_matches_desc = re.match(match_url, url)
-                if url_matches_desc and auto_link_display == "text":
-                    display_text = desc
-                elif url_matches_desc and auto_link_display == "url":
-                    display_text = url
+                if id.startswith("#C"):
+                    display_text = "#{}".format(ref.split('|')[1])
+                elif id.startswith("@U"):
+                    display_text = ref.split('|')[1]
+                elif id.startswith("!subteam"):
+                    if ref.split('|')[1].startswith('@'):
+                        handle = ref.split('|')[1][1:]
+                    else:
+                        handle = ref.split('|')[1]
+                    display_text = '@{}'.format(handle)
                 else:
-                    display_text = "{} ({})".format(url, desc)
-    else:
-        display_text = resolve_ref(ref)
-    return display_text
+                    url, desc = ref.split('|', 1)
+                    match_url = r"^\w+:(//)?{}$".format(re.escape(desc))
+                    url_matches_desc = re.match(match_url, url)
+                    if url_matches_desc and auto_link_display == "text":
+                        display_text = desc
+                    elif url_matches_desc and auto_link_display == "url":
+                        display_text = url
+                    else:
+                        display_text = "{} ({})".format(url, desc)
+        else:
+            display_text = resolve_ref(ref)
+        return display_text
+
+    return re.sub(r"<([@#!]?[^>]*)>", unfurl_ref, text)
 
 
 def unhtmlescape(text):
