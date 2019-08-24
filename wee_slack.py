@@ -1320,7 +1320,7 @@ class SlackTeam(object):
                 return channel
 
     def get_channel_map(self):
-        return {v.slack_name: k for k, v in self.channels.items()}
+        return {v.name: k for k, v in self.channels.items()}
 
     def get_username_map(self):
         return {v.name: k for k, v in self.users.items()}
@@ -3215,8 +3215,8 @@ def linkify_text(message, team):
         if targets and targets.groups()[0] == '#':
             named = targets.groups()
             try:
-                if channels[named[1]]:
-                    message[item[0]] = "<#{}|{}>{}".format(channels[named[1]], named[1], named[2])
+                if channels[named[0] + named[1]]:
+                    message[item[0]] = "<#{}|{}>{}".format(channels[named[0] + named[1]], named[1], named[2])
             except:
                 message[item[0]] = "#{}{}".format(named[1], named[2])
 
@@ -3549,7 +3549,7 @@ def parse_topic_command(command):
 
     if args:
         if args[0].startswith('#'):
-            channel_name = args[0][1:]
+            channel_name = args[0]
             topic = args[1:]
         else:
             topic = args
@@ -3580,7 +3580,7 @@ def topic_command_cb(data, current_buffer, command):
         channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
 
     if not channel:
-        w.prnt(team.channel_buffer, "#{}: No such channel".format(channel_name))
+        w.prnt(team.channel_buffer, "{}: No such channel".format(channel_name))
         return w.WEECHAT_RC_OK_EAT
 
     if topic is None:
@@ -3710,7 +3710,7 @@ def msg_command_cb(data, current_buffer, args):
     aargs = args.split(None, 2)
     who = aargs[1].lstrip('@')
     if who == "*":
-        who = EVENTROUTER.weechat_controller.buffers[current_buffer].slack_name
+        who = EVENTROUTER.weechat_controller.buffers[current_buffer].name
     else:
         join_query_command_cb(data, current_buffer, '/query ' + who)
 
@@ -3816,7 +3816,7 @@ def join_query_command_cb(data, current_buffer, args):
     query = split_args[1]
 
     # Try finding the channel by name
-    channel = team.channels.get(team.get_channel_map().get(query.lstrip('#')))
+    channel = team.channels.get(team.get_channel_map().get(query))
 
     # If the channel doesn't exist, try finding a DM or MPDM instead
     if not channel:

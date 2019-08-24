@@ -57,7 +57,7 @@ def team(realish_eventrouter):
 
 @pytest.fixture
 def channel_general(team):
-    return team.channels[team.get_channel_map()['general']]
+    return team.channels[team.get_channel_map()['#general']]
 
 @pytest.fixture
 def user_alice(team):
