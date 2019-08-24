@@ -227,7 +227,7 @@ class WeechatWrapper(object):
 
 class ProxyWrapper(object):
     def __init__(self):
-        self.proxy_name = w.config_string(weechat.config_get('weechat.network.proxy_curl'))
+        self.proxy_name = w.config_string(w.config_get('weechat.network.proxy_curl'))
         self.proxy_string = ""
         self.proxy_type = ""
         self.proxy_address = ""
@@ -238,12 +238,12 @@ class ProxyWrapper(object):
 
         if self.proxy_name:
             self.proxy_string = "weechat.proxy.{}".format(self.proxy_name)
-            self.proxy_type = w.config_string(weechat.config_get("{}.type".format(self.proxy_string)))
+            self.proxy_type = w.config_string(w.config_get("{}.type".format(self.proxy_string)))
             if self.proxy_type == "http":
-                self.proxy_address = w.config_string(weechat.config_get("{}.address".format(self.proxy_string)))
-                self.proxy_port = w.config_integer(weechat.config_get("{}.port".format(self.proxy_string)))
-                self.proxy_user = w.config_string(weechat.config_get("{}.username".format(self.proxy_string)))
-                self.proxy_password = w.config_string(weechat.config_get("{}.password".format(self.proxy_string)))
+                self.proxy_address = w.config_string(w.config_get("{}.address".format(self.proxy_string)))
+                self.proxy_port = w.config_integer(w.config_get("{}.port".format(self.proxy_string)))
+                self.proxy_user = w.config_string(w.config_get("{}.username".format(self.proxy_string)))
+                self.proxy_password = w.config_string(w.config_get("{}.password".format(self.proxy_string)))
                 self.has_proxy = True
             else:
                 w.prnt("", "\nWarning: weechat.network.proxy_curl is set to {} type (name : {}, conf string : {}). Only HTTP proxy is supported.\n\n".format(self.proxy_type, self.proxy_name, self.proxy_string))
@@ -2917,7 +2917,7 @@ def download_files(message_json, **kwargs):
         for fileout in fileout_iter(os.path.join(download_location, filename)):
             if os.path.isfile(fileout):
                 continue
-            weechat.hook_process_hashtable(
+            w.hook_process_hashtable(
                 "url:" + f['url_private'],
                 {
                     'file_out': fileout,
