@@ -49,8 +49,35 @@ def test_linkifytext_at_channel(team):
 
     assert text == '<!channel>: my test message'
 
+def test_linkifytext_at_group(team):
+    text = linkify_text('@group: my test message', team)
+
+    assert text == '<!group>: my test message'
+
+def test_linkifytext_at_here(team):
+    text = linkify_text('@here: my test message', team)
+
+    assert text == '<!here>: my test message'
+
 def test_linkifytext_channel(team, channel_general):
     channel_name = re.sub(r'^[#&]', '', channel_general.name)
     text = linkify_text('#{}: my test message'.format(channel_name), team)
 
     assert text == '<#{}|{}>: my test message'.format(channel_general.id, channel_name)
+
+def test_linkifytext_not_private_using_hash(team, channel_private):
+    channel_name = re.sub(r'^[#&]', '', channel_private.name)
+    text = linkify_text('#{}: my test message'.format(channel_name), team)
+
+    assert text == '#{}: my test message'.format(channel_name)
+
+def test_linkifytext_not_private_using_ampersand(team, channel_private):
+    channel_name = re.sub(r'^[#&]', '', channel_private.name)
+    text = linkify_text('&{}: my test message'.format(channel_name), team)
+
+    assert text == '&amp;{}: my test message'.format(channel_name)
+
+def test_linkifytext_not_dm(team, channel_dm):
+    text = linkify_text('#{}: my test message'.format(channel_dm.name), team)
+
+    assert text == '#{}: my test message'.format(channel_dm.name)

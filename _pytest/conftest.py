@@ -60,6 +60,18 @@ def channel_general(team):
     return team.channels[team.get_channel_map()['#general']]
 
 @pytest.fixture
+def channel_private(team):
+    return team.channels[team.get_channel_map()['&some-private-channel']]
+
+@pytest.fixture
+def channel_dm(team):
+    return team.channels[team.get_channel_map()['alice']]
+
+@pytest.fixture
+def channel_mpdm(team):
+    return team.channels[team.get_channel_map()['CharlesTestuser,alice']]
+
+@pytest.fixture
 def user_alice(team):
     return team.users[team.get_username_map()['alice']]
 
