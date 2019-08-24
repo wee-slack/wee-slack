@@ -3736,8 +3736,8 @@ def command_channels(data, current_buffer, args):
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
 
     team.buffer_prnt("Channels:")
-    for channel in team.get_channel_map():
-        team.buffer_prnt("    {}".format(channel))
+    for channel in team.channels.values():
+        team.buffer_prnt("    {}".format(channel.name))
     return w.WEECHAT_RC_OK_EAT
 
 
