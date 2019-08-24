@@ -3537,6 +3537,8 @@ def part_command_cb(data, current_buffer, args):
         if channel in cmap:
             buffer_ptr = team.channels[cmap[channel]].channel_buffer
             e.weechat_controller.unregister_buffer(buffer_ptr, update_remote=True, close_buffer=True)
+        else:
+            w.prnt(team.channel_buffer, "{}: No such channel".format(channel))
     else:
         e.weechat_controller.unregister_buffer(current_buffer, update_remote=True, close_buffer=True)
     return w.WEECHAT_RC_OK_EAT
