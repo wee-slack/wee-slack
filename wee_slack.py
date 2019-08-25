@@ -2784,7 +2784,7 @@ def handle_usergroupsuserslist(users_json, eventrouter, **kwargs):
     team = eventrouter.teams[request_metadata.team_hash]
     header = 'Users in {}'.format(request_metadata.usergroup_handle)
     users = [team.users[key] for key in users_json['users']]
-    return print_team_items_info(team, header, users, lambda user: user.presence)
+    return print_users_info(team, header, users)
 
 
 def handle_usersprofileset(json, eventrouter, **kwargs):
@@ -3804,6 +3804,13 @@ def print_team_items_info(team, header, items, extra_info_function):
     return w.WEECHAT_RC_OK_EAT
 
 
+def print_users_info(team, header, users):
+    def extra_info_function(user):
+        external_text = ", external" if user.is_external else ""
+        return user.presence + external_text
+    return print_team_items_info(team, header, users, extra_info_function)
+
+
 @slack_buffer_required
 @utf8_decode
 def command_channels(data, current_buffer, args):
@@ -3831,7 +3838,7 @@ def command_users(data, current_buffer, args):
     List the users in the current team.
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
-    return print_team_items_info(team, "Users", team.users.values(), lambda user: user.presence)
+    return print_users_info(team, "Users", team.users.values())
 
 
 @slack_buffer_required
