@@ -3812,6 +3812,7 @@ def command_channels(data, current_buffer, args):
     List the channels in the current team.
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    channels = [channel for channel in team.channels.values() if channel.type not in ['im', 'mpim']]
     def extra_info_function(channel):
         if channel.active:
             return "member"
@@ -3819,7 +3820,7 @@ def command_channels(data, current_buffer, args):
             return "archived"
         else:
             return "not a member"
-    return print_team_items_info(team, "Channels", team.channels.values(), extra_info_function)
+    return print_team_items_info(team, "Channels", channels, extra_info_function)
 
 
 @slack_buffer_required
