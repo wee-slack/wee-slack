@@ -1182,12 +1182,13 @@ class SlackSubteam(object):
    Represents a slack group or subteam
    """
 
-   def __init__(self, originating_team_id, **kwargs):
+   def __init__(self, originating_team_id, is_member, **kwargs):
        self.handle = '@{}'.format(kwargs['handle'])
        self.identifier = kwargs['id']
        self.name = kwargs['name']
        self.description = kwargs.get('description')
        self.team_id = originating_team_id
+       self.is_member = is_member
 
    def __repr__(self):
        return "Name:{} Identifier:{}".format(self.name, self.identifier)
@@ -1687,15 +1688,15 @@ class SlackChannel(SlackChannelCommon):
     def set_related_server(self, team):
         self.team = team
 
-    def mentions(self):
-        return {'@' + self.team.nick, self.team.myidentifier}
-
     def highlights(self):
-        personal_highlights = self.team.highlight_words.union(self.mentions())
+        nick_highlights = {'@' + self.team.nick, self.team.myidentifier}
+        subteam_highlights = {subteam.handle for subteam in self.team.subteams.values()
+                if subteam.is_member}
+        highlights = nick_highlights | subteam_highlights | self.team.highlight_words
         if self.muted and config.muted_channels_activity == "personal_highlights":
-            return personal_highlights
+            return highlights
         else:
-            return personal_highlights.union({"@channel", "@everyone", "@group", "@here"})
+            return highlights | {"@channel", "@everyone", "@group", "@here"}
 
     def set_highlights(self):
         # highlight my own name and any set highlights
@@ -2486,7 +2487,8 @@ class SlackMessage(object):
                     r["users"].remove(user)
 
     def has_mention(self):
-        return w.string_has_highlight(self.message_json.get('text'), ",".join(self.channel.mentions()))
+        return w.string_has_highlight(unfurl_refs(self.message_json.get('text')),
+                ",".join(self.channel.highlights()))
 
     def notify_thread(self, action=None, sender_id=None):
         if config.auto_open_threads:
@@ -2624,7 +2626,9 @@ def handle_rtmstart(login_data, eventrouter):
 
         subteams = {}
         for item in login_data["subteams"]["all"]:
-            subteams[item['id']] = SlackSubteam(login_data['team']['id'], **item)
+            is_member = item['id'] in login_data["subteams"]["self"]
+            subteams[item['id']] = SlackSubteam(
+                    login_data['team']['id'], is_member=is_member, **item)
 
         channels = {}
         for item in login_data["channels"]:
@@ -3185,8 +3189,13 @@ def process_subteam_created(subteam_json, eventrouter, **kwargs):
 def process_subteam_updated(subteam_json, eventrouter, **kwargs):
     team = kwargs['team']
     current_subteam_info = team.subteams[subteam_json['subteam']['id']]
-    new_subteam_info = SlackSubteam(team.identifier, **subteam_json['subteam'])
+    is_member = team.myidentifier in subteam_json['subteam']['users']
+    new_subteam_info = SlackSubteam(team.identifier, is_member=is_member, **subteam_json['subteam'])
     team.subteams[subteam_json['subteam']['id']] = new_subteam_info
+
+    if current_subteam_info.is_member != new_subteam_info.is_member:
+        for channel in team.channels.values():
+            channel.set_highlights()
 
     if config.notify_usergroup_handle_updated and current_subteam_info.handle != new_subteam_info.handle:
         message = 'User group {old_handle} has updated its handle to {new_handle} in team {team}.'.format(
@@ -3844,7 +3853,10 @@ def command_usergroups(data, current_buffer, args):
         w.prnt('', 'ERROR: Unknown usergroup handle: {}'.format(args))
         return w.WEECHAT_RC_ERROR
     else:
-        return print_team_items_info(team, "Usergroups", team.subteams.values(), lambda subteam: subteam.handle)
+        def extra_info_function(subteam):
+            is_member = 'member' if subteam.is_member else 'not a member'
+            return '{}, {}'.format(subteam.handle, is_member)
+        return print_team_items_info(team, "Usergroups", team.subteams.values(), extra_info_function)
     return w.WEECHAT_RC_OK_EAT
 
 command_usergroups.completion = '%(usergroups)'
