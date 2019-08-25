@@ -3182,14 +3182,15 @@ def process_reaction_removed(message_json, eventrouter, **kwargs):
 def process_subteam_created(subteam_json, eventrouter, **kwargs):
     team = kwargs['team']
     subteam_json_info = subteam_json['subteam']
-    subteam = SlackSubteam(team.identifier, **subteam_json_info)
+    is_member = team.myidentifier in subteam_json_info.get('users', [])
+    subteam = SlackSubteam(team.identifier, is_member=is_member, **subteam_json_info)
     team.subteams[subteam_json_info['id']] = subteam
 
 
 def process_subteam_updated(subteam_json, eventrouter, **kwargs):
     team = kwargs['team']
     current_subteam_info = team.subteams[subteam_json['subteam']['id']]
-    is_member = team.myidentifier in subteam_json['subteam']['users']
+    is_member = team.myidentifier in subteam_json['subteam'].get('users', [])
     new_subteam_info = SlackSubteam(team.identifier, is_member=is_member, **subteam_json['subteam'])
     team.subteams[subteam_json['subteam']['id']] = new_subteam_info
 
