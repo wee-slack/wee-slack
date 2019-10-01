@@ -269,6 +269,46 @@ Show channel name in hotlist after activity
 /set weechat.look.hotlist_names_level 14
 ```
 
+FAQ
+---
+
+### How do I send messages with multiple lines?
+
+You have to install a script to be able to send multiple lines, e.g. the
+`multiline.pl` script with: `/script install multiline.pl`
+
+By default it will wait for one second after you press enter, and if you type
+another character in that period, it will insert the character on a newline,
+and if you don't type anything it will send the message. If you rather want to
+use a separate key to insert a newline, and have the enter key send the message
+immediately, you can run these commands:
+
+```
+/set plugins.var.perl.multiline.magic_paste_only on
+/key bind meta-ctrl-M /input insert \n
+```
+
+This will bind meta-enter (which is usually alt-enter) to insert the newline.
+Replace `meta-ctrl-M` with something else if you want to use a different key
+combination.
+
+The `multiline.pl` script will also let you edit pasted text which incudes
+newlines before you send the message. If this is not working, you may try to
+run the commands below. At least in the `kitty` terminal, it won't work by
+default, but should work after running these commands:
+
+```
+/set plugins.var.perl.multiline.weechat_paste_fix "off"
+/key bind ctrl-J /input magic_enter
+```
+
+You may also want to disable weechats paste prompt, since that is not necessary
+when using `multiline.pl`:
+
+```
+/set weechat.look.paste_max_lines -1
+```
+
 Development
 -----------
 
