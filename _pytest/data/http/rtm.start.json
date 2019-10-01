@@ -311,6 +311,7 @@
             "is_org_shared": false,
             "has_pins": false,
             "is_member": true,
+            "is_private": false,
             "last_read": "1485976236.000019",
             "latest": {
                 "type": "message",
@@ -398,6 +399,7 @@
             "is_org_shared": false,
             "has_pins": false,
             "is_member": false,
+            "is_private": false,
             "previous_names": []
         },
         {
@@ -412,6 +414,7 @@
             "is_org_shared": false,
             "has_pins": false,
             "is_member": true,
+            "is_private": false,
             "last_read": "1485969592.000002",
             "latest": {
                 "user": "U4096CBHC",
@@ -451,9 +454,50 @@
             "is_org_shared": false,
             "has_pins": false,
             "is_member": false,
+            "is_private": false,
             "previous_names": [
                 "some-channel2"
             ]
+        },
+        {
+          "id": "CNZQKUU9M",
+          "name": "channel-created-as-public-then-converted-to-private",
+          "is_channel": true,
+          "is_group": false,
+          "is_im": false,
+          "created": 1569952842,
+          "is_archived": false,
+          "is_general": false,
+          "unlinked": 0,
+          "name_normalized": "channel-created-as-public-then-converted-to-private",
+          "is_shared": false,
+          "parent_conversation": null,
+          "creator": "U407ABLLW",
+          "is_ext_shared": false,
+          "is_org_shared": false,
+          "shared_team_ids": [
+            "T3YS5EAL9"
+          ],
+          "pending_shared": [],
+          "pending_connected_team_ids": [],
+          "is_pending_ext_shared": false,
+          "has_pins": false,
+          "is_member": true,
+          "is_private": true,
+          "is_mpim": false,
+          "last_read": "1569952877.000300",
+          "is_open": true,
+          "topic": {
+            "value": "",
+            "creator": "",
+            "last_set": 0
+          },
+          "purpose": {
+            "value": "",
+            "creator": "",
+            "last_set": 0
+          },
+          "priority": 0
         }
     ],
     "groups": [

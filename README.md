@@ -309,6 +309,22 @@ when using `multiline.pl`:
 /set weechat.look.paste_max_lines -1
 ```
 
+Known issues
+------------
+
+Not all issues are listed here (see
+[issues](https://github.com/wee-slack/wee-slack/issues) for all), but these are
+some noteworthy:
+
+- For channels initially created as a public channel, but later converted to a private channel:
+  - Which messages that has been read is not synced to Slack.
+  - If the option `background_load_all_history` is false, the channel will not
+    be shown as unread when wee-slack loads, even if there are unread messages.
+    Messages which arrive after wee-slack has loaded however will mark the
+    channel as unread.
+  - The option `thread_messages_in_channel` is only working for messages which
+    arrive after the channel history has been loaded.
+
 Development
 -----------
 
