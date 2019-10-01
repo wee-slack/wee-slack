@@ -39,9 +39,9 @@ Setup
 
 ### 1. Install dependencies
 
-**Arch Linux**: `pacman -S python2-websocket-client`
+**Arch Linux**: `pacman -S python-websocket-client`
 
-**Debian/Ubuntu**: `apt install weechat-python python-websocket`
+**Debian/Ubuntu**: `apt install weechat-python python-websocket`. If using weechat 2.6 or newer, run `apt install weechat-python python3-websocket` instead.
 
 **Fedora**: `dnf install python3-websocket-client`
 
