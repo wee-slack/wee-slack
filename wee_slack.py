@@ -2900,7 +2900,7 @@ def process_message(message_json, eventrouter, store=True, history_message=False
     if SlackTS(message_json["ts"]) in channel.messages:
         return
 
-    if "thread_ts" in message_json and "reply_count" not in message_json:
+    if "thread_ts" in message_json and "reply_count" not in message_json and "subtype" not in message_json:
         message_json["subtype"] = "thread_message"
 
     subtype = message_json.get("subtype")
@@ -2969,6 +2969,10 @@ def download_files(message_json, **kwargs):
             break
 
 
+def subprocess_thread_broadcast(message_json, eventrouter, channel, team, history_message):
+    subprocess_thread_message(message_json, eventrouter, channel, team, history_message)
+
+
 def subprocess_thread_message(message_json, eventrouter, channel, team, history_message):
     # print ("THREADED: " + str(message_json))
     parent_ts = message_json.get('thread_ts')
@@ -2987,14 +2991,15 @@ def subprocess_thread_message(message_json, eventrouter, channel, team, history_
             elif message.ts > channel.last_read and message.has_mention():
                 parent_message.notify_thread(action="mention", sender_id=message_json["user"])
 
-            if config.thread_messages_in_channel:
+            if config.thread_messages_in_channel or message_json["subtype"] == "thread_broadcast":
+                thread_tag = "thread_broadcast" if message_json["subtype"] == "thread_broadcast" else "thread_message"
                 channel.buffer_prnt(
                     message.sender,
                     channel.render(message),
                     message.ts,
                     tag_nick=message.sender_plain,
                     history_message=history_message,
-                    extra_tags=["thread_message"],
+                    extra_tags=[thread_tag],
                 )
 
 #    channel = channels.find(message_json["channel"])
