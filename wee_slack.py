@@ -3864,6 +3864,19 @@ def print_users_info(team, header, users):
 
 @slack_buffer_required
 @utf8_decode
+def command_teams(data, current_buffer, args):
+    """
+    /slack teams
+    List the connected Slack teams.
+    """
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    teams = EVENTROUTER.teams.values()
+    extra_info_function = lambda team: "token: {}...".format(team.token[:15])
+    return print_team_items_info(team, "Slack teams", teams, extra_info_function)
+
+
+@slack_buffer_required
+@utf8_decode
 def command_channels(data, current_buffer, args):
     """
     /slack channels
