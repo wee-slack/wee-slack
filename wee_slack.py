@@ -2428,6 +2428,9 @@ class SlackMessage(object):
         else:
             text = ""
 
+        if "blocks" in self.message_json:
+            text += unfurl_blocks(self.message_json)
+
         if self.message_json.get('mrkdwn', True):
             text = render_formatting(text)
 
@@ -3309,6 +3312,20 @@ def linkify_text(message, team, only_users=False):
 
     linkify_regex = r'(?:^|(?<=\s))([@#])([\w\(\)\'.-]+)'
     return re.sub(linkify_regex, linkify_word, message_escaped, re.UNICODE)
+
+
+def unfurl_blocks(message_json):
+    block_text = []
+    for block in message_json["blocks"]:
+        if block["type"] == "section":
+            block_text.append(block["text"]["text"]) #TODO: markdown, etc. parse?
+        if block["type"] == "actions":
+            block_text.append("|".join(i["text"]["text"] for i in block["elements"]))
+        if block["type"] == "divider":
+            block_text.append("\n")
+        if block["type"] == "context":
+            block_text.append("|".join(i["text"] for i in block["elements"]))
+    return "\n".join(block_text)
 
 
 def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
