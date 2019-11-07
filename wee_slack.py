@@ -3323,6 +3323,8 @@ def unfurl_blocks(message_json):
                 if "fields" in block: block_text += unfurl_texts(block["fields"])
             elif block["type"] == "actions":
                 block_text.append("|".join(i["text"]["text"] for i in block["elements"]))
+            elif block["type"] == "call":
+                block_text.append(". Join via ").append(block["call"]["v1"]["join_url"])
             elif block["type"] == "divider":
                 block_text.append("\n")
             elif block["type"] == "context":
