@@ -3317,15 +3317,28 @@ def linkify_text(message, team, only_users=False):
 def unfurl_blocks(message_json):
     block_text = []
     for block in message_json["blocks"]:
-        if block["type"] == "section":
-            block_text.append(block["text"]["text"]) #TODO: markdown, etc. parse?
-        if block["type"] == "actions":
-            block_text.append("|".join(i["text"]["text"] for i in block["elements"]))
-        if block["type"] == "divider":
-            block_text.append("\n")
-        if block["type"] == "context":
-            block_text.append("|".join(i["text"] for i in block["elements"]))
+        try:
+            if block["type"] == "section":
+                if "text" in block: block_text.append(block["text"]["text"])
+                if "fields" in block: block_text += unfurl_texts(block["fields"])
+            elif block["type"] == "actions":
+                block_text.append("|".join(i["text"]["text"] for i in block["elements"]))
+            elif block["type"] == "divider":
+                block_text.append("\n")
+            elif block["type"] == "context":
+                block_text.append("|".join(i["text"] for i in block["elements"]))
+            else:
+                block_text.append(json.dumps(block))
+        except KeyError as e:
+            block_text.append(json.dumps(block) + repr(e))
     return "\n".join(block_text)
+
+
+def unfurl_texts(texts):
+    texts_ret = []
+    for text in texts:
+        texts_ret.append(text["text"]) #TODO: markdown, etc. parse?
+    return texts_ret
 
 
 def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
