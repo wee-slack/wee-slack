@@ -47,7 +47,7 @@ Setup
 
 **FreeBSD**: `pkg install py36-websocket-client`
 
-**OpenBSD**: `pkg_add weechat-python py-websocket-client`
+**OpenBSD**: `pkg_add weechat-python py3-websocket-client`
 
 **Other**: `pip install websocket-client`
 
