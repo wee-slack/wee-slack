@@ -432,6 +432,8 @@ class EventRouter(object):
                 team.set_disconnected()
             if not team.connected:
                 team.connect()
+                for c in team.channels.keys():
+                    team.channels[c].check_should_open()
                 dbg("reconnecting {}".format(team))
 
     def receive_ws_callback(self, team_hash):
