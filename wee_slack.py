@@ -3379,7 +3379,7 @@ def unfurl_blocks(message_json):
     for block in message_json["blocks"]:
         try:
             if block["type"] == "section":
-                if "text" in block: block_text.append(block["text"]["text"])
+                if "text" in block: block_text += unfurl_texts([block["text"]])
                 if "fields" in block: block_text += unfurl_texts(block["fields"])
             elif block["type"] == "actions":
                 block_text.append("|".join(i["text"]["text"] for i in block["elements"]))
@@ -3389,7 +3389,7 @@ def unfurl_blocks(message_json):
                 block_text.append("|".join(i["text"] for i in block["elements"]))
             else:
                 block_text.append(json.dumps(block))
-        except KeyError as e:
+        except Exception as e:
             block_text.append(json.dumps(block) + repr(e))
     return "\n".join(block_text)
 
@@ -3397,7 +3397,11 @@ def unfurl_blocks(message_json):
 def unfurl_texts(texts):
     texts_ret = []
     for text in texts:
-        texts_ret.append(text["text"]) #TODO: markdown, etc. parse?
+        if text["type"] == "mrkdwn":
+            ftext = render_formatting(text["text"])
+        else:
+            ftext = text["text"]
+        texts_ret.append(ftext)
     return texts_ret
 
 
