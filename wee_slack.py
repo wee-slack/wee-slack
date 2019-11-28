@@ -3390,9 +3390,9 @@ def unfurl_blocks(message_json):
             elif block["type"] == "context":
                 block_text.append("|".join(i["text"] for i in block["elements"]))
             else:
-                block_text.append(json.dumps(block))
+                raise NotImplementedError("Block type not implemented", block["type"])
         except Exception as e:
-            block_text.append(json.dumps(block) + repr(e))
+            dbg("Failed to unfurl block ({}): {}".format(repr(e), json.dumps(block)), level=4)
     return "\n".join(block_text)
 
 
