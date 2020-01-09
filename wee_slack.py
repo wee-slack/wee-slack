@@ -3384,11 +3384,13 @@ def unfurl_blocks(message_json):
             elif block["type"] == "actions":
                 block_text.append("|".join(i["text"]["text"] for i in block["elements"]))
             elif block["type"] == "call":
-                block_text.append(". Join via ").append(block["call"]["v1"]["join_url"])
+                block_text.append(". Join via " + block["call"]["v1"]["join_url"])
             elif block["type"] == "divider":
                 block_text.append("\n")
             elif block["type"] == "context":
                 block_text.append("|".join(i["text"] for i in block["elements"]))
+            elif block["type"] == "rich_text":
+                continue
             else:
                 block_text.append(' {}<<Unsupported block type "{}">>{}'.format(w.color(config.color_deleted), block["type"], w.color("reset")))
                 dbg('Unsupported block: "{}"'.format(json.dumps(block)), level=4)
