@@ -1,5 +1,46 @@
 # Changelog
 
+## 2.4.0 (2020-01-16)
+
+- Support regex flags i, m and s for message edits.
+- Allow %h (weechat home) replacement in download_location (PR #690).
+- Render "by invitation from" before reactions.
+- The command `/slack status` now prints the status if no arguments are given. Pass `-delete` to unset the status (fixes #574).
+- Add completion for channel names (fixes #235).
+- Add completion for all command arguments.
+- Allow completion of emoji with a prefix (fixes #580).
+- For `/slack upload` remove escape characters from path if file is not found (fixes #360).
+- For `/slack upload` resolve relative paths.
+- Expose more information in /whois (PR #700).
+- Add option `use_full_names` to only use full names (fixes #100).
+- Support nicks prefixed with @ in the `/msg` command.
+- Show member status in the `/slack channels` command.
+- Show handle when listing usergroup members.
+- Add support for the /invite command (fixes #698).
+- Add the usergroups you are a member of to highlight words (fixes #272, fixes #367, fixes #542).
+- Add a command to list the Slack teams.
+- Some changes on line tags, most notably irc_smart_filter is replaced with irc_join and irc_part because no smartness is implemented. Search for "tag" in the commit messages to see the other changes.
+- Prevent highlight in debug buffer.
+- Don't log backlog messages to the logfile (fixes #663).
+- Use proper nicks for mpdm names (fixes #498).
+- Fallback to full name instead of username if display name is not set.
+- Don't add deleted users to tab completion (fixes #703).
+- Print responses and errors from /slack slash command (fixes #369, fixes #374).
+- Fix option `record_events` (it was broken in 2.3.0).
+- Fix output of the `/topic` command (PR #691).
+- Set own nick to display name if set (fixes #692).
+- Prevent crash when having mpdm with an external user.
+- Prevent crash when script is reloaded if numpy is installed.
+- Support topic changes for private channels (fixes #697).
+- Fix attachment fields without titles (PR #707).
+- Don't turn `#name` into a link to the private message (fixes #587).
+- Render group notifications with @ instead of !.
+- Support using display names in the `/slack slash` command.
+- Print thread broadcast messages in parent channel (fixes #620).
+- Add basic support for private channels converted from public (fixes most of #664).
+- Better error messages.
+- Various small bug fixes, see the commit messages for details.
+
 ## 2.3.0 (2019-05-05)
 
 - Python 3 support. Python 2 will continue to be supported at least until the end of 2019 (fixes #258, fixes #331, fixes #555, fixes #576, fixes #598).

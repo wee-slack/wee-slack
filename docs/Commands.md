@@ -150,6 +150,14 @@ Prints current status if no arguments are given, unsets the status if -delete is
 
 Open a chat with the specified user(s).
 
+### teams
+
+```
+/slack teams
+```
+
+List the connected Slack teams.
+
 ### thread
 
 ```

@@ -1,6 +1,6 @@
 # Copyright (c) 2014-2016 Ryan Huber <rhuber@gmail.com>
 # Copyright (c) 2015-2018 Tollef Fog Heen <tfheen@err.no>
-# Copyright (c) 2015-2019 Trygve Aaberge <trygveaa@gmail.com>
+# Copyright (c) 2015-2020 Trygve Aaberge <trygveaa@gmail.com>
 # Released under the MIT license.
 
 from __future__ import print_function, unicode_literals
@@ -56,7 +56,7 @@ except ImportError:
 
 SCRIPT_NAME = "slack"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "2.3.0"
+SCRIPT_VERSION = "2.4.0"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 

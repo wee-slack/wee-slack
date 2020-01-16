@@ -220,3 +220,9 @@ slack` after changing it to take effect.
 
 **Description:** When activity occurs on a buffer, unhide it even if it was previously hidden (whether by the user or by the distracting_channels setting).
 
+### use_full_names
+
+**Default:** `false`
+
+**Description:** Use full names as the nicks for all users. When this is false (the default), display names will be used if set, with a fallback to the full name if display name is not set.
+
