@@ -49,7 +49,7 @@ Setup
 
 **OpenBSD**: `pkg_add weechat-python py3-websocket-client`
 
-**Other**: `pip install websocket-client`
+**Other**: `pip3 install websocket-client`
 
 Note for **macOS**: If you installed weechat with Homebrew, you will have to locate the python runtime environment used.
 If `--with-python@2` was used, you should use: `sudo /usr/local/opt/python@2/bin/pip2 install websocket_client`
