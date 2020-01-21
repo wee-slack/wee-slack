@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>wee-slack</title>
+    <style type="text/css">
+      #input-code {
+        width: 60em;
+        max-width: 100%;
+      }
+      #with-code {
+        display: none;
+      }
+      #without-code {
+        display: none;
+      }
+    </style>
+    <script type="text/javascript">
+      document.addEventListener('DOMContentLoaded', function() {
+        var locationsHash = location.hash
+          .replace(/^#\?/, '')
+          .split('&')
+          .reduce((obj, query) => {
+            split = query.split('=');
+            obj[split[0]] = split[1];
+            return obj}, {}
+          )
+        var code = locationsHash['code'];
+        if (code) {
+          document.getElementById('with-code').style.display = 'block';
+        } else {
+          document.getElementById('without-code').style.display = 'block';
+        }
+
+        var codeElement = document.getElementById('input-code');
+        codeElement.value = '/slack register ' + code;
+        codeElement.focus();
+        codeElement.select();
+
+        document.getElementById('button-copy').addEventListener('click', () => {
+          codeElement.focus();
+          codeElement.select();
+          document.execCommand('copy');
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <div id="with-code">
+      <h1>OAuth code for wee-slack</h1>
+      <p>Copy this command and run it in WeeChat:</p>
+      <input id="input-code" readonly>
+      <button id="button-copy" type="button">Copy</button>
+    </div>
+
+    <div id="without-code">
+      <h1>wee-slack</h1>
+      <p>This page exists for using OAuth in wee-slack. For info about wee-slack see <a href="https://github.com/wee-slack/wee-slack">the github page.</a></p>
+
+      <p>If you came here as part of the OAuth flow and are seeing this text, that means that something went wrong. Please report this <a href="https://github.com/wee-slack/wee-slack/issues/new">in the issue tracker</a> and describe how you got here.</p>
+    </div>
+
+    <noscript>
+      <h1>OAuth code for wee-slack</h1>
+      <p>Since you have disabled JavaScript, the OAuth code can't be shown here. Instead you will have to extract it from the page url. The code is the text which comes after "code=" in the url, up until the first "&" character or until the end of the url if there are no "&" characters.</p>
+      <p>Run the command "/slack register &lt;code&gt;" in WeeChat, where you substitute "&lt;code&gt;" with the code you extracted from the url.</p>
+    </noscript>
+  </body>
+</html>

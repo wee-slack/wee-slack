@@ -3771,23 +3771,23 @@ def command_register(data, current_buffer, args):
     """
     CLIENT_ID = "2468770254.51917335286"
     CLIENT_SECRET = "dcb7fe380a000cba0cca3169a5fe8d70"  # Not really a secret.
+    REDIRECT_URI = "https%3A%2F%2Fwee-slack.github.io%2Fwee-slack%2Foauth%23"
     if not args:
         message = textwrap.dedent("""
-            #### Retrieving a Slack token via OAUTH ####
-            1) Paste this into a browser: https://slack.com/oauth/authorize?client_id=2468770254.51917335286&scope=client
-            2) Select the team you wish to access from wee-slack in your browser.
-            3) Click "Authorize" in the browser **IMPORTANT: the redirect will fail, this is expected**
+            ### Connecting to a Slack team with OAuth ###
+            1) Paste this link into a browser: https://slack.com/oauth/authorize?client_id={}&scope=client&redirect_uri={}
+            2) Select the team you wish to access from wee-slack in your browser. If you want to add multiple teams, you will have to repeat this whole process for each team.
+            3) Click "Authorize" in the browser.
                If you get a message saying you are not authorized to install wee-slack, the team has restricted Slack app installation and you will have to request it from an admin. To do that, go to https://my.slack.com/apps/A1HSZ9V8E-wee-slack and click "Request to Install".
-            4) Copy the "code" portion of the URL to your clipboard
-            5) Return to weechat and run `/slack register [code]`
-        """).strip()
+            4) The web page will show a command in the form `/slack register <code>`. Run this command in weechat.
+        """).strip().format(CLIENT_ID, REDIRECT_URI)
         w.prnt("", message)
         return w.WEECHAT_RC_OK_EAT
 
     uri = (
         "https://slack.com/api/oauth.access?"
-        "client_id={}&client_secret={}&code={}"
-    ).format(CLIENT_ID, CLIENT_SECRET, args)
+        "client_id={}&client_secret={}&redirect_uri={}&code={}"
+    ).format(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, args)
     params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
     w.hook_process_hashtable('url:', params, config.slack_timeout, "", "")
     w.hook_process_hashtable("url:{}".format(uri), params, config.slack_timeout, "register_callback", "")
@@ -3822,6 +3822,7 @@ def register_callback(data, command, return_code, out, err):
 
     w.prnt("", "Success! Added team \"%s\"" % (d['team_name'],))
     w.prnt("", "Please reload wee-slack with: /python reload slack")
+    w.prnt("", "If you want to add another team you can repeat this process from step 1 before reloading wee-slack.")
     return w.WEECHAT_RC_OK_EAT
 
 
