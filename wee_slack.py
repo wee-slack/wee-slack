@@ -2102,6 +2102,13 @@ class SlackPrivateChannel(SlackGroupChannel):
         super(SlackPrivateChannel, self).__init__(eventrouter, **kwargs)
         self.type = "private"
 
+    def set_related_server(self, team):
+        super(SlackPrivateChannel, self).set_related_server(team)
+        # Fetch members here (after the team is known) since they aren't
+        # included in rtm.start
+        s = SlackRequest(team.token, 'conversations.members', {'channel': self.identifier}, team_hash=team.team_hash, channel_identifier=self.identifier)
+        self.eventrouter.receive(s)
+
 
 class SlackMPDMChannel(SlackChannel):
     """
