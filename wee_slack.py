@@ -3177,6 +3177,7 @@ def process_channel_joined(message_json, eventrouter, **kwargs):
 
 def process_channel_created(message_json, eventrouter, **kwargs):
     item = message_json["channel"]
+    item['is_member'] = False
     c = SlackChannel(eventrouter, team=kwargs["team"], **item)
     kwargs['team'].channels[item["id"]] = c
     kwargs['team'].buffer_prnt('Channel created: {}'.format(c.slack_name))
