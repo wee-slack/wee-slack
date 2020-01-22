@@ -56,7 +56,7 @@ slack` after changing it to take effect.
 
 **Default:** `lightcyan`
 
-**Description:** Color to use for the [thread: XXX] suffix on messages that have threads attached to them.
+**Description:** Color to use for the [thread: XXX] suffix on messages that have threads attached to them. The special value "multiple" can be used to use a different color for each thread.
 
 ### colorize_private_chats
 

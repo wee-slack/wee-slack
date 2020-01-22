@@ -284,12 +284,22 @@ def format_exc_only():
     return ''.join(decode_from_utf8(traceback.format_exception_only(etype, value)))
 
 
-def get_nick_color_name(nick):
+def get_nick_color(nick, name=False):
     info_name_prefix = "irc_" if int(weechat_version) < 0x1050000 else ""
-    return w.info_get(info_name_prefix + "nick_color_name", nick)
+    name_suffix = "_name" if name else ""
+    return w.info_get(info_name_prefix + "nick_color" + name_suffix, nick)
+
+
+def get_thread_color(thread_id):
+    if config.color_thread_suffix == 'multiple':
+        return get_nick_color(thread_id, name=False)
+    else:
+        return w.color(config.color_thread_suffix)
+
 
 def sha1_hex(s):
     return hashlib.sha1(s.encode('utf-8')).hexdigest()
+
 
 def get_functions_with_prefix(prefix):
     return {name[len(prefix):]: ref for name, ref in globals().items()
@@ -1982,9 +1992,10 @@ class SlackChannel(SlackChannelCommon):
     def render(self, message, force=False):
         text = message.render(force)
         if isinstance(message, SlackThreadMessage):
+            thread_id = message.parent_message.hash or message.parent_message.ts
             return '{}[{}]{} {}'.format(
-                w.color(config.color_thread_suffix),
-                message.parent_message.hash or message.parent_message.ts,
+                get_thread_color(thread_id),
+                thread_id,
                 w.color('reset'),
                 text)
 
@@ -2026,7 +2037,7 @@ class SlackDMChannel(SlackChannel):
 
     def update_color(self):
         if config.colorize_private_chats:
-            self.color_name = get_nick_color_name(self.name)
+            self.color_name = get_nick_color(self.name, name=True)
             self.color = w.color(self.color_name)
         else:
             self.color = ""
@@ -2367,7 +2378,7 @@ class SlackUser(object):
     def update_color(self):
         # This will automatically be none/"" if the user has disabled nick
         # colourization.
-        self.color_name = get_nick_color_name(self.name)
+        self.color_name = get_nick_color(self.name, name=True)
         self.color = w.color(self.color_name)
 
     def update_status(self, status_emoji, status_text):
@@ -2463,7 +2474,7 @@ class SlackMessage(object):
         if self.number_of_replies():
             self.channel.hash_message(self.ts)
             text += " {}[ Thread: {} Replies: {} ]".format(
-                    w.color(config.color_thread_suffix),
+                    get_thread_color(self.hash),
                     self.hash,
                     self.number_of_replies())
 
@@ -4650,7 +4661,8 @@ class PluginConfig(object):
         'color_thread_suffix': Setting(
             default='lightcyan',
             desc='Color to use for the [thread: XXX] suffix on messages that'
-            ' have threads attached to them.'),
+            ' have threads attached to them. The special value "multiple" can'
+            ' be used to use a different color for each thread.'),
         'colorize_private_chats': Setting(
             default='false',
             desc='Whether to use nick-colors in DM windows.'),
