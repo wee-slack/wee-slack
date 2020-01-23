@@ -275,6 +275,10 @@ class ProxyWrapper(object):
 ##### Helpers
 
 
+def print_error(message, buffer=''):
+    w.prnt(buffer, '{}Error: {}'.format(w.prefix('error'), message))
+
+
 def format_exc_tb():
     return decode_from_utf8(traceback.format_exc())
 
@@ -1478,7 +1482,7 @@ class SlackChannelCommon(object):
         else:
             return
         data = {"channel": self.identifier, "timestamp": timestamp, "name": reaction}
-        s = SlackRequest(self.team.token, method, data)
+        s = SlackRequest(self.team.token, method, data, reaction=reaction)
         self.eventrouter.receive(s)
 
     def edit_nth_previous_message(self, msg_id, old, new, flags):
@@ -2878,6 +2882,18 @@ def handle_chatcommand(json, eventrouter, **kwargs):
         response_text = '. Response: {}'.format(response) if response else ''
         w.prnt(team.channel_buffer, 'ERROR: Couldn\'t run command "{}". Error: {}{}'
                 .format(command, json['error'], response_text))
+
+
+def handle_reactionsadd(json, eventrouter, **kwargs):
+    if not json['ok']:
+        request_metadata = json['wee_slack_request_metadata']
+        print_error("Couldn't add reaction {}: {}".format(request_metadata.reaction, json['error']))
+
+
+def handle_reactionsremove(json, eventrouter, **kwargs):
+    if not json['ok']:
+        request_metadata = json['wee_slack_request_metadata']
+        print_error("Couldn't remove reaction {}: {}".format(request_metadata.reaction, json['error']))
 
 
 ###### New/converted process_ and subprocess_ methods
