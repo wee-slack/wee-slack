@@ -2818,11 +2818,10 @@ def handle_conversationsreplies(message_json, eventrouter, **kwargs):
 def handle_conversationsmembers(members_json, eventrouter, **kwargs):
     request_metadata = members_json['wee_slack_request_metadata']
     team = eventrouter.teams[request_metadata.team_hash]
+    channel = team.channels[request_metadata.channel_identifier]
     if members_json['ok']:
-        channel = team.channels[request_metadata.channel_identifier]
-        channel.members = set(members_json['members'])
+        channel.set_members(members_json['members'])
     else:
-        channel = team.channels[request_metadata.channel_identifier]
         w.prnt(team.channel_buffer, '{}Couldn\'t load members for channel {}. Error: {}'
                 .format(w.prefix('error'), channel.name, members_json['error']))
 
