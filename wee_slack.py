@@ -986,7 +986,7 @@ def typing_bar_item_cb(data, item, current_window, current_buffer, extra_info):
 
     typing = ", ".join(typers)
     if typing != "":
-        typing = w.color('yellow') + "typing: " + typing
+        typing = w.color(config.color_typing_notice) + "typing: " + typing
 
     return typing
 
@@ -3168,7 +3168,7 @@ def subprocess_message_changed(message_json, eventrouter, channel, team, history
 
 def subprocess_message_deleted(message_json, eventrouter, channel, team, history_message):
     message = "{}{}{}".format(
-            w.color("red"), '(deleted)', w.color("reset"))
+            w.color(config.color_deleted), '(deleted)', w.color("reset"))
     channel.change_message(message_json["deleted_ts"], text=message)
 
 
@@ -3494,7 +3494,7 @@ def unwrap_files(message_json, text_before):
             text = '{} ({})'.format(f['url_private'], f['title'])
         else:
             text = '{}(This file was deleted.){}'.format(
-                w.color("red"),
+                w.color(config.color_deleted),
                 w.color("reset"))
         files_texts.append(text)
 
@@ -4705,6 +4705,9 @@ class PluginConfig(object):
         'color_buflist_muted_channels': Setting(
             default='darkgray',
             desc='Color to use for muted channels in the buflist'),
+        'color_deleted': Setting(
+            default='red',
+            desc='Color to use for deleted messages and files.'),
         'color_edited_suffix': Setting(
             default='095',
             desc='Color to use for (edited) suffix on messages that have been edited.'),
@@ -4717,6 +4720,9 @@ class PluginConfig(object):
             desc='Color to use for the [thread: XXX] suffix on messages that'
             ' have threads attached to them. The special value "multiple" can'
             ' be used to use a different color for each thread.'),
+        'color_typing_notice': Setting(
+            default='yellow',
+            desc='Color to use for the typing notice.'),
         'colorize_private_chats': Setting(
             default='false',
             desc='Whether to use nick-colors in DM windows.'),
@@ -4899,9 +4905,11 @@ class PluginConfig(object):
         return w.config_get_plugin(key) == default
 
     get_color_buflist_muted_channels = get_string
+    get_color_deleted = get_string
     get_color_edited_suffix = get_string
     get_color_reaction_suffix = get_string
     get_color_thread_suffix = get_string
+    get_color_typing_notice = get_string
     get_debug_level = get_int
     get_external_user_suffix = get_string
     get_files_download_location = get_string

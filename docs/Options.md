@@ -40,6 +40,12 @@ slack` after changing it to take effect.
 
 **Description:** Color to use for muted channels in the buflist
 
+### color_deleted
+
+**Default:** `red`
+
+**Description:** Color to use for deleted messages and files.
+
 ### color_edited_suffix
 
 **Default:** `095`
@@ -57,6 +63,12 @@ slack` after changing it to take effect.
 **Default:** `lightcyan`
 
 **Description:** Color to use for the [thread: XXX] suffix on messages that have threads attached to them. The special value "multiple" can be used to use a different color for each thread.
+
+### color_typing_notice
+
+**Default:** `yellow`
+
+**Description:** Color to use for the typing notice.
 
 ### colorize_private_chats
 
