@@ -8,7 +8,7 @@ from __future__ import print_function, unicode_literals
 from collections import OrderedDict
 from functools import wraps
 from io import StringIO
-from itertools import islice, count
+from itertools import chain, count, islice
 
 import errno
 import textwrap
@@ -169,6 +169,7 @@ if hasattr(ssl, "get_default_verify_paths") and callable(ssl.get_default_verify_
         sslopt_ca_certs = {'ca_certs': ssl_defaults.cafile}
 
 EMOJI = {}
+EMOJI_WITH_SKIN_TONES_REVERSE = {}
 
 ###### Unicode handling
 
@@ -325,6 +326,7 @@ def handle_socket_error(exception, team, caller_name):
 
 
 EMOJI_NAME_REGEX = re.compile(':([^: ]+):')
+EMOJI_REGEX_STRING = '[\U00000080-\U0010ffff]+'
 
 
 def regex_match_to_emoji(match):
@@ -337,6 +339,10 @@ def replace_string_with_emoji(text):
         return text
     else:
         return EMOJI_NAME_REGEX.sub(regex_match_to_emoji, text)
+
+
+def replace_emoji_with_string(text):
+    return EMOJI_WITH_SKIN_TONES_REVERSE.get(text, text)
 
 
 ###### New central Event router
@@ -822,13 +828,15 @@ def buffer_input_callback(signal, buffer_ptr, data):
             return int(message_id)
 
     message_id_regex = r"(\d*|\$[0-9a-fA-F]{3,})"
-    reaction = re.match(r"^{}(\+|-):(.*):\s*$".format(message_id_regex), data)
+    reaction = re.match(r"^{}(\+|-)(:(.+):|{})\s*$".format(message_id_regex, EMOJI_REGEX_STRING), data)
     substitute = re.match("^{}s/".format(message_id_regex), data)
     if reaction:
+        emoji_match = reaction.group(4) or reaction.group(3)
+        emoji = replace_emoji_with_string(emoji_match)
         if reaction.group(2) == "+":
-            channel.send_add_reaction(get_id(reaction.group(1)), reaction.group(3))
+            channel.send_add_reaction(get_id(reaction.group(1)), emoji)
         elif reaction.group(2) == "-":
-            channel.send_remove_reaction(get_id(reaction.group(1)), reaction.group(3))
+            channel.send_remove_reaction(get_id(reaction.group(1)), emoji)
     elif substitute:
         msg_id = get_id(substitute.group(1))
         try:
@@ -4544,10 +4552,18 @@ def load_emoji():
             if 'emoji' in emojis:
                 print_error('The weemoji.json file is in an old format. Please update it.')
             else:
-                return {key: value['unicode'] for key, value in emojis.items()}
+                emoji_unicode = {key: value['unicode'] for key, value in emojis.items()}
+
+                emoji_skin_tones = {skin_tone['name']: skin_tone['unicode']
+                        for emoji in emojis.values()
+                        for skin_tone in emoji.get('skinVariations', {}).values()}
+
+                emoji_with_skin_tones = chain(emoji_unicode.items(), emoji_skin_tones.items())
+                emoji_with_skin_tones_reverse = {v: k for k, v in emoji_with_skin_tones}
+                return emoji_unicode, emoji_with_skin_tones_reverse
     except:
         dbg("Couldn't load emoji list: {}".format(format_exc_only()), 5)
-    return {}
+    return {}, {}
 
 
 def setup_hooks():
@@ -5005,7 +5021,7 @@ if __name__ == "__main__":
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
             w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
 
-            EMOJI = load_emoji()
+            EMOJI, EMOJI_WITH_SKIN_TONES_REVERSE = load_emoji()
             setup_hooks()
 
             # attach to the weechat hooks we need
