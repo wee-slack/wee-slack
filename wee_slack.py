@@ -2509,7 +2509,8 @@ class SlackMessage(object):
         text += unfurl_refs(unwrap_files(self.message_json, text))
         text = unhtmlescape(text.lstrip().replace("\t", "    "))
 
-        text += create_reaction_string(self.message_json.get("reactions", ""))
+        text += create_reactions_string(
+                self.message_json.get("reactions", ""), self.team.myidentifier)
 
         if self.number_of_replies():
             self.channel.hash_message(self.ts)
@@ -3616,27 +3617,27 @@ def create_user_status_string(profile):
         return real_name
 
 
-def create_reaction_string(reactions):
-    count = 0
-    if not isinstance(reactions, list):
-        reaction_string = " {}[{}]{}".format(
-                w.color(config.color_reaction_suffix), reactions, w.color("reset"))
-
+def create_reaction_string(reaction, myidentifier):
+    if config.show_reaction_nicks:
+        nicks = [resolve_ref('@{}'.format(user)) for user in reaction['users']]
+        users = '({})'.format(','.join(nicks))
     else:
-        reaction_string = ' {}['.format(w.color(config.color_reaction_suffix))
-        for r in reactions:
-            if len(r["users"]) > 0:
-                count += 1
-                if config.show_reaction_nicks:
-                    nicks = [resolve_ref("@{}".format(user)) for user in r["users"]]
-                    users = "({})".format(",".join(nicks))
-                else:
-                    users = len(r["users"])
-                reaction_string += ":{}:{} ".format(r["name"], users)
-        reaction_string = reaction_string[:-1] + ']'
-    if count == 0:
-        reaction_string = ''
-    return reaction_string
+        users = len(reaction['users'])
+    reaction_string = ':{}:{}'.format(reaction['name'], users)
+    if myidentifier in reaction['users']:
+        return '{}{}{}'.format(w.color(config.color_reaction_suffix_added_by_you),
+                reaction_string, w.color(config.color_reaction_suffix))
+    else:
+        return reaction_string
+
+
+def create_reactions_string(reactions, myidentifier):
+    reactions_with_users = [r for r in reactions if len(r['users']) > 0]
+    reactions_string = ' '.join(create_reaction_string(r, myidentifier) for r in reactions_with_users)
+    if reactions_string:
+        return ' {}[{}]'.format(w.color(config.color_reaction_suffix), reactions_string)
+    else:
+        return ''
 
 
 def hdata_line_ts(line_pointer):
@@ -4795,6 +4796,9 @@ class PluginConfig(object):
             default='darkgray',
             desc='Color to use for the [:wave:(@user)] suffix on messages that'
             ' have reactions attached to them.'),
+        'color_reaction_suffix_added_by_you': Setting(
+            default='blue',
+            desc='Color to use for reactions that you have added.'),
         'color_thread_suffix': Setting(
             default='lightcyan',
             desc='Color to use for the [thread: XXX] suffix on messages that'
@@ -4989,6 +4993,7 @@ class PluginConfig(object):
     get_color_deleted = get_string
     get_color_edited_suffix = get_string
     get_color_reaction_suffix = get_string
+    get_color_reaction_suffix_added_by_you = get_string
     get_color_thread_suffix = get_string
     get_color_typing_notice = get_string
     get_debug_level = get_int

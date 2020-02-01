@@ -58,6 +58,12 @@ slack` after changing it to take effect.
 
 **Description:** Color to use for the [:wave:(@user)] suffix on messages that have reactions attached to them.
 
+### color_reaction_suffix_added_by_you
+
+**Default:** `blue`
+
+**Description:** Color to use for reactions that you have added.
+
 ### color_thread_suffix
 
 **Default:** `lightcyan`
