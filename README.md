@@ -202,24 +202,36 @@ Label a thread with a memorable name. The above command will open a channel call
 ```
 _Note: labels do not persist once a thread buffer is closed_
 
-### Emoji tab completions
+### Emoji characters and tab completions of emoji names
 
-To enable tab completion of emojis, copy or symlink the `weemoji.json` file to
-your weechat config directory (e.g. `~/.weechat`). If doing this after starting
-wee-slack, you will have to reload it by running `/python reload slack`. Then
-append `|%(emoji)` to the `weechat.completion.default_template` config option,
-e.g. like this:
+To enable rendering of emoji characters and tab completion of emoji names, copy
+or symlink the
+[`weemoji.json`](https://github.com/wee-slack/wee-slack/blob/master/weemoji.json)
+file to your weechat config directory (e.g. `~/.weechat`). If doing this after
+starting wee-slack, you will have to reload it by running `/python reload
+slack`. Then append `|%(emoji)` to the `weechat.completion.default_template`
+config option, e.g. like this:
 
 ```
 /set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(emoji)"
 ```
 
+Emoji names can be completed by typing colon and the start of the emoji name
+and pressing tab.
+
 ### User group tab completions
-To enable tab completions for usergroups append `|%(usergroups)`
+
+To enable tab completions for usergroups append `|%(usergroups)` to the
+`weechat.completion.default_template` config option, e.g. like this:
+
 ```
 /set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(usergroups)"
 ```
-The usergroup will appear in the same formats as nicks like the following `@marketing` where marketing is the handle
+
+If you already added `%(emoji)` to this config option, like described in the
+last section, make sure not to overwrite that. The usergroup will appear in the
+same format as nicks, like the following: `@marketing`, where marketing is the
+usergroup handle.
 
 ### Cursor and mouse mode
 

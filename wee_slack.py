@@ -59,6 +59,7 @@ SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
 SCRIPT_VERSION = "2.4.0"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
+REPO_URL = "https://github.com/wee-slack/wee-slack"
 
 BACKLOG_SIZE = 200
 SCROLLBACK_SIZE = 500
@@ -167,7 +168,7 @@ if hasattr(ssl, "get_default_verify_paths") and callable(ssl.get_default_verify_
     if ssl_defaults.cafile is not None:
         sslopt_ca_certs = {'ca_certs': ssl_defaults.cafile}
 
-EMOJI = []
+EMOJI = {}
 
 ###### Unicode handling
 
@@ -321,6 +322,21 @@ def handle_socket_error(exception, team, caller_name):
     dbg('Socket failed on {} with exception:\n{}'.format(
         caller_name, format_exc_tb()), level=5)
     team.set_disconnected()
+
+
+EMOJI_NAME_REGEX = re.compile(':([^: ]+):')
+
+
+def regex_match_to_emoji(match):
+    emoji = match.group(1)
+    return EMOJI.get(emoji, match.group())
+
+
+def replace_string_with_emoji(text):
+    if config.render_emoji_as_string:
+        return text
+    else:
+        return EMOJI_NAME_REGEX.sub(regex_match_to_emoji, text)
 
 
 ###### New central Event router
@@ -1282,7 +1298,7 @@ class SlackTeam(object):
         return self.users.keys()
 
     def load_emoji_completions(self):
-        self.emoji_completions = list(EMOJI)
+        self.emoji_completions = list(EMOJI.keys())
         if self.emoji_completions:
             s = SlackRequest(self.token, "emoji.list", {}, team_hash=self.team_hash)
             self.eventrouter.receive(s)
@@ -2482,6 +2498,8 @@ class SlackMessage(object):
                     self.hash,
                     self.number_of_replies())
 
+        text = replace_string_with_emoji(text)
+
         self.message_json["_rendered_text"] = text
         return text
 
@@ -3502,7 +3520,7 @@ def resolve_ref(ref):
 
 def create_user_status_string(profile):
     real_name = profile.get("real_name")
-    status_emoji = profile.get("status_emoji")
+    status_emoji = replace_string_with_emoji(profile.get("status_emoji", ""))
     status_text = profile.get("status_text")
     if status_emoji or status_text:
         return "{} | {} {}".format(real_name, status_emoji, status_text)
@@ -3771,7 +3789,7 @@ def whois_command_cb(data, current_buffer, command):
                 team.buffer_prnt("[{}]: {}: {}".format(user, field, value))
 
         team.buffer_prnt("[{}]: {}".format(user, u.real_name))
-        status_emoji = u.profile.get("status_emoji", "")
+        status_emoji = replace_string_with_emoji(u.profile.get("status_emoji", ""))
         status_text = u.profile.get("status_text", "")
         if status_emoji or status_text:
             team.buffer_prnt("[{}]: {} {}".format(user, status_emoji, status_text))
@@ -4396,7 +4414,7 @@ def command_status(data, current_buffer, args):
     if not split_args[0]:
         profile = team.users[team.myidentifier].profile
         team.buffer_prnt("Status: {} {}".format(
-            profile.get("status_emoji", ""),
+            replace_string_with_emoji(profile.get("status_emoji", "")),
             profile.get("status_text", "")))
         return w.WEECHAT_RC_OK
 
@@ -4520,12 +4538,16 @@ def create_slack_debug_buffer():
 
 def load_emoji():
     try:
-        DIR = w.info_get("weechat_dir", "")
+        DIR = w.info_get('weechat_dir', '')
         with open('{}/weemoji.json'.format(DIR), 'r') as ef:
-            return json.loads(ef.read())["emoji"]
+            emojis = json.loads(ef.read())
+            if 'emoji' in emojis:
+                print_error('The weemoji.json file is in an old format. Please update it.')
+            else:
+                return {key: value['unicode'] for key, value in emojis.items()}
     except:
         dbg("Couldn't load emoji list: {}".format(format_exc_only()), 5)
-    return []
+    return {}
 
 
 def setup_hooks():
@@ -4730,6 +4752,13 @@ class PluginConfig(object):
         'render_bold_as': Setting(
             default='bold',
             desc='When receiving bold text from Slack, render it as this in weechat.'),
+        'render_emoji_as_string': Setting(
+            default='false',
+            desc="Render emojis as :emoji_name: instead of emoji characters. Enable this"
+            " if your terminal doesn't support emojis. Note that even though this is"
+            " disabled by default, you need to place {}/blob/master/weemoji.json in your"
+            " weechat directory to enable rendering emojis as emoji characters."
+            .format(REPO_URL)),
         'render_italic_as': Setting(
             default='italic',
             desc='When receiving bold text from Slack, render it as this in weechat.'
@@ -4976,7 +5005,7 @@ if __name__ == "__main__":
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
             w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
 
-            EMOJI.extend(load_emoji())
+            EMOJI = load_emoji()
             setup_hooks()
 
             # attach to the weechat hooks we need
