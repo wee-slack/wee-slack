@@ -2717,26 +2717,6 @@ def handle_mpimopen(mpim_json, eventrouter, object_name='group', **kwargs):
     handle_conversationsopen(mpim_json, eventrouter, object_name, **kwargs)
 
 
-def handle_groupshistory(message_json, eventrouter, **kwargs):
-    handle_history(message_json, eventrouter, **kwargs)
-
-
-def handle_channelshistory(message_json, eventrouter, **kwargs):
-    handle_history(message_json, eventrouter, **kwargs)
-
-
-def handle_imhistory(message_json, eventrouter, **kwargs):
-    handle_history(message_json, eventrouter, **kwargs)
-
-
-def handle_mpimhistory(message_json, eventrouter, **kwargs):
-    handle_history(message_json, eventrouter, **kwargs)
-
-
-def handle_conversationshistory(message_json, eventrouter, **kwargs):
-    handle_history(message_json, eventrouter, **kwargs)
-
-
 def handle_history(message_json, eventrouter, **kwargs):
     request_metadata = message_json["wee_slack_request_metadata"]
     kwargs['team'] = request_metadata.team
@@ -2746,6 +2726,13 @@ def handle_history(message_json, eventrouter, **kwargs):
     kwargs['channel'].got_history = True
     for message in reversed(message_json["messages"]):
         process_message(message, eventrouter, history_message=True, **kwargs)
+
+
+handle_channelshistory = handle_history
+handle_conversationshistory = handle_history
+handle_groupshistory = handle_history
+handle_imhistory = handle_history
+handle_mpimhistory = handle_history
 
 
 def handle_conversationsreplies(message_json, eventrouter, **kwargs):
@@ -2842,10 +2829,6 @@ def process_reconnect_url(message_json, eventrouter, **kwargs):
     kwargs['team'].set_reconnect_url(message_json['url'])
 
 
-def process_manual_presence_change(message_json, eventrouter, **kwargs):
-    process_presence_change(message_json, eventrouter, **kwargs)
-
-
 def process_presence_change(message_json, eventrouter, **kwargs):
     if "user" in kwargs:
         # TODO: remove once it's stable
@@ -2857,6 +2840,9 @@ def process_presence_change(message_json, eventrouter, **kwargs):
         for user_id in message_json["users"]:
             user = team.users[user_id]
             team.update_member_presence(user, message_json["presence"])
+
+
+process_manual_presence_change = process_presence_change
 
 
 def process_pref_change(message_json, eventrouter, **kwargs):
@@ -2979,10 +2965,6 @@ def download_files(message_json, **kwargs):
             break
 
 
-def subprocess_thread_broadcast(message_json, eventrouter, channel, team, history_message):
-    subprocess_thread_message(message_json, eventrouter, channel, team, history_message)
-
-
 def subprocess_thread_message(message_json, eventrouter, channel, team, history_message):
     parent_ts = message_json.get('thread_ts')
     if parent_ts:
@@ -3010,6 +2992,9 @@ def subprocess_thread_message(message_json, eventrouter, channel, team, history_
                     history_message=history_message,
                     extra_tags=[thread_tag],
                 )
+
+
+subprocess_thread_broadcast = subprocess_thread_message
 
 
 def subprocess_channel_join(message_json, eventrouter, channel, team, history_message):
@@ -3090,16 +3075,9 @@ def process_channel_marked(message_json, eventrouter, **kwargs):
         dbg("tried to mark something weird {}".format(message_json))
 
 
-def process_group_marked(message_json, eventrouter, **kwargs):
-    process_channel_marked(message_json, eventrouter, **kwargs)
-
-
-def process_im_marked(message_json, eventrouter, **kwargs):
-    process_channel_marked(message_json, eventrouter, **kwargs)
-
-
-def process_mpim_marked(message_json, eventrouter, **kwargs):
-    process_channel_marked(message_json, eventrouter, **kwargs)
+process_group_marked = process_channel_marked
+process_im_marked = process_channel_marked
+process_mpim_marked = process_channel_marked
 
 
 def process_channel_joined(message_json, eventrouter, **kwargs):
