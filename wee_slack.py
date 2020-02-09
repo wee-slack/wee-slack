@@ -433,10 +433,7 @@ class EventRouter(object):
         weechat's "callback_data" has a limited size and weechat will crash if you exceed
         this size.
         """
-        data = self.context.get(identifier)
-        if data:
-            # dbg("retrieved context {} ".format(identifier))
-            return data
+        return self.context.get(identifier)
 
     def delete_context(self, identifier):
         """
