@@ -503,10 +503,7 @@ class EventRouter(object):
                 return w.WEECHAT_RC_OK
 
             message_json = json.loads(data.decode('utf-8'))
-            metadata = WeeSlackMetadata({
-                "team": team_hash,
-            }).jsonify()
-            message_json["wee_slack_metadata"] = metadata
+            message_json["wee_slack_metadata_team"] = team
             if self.recording:
                 self.record_event(message_json, 'type', 'websocket')
             self.receive(message_json)
@@ -638,20 +635,16 @@ class EventRouter(object):
                     function_name = "unknown"
 
                 # Here we are passing the actual objects. No more lookups.
-                meta = j.get("wee_slack_metadata")
-                if meta:
+                team = j.get("wee_slack_metadata_team")
+                if team:
                     try:
-                        if isinstance(meta, basestring):
-                            dbg("string of metadata")
-                        team = meta.get("team")
-                        if team:
-                            kwargs["team"] = self.teams[team]
-                            if "user" in j:
-                                kwargs["user"] = self.teams[team].users[j["user"]]
-                            if "channel" in j:
-                                kwargs["channel"] = self.teams[team].channels[j["channel"]]
-                            if "subteam" in j:
-                                kwargs["subteam"] = self.teams[team].subteams[j["subteam"]]
+                        kwargs["team"] = team
+                        if "user" in j:
+                            kwargs["user"] = team.users[j["user"]]
+                        if "channel" in j:
+                            kwargs["channel"] = team.channels[j["channel"]]
+                        if "subteam" in j:
+                            kwargs["subteam"] = team.subteams[j["subteam"]]
                     except:
                         dbg("metadata failure")
 
@@ -2522,18 +2515,6 @@ class SlackThreadMessage(SlackMessage):
     def __init__(self, parent_message, *args):
         super(SlackThreadMessage, self).__init__(*args)
         self.parent_message = parent_message
-
-
-class WeeSlackMetadata(object):
-    """
-    A simple container that we pickle/unpickle to hold data.
-    """
-
-    def __init__(self, meta):
-        self.meta = meta
-
-    def jsonify(self):
-        return self.meta
 
 
 class Hdata(object):
