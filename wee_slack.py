@@ -637,16 +637,17 @@ class EventRouter(object):
                 # Here we are passing the actual objects. No more lookups.
                 team = j.get("wee_slack_metadata_team")
                 if team:
-                    try:
-                        kwargs["team"] = team
-                        if "user" in j:
-                            kwargs["user"] = team.users[j["user"]]
-                        if "channel" in j:
-                            kwargs["channel"] = team.channels[j["channel"]]
-                        if "subteam" in j:
-                            kwargs["subteam"] = team.subteams[j["subteam"]]
-                    except:
-                        dbg("metadata failure")
+                    kwargs["team"] = team
+                    if "user" in j:
+                        user_id = j["user"]["id"] if type(j["user"]) == dict else j["user"]
+                        kwargs["user"] = team.users.get(user_id)
+                    if "channel" in j:
+                        channel_id = j["channel"]["id"] if type(j["channel"]) == dict else j["channel"]
+                        kwargs["channel"] = team.channels.get(channel_id)
+                    if "subteam" in j:
+                        kwargs["subteam"] = team.subteams.get(j["subteam"]["id"])
+                    if "subteam_id" in j:
+                        kwargs["subteam"] = team.subteams.get(j["subteam_id"])
 
                 dbg("running {}".format(function_name))
                 if function_name.startswith("local_") and function_name in self.local_proc:
