@@ -1213,7 +1213,7 @@ class SlackSubteam(object):
        return "Name:{} Identifier:{}".format(self.name, self.identifier)
 
    def __eq__(self, compare_str):
-       return compare_str == self.subteam_id
+       return compare_str == self.identifier
 
 
 class SlackTeam(object):
