@@ -12,7 +12,7 @@ def test_process_team_join(realish_eventrouter, team):
     datafile = '_pytest/data/websocket/1485975606.59-team_join.json'
     data = json.loads(open(datafile, 'r').read())
     team.ws.add(data)
-    realish_eventrouter.receive_ws_callback(team.team_hash)
+    realish_eventrouter.receive_ws_callback(team.team_hash, None)
     realish_eventrouter.handle_next()
 
     assert len(team.users) == 4

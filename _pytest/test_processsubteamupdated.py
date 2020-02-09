@@ -9,7 +9,7 @@ def test_process_subteam_self_updated(realish_eventrouter, team):
     datafile = '_pytest/data/websocket/1483975206.59-subteam_updated.json'
     data = json.loads(open(datafile, 'r').read())
     team.ws.add(data)
-    realish_eventrouter.receive_ws_callback(team.team_hash)
+    realish_eventrouter.receive_ws_callback(team.team_hash, None)
     realish_eventrouter.handle_next()
     subteam = team.subteams['TGX0ALBK3']
 

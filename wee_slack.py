@@ -479,7 +479,8 @@ class EventRouter(object):
                 team.connect()
                 dbg("reconnecting {}".format(team))
 
-    def receive_ws_callback(self, team_hash):
+    @utf8_decode
+    def receive_ws_callback(self, team_hash, fd):
         """
         This is called by the global method of the same name.
         It is triggered when we have incoming data on a websocket,
@@ -513,7 +514,9 @@ class EventRouter(object):
             if self.recording:
                 self.record_event(message_json, 'type', 'websocket')
             self.receive(message_json)
+        return w.WEECHAT_RC_OK
 
+    @utf8_decode
     def receive_httprequest_callback(self, data, command, return_code, out, err):
         """
         complete
@@ -524,11 +527,7 @@ class EventRouter(object):
         where the request originated and route properly.
         """
         request_metadata = self.retrieve_context(data)
-        try:
-            dbg("RECEIVED CALLBACK with request of {} id of {} and  code {} of length {}".format(request_metadata.request, request_metadata.response_id, return_code, len(out)))
-        except:
-            dbg(request_metadata)
-            return
+        dbg("RECEIVED CALLBACK with request of {} id of {} and  code {} of length {}".format(request_metadata.request, request_metadata.response_id, return_code, len(out)))
         if return_code == 0:
             if len(out) > 0:
                 if request_metadata.response_id not in self.reply_buffer:
@@ -571,6 +570,7 @@ class EventRouter(object):
                 dbg('rtm.start failed with return_code {}. stack:\n{}'
                         .format(return_code, ''.join(traceback.format_stack())), level=5)
                 self.receive(request_metadata)
+        return w.WEECHAT_RC_OK
 
     def receive(self, dataobj):
         """
@@ -672,12 +672,7 @@ class EventRouter(object):
                     dbg("Callback not implemented for event: {}".format(function_name))
 
 
-def handle_next(*args):
-    """
-    complete
-    This is just a place to call the event router globally.
-    This is a dirty hack. There must be a better way.
-    """
+def handle_next(data, remaining_calls):
     try:
         EVENTROUTER.handle_next()
     except:
@@ -763,29 +758,6 @@ def local_process_async_slack_api_request(request, event_router):
         w.hook_process_hashtable(weechat_request, params, config.slack_timeout, "receive_httprequest_callback", context)
 
 ###### New Callbacks
-
-
-@utf8_decode
-def receive_httprequest_callback(data, command, return_code, out, err):
-    """
-    complete
-    This is a dirty hack. There must be a better way.
-    """
-    # def url_processor_cb(data, command, return_code, out, err):
-    EVENTROUTER.receive_httprequest_callback(data, command, return_code, out, err)
-    return w.WEECHAT_RC_OK
-
-
-@utf8_decode
-def receive_ws_callback(*args):
-    """
-    complete
-    The first arg is all we want here. It contains the team
-    hash which is set when we _hook the descriptor.
-    This is a dirty hack. There must be a better way.
-    """
-    EVENTROUTER.receive_ws_callback(args[0])
-    return w.WEECHAT_RC_OK
 
 
 @utf8_decode
@@ -5100,6 +5072,9 @@ if __name__ == "__main__":
             global EVENTROUTER
             EVENTROUTER = EventRouter()
             # setup_trace()
+
+            receive_httprequest_callback = EVENTROUTER.receive_httprequest_callback
+            receive_ws_callback = EVENTROUTER.receive_ws_callback
 
             # WEECHAT_HOME = w.info_get("weechat_dir", "")
 

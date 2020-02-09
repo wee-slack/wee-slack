@@ -21,7 +21,7 @@ def test_process_message(realish_eventrouter, team, user_alice):
         m["user"] = user_alice.id
         team.ws.add(m)
 
-    realish_eventrouter.receive_ws_callback(team.team_hash)
+    realish_eventrouter.receive_ws_callback(team.team_hash, None)
     realish_eventrouter.handle_next()
     realish_eventrouter.handle_next()
     realish_eventrouter.handle_next()

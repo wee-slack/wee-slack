@@ -12,7 +12,7 @@ def test_message_has_thread_suffix(realish_eventrouter, team, channel_general):
     datafile = '_pytest/data/websocket/1485975824.48-message.json'
     data = json.loads(open(datafile).read())
     team.ws.add(data)
-    realish_eventrouter.receive_ws_callback(team.team_hash)
+    realish_eventrouter.receive_ws_callback(team.team_hash, None)
     realish_eventrouter.handle_next()
 
     message_text = channel_general.messages[thread_ts].message_json['_rendered_text']
@@ -21,7 +21,7 @@ def test_message_has_thread_suffix(realish_eventrouter, team, channel_general):
     datafile = '_pytest/data/websocket/1485975836.23-message.json'
     data = json.loads(open(datafile).read())
     team.ws.add(data)
-    realish_eventrouter.receive_ws_callback(team.team_hash)
+    realish_eventrouter.receive_ws_callback(team.team_hash, None)
     realish_eventrouter.handle_next()
 
     message_text = channel_general.messages[thread_ts].message_json['_rendered_text']
@@ -30,7 +30,7 @@ def test_message_has_thread_suffix(realish_eventrouter, team, channel_general):
     datafile = '_pytest/data/websocket/1485975842.1-message.json'
     data = json.loads(open(datafile).read())
     team.ws.add(data)
-    realish_eventrouter.receive_ws_callback(team.team_hash)
+    realish_eventrouter.receive_ws_callback(team.team_hash, None)
     realish_eventrouter.handle_next()
 
     message_text = channel_general.messages[thread_ts].message_json['_rendered_text']

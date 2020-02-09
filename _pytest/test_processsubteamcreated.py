@@ -9,7 +9,7 @@ def test_process_subteam_created(realish_eventrouter, team):
     datafile = '_pytest/data/websocket/1483975206.59-subteam_created.json'
     data = json.loads(open(datafile, 'r').read())
     team.ws.add(data)
-    realish_eventrouter.receive_ws_callback(team.team_hash)
+    realish_eventrouter.receive_ws_callback(team.team_hash, None)
     realish_eventrouter.handle_next()
 
     assert len(team.subteams) == 2
