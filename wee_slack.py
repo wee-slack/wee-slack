@@ -278,6 +278,13 @@ class ProxyWrapper(object):
 ##### Helpers
 
 
+def colorize_string(color, string, reset_color='reset'):
+    if color:
+        return w.color(color) + string + w.color(reset_color)
+    else:
+        return string
+
+
 def print_error(message, buffer=''):
     w.prnt(buffer, '{}Error: {}'.format(w.prefix('error'), message))
 
@@ -291,17 +298,16 @@ def format_exc_only():
     return ''.join(decode_from_utf8(traceback.format_exception_only(etype, value)))
 
 
-def get_nick_color(nick, name=False):
+def get_nick_color(nick):
     info_name_prefix = "irc_" if int(weechat_version) < 0x1050000 else ""
-    name_suffix = "_name" if name else ""
-    return w.info_get(info_name_prefix + "nick_color" + name_suffix, nick)
+    return w.info_get(info_name_prefix + "nick_color_name", nick)
 
 
 def get_thread_color(thread_id):
     if config.color_thread_suffix == 'multiple':
-        return get_nick_color(thread_id, name=False)
+        return get_nick_color(thread_id)
     else:
-        return w.color(config.color_thread_suffix)
+        return config.color_thread_suffix
 
 
 def sha1_hex(s):
@@ -957,7 +963,7 @@ def typing_bar_item_cb(data, item, current_window, current_buffer, extra_info):
 
     typing = ", ".join(typers)
     if typing != "":
-        typing = w.color(config.color_typing_notice) + "typing: " + typing
+        typing = colorize_string(config.color_typing_notice, "typing: " + typing)
 
     return typing
 
@@ -1640,10 +1646,10 @@ class SlackChannel(SlackChannelCommon):
             prepend = config.shared_name_prefix
         else:
             prepend = "#"
-        sidebar_color = w.color(config.color_buflist_muted_channels) if self.muted else ""
+        sidebar_color = config.color_buflist_muted_channels if self.muted else ""
         select = {
             "default": prepend + self.slack_name,
-            "sidebar": sidebar_color + prepend + self.slack_name + (w.color("reset") if sidebar_color else ""),
+            "sidebar": colorize_string(sidebar_color, prepend + self.slack_name),
             "base": self.slack_name,
             "long_default": "{}.{}{}".format(self.team.preferred_name, prepend, self.slack_name),
             "long_base": "{}.{}".format(self.team.preferred_name, self.slack_name),
@@ -1981,11 +1987,7 @@ class SlackChannel(SlackChannelCommon):
         text = message.render(force)
         if isinstance(message, SlackThreadMessage):
             thread_id = message.parent_message.hash or message.parent_message.ts
-            return '{}[{}]{} {}'.format(
-                get_thread_color(thread_id),
-                thread_id,
-                w.color('reset'),
-                text)
+            return colorize_string(get_thread_color(thread_id), '[{}]'.format(thread_id)) + ' {}'.format(text)
 
         return text
 
@@ -2025,17 +2027,11 @@ class SlackDMChannel(SlackChannel):
 
     def update_color(self):
         if config.colorize_private_chats:
-            self.color_name = get_nick_color(self.name, name=True)
-            self.color = w.color(self.color_name)
+            self.color_name = get_nick_color(self.name)
         else:
-            self.color = ""
             self.color_name = ""
 
     def formatted_name(self, style="default", typing=False, present=True, enable_color=False, **kwargs):
-        if config.colorize_private_chats and enable_color:
-            print_color = self.color
-        else:
-            print_color = ""
         prepend = ""
         if config.show_buflist_presence:
             prepend = "+" if present else " "
@@ -2046,8 +2042,8 @@ class SlackDMChannel(SlackChannel):
             "long_default": "{}.{}".format(self.team.preferred_name, self.slack_name),
             "long_base": "{}.{}".format(self.team.preferred_name, self.slack_name),
         }
-        if print_color:
-            return print_color + select[style] + w.color('reset')
+        if config.colorize_private_chats and enable_color:
+            return colorize_string(self.color_name, select[style])
         else:
             return select[style]
 
@@ -2335,23 +2331,22 @@ class SlackUser(object):
 
     def force_color(self, color_name):
         self.color_name = color_name
-        self.color = w.color(self.color_name)
 
     def update_color(self):
         # This will automatically be none/"" if the user has disabled nick
         # colourization.
-        self.color_name = get_nick_color(self.name, name=True)
-        self.color = w.color(self.color_name)
+        self.color_name = get_nick_color(self.name)
 
     def update_status(self, status_emoji, status_text):
         self.profile["status_emoji"] = status_emoji
         self.profile["status_text"] = status_text
 
     def formatted_name(self, prepend="", enable_color=True):
+        name = prepend + self.name
         if enable_color:
-            return self.color + prepend + self.name + w.color("reset")
+            return colorize_string(self.color_name, name)
         else:
-            return prepend + self.name
+            return name
 
 
 class SlackBot(SlackUser):
@@ -2427,8 +2422,7 @@ class SlackMessage(object):
             text += " by invitation from {}".format(inviter_nick)
 
         if "edited" in self.message_json:
-            text += "{}{}{}".format(
-                    w.color(config.color_edited_suffix), ' (edited)', w.color("reset"))
+            text += " " + colorize_string(config.color_edited_suffix, '(edited)')
 
         text += unfurl_refs(unwrap_attachments(self.message_json, text))
         text += unfurl_refs(unwrap_files(self.message_json, text))
@@ -2439,11 +2433,8 @@ class SlackMessage(object):
 
         if self.number_of_replies():
             self.channel.hash_message(self.ts)
-            text += " {}[ Thread: {} Replies: {} ]{}".format(
-                    get_thread_color(self.hash),
-                    self.hash,
-                    self.number_of_replies(),
-                    w.color("reset"))
+            text += " " + colorize_string(get_thread_color(self.hash), "[ Thread: {} Replies: {} ]".format(
+                    self.hash, self.number_of_replies()))
 
         text = replace_string_with_emoji(text)
 
@@ -3014,8 +3005,7 @@ def subprocess_message_changed(message_json, eventrouter, team, channel, history
 
 
 def subprocess_message_deleted(message_json, eventrouter, team, channel, history_message):
-    message = "{}{}{}".format(
-            w.color(config.color_deleted), '(deleted)', w.color("reset"))
+    message = colorize_string(config.color_deleted, '(deleted)')
     channel.change_message(message_json["deleted_ts"], text=message)
 
 
@@ -3210,8 +3200,8 @@ def unfurl_blocks(message_json):
                     if element["type"] == "button":
                         elements.append(unfurl_block_element(element["text"]))
                     else:
-                        elements.append('{}<<Unsupported block action type "{}">>{}'.format(
-                            w.color(config.color_deleted), element["type"], w.color("reset")))
+                        elements.append(colorize_string(config.color_deleted,
+                            '<<Unsupported block action type "{}">>'.format(element["type"])))
                 block_text.append(" | ".join(elements))
             elif block["type"] == "call":
                 block_text.append("Join via " + block["call"]["v1"]["join_url"])
@@ -3226,7 +3216,8 @@ def unfurl_blocks(message_json):
             elif block["type"] == "rich_text":
                 continue
             else:
-                block_text.append('{}<<Unsupported block type "{}">>{}'.format(w.color(config.color_deleted), block["type"], w.color("reset")))
+                block_text.append(colorize_string(config.color_deleted,
+                    '<<Unsupported block type "{}">>'.format(block["type"])))
                 dbg('Unsupported block: "{}"'.format(json.dumps(block)), level=4)
         except Exception as e:
             dbg("Failed to unfurl block ({}): {}".format(repr(e), json.dumps(block)), level=4)
@@ -3355,9 +3346,7 @@ def unwrap_files(message_json, text_before):
         if f.get('mode', '') != 'tombstone':
             text = '{} ({})'.format(f['url_private'], f['title'])
         else:
-            text = '{}(This file was deleted.){}'.format(
-                w.color(config.color_deleted),
-                w.color("reset"))
+            text = colorize_string(config.color_deleted, '(This file was deleted.)')
         files_texts.append(text)
 
     if text_before:
@@ -3436,8 +3425,8 @@ def create_reaction_string(reaction, myidentifier):
         users = len(reaction['users'])
     reaction_string = ':{}:{}'.format(reaction['name'], users)
     if myidentifier in reaction['users']:
-        return '{}{}{}'.format(w.color(config.color_reaction_suffix_added_by_you),
-                reaction_string, w.color(config.color_reaction_suffix))
+        return colorize_string(config.color_reaction_suffix_added_by_you, reaction_string,
+                reset_color=config.color_reaction_suffix)
     else:
         return reaction_string
 
@@ -3446,7 +3435,7 @@ def create_reactions_string(reactions, myidentifier):
     reactions_with_users = [r for r in reactions if len(r['users']) > 0]
     reactions_string = ' '.join(create_reaction_string(r, myidentifier) for r in reactions_with_users)
     if reactions_string:
-        return ' {}[{}]{}'.format(w.color(config.color_reaction_suffix), reactions_string, w.color('reset'))
+        return ' ' + colorize_string(config.color_reaction_suffix, '[{}]'.format(reactions_string))
     else:
         return ''
 
@@ -3523,12 +3512,10 @@ def format_nick(nick, previous_nick=None):
         nick = w.config_string(w.config_get('weechat.look.prefix_same_nick')) or nick
     nick_prefix = w.config_string(w.config_get('weechat.look.nick_prefix'))
     nick_prefix_color_name = w.config_string(w.config_get('weechat.color.chat_nick_prefix'))
-    nick_prefix_color = w.color(nick_prefix_color_name)
 
     nick_suffix = w.config_string(w.config_get('weechat.look.nick_suffix'))
     nick_suffix_color_name = w.config_string(w.config_get('weechat.color.chat_nick_prefix'))
-    nick_suffix_color = w.color(nick_suffix_color_name)
-    return nick_prefix_color + nick_prefix + w.color("reset") + nick + nick_suffix_color + nick_suffix + w.color("reset")
+    return colorize_string(nick_prefix_color_name, nick_prefix) + nick + colorize_string(nick_suffix_color_name, nick_suffix)
 
 
 def tag(tagset=None, user=None, self_msg=False, backlog=False, no_log=False, extra_tags=None):
