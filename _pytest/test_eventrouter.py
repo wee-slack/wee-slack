@@ -13,7 +13,7 @@ def test_EventRouter(mock_weechat):
     # Handling an event removes from the queue.
     e = EventRouter()
     # Create a function to test we are called
-    e.proc['testfunc'] = lambda x, y: x
+    e.proc['testfunc'] = lambda json, eventrouter, team, channel, metadata: json
     e.receive({"type": "testfunc"})
     e.handle_next()
     assert len(e.queue) == 0
@@ -21,7 +21,7 @@ def test_EventRouter(mock_weechat):
     # Handling a local event removes from the queue.
     e = EventRouter()
     # Create a function to test we are called
-    e.proc['local_testfunc'] = lambda x, y: x
+    e.proc['local_testfunc'] = lambda json, eventrouter, team, channel, metadata: json
     e.receive({"type": "local_testfunc"})
     e.handle_next()
     assert len(e.queue) == 0
