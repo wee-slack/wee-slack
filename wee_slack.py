@@ -1643,7 +1643,7 @@ class SlackChannel(SlackChannelCommon):
         sidebar_color = w.color(config.color_buflist_muted_channels) if self.muted else ""
         select = {
             "default": prepend + self.slack_name,
-            "sidebar": sidebar_color + prepend + self.slack_name,
+            "sidebar": sidebar_color + prepend + self.slack_name + (w.color("reset") if sidebar_color else ""),
             "base": self.slack_name,
             "long_default": "{}.{}{}".format(self.team.preferred_name, prepend, self.slack_name),
             "long_base": "{}.{}".format(self.team.preferred_name, self.slack_name),
@@ -2046,7 +2046,10 @@ class SlackDMChannel(SlackChannel):
             "long_default": "{}.{}".format(self.team.preferred_name, self.slack_name),
             "long_base": "{}.{}".format(self.team.preferred_name, self.slack_name),
         }
-        return print_color + select[style]
+        if print_color:
+            return print_color + select[style] + w.color('reset')
+        else:
+            return select[style]
 
     def open(self, update_remote=True):
         self.create_buffer()
@@ -2436,10 +2439,11 @@ class SlackMessage(object):
 
         if self.number_of_replies():
             self.channel.hash_message(self.ts)
-            text += " {}[ Thread: {} Replies: {} ]".format(
+            text += " {}[ Thread: {} Replies: {} ]{}".format(
                     get_thread_color(self.hash),
                     self.hash,
-                    self.number_of_replies())
+                    self.number_of_replies(),
+                    w.color("reset"))
 
         text = replace_string_with_emoji(text)
 
@@ -3442,7 +3446,7 @@ def create_reactions_string(reactions, myidentifier):
     reactions_with_users = [r for r in reactions if len(r['users']) > 0]
     reactions_string = ' '.join(create_reaction_string(r, myidentifier) for r in reactions_with_users)
     if reactions_string:
-        return ' {}[{}]'.format(w.color(config.color_reaction_suffix), reactions_string)
+        return ' {}[{}]{}'.format(w.color(config.color_reaction_suffix), reactions_string, w.color('reset'))
     else:
         return ''
 
