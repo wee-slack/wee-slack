@@ -2406,6 +2406,11 @@ class SlackMessage(object):
         if self.message_json.get('mrkdwn', True):
             text = render_formatting(text)
 
+        if (self.message_json.get('subtype') in ('channel_join', 'group_join') and
+                self.message_json.get('inviter')):
+            inviter_id = self.message_json.get('inviter')
+            text += " by invitation from <@{}>".format(inviter_id)
+
         if "blocks" in self.message_json:
             text += unfurl_blocks(self.message_json)
 
@@ -2414,12 +2419,6 @@ class SlackMessage(object):
         if (self.message_json.get('subtype') == 'me_message' and
                 not self.message_json['text'].startswith(self.sender)):
             text = "{} {}".format(self.sender, text)
-
-        if (self.message_json.get('subtype') in ('channel_join', 'group_join') and
-                self.message_json.get('inviter')):
-            inviter_id = self.message_json.get('inviter')
-            inviter_nick = unfurl_refs("<@{}>".format(inviter_id))
-            text += " by invitation from {}".format(inviter_nick)
 
         if "edited" in self.message_json:
             text += " " + colorize_string(config.color_edited_suffix, '(edited)')
