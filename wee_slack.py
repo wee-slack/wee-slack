@@ -3977,6 +3977,10 @@ def command_thread(data, current_buffer, args):
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
 
+    if not isinstance(channel, SlackChannelCommon):
+        print_error('/thread can not be used in the team buffer, only in a channel')
+        return w.WEECHAT_RC_ERROR
+
     if args:
         msg = get_msg_from_id(channel, args)
         if not msg:
