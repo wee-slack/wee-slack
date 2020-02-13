@@ -1312,8 +1312,15 @@ class SlackTeam(object):
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'server')
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.nick)
             w.buffer_set(self.channel_buffer, "localvar_set_server", self.preferred_name)
-            if w.config_string(w.config_get('irc.look.server_buffer')) == 'merge_with_core':
-                w.buffer_merge(self.channel_buffer, w.buffer_search_main())
+            self.buffer_merge()
+
+    def buffer_merge(self, config_value=None):
+        if not config_value:
+            config_value = w.config_string(w.config_get('irc.look.server_buffer'))
+        if config_value == 'merge_with_core':
+            w.buffer_merge(self.channel_buffer, w.buffer_search_main())
+        else:
+            w.buffer_unmerge(self.channel_buffer, 0)
 
     def destroy_buffer(self, update_remote):
         pass
@@ -4836,6 +4843,11 @@ class PluginConfig(object):
             w.config_set_plugin("color_thread_suffix", old_thread_color_config)
 
 
+def config_server_buffer_cb(data, key, value):
+    for team in EVENTROUTER.teams.values():
+        team.buffer_merge(value)
+    return w.WEECHAT_RC_OK
+
 
 # to Trace execution, add `setup_trace()` to startup
 # and  to a function and sys.settrace(trace_calls)  to a function
@@ -4902,6 +4914,7 @@ if __name__ == "__main__":
             hide_distractions = False
 
             w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
+            w.hook_config("irc.look.server_buffer", "config_server_buffer_cb", "")
             w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
 
             EMOJI, EMOJI_WITH_SKIN_TONES_REVERSE = load_emoji()
