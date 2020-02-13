@@ -4410,9 +4410,7 @@ def closed_slack_debug_buffer_cb(data, buffer):
 
 def create_slack_debug_buffer():
     global slack_debug, debug_string
-    if slack_debug is not None:
-        w.buffer_set(slack_debug, "display", "1")
-    else:
+    if slack_debug is None:
         debug_string = None
         slack_debug = w.buffer_new("slack-debug", "", "", "closed_slack_debug_buffer_cb", "")
         w.buffer_set(slack_debug, "notify", "0")
