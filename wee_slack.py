@@ -1394,7 +1394,8 @@ class SlackTeam(object):
 
     def buffer_prnt(self, data, message=False):
         tag_name = "team_message" if message else "team_info"
-        w.prnt_date_tags(self.channel_buffer, SlackTS().major, tag(tag_name), data)
+        ts = SlackTS()
+        w.prnt_date_tags(self.channel_buffer, ts.major, tag(ts, tag_name), data)
 
     def send_message(self, message, subtype=None, request_dict_ext={}):
         w.prnt("", "ERROR: Sending a message in the team buffer is not supported")
@@ -1563,8 +1564,9 @@ class SlackChannelCommon(object):
 
     def print_getting_history(self):
         if self.channel_buffer:
-            w.prnt_date_tags(self.channel_buffer, SlackTS().major,
-                    tag(backlog=True, no_log=True), '\tgetting channel history...')
+            ts = SlackTS()
+            w.prnt_date_tags(self.channel_buffer, ts.major,
+                    tag(ts, backlog=True, no_log=True), '\tgetting channel history...')
 
     def reprint_messages(self, history_message=False, no_log=True, force_render=False):
         if self.channel_buffer:
@@ -1937,7 +1939,7 @@ class SlackChannel(SlackChannelCommon):
 
             no_log = no_log or history_message and backlog
             self_msg = tag_nick == self.team.nick
-            tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, no_log=no_log, extra_tags=extra_tags)
+            tags = tag(ts, tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, no_log=no_log, extra_tags=extra_tags)
 
             try:
                 if (config.unhide_buffers_with_activity
@@ -1945,7 +1947,6 @@ class SlackChannel(SlackChannelCommon):
                     w.buffer_set(self.channel_buffer, "hidden", "0")
 
                 w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
-                modify_last_print_time(self.channel_buffer, ts.minor)
                 if backlog or self_msg:
                     self.mark_read(ts, update_remote=False, force=True)
             except:
@@ -2471,10 +2472,9 @@ class SlackThreadChannel(SlackChannelCommon):
 
             no_log = no_log or history_message and backlog
             self_msg = tag_nick == self.team.nick
-            tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, no_log=no_log, extra_tags=extra_tags)
+            tags = tag(ts, tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, no_log=no_log, extra_tags=extra_tags)
 
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
-            modify_last_print_time(self.channel_buffer, ts.minor)
             if backlog or self_msg:
                 self.mark_read(ts, update_remote=False, force=True)
 
@@ -3885,9 +3885,11 @@ def create_reactions_string(reactions, myidentifier):
 
 def hdata_line_ts(line_pointer):
     data = w.hdata_pointer(hdata.line, line_pointer, 'data')
-    ts_major = w.hdata_time(hdata.line_data, data, 'date')
-    ts_minor = w.hdata_time(hdata.line_data, data, 'date_printed')
-    return (ts_major, ts_minor)
+    for i in range(w.hdata_integer(hdata.line_data, data, 'tags_count')):
+        tag = w.hdata_string(hdata.line_data, data, '{}|tags_array'.format(i))
+        if tag.startswith('slack_ts_'):
+            return SlackTS(tag[9:])
+    return None
 
 
 def modify_buffer_line(buffer_pointer, ts, new_text):
@@ -3895,12 +3897,12 @@ def modify_buffer_line(buffer_pointer, ts, new_text):
     line_pointer = w.hdata_pointer(hdata.lines, own_lines, 'last_line')
 
     # Find the last line with this ts
-    while line_pointer and hdata_line_ts(line_pointer) != (ts.major, ts.minor):
+    while line_pointer and hdata_line_ts(line_pointer) != ts:
         line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
 
     # Find all lines for the message
     pointers = []
-    while line_pointer and hdata_line_ts(line_pointer) == (ts.major, ts.minor):
+    while line_pointer and hdata_line_ts(line_pointer) == ts:
         pointers.append(line_pointer)
         line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
     pointers.reverse()
@@ -3915,28 +3917,6 @@ def modify_buffer_line(buffer_pointer, ts, new_text):
     for pointer, line in zip(pointers, lines):
         data = w.hdata_pointer(hdata.line, pointer, 'data')
         w.hdata_update(hdata.line_data, data, {"message": line})
-
-    return w.WEECHAT_RC_OK
-
-
-def modify_last_print_time(buffer_pointer, ts_minor):
-    """
-    This overloads the time printed field to let us store the slack
-    per message unique id that comes after the "." in a slack ts
-    """
-    own_lines = w.hdata_pointer(hdata.buffer, buffer_pointer, 'own_lines')
-    line_pointer = w.hdata_pointer(hdata.lines, own_lines, 'last_line')
-
-    while line_pointer:
-        data = w.hdata_pointer(hdata.line, line_pointer, 'data')
-        w.hdata_update(hdata.line_data, data, {"date_printed": str(ts_minor)})
-
-        if w.hdata_string(hdata.line_data, data, 'prefix'):
-            # Reached the first line of the message, so stop here
-            break
-
-        # Move one line backwards so all lines of the message are set
-        line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
 
     return w.WEECHAT_RC_OK
 
@@ -3961,7 +3941,7 @@ def format_nick(nick, previous_nick=None):
     return colorize_string(nick_prefix_color_name, nick_prefix) + nick + colorize_string(nick_suffix_color_name, nick_suffix)
 
 
-def tag(tagset=None, user=None, self_msg=False, backlog=False, no_log=False, extra_tags=None):
+def tag(ts, tagset=None, user=None, self_msg=False, backlog=False, no_log=False, extra_tags=None):
     tagsets = {
         "team_info": {"no_highlight", "log3"},
         "team_message": {"irc_privmsg", "notify_message", "log1"},
@@ -3971,9 +3951,10 @@ def tag(tagset=None, user=None, self_msg=False, backlog=False, no_log=False, ext
         "topic": {"irc_topic", "no_highlight", "log3"},
         "channel": {"irc_privmsg", "notify_message", "log1"},
     }
+    ts_tag = {"slack_ts_{}".format(ts)}
     nick_tag = {"nick_{}".format(user).replace(" ", "_")} if user else set()
     slack_tag = {"slack_{}".format(tagset or "default")}
-    tags = nick_tag | slack_tag | tagsets.get(tagset, set())
+    tags = ts_tag | nick_tag | slack_tag | tagsets.get(tagset, set())
     if self_msg or backlog:
         tags -= {"notify_highlight", "notify_message", "notify_private"}
         tags |= {"notify_none", "no_highlight"}
@@ -4870,14 +4851,18 @@ command_status.completion = "-delete|%(emoji) %-"
 
 @utf8_decode
 def line_event_cb(data, signal, hashtable):
+    tags = hashtable["_chat_line_tags"].split(',')
+    for tag in tags:
+        if tag.startswith('slack_ts_'):
+            ts = SlackTS(tag[9:])
+            break
+    else:
+        return w.WEECHAT_RC_OK
+
     buffer_pointer = hashtable["_buffer"]
-    line_timestamp = hashtable["_chat_line_date"]
-    line_time_id = hashtable["_chat_line_date_printed"]
     channel = EVENTROUTER.weechat_controller.buffers.get(buffer_pointer)
 
-    if line_timestamp and line_time_id and isinstance(channel, SlackChannelCommon):
-        ts = SlackTS("{}.{}".format(line_timestamp, line_time_id))
-
+    if isinstance(channel, SlackChannelCommon):
         message_hash = channel.hashed_messages[ts]
         if message_hash is None:
             return w.WEECHAT_RC_OK

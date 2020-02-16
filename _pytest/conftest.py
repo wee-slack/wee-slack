@@ -93,6 +93,8 @@ class FakeWeechat():
         print("w.prnt {}".format(output))
     def hdata_get(*args):
         return "0x000001"
+    def hdata_integer(*args):
+        return 1
     def hdata_pointer(*args):
         return "0x000002"
     def hdata_time(*args):
