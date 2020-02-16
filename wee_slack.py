@@ -3943,31 +3943,31 @@ def format_nick(nick, previous_nick=None):
 
 def tag(ts, tagset=None, user=None, self_msg=False, backlog=False, no_log=False, extra_tags=None):
     tagsets = {
-        "team_info": {"no_highlight", "log3"},
-        "team_message": {"irc_privmsg", "notify_message", "log1"},
-        "dm": {"irc_privmsg", "notify_private", "log1"},
-        "join": {"irc_join", "no_highlight", "log4"},
-        "leave": {"irc_part", "no_highlight", "log4"},
-        "topic": {"irc_topic", "no_highlight", "log3"},
-        "channel": {"irc_privmsg", "notify_message", "log1"},
+        "team_info": ["no_highlight", "log3"],
+        "team_message": ["irc_privmsg", "notify_message", "log1"],
+        "dm": ["irc_privmsg", "notify_private", "log1"],
+        "join": ["irc_join", "no_highlight", "log4"],
+        "leave": ["irc_part", "no_highlight", "log4"],
+        "topic": ["irc_topic", "no_highlight", "log3"],
+        "channel": ["irc_privmsg", "notify_message", "log1"],
     }
-    ts_tag = {"slack_ts_{}".format(ts)}
-    nick_tag = {"nick_{}".format(user).replace(" ", "_")} if user else set()
-    slack_tag = {"slack_{}".format(tagset or "default")}
-    tags = ts_tag | nick_tag | slack_tag | tagsets.get(tagset, set())
+    ts_tag = "slack_ts_{}".format(ts)
+    slack_tag = "slack_{}".format(tagset or "default")
+    nick_tag = ["nick_{}".format(user).replace(" ", "_")] if user else []
+    tags = [ts_tag, slack_tag] + nick_tag + tagsets.get(tagset, [])
     if self_msg or backlog:
-        tags -= {"notify_highlight", "notify_message", "notify_private"}
-        tags |= {"notify_none", "no_highlight"}
+        tags = [x for x in tags if x not in ["notify_highlight", "notify_message", "notify_private"]]
+        tags += ["notify_none", "no_highlight"]
         if self_msg:
-            tags |= {"self_msg"}
+            tags += ["self_msg"]
         if backlog:
-            tags |= {"logger_backlog"}
+            tags += ["logger_backlog"]
     if no_log:
-        tags |= {"no_log"}
-        tags = {tag for tag in tags if not tag.startswith("log") or tag == "logger_backlog"}
+        tags += ["no_log"]
+        tags = [tag for tag in tags if not tag.startswith("log") or tag == "logger_backlog"]
     if extra_tags:
-        tags |= set(extra_tags)
-    return ",".join(tags)
+        tags += extra_tags
+    return ",".join(OrderedDict.fromkeys(tags))
 
 
 def set_own_presence_active(team):
