@@ -3390,7 +3390,7 @@ def unfurl_blocks(message_json):
             elif block["type"] == "context":
                 block_text.append("|".join(i["text"] for i in block["elements"]))
             else:
-                block_text.append(' {}<<Unsupported block type "{}">>{}'.format(w.color(config.color_reaction_suffix), block["type"], w.color("reset")))
+                block_text.append(' {}<<Unsupported block type "{}">>{}'.format(w.color(config.color_deleted), block["type"], w.color("reset")))
                 dbg('Unsupported block: "{}"'.format(json.dumps(block)), level=4)
         except Exception as e:
             dbg("Failed to unfurl block ({}): {}".format(repr(e), json.dumps(block)), level=4)
