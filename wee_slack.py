@@ -2474,11 +2474,11 @@ class SlackMessage(object):
         else:
             text = ""
 
-        if "blocks" in self.message_json:
-            text += unfurl_blocks(self.message_json)
-
         if self.message_json.get('mrkdwn', True):
             text = render_formatting(text)
+
+        if "blocks" in self.message_json:
+            text += unfurl_blocks(self.message_json)
 
         text = unfurl_refs(text)
 
@@ -3390,7 +3390,8 @@ def unfurl_blocks(message_json):
             elif block["type"] == "context":
                 block_text.append("|".join(i["text"] for i in block["elements"]))
             else:
-                raise NotImplementedError("Block type not implemented", block["type"])
+                block_text.append(' {}<<Unsupported block type "{}">>{}'.format(w.color(config.color_reaction_suffix), block["type"], w.color("reset")))
+                dbg('Unsupported block: "{}"'.format(json.dumps(block)), level=4)
         except Exception as e:
             dbg("Failed to unfurl block ({}): {}".format(repr(e), json.dumps(block)), level=4)
     return "\n".join(block_text)
