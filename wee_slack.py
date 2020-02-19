@@ -2477,6 +2477,9 @@ class SlackMessage(object):
         if self.message_json.get('mrkdwn', True):
             text = render_formatting(text)
 
+        if "blocks" in self.message_json:
+            text += unfurl_blocks(self.message_json)
+
         text = unfurl_refs(text)
 
         if (self.message_json.get('subtype') == 'me_message' and
@@ -3369,6 +3372,42 @@ def linkify_text(message, team, only_users=False):
 
     linkify_regex = r'(?:^|(?<=\s))([@#])([\w\(\)\'.-]+)'
     return re.sub(linkify_regex, linkify_word, message_escaped, re.UNICODE)
+
+
+def unfurl_blocks(message_json):
+    block_text = []
+    for block in message_json["blocks"]:
+        try:
+            if block["type"] == "section":
+                if "text" in block: block_text += unfurl_texts([block["text"]])
+                if "fields" in block: block_text += unfurl_texts(block["fields"])
+            elif block["type"] == "actions":
+                block_text.append("|".join(i["text"]["text"] for i in block["elements"]))
+            elif block["type"] == "call":
+                block_text.append(". Join via " + block["call"]["v1"]["join_url"])
+            elif block["type"] == "divider":
+                block_text.append("\n")
+            elif block["type"] == "context":
+                block_text.append("|".join(i["text"] for i in block["elements"]))
+            elif block["type"] == "rich_text":
+                continue
+            else:
+                block_text.append(' {}<<Unsupported block type "{}">>{}'.format(w.color(config.color_deleted), block["type"], w.color("reset")))
+                dbg('Unsupported block: "{}"'.format(json.dumps(block)), level=4)
+        except Exception as e:
+            dbg("Failed to unfurl block ({}): {}".format(repr(e), json.dumps(block)), level=4)
+    return "\n".join(block_text)
+
+
+def unfurl_texts(texts):
+    texts_ret = []
+    for text in texts:
+        if text["type"] == "mrkdwn":
+            ftext = render_formatting(text["text"])
+        else:
+            ftext = text["text"]
+        texts_ret.append(ftext)
+    return texts_ret
 
 
 def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
