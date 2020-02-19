@@ -3382,7 +3382,14 @@ def unfurl_blocks(message_json):
                 if "text" in block: block_text += unfurl_texts([block["text"]])
                 if "fields" in block: block_text += unfurl_texts(block["fields"])
             elif block["type"] == "actions":
-                block_text.append(" | ".join(i["text"]["text"] for i in block["elements"]))
+                elements = []
+                for element in block["elements"]:
+                    if element["type"] == "button":
+                        elements.append(element["text"]["text"])
+                    else:
+                        elements.append('{}<<Unsupported block action type "{}">>{}'.format(
+                            w.color(config.color_deleted), element["type"], w.color("reset")))
+                block_text.append(" | ".join(elements))
             elif block["type"] == "call":
                 block_text.append("Join via " + block["call"]["v1"]["join_url"])
             elif block["type"] == "divider":
