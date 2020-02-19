@@ -3379,13 +3379,15 @@ def unfurl_blocks(message_json):
     for block in message_json["blocks"]:
         try:
             if block["type"] == "section":
-                if "text" in block: block_text += unfurl_texts([block["text"]])
-                if "fields" in block: block_text += unfurl_texts(block["fields"])
+                fields = block.get("fields", [])
+                if "text" in block:
+                    fields.insert(0, block["text"])
+                block_text.extend(unfurl_block_element(field) for field in fields)
             elif block["type"] == "actions":
                 elements = []
                 for element in block["elements"]:
                     if element["type"] == "button":
-                        elements.append(element["text"]["text"])
+                        elements.append(unfurl_block_element(element["text"]))
                     else:
                         elements.append('{}<<Unsupported block action type "{}">>{}'.format(
                             w.color(config.color_deleted), element["type"], w.color("reset")))
@@ -3395,7 +3397,7 @@ def unfurl_blocks(message_json):
             elif block["type"] == "divider":
                 block_text.append("---")
             elif block["type"] == "context":
-                block_text.append(" | ".join(i["text"] for i in block["elements"]))
+                block_text.append(" | ".join(unfurl_block_element(el) for el in block["elements"]))
             elif block["type"] == "rich_text":
                 continue
             else:
@@ -3406,15 +3408,11 @@ def unfurl_blocks(message_json):
     return "\n".join(block_text)
 
 
-def unfurl_texts(texts):
-    texts_ret = []
-    for text in texts:
-        if text["type"] == "mrkdwn":
-            ftext = render_formatting(text["text"])
-        else:
-            ftext = text["text"]
-        texts_ret.append(ftext)
-    return texts_ret
+def unfurl_block_element(text):
+    if text["type"] == "mrkdwn":
+        return render_formatting(text["text"])
+    elif text["type"] == "plain_text":
+        return text["text"]
 
 
 def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
