@@ -3448,6 +3448,8 @@ def unfurl_refs(text):
             elif ref.startswith("!subteam"):
                 prefix = "@" if not fallback.startswith("@") else ""
                 return prefix + fallback
+            elif ref.startswith("!date"):
+                return fallback
             else:
                 match_url = r"^\w+:(//)?{}$".format(re.escape(fallback))
                 url_matches_desc = re.match(match_url, ref)

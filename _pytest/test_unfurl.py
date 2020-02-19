@@ -101,6 +101,10 @@ import pytest
     {
         'input': "<!subteam^UNKNOWN|@othersubteam> This is announcement for the dev team",
         'output': "@othersubteam This is announcement for the dev team"
+    },
+    {
+        'input': "Ends <!date^1584573568^{date_short} at {time}|Mar 18, 2020 at 23:19 PM>.",
+        'output': "Ends Mar 18, 2020 at 23:19 PM."
     }
 ))
 def test_unfurl_refs(case, realish_eventrouter):
