@@ -3375,24 +3375,24 @@ def linkify_text(message, team, only_users=False):
 
 
 def unfurl_blocks(message_json):
-    block_text = []
+    block_text = [""]
     for block in message_json["blocks"]:
         try:
             if block["type"] == "section":
                 if "text" in block: block_text += unfurl_texts([block["text"]])
                 if "fields" in block: block_text += unfurl_texts(block["fields"])
             elif block["type"] == "actions":
-                block_text.append("|".join(i["text"]["text"] for i in block["elements"]))
+                block_text.append(" | ".join(i["text"]["text"] for i in block["elements"]))
             elif block["type"] == "call":
-                block_text.append(". Join via " + block["call"]["v1"]["join_url"])
+                block_text.append("Join via " + block["call"]["v1"]["join_url"])
             elif block["type"] == "divider":
-                block_text.append("\n")
+                block_text.append("---")
             elif block["type"] == "context":
-                block_text.append("|".join(i["text"] for i in block["elements"]))
+                block_text.append(" | ".join(i["text"] for i in block["elements"]))
             elif block["type"] == "rich_text":
                 continue
             else:
-                block_text.append(' {}<<Unsupported block type "{}">>{}'.format(w.color(config.color_deleted), block["type"], w.color("reset")))
+                block_text.append('{}<<Unsupported block type "{}">>{}'.format(w.color(config.color_deleted), block["type"], w.color("reset")))
                 dbg('Unsupported block: "{}"'.format(json.dumps(block)), level=4)
         except Exception as e:
             dbg("Failed to unfurl block ({}): {}".format(repr(e), json.dumps(block)), level=4)
