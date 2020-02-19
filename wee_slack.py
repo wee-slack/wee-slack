@@ -3421,7 +3421,7 @@ def unfurl_block_element(text):
         return "{} ({})".format(text["image_url"], text["alt_text"])
 
 
-def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
+def unfurl_refs(text, ignore_alt_text=None):
     """
     input : <@U096Q7CQM|someuser> has joined the channel
     ouput : someuser has joined the channel
@@ -3435,8 +3435,6 @@ def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
 
     if ignore_alt_text is None:
         ignore_alt_text = config.unfurl_ignore_alt_text
-    if auto_link_display is None:
-        auto_link_display = config.unfurl_auto_link_display
 
     def unfurl_ref(match):
         ref = match.group(1)
@@ -3460,9 +3458,9 @@ def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
                     url, desc = ref.split('|', 1)
                     match_url = r"^\w+:(//)?{}$".format(re.escape(desc))
                     url_matches_desc = re.match(match_url, url)
-                    if url_matches_desc and auto_link_display == "text":
+                    if url_matches_desc and config.unfurl_auto_link_display == "text":
                         display_text = desc
-                    elif url_matches_desc and auto_link_display == "url":
+                    elif url_matches_desc and config.unfurl_auto_link_display == "url":
                         display_text = url
                     else:
                         display_text = "{} ({})".format(url, desc)

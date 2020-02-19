@@ -85,10 +85,10 @@ import pytest
 ))
 def test_unfurl_refs(case, realish_eventrouter):
     wee_slack.EVENTROUTER = realish_eventrouter
+    wee_slack.config.unfurl_auto_link_display = case.get('auto_link_display')
 
     result = wee_slack.unfurl_refs(
         case['input'],
-        ignore_alt_text=case.get('ignore_alt_text', False),
-        auto_link_display=case.get('auto_link_display', 'both'),
+        ignore_alt_text=case.get('ignore_alt_text', False)
     )
     assert result == case['output']
