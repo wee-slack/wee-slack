@@ -3398,6 +3398,10 @@ def unfurl_blocks(message_json):
                 block_text.append("---")
             elif block["type"] == "context":
                 block_text.append(" | ".join(unfurl_block_element(el) for el in block["elements"]))
+            elif block["type"] == "image":
+                if "title" in block:
+                    block_text.append(unfurl_block_element(block["title"]))
+                block_text.append(unfurl_block_element(block))
             elif block["type"] == "rich_text":
                 continue
             else:
@@ -3413,6 +3417,8 @@ def unfurl_block_element(text):
         return render_formatting(text["text"])
     elif text["type"] == "plain_text":
         return text["text"]
+    elif text["type"] == "image":
+        return "{} ({})".format(text["image_url"], text["alt_text"])
 
 
 def unfurl_refs(text, ignore_alt_text=None, auto_link_display=None):
