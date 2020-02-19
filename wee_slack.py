@@ -63,6 +63,7 @@ REPO_URL = "https://github.com/wee-slack/wee-slack"
 
 BACKLOG_SIZE = 200
 SCROLLBACK_SIZE = 500
+PRESENCE_SUBSCRIBE_SIZE = 750
 
 RECORD_DIR = "/tmp/weeslack-debug"
 
@@ -1476,15 +1477,43 @@ class SlackTeam(object):
                 c.update_nicklist(user.id)
 
     def subscribe_users_presence(self):
-        # FIXME: There is a limitation in the API to the size of the
-        # json we can send.
-        # We should try to be smarter to fetch the users whom we want to
-        # subscribe to.
-        users = list(self.users.keys())[0:750]
+        if len(self.users) <= PRESENCE_SUBSCRIBE_SIZE:
+            users = list(self.users.keys())
+        else:
+            users = self.get_users_by_presence_order()
+
         self.send_to_websocket({
             "type": "presence_sub",
             "ids": users,
         }, expect_reply=False)
+
+    def get_users_by_presence_order(self):
+        """
+        Get users in this order (restricted by the API JSON size limit):
+
+        1. Current user
+        2. Users in DMs
+        3. Users in MPDMs
+        4. Users in private groups
+        5. Users in public channels (excluding the "general" channel)
+        """
+        users = {
+            channel_type: set() for channel_type in
+            ("im", "mpim", "group", "channel", "shared")
+        }
+        for channel in self.channels.values():
+            if getattr(channel, "is_open", False) or (
+                getattr(channel, "is_member", False) and not channel.is_general
+            ):
+                users[channel.type].update(channel.get_members())
+
+        user_set = {self.myidentifier}
+        for channel_type in ("im", "mpim", "group", "channel"):
+            for user in users[channel_type]:
+                if len(user_set) >= PRESENCE_SUBSCRIBE_SIZE:
+                    return list(user_set)
+                user_set.add(user)
+        return list(user_set)
 
 
 class SlackChannelCommon(object):
