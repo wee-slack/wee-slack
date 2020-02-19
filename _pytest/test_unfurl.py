@@ -28,23 +28,38 @@ import pytest
     {
         'input': "<@U407ABLLW|@othernick>: foo",
         'output': "@alice: foo",
-        'ignore_alt_text': True,
+    },
+    {
+        'input': "<@UNKNOWN|@othernick>: foo",
+        'output': "@othernick: foo",
     },
     {
         'input': "foo <#C407ABS94|otherchannel> foo",
+        'output': "foo #general foo",
+    },
+    {
+        'input': "foo <#UNKNOWN|otherchannel> foo",
         'output': "foo #otherchannel foo",
     },
     {
-        'input': "foo <#C407ABS94> foo",
-        'output': "foo #general foo",
+        'input': "url: <https://example.com|fallback> suffix",
+        'output': "url: https://example.com suffix",
+        'ignore_alt_text': True,
     },
     {
         'input': "url: <https://example.com|example> suffix",
         'output': "url: https://example.com (example) suffix",
+        'auto_link_display': 'both',
     },
     {
         'input': "url: <https://example.com|example with spaces> suffix",
         'output': "url: https://example.com (example with spaces) suffix",
+        'auto_link_display': 'both',
+    },
+    {
+        'input': "url: <https://example.com|example.com> suffix",
+        'output': "url: https://example.com (example.com) suffix",
+        'auto_link_display': 'both',
     },
     {
         'input': "url: <https://example.com|example.com> suffix",
@@ -67,8 +82,9 @@ import pytest
         'auto_link_display': 'url',
     },
     {
-        'input': "<@U407ABLLW|@othernick> multiple unfurl <https://example.com|example with spaces>",
-        'output': "@othernick multiple unfurl https://example.com (example with spaces)",
+        'input': "<@U407ABLLW> multiple unfurl <https://example.com|example with spaces>",
+        'output': "@alice multiple unfurl https://example.com (example with spaces)",
+        'auto_link_display': 'both',
     },
     {
         'input': "try the #general channel",
@@ -79,8 +95,12 @@ import pytest
         'output': "@alice I think 3 > 2",
     },
     {
-        'input': "<!subteam^U407ABLLW|@dev> This is announcement for the dev team",
-        'output': "@dev This is announcement for the dev team"
+        'input': "<!subteam^TGX0ALBK3|@othersubteam> This is announcement for the dev team",
+        'output': "@test This is announcement for the dev team"
+    },
+    {
+        'input': "<!subteam^UNKNOWN|@othersubteam> This is announcement for the dev team",
+        'output': "@othersubteam This is announcement for the dev team"
     }
 ))
 def test_unfurl_refs(case, realish_eventrouter):

@@ -3434,38 +3434,32 @@ def unfurl_refs(text):
     # Test patterns lives in ./_pytest/test_unfurl.py
 
     def unfurl_ref(match):
-        ref = match.group(1)
-        id = ref.split('|')[0]
-        display_text = ref
-        if ref.find('|') > -1:
-            if config.unfurl_ignore_alt_text:
-                display_text = resolve_ref(id)
-            else:
-                if id.startswith("#"):
-                    display_text = "#{}".format(ref.split('|')[1])
-                elif id.startswith("@"):
-                    display_text = ref.split('|')[1]
-                elif id.startswith("!subteam"):
-                    if ref.split('|')[1].startswith('@'):
-                        handle = ref.split('|')[1][1:]
-                    else:
-                        handle = ref.split('|')[1]
-                    display_text = '@{}'.format(handle)
-                else:
-                    url, desc = ref.split('|', 1)
-                    match_url = r"^\w+:(//)?{}$".format(re.escape(desc))
-                    url_matches_desc = re.match(match_url, url)
-                    if url_matches_desc and config.unfurl_auto_link_display == "text":
-                        display_text = desc
-                    elif url_matches_desc and config.unfurl_auto_link_display == "url":
-                        display_text = url
-                    else:
-                        display_text = "{} ({})".format(url, desc)
-        else:
-            display_text = resolve_ref(ref)
-        return display_text
+        ref, fallback = match.groups()
 
-    return re.sub(r"<([@#!]?[^>]*)>", unfurl_ref, text)
+        resolved_ref = resolve_ref(ref)
+        if resolved_ref != ref:
+            return resolved_ref
+
+        if fallback and not config.unfurl_ignore_alt_text:
+            if ref.startswith("#"):
+                return "#{}".format(fallback)
+            elif ref.startswith("@"):
+                return fallback
+            elif ref.startswith("!subteam"):
+                prefix = "@" if not fallback.startswith("@") else ""
+                return prefix + fallback
+            else:
+                match_url = r"^\w+:(//)?{}$".format(re.escape(fallback))
+                url_matches_desc = re.match(match_url, ref)
+                if url_matches_desc and config.unfurl_auto_link_display == "text":
+                    return fallback
+                elif url_matches_desc and config.unfurl_auto_link_display == "url":
+                    return ref
+                else:
+                    return "{} ({})".format(ref, fallback)
+        return ref
+
+    return re.sub(r"<([^|>]*)(?:\|([^>]*))?>", unfurl_ref, text)
 
 
 def unhtmlescape(text):
@@ -3549,10 +3543,10 @@ def unwrap_files(message_json, text_before):
 
 
 def resolve_ref(ref):
+    if ref in ['!channel', '!everyone', '!group', '!here']:
+        return ref.replace('!', '@')
     for team in EVENTROUTER.teams.values():
-        if ref in ['!channel', '!everyone', '!group', '!here']:
-            return ref.replace('!', '@')
-        elif ref.startswith('@'):
+        if ref.startswith('@'):
             user = team.users.get(ref[1:])
             if user:
                 suffix = config.external_user_suffix if user.is_external else ''
