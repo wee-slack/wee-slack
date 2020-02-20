@@ -1,7 +1,8 @@
 from __future__ import print_function, unicode_literals
 
-import wee_slack
+from datetime import datetime, timedelta
 import pytest
+import wee_slack
 
 
 @pytest.mark.parametrize('case', (
@@ -103,8 +104,35 @@ import pytest
         'output': "@othersubteam This is announcement for the dev team"
     },
     {
-        'input': "Ends <!date^1584573568^{date_short} at {time}|Mar 18, 2020 at 23:19 PM>.",
-        'output': "Ends Mar 18, 2020 at 23:19 PM."
+        'input': "Ends <!date^1584573568^{date_num} - {date} - {date_short} - {date_long} at {time} - {time_secs}|Mar 18, 2020 at 23:19 PM>.",
+        'output': "Ends 2020-03-19 - March 19, 2020 - Mar 19, 2020 - Thursday, March 19, 2020 at 00:19 - 00:19:28."
+    },
+    {
+        'input': "Ends <!date^1584573568^{date_num} {invalid_token}>.",
+        'output': "Ends 2020-03-19 {invalid_token}."
+    },
+    {
+        'input': "Ends <!date^1584573568^{date_num}^http://github.com>.",
+        'output': "Ends 2020-03-19 (http://github.com)."
+    },
+    {
+        'input': "Ends <!date^{}^{{date_pretty}} - {{date_short_pretty}} - {{date_long_pretty}}>.".format(
+            int((datetime.today()).timestamp())),
+        'output': "Ends today - today - today."
+    },
+    {
+        'input': "Ends <!date^{}^{{date_pretty}} - {{date_short_pretty}} - {{date_long_pretty}}>.".format(
+            int((datetime.today() - timedelta(days=1)).timestamp())),
+        'output': "Ends yesterday - yesterday - yesterday."
+    },
+    {
+        'input': "Ends <!date^{}^{{date_pretty}} - {{date_short_pretty}} - {{date_long_pretty}}>.".format(
+            int((datetime.today() + timedelta(days=1)).timestamp())),
+        'output': "Ends tomorrow - tomorrow - tomorrow."
+    },
+    {
+        'input': "Ends <!date^1577833200^{date_pretty} - {date_short_pretty} - {date_long_pretty}>.",
+        'output': "Ends January 01, 2020 - Jan 01, 2020 - Wednesday, January 01, 2020."
     }
 ))
 def test_unfurl_refs(case, realish_eventrouter):

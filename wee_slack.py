@@ -6,6 +6,7 @@
 from __future__ import print_function, unicode_literals
 
 from collections import OrderedDict
+from datetime import date, datetime, timedelta
 from functools import wraps
 from io import StringIO
 from itertools import chain, count, islice
@@ -3562,6 +3563,36 @@ def resolve_ref(ref):
             subteam = team.subteams.get(subteam_id)
             if subteam:
                 return subteam.handle
+        elif ref.startswith("!date"):
+            parts = ref.split('^')
+            ref_datetime = datetime.fromtimestamp(int(parts[1]))
+            link_suffix = ' ({})'.format(parts[3]) if len(parts) > 3 else ''
+            token_to_format = {
+                    'date_num': '%Y-%m-%d',
+                    'date': '%B %d, %Y',
+                    'date_short': '%b %d, %Y',
+                    'date_long': '%A, %B %d, %Y',
+                    'time': '%H:%M',
+                    'time_secs': '%H:%M:%S'
+            }
+
+            def replace_token(match):
+                token = match.group(1)
+                if token.startswith('date_') and token.endswith('_pretty'):
+                    if ref_datetime.date() == date.today():
+                        return 'today'
+                    elif ref_datetime.date() == date.today() - timedelta(days=1):
+                        return 'yesterday'
+                    elif ref_datetime.date() == date.today() + timedelta(days=1):
+                        return 'tomorrow'
+                    else:
+                        token = token.replace('_pretty', '')
+                if token in token_to_format:
+                    return ref_datetime.strftime(token_to_format[token])
+                else:
+                    return match.group(0)
+
+            return re.sub(r"{([^}]+)}", replace_token, parts[2]) + link_suffix
 
     # Something else, just return as-is
     return ref
