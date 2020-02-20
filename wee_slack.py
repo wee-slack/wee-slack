@@ -1692,7 +1692,7 @@ class SlackChannel(SlackChannelCommon):
         topic = self.topic['value']
         if not topic and fallback_to_purpose:
             topic = self.slack_purpose['value']
-        return unhtmlescape(unfurl_refs(topic, ignore_alt_text=False))
+        return unhtmlescape(unfurl_refs(topic))
 
     def set_topic(self, value=None):
         if value is not None:
@@ -3421,7 +3421,7 @@ def unfurl_block_element(text):
         return "{} ({})".format(text["image_url"], text["alt_text"])
 
 
-def unfurl_refs(text, ignore_alt_text=None):
+def unfurl_refs(text):
     """
     input : <@U096Q7CQM|someuser> has joined the channel
     ouput : someuser has joined the channel
@@ -3433,15 +3433,12 @@ def unfurl_refs(text, ignore_alt_text=None):
     #  - <!subteam^U2147483697|@group>
     # Test patterns lives in ./_pytest/test_unfurl.py
 
-    if ignore_alt_text is None:
-        ignore_alt_text = config.unfurl_ignore_alt_text
-
     def unfurl_ref(match):
         ref = match.group(1)
         id = ref.split('|')[0]
         display_text = ref
         if ref.find('|') > -1:
-            if ignore_alt_text:
+            if config.unfurl_ignore_alt_text:
                 display_text = resolve_ref(id)
             else:
                 if id.startswith("#"):
