@@ -104,16 +104,20 @@ import wee_slack
         'output': "@othersubteam This is announcement for the dev team"
     },
     {
-        'input': "Ends <!date^1584573568^{date_num} - {date} - {date_short} - {date_long} at {time} - {time_secs}|Mar 18, 2020 at 23:19 PM>.",
-        'output': "Ends 2020-03-19 - March 19, 2020 - Mar 19, 2020 - Thursday, March 19, 2020 at 00:19 - 00:19:28."
+        'input': "Ends <!date^1577880000^{date_num} - {date} - {date_short} - {date_long}|Jan 01, 2020>.",
+        'output': "Ends 2020-01-01 - January 01, 2020 - Jan 01, 2020 - Wednesday, January 01, 2020."
     },
     {
-        'input': "Ends <!date^1584573568^{date_num} {invalid_token}>.",
-        'output': "Ends 2020-03-19 {invalid_token}."
+        'input': "Ends <!date^1577880000^{time} - {time_secs}|12:00 PM>.",
+        'output': "Ends 12:00 - 12:00:00."
     },
     {
-        'input': "Ends <!date^1584573568^{date_num}^http://github.com>.",
-        'output': "Ends 2020-03-19 (http://github.com)."
+        'input': "Ends <!date^1577880000^{date_num} {invalid_token}>.",
+        'output': "Ends 2020-01-01 {invalid_token}."
+    },
+    {
+        'input': "Ends <!date^1577880000^{date_num}^http://github.com>.",
+        'output': "Ends 2020-01-01 (http://github.com)."
     },
     {
         'input': "Ends <!date^{}^{{date_pretty}} - {{date_short_pretty}} - {{date_long_pretty}}>.".format(
@@ -131,7 +135,7 @@ import wee_slack
         'output': "Ends tomorrow - tomorrow - tomorrow."
     },
     {
-        'input': "Ends <!date^1577833200^{date_pretty} - {date_short_pretty} - {date_long_pretty}>.",
+        'input': "Ends <!date^1577880000^{date_pretty} - {date_short_pretty} - {date_long_pretty}>.",
         'output': "Ends January 01, 2020 - Jan 01, 2020 - Wednesday, January 01, 2020."
     }
 ))
