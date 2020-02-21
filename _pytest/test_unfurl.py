@@ -2,6 +2,7 @@ from __future__ import print_function, unicode_literals
 
 from datetime import datetime, timedelta
 import pytest
+import time
 import wee_slack
 
 
@@ -121,17 +122,17 @@ import wee_slack
     },
     {
         'input': "Ends <!date^{}^{{date_pretty}} - {{date_short_pretty}} - {{date_long_pretty}}>.".format(
-            int((datetime.today()).timestamp())),
+            int(time.mktime(datetime.today().timetuple()))),
         'output': "Ends today - today - today."
     },
     {
         'input': "Ends <!date^{}^{{date_pretty}} - {{date_short_pretty}} - {{date_long_pretty}}>.".format(
-            int((datetime.today() - timedelta(days=1)).timestamp())),
+            int(time.mktime((datetime.today() - timedelta(days=1)).timetuple()))),
         'output': "Ends yesterday - yesterday - yesterday."
     },
     {
         'input': "Ends <!date^{}^{{date_pretty}} - {{date_short_pretty}} - {{date_long_pretty}}>.".format(
-            int((datetime.today() + timedelta(days=1)).timestamp())),
+            int(time.mktime((datetime.today() + timedelta(days=1)).timetuple()))),
         'output': "Ends tomorrow - tomorrow - tomorrow."
     },
     {
