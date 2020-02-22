@@ -7,7 +7,7 @@ from __future__ import print_function, unicode_literals
 
 from collections import OrderedDict
 from datetime import date, datetime, timedelta
-from functools import wraps
+from functools import partial, wraps
 from io import StringIO
 from itertools import chain, count, islice
 
@@ -330,16 +330,24 @@ EMOJI_NAME_REGEX = re.compile(':([^: ]+):')
 EMOJI_REGEX_STRING = '[\U00000080-\U0010ffff]+'
 
 
-def regex_match_to_emoji(match):
+def regex_match_to_emoji(match, include_name=False):
     emoji = match.group(1)
-    return EMOJI.get(emoji, match.group())
+    full_match = match.group()
+    char = EMOJI.get(emoji, full_match)
+    if include_name and char != full_match:
+        return '{} ({})'.format(char, full_match)
+    return char
 
 
 def replace_string_with_emoji(text):
-    if config.render_emoji_as_string:
+    if config.render_emoji_as_string == 'both':
+        return EMOJI_NAME_REGEX.sub(
+            partial(regex_match_to_emoji, include_name=True),
+            text,
+        )
+    elif config.render_emoji_as_string:
         return text
-    else:
-        return EMOJI_NAME_REGEX.sub(regex_match_to_emoji, text)
+    return EMOJI_NAME_REGEX.sub(regex_match_to_emoji, text)
 
 
 def replace_emoji_with_string(text):
@@ -4849,7 +4857,8 @@ class PluginConfig(object):
         'render_emoji_as_string': Setting(
             default='false',
             desc="Render emojis as :emoji_name: instead of emoji characters. Enable this"
-            " if your terminal doesn't support emojis. Note that even though this is"
+            " if your terminal doesn't support emojis, or set to 'both' if you want to"
+            " see both renderings. Note that even though this is"
             " disabled by default, you need to place {}/blob/master/weemoji.json in your"
             " weechat directory to enable rendering emojis as emoji characters."
             .format(REPO_URL)),
@@ -5007,6 +5016,12 @@ class PluginConfig(object):
             return w.string_eval_expression(token, {}, {}, {})
         else:
             return token
+
+    def get_render_emoji_as_string(self, key):
+        s = w.config_get_plugin(key)
+        if s == 'both':
+            return s
+        return w.config_string_to_boolean(s)
 
     def migrate(self):
         """
