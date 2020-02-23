@@ -158,7 +158,7 @@ slack` after changing it to take effect.
 
 **Default:** `false`
 
-**Description:** Render emojis as :emoji_name: instead of emoji characters. Enable this if your terminal doesn't support emojis. Note that even though this is disabled by default, you need to place https://github.com/wee-slack/wee-slack/blob/master/weemoji.json in your weechat directory to enable rendering emojis as emoji characters.
+**Description:** Render emojis as :emoji_name: instead of emoji characters. Enable this if your terminal doesn't support emojis, or set to 'both' if you want to see both renderings. Note that even though this is disabled by default, you need to place https://github.com/wee-slack/wee-slack/blob/master/weemoji.json in your weechat directory to enable rendering emojis as emoji characters.
 
 ### render_italic_as
 
