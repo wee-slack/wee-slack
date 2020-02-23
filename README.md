@@ -269,6 +269,11 @@ You may remove a team by removing its token from the dedicated comma-separated l
 /set plugins.var.python.slack.slack_api_token "xoxp-XXXXXXXX,xoxp-XXXXXXXX"
 ```
 
+You can use tab completion after the key to complete the current value. To see
+which token belongs to which team, run `/slack teams`.
+
+After removing the token, you have to reload wee-slack with `/python reload slack`.
+
 Optional settings
 -----------------
 
