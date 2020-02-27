@@ -2943,7 +2943,7 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
             channel.change_message(parent_ts)
 
             if parent_message.thread_channel and parent_message.thread_channel.active:
-                parent_message.thread_channel.buffer_prnt(message.sender, parent_message.thread_channel.render(message), message.ts, tag_nick=message.sender_plain, history_message=history_message)
+                parent_message.thread_channel.buffer_prnt(message.sender, parent_message.thread_channel.render(message), message.ts, tag_nick=message.sender_plain)
             elif message.ts > channel.last_read and message.has_mention():
                 parent_message.notify_thread(action="mention", sender_id=message_json["user"])
 
