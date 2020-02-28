@@ -3188,7 +3188,7 @@ def linkify_text(message, team, only_users=False):
         return word
 
     linkify_regex = r'(?:^|(?<=\s))([@#])([\w\(\)\'.-]+)'
-    return re.sub(linkify_regex, linkify_word, message_escaped, re.UNICODE)
+    return re.sub(linkify_regex, linkify_word, message_escaped, flags=re.UNICODE)
 
 
 def unfurl_blocks(message_json):
