@@ -4006,10 +4006,17 @@ command_thread.completion = '%(threads)'
 @utf8_decode
 def command_reply(data, current_buffer, args):
     """
+    When in a channel buffer:
     /reply [-alsochannel] <count/message_id> <text>
-    Reply in a thread on the message. Specify either the message id, a count
-    upwards to the message from the last message, or, if you are already in a
-    thread, nothing.
+    Reply in a thread on the message. Specify either the message id or a count
+    upwards to the message from the last message.
+
+    When in a thread buffer:
+    /reply [-alsochannel] <text>
+    Reply to the current thread.  This can be used to send the reply to the
+    rest of the channel.
+
+    In either case, -alsochannel also sends the reply to the parent channel.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     parts = args.split(None, 1)
@@ -4019,18 +4026,15 @@ def command_reply(data, current_buffer, args):
     else:
         broadcast = False
 
-    try:
-        if isinstance(channel, SlackThreadChannel):
-            text = args
-        else:
-            msg_id, text = args.split(None, 1)
-    except ValueError:
-        w.prnt('', 'Usage: /reply [-alsochannel] <count/id> <message>')
-        return w.WEECHAT_RC_OK_EAT
-
     if isinstance(channel, SlackThreadChannel):
+        text = args
         msg = channel.parent_message
     else:
+        try:
+            msg_id, text = args.split(None, 1)
+        except ValueError:
+            w.prnt('', 'Usage (when in a channel buffer): /reply [-alsochannel] <count/id> <message>')
+            return w.WEECHAT_RC_OK_EAT
         msg = get_msg_from_id(channel, msg_id)
 
     if msg:
