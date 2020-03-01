@@ -4006,6 +4006,8 @@ command_thread.completion = '%(threads)'
 @utf8_decode
 def command_reply(data, current_buffer, args):
     """
+    /reply [-alsochannel] [<count/message_id>] <text>
+
     When in a channel buffer:
     /reply [-alsochannel] <count/message_id> <text>
     Reply in a thread on the message. Specify either the message id or a count
