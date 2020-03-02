@@ -851,10 +851,9 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
 @utf8_decode
 def buffer_switch_callback(signal, sig_type, data):
     """
-    incomplete
     Every time we change channels in weechat, we call this to:
     1) set read marker 2) determine if we have already populated
-    channel history data
+    channel history data 3) set presence to active
     """
     eventrouter = eval(signal)
 
@@ -868,6 +867,7 @@ def buffer_switch_callback(signal, sig_type, data):
     if new_channel:
         if not new_channel.got_history:
             new_channel.get_history()
+        set_own_presence_active(new_channel.team)
 
     eventrouter.weechat_controller.set_previous_buffer(data)
     return w.WEECHAT_RC_OK
@@ -927,10 +927,7 @@ def typing_update_cb(data, remaining_calls):
 def slack_never_away_cb(data, remaining_calls):
     if config.never_away:
         for team in EVENTROUTER.teams.values():
-            slackbot = team.get_channel_map()['Slackbot']
-            channel = team.channels[slackbot]
-            request = {"type": "typing", "channel": channel.identifier}
-            channel.team.send_to_websocket(request, expect_reply=False)
+            set_own_presence_active(team)
     return w.WEECHAT_RC_OK
 
 
@@ -3567,6 +3564,14 @@ def tag(tagset=None, user=None, self_msg=False, backlog=False, no_log=False, ext
         tags |= set(extra_tags)
     return ",".join(tags)
 
+
+def set_own_presence_active(team):
+    slackbot = team.get_channel_map()['Slackbot']
+    channel = team.channels[slackbot]
+    request = {"type": "typing", "channel": channel.identifier}
+    channel.team.send_to_websocket(request, expect_reply=False)
+
+
 ###### New/converted command_ commands
 
 
@@ -4381,6 +4386,7 @@ def command_back(data, current_buffer, args):
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
     s = SlackRequest(team, "users.setPresence", {"presence": "auto"})
     EVENTROUTER.receive(s)
+    set_own_presence_active(team)
     return w.WEECHAT_RC_OK
 
 
