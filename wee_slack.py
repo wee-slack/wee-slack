@@ -1238,7 +1238,7 @@ class SlackTeam(object):
     Team object under which users and channels live.. Does lots.
     """
 
-    def __init__(self, eventrouter, token, websocket_url, team_info, subteams,  nick, myidentifier, users, bots, channels, **kwargs):
+    def __init__(self, eventrouter, token, websocket_url, team_info, subteams,  nick, myidentifier, my_manual_presence, users, bots, channels, **kwargs):
         self.identifier = team_info["id"]
         self.active = True
         self.ws_url = websocket_url
@@ -1260,6 +1260,7 @@ class SlackTeam(object):
         self.preferred_name = self.domain
         self.nick = nick
         self.myidentifier = myidentifier
+        self.my_manual_presence = my_manual_presence
         try:
             if self.channels:
                 for c in channels.keys():
@@ -2677,6 +2678,7 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
             subteams,
             self_nick,
             login_data["self"]["id"],
+            login_data["self"]["manual_presence"],
             users,
             bots,
             channels,
@@ -2834,7 +2836,8 @@ def process_presence_change(message_json, eventrouter, team, channel, metadata):
         w.bar_item_update("slack_away")
 
 
-process_manual_presence_change = process_presence_change
+def process_manual_presence_change(message_json, eventrouter, team, channel, metadata):
+    team.my_manual_presence = message_json["presence"]
 
 
 def process_pref_change(message_json, eventrouter, team, channel, metadata):
