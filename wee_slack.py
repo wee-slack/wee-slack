@@ -2888,7 +2888,10 @@ def process_message(message_json, eventrouter, team, channel, metadata, history_
         return
 
     if "thread_ts" in message_json and "reply_count" not in message_json and "subtype" not in message_json:
-        message_json["subtype"] = "thread_message"
+        if message_json.get("reply_broadcast"):
+            message_json["subtype"] = "thread_broadcast"
+        else:
+            message_json["subtype"] = "thread_message"
 
     subtype = message_json.get("subtype")
     subtype_functions = get_functions_with_prefix("subprocess_")
