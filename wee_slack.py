@@ -2279,7 +2279,7 @@ class SlackThreadChannel(SlackChannelCommon):
     def main_message_keys_reversed(self):
         return (message.ts for message in reversed(self.parent_message.submessages))
 
-    def send_message(self, message, subtype=None):
+    def send_message(self, message, subtype=None, request_dict_ext={}):
         if subtype == 'me_message':
             w.prnt("", "ERROR: /me is not supported in threads")
             return w.WEECHAT_RC_ERROR
@@ -2289,6 +2289,7 @@ class SlackThreadChannel(SlackChannelCommon):
                 "channel": self.parent_message.channel.identifier,
                 "thread_ts": str(self.parent_message.ts),
                 "user": self.team.myidentifier}
+        request.update(request_dict_ext)
         self.team.send_to_websocket(request)
 
     def open(self, update_remote=True):
@@ -4031,22 +4032,44 @@ def command_thread(data, current_buffer, args):
 
 command_thread.completion = '%(threads)'
 
+
 @slack_buffer_required
 @utf8_decode
 def command_reply(data, current_buffer, args):
     """
-    /reply <count/message_id> <text>
-    Reply in a thread on the message. Specify either the message id
-    or a count upwards to the message from the last message.
+    /reply [-alsochannel] [<count/message_id>] <text>
+
+    When in a channel buffer:
+    /reply [-alsochannel] <count/message_id> <text>
+    Reply in a thread on the message. Specify either the message id or a count
+    upwards to the message from the last message.
+
+    When in a thread buffer:
+    /reply [-alsochannel] <text>
+    Reply to the current thread.  This can be used to send the reply to the
+    rest of the channel.
+
+    In either case, -alsochannel also sends the reply to the parent channel.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    try:
-        msg_id, text = args.split(None, 1)
-    except ValueError:
-        w.prnt('', 'Usage: /reply <count/id> <message>')
-        return w.WEECHAT_RC_OK_EAT
+    parts = args.split(None, 1)
+    if parts[0] == "-alsochannel":
+        args = parts[1]
+        broadcast = True
+    else:
+        broadcast = False
 
-    msg = get_msg_from_id(channel, msg_id)
+    if isinstance(channel, SlackThreadChannel):
+        text = args
+        msg = channel.parent_message
+    else:
+        try:
+            msg_id, text = args.split(None, 1)
+        except ValueError:
+            w.prnt('', 'Usage (when in a channel buffer): /reply [-alsochannel] <count/id> <message>')
+            return w.WEECHAT_RC_OK_EAT
+        msg = get_msg_from_id(channel, msg_id)
+
     if msg:
         parent_id = str(msg.ts)
     elif msg_id.isdigit() and int(msg_id) >= 1:
@@ -4056,10 +4079,10 @@ def command_reply(data, current_buffer, args):
         w.prnt('', 'ERROR: Invalid id given, must be a number greater than 0 or an existing id')
         return w.WEECHAT_RC_OK_EAT
 
-    channel.send_message(text, request_dict_ext={'thread_ts': parent_id})
+    channel.send_message(text, request_dict_ext={'thread_ts': parent_id, 'reply_broadcast': broadcast})
     return w.WEECHAT_RC_OK_EAT
 
-command_reply.completion = '%(threads)'
+command_reply.completion = '-alsochannel %(threads)||%(threads)'
 
 
 @slack_buffer_required
