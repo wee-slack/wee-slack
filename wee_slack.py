@@ -969,6 +969,19 @@ def typing_bar_item_cb(data, item, current_window, current_buffer, extra_info):
 
 
 @utf8_decode
+def away_bar_item_cb(data, item, current_window, current_buffer, extra_info):
+    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    if not channel:
+        return ''
+
+    if channel.team.is_user_present(channel.team.myidentifier):
+        return ''
+    else:
+        away_color = w.config_string(w.config_get('weechat.color.item_away'))
+        return colorize_string(away_color, 'away')
+
+
+@utf8_decode
 def channel_completion_cb(data, completion_item, current_buffer, completion):
     """
     Adds all channels on all teams to completion list
@@ -2817,6 +2830,9 @@ def process_presence_change(message_json, eventrouter, team, channel, metadata):
         users.append(metadata["user"])
     for user in users:
         team.update_member_presence(user, message_json["presence"])
+    if team.myidentifier in users:
+        w.bar_item_update("away")
+        w.bar_item_update("slack_away")
 
 
 process_manual_presence_change = process_presence_change
@@ -4452,6 +4468,8 @@ def load_emoji():
 
 def setup_hooks():
     w.bar_item_new('slack_typing_notice', '(extra)typing_bar_item_cb', '')
+    w.bar_item_new('away', '(extra)away_bar_item_cb', '')
+    w.bar_item_new('slack_away', '(extra)away_bar_item_cb', '')
 
     w.hook_timer(5000, 0, 0, "ws_ping_cb", "")
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
