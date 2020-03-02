@@ -1464,7 +1464,9 @@ class SlackTeam(object):
         # json we can send.
         # We should try to be smarter to fetch the users whom we want to
         # subscribe to.
-        users = list(self.users.keys())[0:750]
+        users = list(self.users.keys())[:750]
+        if self.myidentifier not in users:
+            users.append(self.myidentifier)
         self.send_to_websocket({
             "type": "presence_sub",
             "ids": users,
