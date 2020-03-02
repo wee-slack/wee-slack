@@ -4561,7 +4561,7 @@ def setup_hooks():
     for cmd in ['hide', 'label', 'rehistory', 'reply', 'thread']:
         doc = EVENTROUTER.cmds[cmd].__doc__.strip().split('\n', 1)
         args = ' '.join(doc[0].split()[1:])
-        description = textwrap.dedent(doc[1])
+        description = textwrap.dedent(doc[1]).strip()
         completion = getattr(EVENTROUTER.cmds[cmd], 'completion', '')
         w.hook_command(cmd, description, args, '', completion, 'command_' + cmd, '')
 
