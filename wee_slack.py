@@ -4142,11 +4142,14 @@ def command_help(data, current_buffer, args):
             return w.WEECHAT_RC_OK
     else:
         cmds = EVENTROUTER.cmds
-        w.prnt('', 'Slack commands:')
+        w.prnt('', '\n{}'.format(colorize_string('bold', 'Slack commands:')))
 
-    for name, cmd in sorted(cmds.items()):
-        helptext = (cmd.__doc__ or '').rstrip()
-        w.prnt('', '{}:{}'.format(name, helptext))
+    script_prefix = '{0}[{1}python{0}/{1}slack{0}]{1}'.format(w.color('green'), w.color('reset'))
+
+    for _, cmd in sorted(cmds.items()):
+        name, cmd_args, description = parse_help_docstring(cmd)
+        w.prnt('', '\n{}  {} {}\n\n{}'.format(
+            script_prefix, colorize_string('white', name), cmd_args, description))
     return w.WEECHAT_RC_OK
 
 
@@ -4508,6 +4511,13 @@ def load_emoji():
     return {}, {}
 
 
+def parse_help_docstring(cmd):
+    doc = textwrap.dedent(cmd.__doc__).strip().split('\n', 1)
+    cmd_line = doc[0].split(None, 1)
+    args = ''.join(cmd_line[1:])
+    return cmd_line[0], args, doc[1].strip()
+
+
 def setup_hooks():
     w.bar_item_new('slack_typing_notice', '(extra)typing_bar_item_cb', '')
     w.bar_item_new('away', '(extra)away_bar_item_cb', '')
@@ -4558,12 +4568,11 @@ def setup_hooks():
     w.hook_command_run('/away', 'away_command_cb', '')
     w.hook_command_run('/whois', 'whois_command_cb', '')
 
-    for cmd in ['hide', 'label', 'rehistory', 'reply', 'thread']:
-        doc = EVENTROUTER.cmds[cmd].__doc__.strip().split('\n', 1)
-        args = ' '.join(doc[0].split()[1:])
-        description = textwrap.dedent(doc[1]).strip()
-        completion = getattr(EVENTROUTER.cmds[cmd], 'completion', '')
-        w.hook_command(cmd, description, args, '', completion, 'command_' + cmd, '')
+    for cmd_name in ['hide', 'label', 'rehistory', 'reply', 'thread']:
+        cmd = EVENTROUTER.cmds[cmd_name]
+        _, args, description = parse_help_docstring(cmd)
+        completion = getattr(cmd, 'completion', '')
+        w.hook_command(cmd_name, description, args, '', completion, 'command_' + cmd_name, '')
 
     w.hook_completion("irc_channel_topic", "complete topic for slack", "topic_completion_cb", "")
     w.hook_completion("irc_channels", "complete channels for slack", "channel_completion_cb", "")
