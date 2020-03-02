@@ -975,7 +975,10 @@ def away_bar_item_cb(data, item, current_window, current_buffer, extra_info):
         return ''
     else:
         away_color = w.config_string(w.config_get('weechat.color.item_away'))
-        return colorize_string(away_color, 'away')
+        if channel.team.my_manual_presence == 'away':
+            return colorize_string(away_color, 'manual away')
+        else:
+            return colorize_string(away_color, 'auto away')
 
 
 @utf8_decode
@@ -2838,6 +2841,8 @@ def process_presence_change(message_json, eventrouter, team, channel, metadata):
 
 def process_manual_presence_change(message_json, eventrouter, team, channel, metadata):
     team.my_manual_presence = message_json["presence"]
+    w.bar_item_update("away")
+    w.bar_item_update("slack_away")
 
 
 def process_pref_change(message_json, eventrouter, team, channel, metadata):
