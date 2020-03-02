@@ -111,11 +111,21 @@ Reload the history in the current channel.
 ### reply
 
 ```
-/reply <count/message_id> <text>
+/reply [-alsochannel] [<count/message_id>] <message>
 ```
 
-Reply in a thread on the message. Specify either the message id
-or a count upwards to the message from the last message.
+
+When in a channel buffer:
+/reply [-alsochannel] <count/message_id> <message>
+Reply in a thread on the message. Specify either the message id or a count
+upwards to the message from the last message.
+
+When in a thread buffer:
+/reply [-alsochannel] <message>
+Reply to the current thread.  This can be used to send the reply to the
+rest of the channel.
+
+In either case, -alsochannel also sends the reply to the parent channel.
 
 ### showmuted
 

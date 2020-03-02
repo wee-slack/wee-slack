@@ -4040,15 +4040,15 @@ command_thread.completion = '%(threads)'
 @utf8_decode
 def command_reply(data, current_buffer, args):
     """
-    /reply [-alsochannel] [<count/message_id>] <text>
+    /reply [-alsochannel] [<count/message_id>] <message>
 
     When in a channel buffer:
-    /reply [-alsochannel] <count/message_id> <text>
+    /reply [-alsochannel] <count/message_id> <message>
     Reply in a thread on the message. Specify either the message id or a count
     upwards to the message from the last message.
 
     When in a thread buffer:
-    /reply [-alsochannel] <text>
+    /reply [-alsochannel] <message>
     Reply to the current thread.  This can be used to send the reply to the
     rest of the channel.
 
@@ -4069,7 +4069,7 @@ def command_reply(data, current_buffer, args):
         try:
             msg_id, text = args.split(None, 1)
         except ValueError:
-            w.prnt('', 'Usage (when in a channel buffer): /reply [-alsochannel] <count/id> <message>')
+            w.prnt('', 'Usage (when in a channel buffer): /reply [-alsochannel] <count/message_id> <message>')
             return w.WEECHAT_RC_OK_EAT
         msg = get_msg_from_id(channel, msg_id)
 
