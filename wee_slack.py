@@ -2432,6 +2432,7 @@ class SlackMessage(object):
             senders = self.get_sender()
             self.sender, self.sender_plain = senders[0], senders[1]
         self.ts = SlackTS(message_json['ts'])
+        self.subscribed = message_json.get("subscribed", False)
 
     def __hash__(self):
         return hash(self.ts)
@@ -2488,8 +2489,8 @@ class SlackMessage(object):
 
         if self.number_of_replies():
             self.channel.hash_message(self.ts)
-            text += " " + colorize_string(get_thread_color(self.hash), "[ Thread: {} Replies: {} ]".format(
-                    self.hash, self.number_of_replies()))
+            text += " " + colorize_string(get_thread_color(self.hash), "[ Thread: {} Replies: {} Subscribed: {} ]".format(
+                    self.hash, self.number_of_replies(), self.subscribed))
 
         text = replace_string_with_emoji(text)
 
@@ -3008,6 +3009,7 @@ def download_files(message_json, team):
 
 
 def subprocess_thread_message(message_json, eventrouter, team, channel, history_message):
+    dbg("THREAD MESSAGE {}".format(message_json))
     parent_ts = message_json.get('thread_ts')
     if parent_ts:
         parent_message = channel.messages.get(SlackTS(parent_ts))
@@ -3021,6 +3023,8 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
 
             if parent_message.thread_channel and parent_message.thread_channel.active:
                 parent_message.thread_channel.buffer_prnt(message.sender, parent_message.thread_channel.render(message), message.ts, tag_nick=message.sender_plain)
+            elif message.ts > channel.last_read and parent_message.subscribed: #TODO: What is the difference between this and message_replied, at least for alerting on threads?
+                parent_message.notify_thread(action="subscribed", sender_id=message_json["user"]) #TODO: Update thread last read mark?
             elif message.ts > channel.last_read and message.has_mention():
                 parent_message.notify_thread(action="mention", sender_id=message_json["user"])
 
@@ -3069,6 +3073,7 @@ subprocess_group_topic = subprocess_channel_topic
 
 
 def subprocess_message_replied(message_json, eventrouter, team, channel, history_message):
+    dbg("MESSAGE REPLIED {}".format(message_json))
     parent_ts = message_json["message"].get("thread_ts")
     parent_message = channel.messages.get(SlackTS(parent_ts))
     # Thread exists but is not open yet
@@ -3214,6 +3219,16 @@ def process_subteam_updated(subteam_json, eventrouter, team, channel, metadata):
 
 def process_emoji_changed(message_json, eventrouter, team, channel, metadata):
     team.load_emoji_completions()
+
+
+def process_thread_subscribed(message_json, eventrouter, team, channel, metadata):
+    dbg("THREAD SUBSCRIBED {}".format(message_json))
+    team.channels[message_json["subscription"]["channel"]].messages.get(SlackTS(message_json["subscription"]["thread_ts"])).subscribed = True
+
+
+def process_thread_unsubscribed(message_json, eventrouter, team, channel, metadata):
+    dbg("THREAD UNSUBSCRIBED {}".format(message_json))
+    team.channels[message_json["subscription"]["channel"]].messages.get(SlackTS(message_json["subscription"]["thread_ts"])).subscribed = False
 
 
 ###### New module/global methods
@@ -4099,6 +4114,31 @@ def command_thread(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 command_thread.completion = '%(threads)'
+
+
+@slack_buffer_required
+@utf8_decode
+def command_subscribe(data, current_buffer, args):
+    """
+    /slack subscribe <thread>
+    Subscribe to a thread, so that you are alerted to new messages.  When in a
+    thread buffer, you can omit the thread id.
+    """
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+
+    if not args:
+        w.prnt('', 'Usage: /slack subscribe <thread>')
+        return w.WEECHAT_RC_ERROR
+
+    if args:
+        msg = get_msg_from_id(channel, args)
+
+    if not msg and isinstance(channel, SlackThreadChannel):
+        msg = channel.parent_message
+
+    # TODO: Looks like there is no RTM api for this?
+
+command_subscribe.completion = '%(threads)'
 
 
 @slack_buffer_required
