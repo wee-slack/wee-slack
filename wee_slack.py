@@ -2273,7 +2273,8 @@ class SlackThreadChannel(SlackChannelCommon):
             self.buffer_prnt(message.sender, text, message.ts, tag_nick=message.sender_plain)
         if len(self.parent_message.submessages) < self.parent_message.number_of_replies():
             s = SlackRequest(self.team, "conversations.replies",
-                    {"channel": self.identifier, "ts": self.parent_message.ts}, channel=self)
+                    {"channel": self.identifier, "ts": self.parent_message.ts},
+                    channel=self.parent_message.channel)
             self.eventrouter.receive(s)
 
     def main_message_keys_reversed(self):
