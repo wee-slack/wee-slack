@@ -4075,7 +4075,10 @@ def command_reply(data, current_buffer, args):
         msg = get_msg_from_id(channel, msg_id)
 
     if msg:
-        parent_id = str(msg.ts)
+        if isinstance(msg, SlackThreadMessage):
+            parent_id = str(msg.parent_message.ts)
+        else:
+            parent_id = str(msg.ts)
     elif msg_id.isdigit() and int(msg_id) >= 1:
         mkeys = channel.main_message_keys_reversed()
         parent_id = str(next(islice(mkeys, int(msg_id) - 1, None)))
