@@ -36,6 +36,7 @@ from websocket import ABNF, create_connection, WebSocketConnectionClosedExceptio
 try:
     basestring     # Python 2
     unicode
+    str = unicode
 except NameError:  # Python 3
     basestring = unicode = str
 
