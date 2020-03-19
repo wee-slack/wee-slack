@@ -2279,7 +2279,7 @@ class SlackThreadChannel(SlackChannelCommon):
 
     def get_history(self):
         self.got_history = True
-        for message in self.parent_message.submessages:
+        for message in chain([self.parent_message], self.parent_message.submessages):
             text = self.render(message)
             self.buffer_prnt(message.sender, text, message.ts, tag_nick=message.sender_plain)
         if len(self.parent_message.submessages) < self.parent_message.number_of_replies():
