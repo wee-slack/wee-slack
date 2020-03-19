@@ -3574,7 +3574,7 @@ def tag(tagset=None, user=None, self_msg=False, backlog=False, no_log=False, ext
             tags |= {"logger_backlog"}
     if no_log:
         tags |= {"no_log"}
-        tags = {tag for tag in tags if not tag.startswith("log")}
+        tags = {tag for tag in tags if not tag.startswith("log") or tag == "logger_backlog"}
     if extra_tags:
         tags |= set(extra_tags)
     return ",".join(tags)
