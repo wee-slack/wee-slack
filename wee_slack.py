@@ -1281,13 +1281,13 @@ class SlackTeam(object):
         self.got_history = True
         self.create_buffer()
         self.set_muted_channels(kwargs.get('muted_channels', ""))
+        self.set_highlight_words(kwargs.get('highlight_words', ""))
         for c in self.channels.keys():
             channels[c].set_related_server(self)
             channels[c].check_should_open()
         # Last step is to make sure my nickname is the set color
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
         # This highlight step must happen after we have set related server
-        self.set_highlight_words(kwargs.get('highlight_words', ""))
         self.load_emoji_completions()
         self.type = "team"
 
@@ -1765,6 +1765,9 @@ class SlackChannel(SlackChannelCommon):
             else:
                 w.buffer_set(self.channel_buffer, "highlight_tags_restrict", "")
 
+            for thread_channel in self.thread_channels.values():
+                thread_channel.set_highlights(h_str)
+
     def create_buffer(self):
         """
         Creates the weechat buffer where the channel magic happens.
@@ -1780,6 +1783,7 @@ class SlackChannel(SlackChannelCommon):
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
+            self.set_highlights()
             self.set_topic()
             self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
             if self.channel_buffer:
@@ -2314,6 +2318,12 @@ class SlackThreadChannel(SlackChannelCommon):
         if self.channel_buffer and not self.label:
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
 
+    def set_highlights(self, highlight_string=None):
+        if self.channel_buffer:
+            if highlight_string is None:
+                highlight_string = ",".join(self.parent_message.channel.highlights())
+            w.buffer_set(self.channel_buffer, "highlight_words", highlight_string)
+
     def create_buffer(self):
         """
         Creates the weechat buffer where the thread magic happens.
@@ -2326,6 +2336,7 @@ class SlackThreadChannel(SlackChannelCommon):
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.preferred_name)
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
+            self.set_highlights()
             time_format = w.config_string(w.config_get("weechat.look.buffer_time_format"))
             parent_time = time.localtime(SlackTS(self.parent_message.ts).major)
             topic = '{} {} | {}'.format(time.strftime(time_format, parent_time), self.parent_message.sender, self.render(self.parent_message)	)
