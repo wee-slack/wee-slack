@@ -2575,7 +2575,7 @@ class SlackTS(object):
                     return 1
                 else:
                     return 0
-        else:
+        elif isinstance(other, str):
             s = self.__str__()
             if s < other:
                 return -1
