@@ -3772,8 +3772,10 @@ def me_command_cb(data, current_buffer, args):
 @utf8_decode
 def command_register(data, current_buffer, args):
     """
-    /slack register [code]
-    Register a Slack team in wee-slack.
+    /slack register [code/token]
+    Register a Slack team in wee-slack. Call this without any arguments and
+    follow the instructions to register a new team. If you already have a token
+    for a team, you can call this with that token to add it.
     """
     CLIENT_ID = "2468770254.51917335286"
     CLIENT_SECRET = "dcb7fe380a000cba0cca3169a5fe8d70"  # Not really a secret.
@@ -3788,6 +3790,9 @@ def command_register(data, current_buffer, args):
             4) The web page will show a command in the form `/slack register <code>`. Run this command in weechat.
         """).strip().format(CLIENT_ID, REDIRECT_URI)
         w.prnt("", message)
+        return w.WEECHAT_RC_OK_EAT
+    elif args.startswith('xox'):
+        add_token(args)
         return w.WEECHAT_RC_OK_EAT
 
     uri = (
@@ -3818,18 +3823,27 @@ def register_callback(data, command, return_code, out, err):
                "ERROR: Couldn't get Slack OAuth token: {}".format(d['error']))
         return w.WEECHAT_RC_OK_EAT
 
+    add_token(d['access_token'], d['team_name'])
+    return w.WEECHAT_RC_OK_EAT
+
+
+def add_token(token, team_name=None):
     if config.is_default('slack_api_token'):
-        w.config_set_plugin('slack_api_token', d['access_token'])
+        w.config_set_plugin('slack_api_token', token)
     else:
         # Add new token to existing set, joined by comma.
-        tok = config.get_string('slack_api_token')
-        w.config_set_plugin('slack_api_token',
-                            ','.join([tok, d['access_token']]))
+        existing_tokens = config.get_string('slack_api_token')
+        if token in existing_tokens:
+            print_error('This token is already registered')
+            return
+        w.config_set_plugin('slack_api_token', ','.join([existing_tokens, token]))
 
-    w.prnt("", "Success! Added team \"%s\"" % (d['team_name'],))
+    if team_name:
+        w.prnt("", "Success! Added team \"{}\"".format(team_name))
+    else:
+        w.prnt("", "Success! Added token")
     w.prnt("", "Please reload wee-slack with: /python reload slack")
     w.prnt("", "If you want to add another team you can repeat this process from step 1 before reloading wee-slack.")
-    return w.WEECHAT_RC_OK_EAT
 
 
 @slack_buffer_or_ignore

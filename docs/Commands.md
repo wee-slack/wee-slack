@@ -95,10 +95,12 @@ Hide or unhide all channels marked as distracting.
 ### register
 
 ```
-/slack register [code]
+/slack register [code/token]
 ```
 
-Register a Slack team in wee-slack.
+Register a Slack team in wee-slack. Call this without any arguments and
+follow the instructions to register a new team. If you already have a token
+for a team, you can call this with that token to add it.
 
 ### rehistory
 
