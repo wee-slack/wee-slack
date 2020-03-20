@@ -4132,20 +4132,54 @@ def command_subscribe(data, current_buffer, args):
     thread buffer, you can omit the thread id.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-
-    if not args:
-        w.prnt('', 'Usage: /slack subscribe <thread>')
-        return w.WEECHAT_RC_ERROR
+    team = channel.team
 
     if args:
         msg = get_msg_from_id(channel, args)
-
-    if not msg and isinstance(channel, SlackThreadChannel):
+    elif isinstance(channel, SlackThreadChannel):
         msg = channel.parent_message
+    else:
+        w.prnt('', 'Usage: /slack subscribe <thread>')
+        return w.WEECHAT_RC_ERROR
 
-    # TODO: Looks like there is no RTM api for this?
+    s = SlackRequest(team, "subscriptions.thread.add",
+            {"channel": channel.identifier, "thread_ts": msg.ts}, channel=channel)
+    EVENTROUTER.receive(s)
+    return w.WEECHAT_RC_OK_EAT
 
 command_subscribe.completion = '%(threads)'
+
+
+@slack_buffer_required
+@utf8_decode
+def command_unsubscribe(data, current_buffer, args):
+    """
+    /slack unsubscribe <thread>
+    Unsubscribe from a thread that has been previously subscribed to, so that
+    you are not alerted to new messages.  When in a thread buffer, you can omit
+    the thread id.
+    """
+    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+    team = channel.team
+
+    if args:
+        msg = get_msg_from_id(channel, args)
+    elif isinstance(channel, SlackThreadChannel):
+        msg = channel.parent_message
+    else:
+        w.prnt('', 'Usage: /slack subscribe <thread>')
+        return w.WEECHAT_RC_ERROR
+
+    s = SlackRequest(team, "subscriptions.thread.remove",
+            {"channel": channel.identifier, "thread_ts": msg.ts}, channel=channel)
+    EVENTROUTER.receive(s)
+    return w.WEECHAT_RC_OK_EAT
+
+command_subscribe.completion = '%(threads)'
+
+
+def handle_subscriptionsthreadmark(json, eventrouter, team, channel, metadata):
+    dbg(repr(json))
 
 
 @slack_buffer_required
