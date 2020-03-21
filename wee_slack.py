@@ -1243,9 +1243,10 @@ class SlackTeam(object):
     Team object under which users and channels live.. Does lots.
     """
 
-    def __init__(self, eventrouter, token, websocket_url, team_info, subteams,  nick, myidentifier, my_manual_presence, users, bots, channels, **kwargs):
+    def __init__(self, eventrouter, token, team_hash, websocket_url, team_info, subteams,  nick, myidentifier, my_manual_presence, users, bots, channels, **kwargs):
         self.identifier = team_info["id"]
         self.active = True
+        self.team_hash = team_hash
         self.ws_url = websocket_url
         self.connected = False
         self.connecting_rtm = False
@@ -1275,7 +1276,6 @@ class SlackTeam(object):
             self.channels = channels
         self.users = users
         self.bots = bots
-        self.team_hash = SlackTeam.generate_team_hash(self.nick, self.subdomain)
         self.name = self.domain
         self.channel_buffer = None
         self.got_history = True
@@ -2704,6 +2704,7 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
         t = SlackTeam(
             eventrouter,
             metadata.token,
+            th,
             login_data['url'],
             login_data["team"],
             subteams,
