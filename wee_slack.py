@@ -286,8 +286,9 @@ def colorize_string(color, string, reset_color='reset'):
         return string
 
 
-def print_error(message, buffer=''):
-    w.prnt(buffer, '{}Error: {}'.format(w.prefix('error'), message))
+def print_error(message, buffer='', warning=False):
+    prefix = 'Warning' if warning else 'Error'
+    w.prnt(buffer, '{}{}: {}'.format(w.prefix('error'), prefix, message))
 
 
 def format_exc_tb():
@@ -2730,6 +2731,15 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
                 )
             )
             return
+        elif metadata.metadata.get('initial_connection'):
+            print_error(
+                'Ignoring duplicate Slack tokens for the same team ({}) and user ({}). The two '
+                'tokens are {}... and {}...'.format(
+                    t.team_info["name"], t.nick, t.token[:15], metadata.token[:15]
+                ),
+                warning=True
+            )
+            return
         else:
             t.set_reconnect_url(login_data['url'])
             t.connecting_rtm = False
@@ -5013,7 +5023,8 @@ def initiate_connection(token, retries=3, team=None):
                         'rtm.{}'.format('connect' if team else 'start'),
                         {"batch_presence_aware": 1},
                         retries=retries,
-                        token=token)
+                        token=token,
+                        metadata={'initial_connection': True})
 
 
 if __name__ == "__main__":
