@@ -2508,8 +2508,8 @@ class SlackMessage(object):
 
         if self.number_of_replies():
             self.channel.hash_message(self.ts)
-            text += " " + colorize_string(get_thread_color(self.hash), "[ Thread: {} Replies: {} Subscribed: {} ]".format(
-                    self.hash, self.number_of_replies(), self.subscribed))
+            text += " " + colorize_string(get_thread_color(self.hash), "[ Thread: {} Replies: {}{} ]".format(
+                    self.hash, self.number_of_replies(), " Subscribed" if self.subscribed else ""))
 
         text = replace_string_with_emoji(text)
 
