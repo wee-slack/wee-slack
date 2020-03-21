@@ -2240,6 +2240,8 @@ class SlackThreadChannel(SlackChannelCommon):
         self.members = self.parent_message.channel.members
         self.team = self.parent_message.team
         self.last_line_from = None
+        self.last_read = self.parent_message.message_json.get("last_read", SlackTS())
+        self.new_messages = False
 
     @property
     def identifier(self):
@@ -2266,32 +2268,42 @@ class SlackThreadChannel(SlackChannelCommon):
         self.rename()
 
     def mark_read(self, ts=None, update_remote=True, force=False):
-        if True or force: #TODO: Add check for new_messages here.
+        if self.new_messages or force:
             if self.channel_buffer:
                 w.buffer_set(self.channel_buffer, "unread", "")
                 w.buffer_set(self.channel_buffer, "hotlist", "-1")
             if not ts:
                 ts = next(reversed(self.messages), SlackTS())
+            if ts > self.last_read:
+                self.last_read = ts
             if update_remote:
                 s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["mark"],
                         {"channel": self.identifier, "thread_ts": self.parent_message.ts, "ts": ts}, channel=self)
                 self.eventrouter.receive(s)
+                self.new_messages = False
 
     def buffer_prnt(self, nick, text, timestamp, tag_nick=None):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
         self.last_line_from = nick
         ts = SlackTS(timestamp)
         if self.channel_buffer:
+            # backlog messages - we will update the read marker as we print these
+            backlog = ts <= self.last_read
+            if not backlog:
+                self.new_messages = True
+
             if self.parent_message.channel.type in ["im", "mpim"]:
                 tagset = "dm"
             else:
                 tagset = "channel"
+
+            no_log = backlog
             self_msg = tag_nick == self.team.nick
-            tags = tag(tagset, user=tag_nick, self_msg=self_msg)
+            tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, no_log=no_log)
 
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
             modify_last_print_time(self.channel_buffer, ts.minor)
-            if self_msg:
+            if backlog or self_msg:
                 self.mark_read(ts, update_remote=False, force=True)
 
     def get_history(self):
@@ -3030,8 +3042,8 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
 
             if parent_message.thread_channel and parent_message.thread_channel.active:
                 parent_message.thread_channel.buffer_prnt(message.sender, parent_message.thread_channel.render(message), message.ts, tag_nick=message.sender_plain)
-            elif message.ts > channel.last_read and parent_message.subscribed:
-                parent_message.notify_thread(action="subscribed", sender_id=message_json["user"]) #TODO: Use thread last_read ts
+            elif message.ts > message.message_json.get("last_read", SlackTS()) and parent_message.subscribed:
+                parent_message.notify_thread(action="subscribed", sender_id=message_json["user"])
             elif message.ts > channel.last_read and message.has_mention():
                 parent_message.notify_thread(action="mention", sender_id=message_json["user"])
 
