@@ -1377,8 +1377,8 @@ class SlackTeam(object):
         return self.team_hash
 
     @staticmethod
-    def generate_team_hash(nick, subdomain):
-        return str(sha1_hex("{}{}".format(nick, subdomain)))
+    def generate_team_hash(team_id, subdomain):
+        return str(sha1_hex("{}{}".format(team_id, subdomain)))
 
     def refresh(self):
         self.rename()
@@ -2658,8 +2658,15 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
 
         return
 
+    self_profile = next(
+        user["profile"]
+        for user in login_data["users"]
+        if user["id"] == login_data["self"]["id"]
+    )
+    self_nick = nick_from_profile(self_profile, login_data["self"]["name"])
+
     # Let's reuse a team if we have it already.
-    th = SlackTeam.generate_team_hash(login_data['self']['name'], login_data['team']['domain'])
+    th = SlackTeam.generate_team_hash(login_data['team']['id'], login_data['team']['domain'])
     if not eventrouter.teams.get(th):
 
         users = {}
@@ -2694,13 +2701,6 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
             else:
                 channels[item["id"]] = SlackGroupChannel(eventrouter, **item)
 
-        self_profile = next(
-            user["profile"]
-            for user in login_data["users"]
-            if user["id"] == login_data["self"]["id"]
-        )
-        self_nick = nick_from_profile(self_profile, login_data["self"]["name"])
-
         t = SlackTeam(
             eventrouter,
             metadata.token,
@@ -2721,8 +2721,18 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
 
     else:
         t = eventrouter.teams.get(th)
-        t.set_reconnect_url(login_data['url'])
-        t.connecting_rtm = False
+        if t.myidentifier != login_data["self"]["id"]:
+            print_error(
+                'The Slack team {} has tokens for two different users, this is not supported. The '
+                'token {}... is for user {}, and the token {}... is for user {}. Please remove '
+                'one of them.'.format(
+                    t.team_info["name"], t.token[:15], t.nick, metadata.token[:15], self_nick
+                )
+            )
+            return
+        else:
+            t.set_reconnect_url(login_data['url'])
+            t.connecting_rtm = False
 
     t.connect()
 
