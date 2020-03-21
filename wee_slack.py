@@ -291,6 +291,10 @@ def print_error(message, buffer='', warning=False):
     w.prnt(buffer, '{}{}: {}'.format(w.prefix('error'), prefix, message))
 
 
+def token_for_print(token):
+    return '{}...{}'.format(token[:15], token[-10:])
+
+
 def format_exc_tb():
     return decode_from_utf8(traceback.format_exc())
 
@@ -565,9 +569,9 @@ class EventRouter(object):
             if request_metadata.request.startswith('rtm.'):
                 retry_text = ('retrying' if request_metadata.should_try() else
                         'will not retry after too many failed attempts')
-                w.prnt('', ('Failed connecting to slack team with token starting with {}, {}. ' +
+                w.prnt('', ('Failed connecting to slack team with token {}, {}. ' +
                         'If this persists, try increasing slack_timeout. Error: {}')
-                        .format(request_metadata.token[:15], retry_text, err))
+                        .format(token_for_print(request_metadata.token), retry_text, err))
                 dbg('rtm.start failed with return_code {}. stack:\n{}'
                         .format(return_code, ''.join(traceback.format_stack())), level=5)
                 self.receive(request_metadata)
@@ -1200,9 +1204,9 @@ class SlackRequest(object):
         self.response_id = sha1_hex('{}{}'.format(self.url, self.start_time))
 
     def __repr__(self):
-        return ("SlackRequest(team={}, request='{}', post_data={}, retries={}, token='{}...', "
+        return ("SlackRequest(team={}, request='{}', post_data={}, retries={}, token='{}', "
                 "tries={}, start_time={})").format(self.team, self.request, self.post_data,
-                        self.retries, self.token[:15], self.tries, self.start_time)
+                        self.retries, token_for_print(self.token), self.tries, self.start_time)
 
     def request_string(self):
         return "{}".format(self.url)
@@ -2651,8 +2655,8 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
     metadata = login_data["wee_slack_request_metadata"]
 
     if not login_data["ok"]:
-        w.prnt("", "ERROR: Failed connecting to Slack with token starting with {}: {}"
-               .format(metadata.token[:15], login_data["error"]))
+        w.prnt("", "ERROR: Failed connecting to Slack with token {}: {}"
+               .format(token_for_print(metadata.token), login_data["error"]))
         if not re.match(r"^xo\w\w(-\d+){3}-[0-9a-f]+$", metadata.token):
             w.prnt("", "ERROR: Token does not look like a valid Slack token. "
                    "Ensure it is a valid token and not just a OAuth code.")
@@ -2725,18 +2729,16 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
         if t.myidentifier != login_data["self"]["id"]:
             print_error(
                 'The Slack team {} has tokens for two different users, this is not supported. The '
-                'token {}... is for user {}, and the token {}... is for user {}. Please remove '
-                'one of them.'.format(
-                    t.team_info["name"], t.token[:15], t.nick, metadata.token[:15], self_nick
-                )
+                'token {} is for user {}, and the token {} is for user {}. Please remove one of '
+                'them.'.format(t.team_info["name"], token_for_print(t.token), t.nick,
+                    token_for_print(metadata.token), self_nick)
             )
             return
         elif metadata.metadata.get('initial_connection'):
             print_error(
                 'Ignoring duplicate Slack tokens for the same team ({}) and user ({}). The two '
-                'tokens are {}... and {}...'.format(
-                    t.team_info["name"], t.nick, t.token[:15], metadata.token[:15]
-                ),
+                'tokens are {} and {}.'.format(t.team_info["name"], t.nick,
+                    token_for_print(t.token), token_for_print(metadata.token)),
                 warning=True
             )
             return
@@ -2752,8 +2754,8 @@ def handle_rtmconnect(login_data, eventrouter, team, channel, metadata):
     team.connecting_rtm = False
 
     if not login_data["ok"]:
-        w.prnt("", "ERROR: Failed reconnecting to Slack with token starting with {}: {}"
-               .format(metadata.token[:15], login_data["error"]))
+        w.prnt("", "ERROR: Failed reconnecting to Slack with token {}: {}"
+               .format(token_for_print(metadata.token), login_data["error"]))
         return
 
     team.set_reconnect_url(login_data['url'])
@@ -3913,7 +3915,7 @@ def command_teams(data, current_buffer, args):
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
     teams = EVENTROUTER.teams.values()
-    extra_info_function = lambda team: "token: {}...".format(team.token[:15])
+    extra_info_function = lambda team: "token: {}".format(token_for_print(team.token))
     return print_team_items_info(team, "Slack teams", teams, extra_info_function)
 
 
