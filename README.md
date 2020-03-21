@@ -81,14 +81,17 @@ Log in to Slack:
 ```
 
 This command prints a link you should open in your browser to authorize WeeChat
-with Slack. Once you've accomplished this, copy the "code" portion of the URL in
-the browser and pass it to this command:
+with Slack. If the page shows a different team than the one you want to add,
+you can change the team in the top right corner of the page.
+
+Once you've accomplished this, the page will show a command which you should
+run in WeeChat. The command is of the form:
 
 ```
-/slack register [CODE_FROM_URL]
+/slack register <code>
 ```
 
-Your Slack team is now added, and you can complete setup by restarting the
+Your Slack team is now added, and you can complete the setup by reloading the
 wee-slack script.
 
 ```
@@ -97,28 +100,30 @@ wee-slack script.
 
 Alternatively, you can click the "Request token" button at the
 [Slack legacy token page](https://api.slack.com/custom-integrations/legacy-tokens),
-and paste it directly into your settings:
+and use that instead of following the procedure above:
 
 ```
-/set plugins.var.python.slack.slack_api_token [YOUR_SLACK_TOKEN]
+/slack register <YOUR_SLACK_TOKEN>
 ```
 
-If you don't want to store your API token in plaintext you can use the secure features of weechat:
+The tokens you add will be stored in the option
+`plugins.var.python.slack.slack_api_token`. If you don't want to store your API
+token in plaintext you can use the secure features of WeeChat:
 
 ```
 /secure passphrase this is a super secret password
-/secure set slack_token [YOUR_SLACK_TOKEN]
+/secure set slack_token <YOUR_SLACK_TOKEN>
 /set plugins.var.python.slack.slack_api_token ${sec.data.slack_token}
 ```
 
 #### Optional: Connecting to multiple teams
 
 You can run the register command multiple times to connect to multiple teams.
-If you set the token yourself, you can use the above command with multiple
-tokens separated by commas.
+If you set the token option yourself, you should separate the tokens with
+commas.
 
 ```
-/set plugins.var.python.slack.slack_api_token [token1],[token2],[token3]
+/set plugins.var.python.slack.slack_api_token <token1>,<token2>,<token3>
 ```
 
 Commands and options
