@@ -295,6 +295,29 @@ Show channel name in hotlist after activity
 FAQ
 ---
 
+### How do I keep the buffers sorted alphabetically or with a custom order?
+
+Install the script
+[autosort.py](https://weechat.org/scripts/source/autosort.py.html/) by running
+`/script install autosort.py`. This will keep your buffer list sorted
+alphabetically by default. If you want to customize it, run `/help autosort`.
+
+### How do I group the buffers by team in the buffer list?
+
+Run `/set irc.look.server_buffer independent` and install the
+[autosort.py](https://weechat.org/scripts/source/autosort.py.html/) script
+mentioned in the previous question.
+
+### How can I get system wide notifications for messages?
+
+Install [one of the notify
+scripts](https://weechat.org/scripts/stable/tag/notify/). Note that not all
+scripts work with wee-slack. For local notifications,
+[lnotify.py](https://weechat.org/scripts/source/lnotify.py.html/) is known to
+work for Linux, and
+[notification_center.py](https://weechat.org/scripts/source/notification_center.py.html/)
+for macOS.
+
 ### How do I send messages with multiple lines?
 
 You have to install a script to be able to send multiple lines, e.g. the
