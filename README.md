@@ -5,6 +5,32 @@ A WeeChat native client for Slack.com. Provides supplemental features only avail
 
 ![animated screenshot](https://github.com/wee-slack/wee-slack/raw/master/docs/slack.gif)
 
+Table of Contents
+-----------------
+  * [Features](#features)
+  * [Dependencies](#dependencies)
+  * [Setup](#setup)
+     * [1. Install dependencies](#1-install-dependencies)
+     * [2. Download wee_slack.py to ~/.weechat/python](#2-download-wee_slackpy-to-weechatpython)
+     * [3. Start WeeChat](#3-start-weechat)
+     * [4. Add your Slack API key(s)](#4-add-your-slack-api-keys)
+        * [Optional: Connecting to multiple teams](#optional-connecting-to-multiple-teams)
+  * [Commands and options](#commands-and-options)
+     * [Threads](#threads)
+     * [Emoji characters and tab completions of emoji names](#emoji-characters-and-tab-completions-of-emoji-names)
+     * [User group tab completions](#user-group-tab-completions)
+     * [Cursor and mouse mode](#cursor-and-mouse-mode)
+  * [Removing a team](#removing-a-team)
+  * [Optional settings](#optional-settings)
+  * [FAQ](#faq)
+     * [How do I keep the buffers sorted alphabetically or with a custom order?](#how-do-i-keep-the-buffers-sorted-alphabetically-or-with-a-custom-order)
+     * [How do I group the buffers by team in the buffer list?](#how-do-i-group-the-buffers-by-team-in-the-buffer-list)
+     * [How can I get system wide notifications for messages?](#how-can-i-get-system-wide-notifications-for-messages)
+     * [How do I send messages with multiple lines?](#how-do-i-send-messages-with-multiple-lines)
+  * [Known issues](#known-issues)
+  * [Development](#development)
+  * [Support](#support)
+
 Features
 --------
   * [Threads](#threads) support
