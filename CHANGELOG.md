@@ -1,5 +1,38 @@
 # Changelog
 
+## 2.5.0 (2020-03-25)
+
+Note that you need to update the `weemoji.json` file when upgrading to this version.
+
+### Features
+
+- Add a proper page for OAuth which shows the code so you don't have to pull it out of the url.
+- Render emojis as emoji characters (fixes #465). Also allow them to be rendered both as emoji characters and as the name (PR #752).
+- Support sending reactions with emoji characters (fixes #236, fixes #575).
+- Add ability to broadcast a thread message to the rest of the channel (PR #753). Use `/reply -alsochannel` to do this.
+- Add support for Slack Blocks (fixes #726, PR #729).
+- Show away in away bar item when presence is away.
+- Set presence to active when switching buffer or calling `/slack back`.
+- Add options for hard coded colors (fixes #681).
+- Show reactions you have added in a different color (fixes #713).
+- Support using a different color for each thread suffix/prefix (fixes #716).
+- (Un)merge team buffers when `irc.look.server_buffer` is changed (fixes #712).
+- Show the parent message as the first message in a thread (fixes #705).
+- Support adding a token you already have with `/slack register <token>`.
+- Print error message when reaction couldn't be added/removed.
+- Print error if trying to use `/thread` in team buffer (fixes #737).
+
+### Bug fixes
+
+- Preserve thread channels across reconnections and `/rehistory` (fixes #714).
+- Set `highlight_words` for new channels and thread channels (fixes #736).
+- Reply to parent message if trying to reply to thread message (fixes #751).
+- Fix bug where not all members in shared channels or channels converted from public to private were shown.
+- Don't switch to the debug buffer when config is changed and `debug_mode` is on.
+- Print warning when having two tokens for the same team, instead of failing with 100 % cpu usage (fixes #734).
+- Fix bug when handling nicks with non-ascii characters on Python 2 (fixes #747). This bug was introduced in 2.4.0.
+- Readd tag `logger_backlog` for backlog messages. This was inadvertently removed in 2.4.0.
+
 ## 2.4.0 (2020-01-16)
 
 - Support regex flags i, m and s for message edits.
