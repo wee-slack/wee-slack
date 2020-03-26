@@ -1597,6 +1597,20 @@ class SlackChannelCommon(object):
         elif ts in self.messages:
             return self.messages[ts].hash
 
+    def mark_read(self, ts=None, update_remote=True, force=False, post_data={}):
+        if self.new_messages or force:
+            if self.channel_buffer:
+                w.buffer_set(self.channel_buffer, "unread", "")
+                w.buffer_set(self.channel_buffer, "hotlist", "-1")
+            if not ts:
+                ts = next(reversed(self.messages), SlackTS())
+            if ts > self.last_read:
+                self.last_read = ts
+            if update_remote:
+                s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["mark"],
+                        {"channel": self.identifier, "ts": ts, **post_data}, channel=self)
+                self.eventrouter.receive(s)
+                self.new_messages = False
 
 
 class SlackChannel(SlackChannelCommon):
@@ -1943,21 +1957,6 @@ class SlackChannel(SlackChannelCommon):
                 del self.typing[user]
         return typing
 
-    def mark_read(self, ts=None, update_remote=True, force=False):
-        if self.new_messages or force:
-            if self.channel_buffer:
-                w.buffer_set(self.channel_buffer, "unread", "")
-                w.buffer_set(self.channel_buffer, "hotlist", "-1")
-            if not ts:
-                ts = next(reversed(self.messages), SlackTS())
-            if ts > self.last_read:
-                self.last_read = ts
-            if update_remote:
-                s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["mark"],
-                        {"channel": self.identifier, "ts": ts}, channel=self)
-                self.eventrouter.receive(s)
-                self.new_messages = False
-
     def user_joined(self, user_id):
         # ugly hack - for some reason this gets turned into a list
         self.members = set(self.members)
@@ -2268,19 +2267,7 @@ class SlackThreadChannel(SlackChannelCommon):
         self.rename()
 
     def mark_read(self, ts=None, update_remote=True, force=False):
-        if self.new_messages or force:
-            if self.channel_buffer:
-                w.buffer_set(self.channel_buffer, "unread", "")
-                w.buffer_set(self.channel_buffer, "hotlist", "-1")
-            if not ts:
-                ts = next(reversed(self.messages), SlackTS())
-            if ts > self.last_read:
-                self.last_read = ts
-            if update_remote:
-                s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["mark"],
-                        {"channel": self.identifier, "thread_ts": self.parent_message.ts, "ts": ts}, channel=self)
-                self.eventrouter.receive(s)
-                self.new_messages = False
+        super().mark_read(ts=ts, update_remote=update_remote, force=force, post_data={"thread_ts": self.parent_message.ts})
 
     def buffer_prnt(self, nick, text, timestamp, tag_nick=None):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
