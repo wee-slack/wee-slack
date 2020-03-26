@@ -1607,8 +1607,10 @@ class SlackChannelCommon(object):
             if ts > self.last_read:
                 self.last_read = ts
             if update_remote:
+                args = {"channel": self.identifier, "ts": ts}
+                args.update(post_data)
                 s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["mark"],
-                        {"channel": self.identifier, "ts": ts, **post_data}, channel=self)
+                        args, channel=self)
                 self.eventrouter.receive(s)
                 self.new_messages = False
 
@@ -2267,7 +2269,7 @@ class SlackThreadChannel(SlackChannelCommon):
         self.rename()
 
     def mark_read(self, ts=None, update_remote=True, force=False):
-        super().mark_read(ts=ts, update_remote=update_remote, force=force, post_data={"thread_ts": self.parent_message.ts})
+        super(SlackThreadChannel, self).mark_read(ts=ts, update_remote=update_remote, force=force, post_data={"thread_ts": self.parent_message.ts})
 
     def buffer_prnt(self, nick, text, timestamp, history_message=False, tag_nick=None):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
