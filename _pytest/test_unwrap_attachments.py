@@ -153,6 +153,30 @@ import pytest
     },
     {
         'input_message': {'attachments': [{
+            'fallback': 'Fallback',
+            'title_link': 'http://link',
+        }]},
+        'input_text_before': "http://link",
+        'output': "",
+    },
+    {
+        'input_message': {'attachments': [{
+            'fallback': 'Fallback',
+            'from_url': 'http://link',
+        }]},
+        'input_text_before': "http://link",
+        'output': "",
+    },
+    {
+        'input_message': {'attachments': [{
+            'fallback': 'Fallback',
+            'image_url': 'http://link',
+        }]},
+        'input_text_before': "http://link",
+        'output': "",
+    },
+    {
+        'input_message': {'attachments': [{
             'title': 'Title',
             'fields': [{
                 'title': 'First field title',

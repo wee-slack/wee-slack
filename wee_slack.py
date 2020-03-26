@@ -3445,10 +3445,12 @@ def unwrap_attachments(message_json, text_before):
                 prepend_title_text = attachment['author_name'] + ": "
             if 'pretext' in attachment:
                 t.append(attachment['pretext'])
+            link_shown = False
             title = attachment.get('title')
             title_link = attachment.get('title_link', '')
-            if title_link in text_before or title_link in text_before_unescaped:
+            if title_link and (title_link in text_before or title_link in text_before_unescaped):
                 title_link = ''
+                link_shown = True
             if title and title_link:
                 t.append('%s%s (%s)' % (prepend_title_text, title, title_link,))
                 prepend_title_text = ''
@@ -3459,6 +3461,8 @@ def unwrap_attachments(message_json, text_before):
             if (from_url not in text_before and from_url not in text_before_unescaped
                     and from_url != title_link):
                 t.append(from_url)
+            elif from_url:
+                link_shown = True
 
             atext = attachment.get("text")
             if atext:
@@ -3470,6 +3474,8 @@ def unwrap_attachments(message_json, text_before):
             if (image_url not in text_before and image_url not in text_before_unescaped
                     and image_url != from_url and image_url != title_link):
                 t.append(image_url)
+            elif image_url:
+                link_shown = True
 
             fields = attachment.get("fields")
             if fields:
@@ -3479,9 +3485,10 @@ def unwrap_attachments(message_json, text_before):
                     else:
                         t.append(f['value'])
             fallback = attachment.get("fallback")
-            if t == [] and fallback:
+            if t == [] and fallback and not link_shown:
                 t.append(fallback)
-            attachment_texts.append("\n".join([x.strip() for x in t if x]))
+            if t:
+                attachment_texts.append("\n".join([x.strip() for x in t if x]))
     return "\n".join(attachment_texts)
 
 
