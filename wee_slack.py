@@ -3485,6 +3485,10 @@ def unwrap_attachments(message_json, text_before):
                     else:
                         t.append(f['value'])
 
+            files = unwrap_files(attachment, None)
+            if files:
+                t.append(files)
+
             footer = attachment.get("footer")
             if footer:
                 ts = attachment.get("ts")

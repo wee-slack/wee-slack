@@ -212,6 +212,22 @@ import pytest
     },
     {
         'input_message': {'attachments': [{
+            'text': 'Original message',
+            'files': [
+              {
+                'title': 'File',
+                'url_private': 'http://link',
+              }
+            ],
+        }]},
+        'input_text_before': "",
+        'output': "\n".join([
+            "Original message",
+            "http://link (File)",
+        ]),
+    },
+    {
+        'input_message': {'attachments': [{
             'title': 'Title',
             'fields': [{
                 'title': 'First field title',
