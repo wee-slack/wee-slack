@@ -2881,6 +2881,21 @@ def handle_reactionsremove(json, eventrouter, team, channel, metadata):
         print_error("Couldn't remove reaction {}: {}".format(metadata['reaction'], json['error']))
 
 
+def handle_subscriptionsthreadmark(json, eventrouter, team, channel, metadata):
+    if not json["ok"]:
+        print_error("Couldn't set thread read status: {}", json['error'])
+
+
+def handle_subscriptionsthreadadd(json, eventrouter, team, channel, metadata):
+    if not json["ok"]:
+        print_error("Couldn't add thread subscription: {}", json['error'])
+
+
+def handle_subscriptionsthreadremove(json, eventrouter, team, channel, metadata):
+    if not json["ok"]:
+        print_error("Couldn't remove thread subscription: {}", json['error'])
+
+
 ###### New/converted process_ and subprocess_ methods
 def process_hello(message_json, eventrouter, team, channel, metadata):
     team.subscribe_users_presence()
@@ -4175,11 +4190,6 @@ def command_unsubscribe(data, current_buffer, args):
     return subscribe_helper(current_buffer, args, 'Usage: /slack unsubscribe <thread>', "subscriptions.thread.remove")
 
 command_unsubscribe.completion = '%(threads)'
-
-
-def handle_subscriptionsthreadmark(json, eventrouter, team, channel, metadata):
-    dbg(repr(json))
-    if not json["ok"]: w.prnt('', 'Failed to set subscription status.  Check debug log for details.')
 
 
 @slack_buffer_required
