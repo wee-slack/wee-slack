@@ -3029,10 +3029,10 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
 
             if parent_message.thread_channel and parent_message.thread_channel.active:
                 parent_message.thread_channel.buffer_prnt(message.sender, parent_message.thread_channel.render(message), message.ts, history_message=history_message, tag_nick=message.sender_plain)
-            elif message.ts > message.message_json.get("last_read", SlackTS()) and parent_message.subscribed:
-                parent_message.notify_thread(action="subscribed", sender_id=message_json["user"])
             elif message.ts > channel.last_read and message.has_mention():
                 parent_message.notify_thread(action="mention", sender_id=message_json["user"])
+            elif message.ts > parent_message.message_json.get("last_read", SlackTS()) and parent_message.subscribed:
+                parent_message.notify_thread(action="subscribed", sender_id=message_json["user"])
 
             if config.thread_messages_in_channel or message_json["subtype"] == "thread_broadcast":
                 thread_tag = "thread_broadcast" if message_json["subtype"] == "thread_broadcast" else "thread_message"
