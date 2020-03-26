@@ -2269,7 +2269,7 @@ class SlackThreadChannel(SlackChannelCommon):
     def mark_read(self, ts=None, update_remote=True, force=False):
         super().mark_read(ts=ts, update_remote=update_remote, force=force, post_data={"thread_ts": self.parent_message.ts})
 
-    def buffer_prnt(self, nick, text, timestamp, tag_nick=None):
+    def buffer_prnt(self, nick, text, timestamp, history_message=False, tag_nick=None):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
         self.last_line_from = nick
         ts = SlackTS(timestamp)
@@ -2284,7 +2284,7 @@ class SlackThreadChannel(SlackChannelCommon):
             else:
                 tagset = "channel"
 
-            no_log = backlog
+            no_log = history_message and backlog
             self_msg = tag_nick == self.team.nick
             tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, no_log=no_log)
 
@@ -2297,7 +2297,7 @@ class SlackThreadChannel(SlackChannelCommon):
         self.got_history = True
         for message in chain([self.parent_message], self.parent_message.submessages):
             text = self.render(message)
-            self.buffer_prnt(message.sender, text, message.ts, tag_nick=message.sender_plain)
+            self.buffer_prnt(message.sender, text, message.ts, history_message=True, tag_nick=message.sender_plain)
         if len(self.parent_message.submessages) < self.parent_message.number_of_replies():
             s = SlackRequest(self.team, "conversations.replies",
                     {"channel": self.identifier, "ts": self.parent_message.ts},
@@ -3028,7 +3028,7 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
             channel.change_message(parent_ts)
 
             if parent_message.thread_channel and parent_message.thread_channel.active:
-                parent_message.thread_channel.buffer_prnt(message.sender, parent_message.thread_channel.render(message), message.ts, tag_nick=message.sender_plain)
+                parent_message.thread_channel.buffer_prnt(message.sender, parent_message.thread_channel.render(message), message.ts, history_message=history_message, tag_nick=message.sender_plain)
             elif message.ts > message.message_json.get("last_read", SlackTS()) and parent_message.subscribed:
                 parent_message.notify_thread(action="subscribed", sender_id=message_json["user"])
             elif message.ts > channel.last_read and message.has_mention():
