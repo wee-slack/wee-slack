@@ -3484,6 +3484,20 @@ def unwrap_attachments(message_json, text_before):
                         t.append('%s %s' % (f['title'], f['value'],))
                     else:
                         t.append(f['value'])
+
+            footer = attachment.get("footer")
+            if footer:
+                ts = attachment.get("ts")
+                if ts:
+                    ts_int = ts if type(ts) == int else SlackTS(ts).major
+                    time_string = ''
+                    if date.today() - date.fromtimestamp(ts_int) <= timedelta(days=1):
+                        time_string = ' at {time}'
+                    timestamp_formatted = resolve_ref('!date^{}^{{date_short_pretty}}{}'
+                            .format(ts_int, time_string)).capitalize()
+                    footer += ' | {}'.format(timestamp_formatted)
+                t.append(footer)
+
             fallback = attachment.get("fallback")
             if t == [] and fallback and not link_shown:
                 t.append(fallback)

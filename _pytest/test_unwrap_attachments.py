@@ -177,6 +177,41 @@ import pytest
     },
     {
         'input_message': {'attachments': [{
+            'text': 'Some message',
+            'footer': 'Thread in #general'
+        }]},
+        'input_text_before': "",
+        'output': "\n".join([
+            "Some message",
+            "Thread in #general",
+        ]),
+    },
+    {
+        'input_message': {'attachments': [{
+            'ts': 1584986782,
+            'text': 'Some message',
+            'footer': 'Thread in #general'
+        }]},
+        'input_text_before': "",
+        'output': "\n".join([
+            "Some message",
+            "Thread in #general | Mar 23, 2020",
+        ]),
+    },
+    {
+        'input_message': {'attachments': [{
+            'ts': '1584986782.261400',
+            'text': 'Some message',
+            'footer': 'Thread in #general'
+        }]},
+        'input_text_before': "",
+        'output': "\n".join([
+            "Some message",
+            "Thread in #general | Mar 23, 2020",
+        ]),
+    },
+    {
+        'input_message': {'attachments': [{
             'title': 'Title',
             'fields': [{
                 'title': 'First field title',
