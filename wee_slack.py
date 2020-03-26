@@ -2570,6 +2570,8 @@ class SlackMessage(object):
                 template = "New message in thread {hash}, channel {channel} in which you participated"
             elif action == "response":
                 template = "New message in thread {hash} in response to own message in {channel}"
+            elif action == "subscribed":
+                template = "New message in thread {hash}, channel {channel} to which you are subscribed"
             else:
                 template = "Notification for message in thread {hash}, channel {channel}"
             message = template.format(hash=self.hash, channel=self.channel.formatted_name())
