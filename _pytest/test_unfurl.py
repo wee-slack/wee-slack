@@ -64,6 +64,11 @@ import wee_slack
         'auto_link_display': 'both',
     },
     {
+        'input': "url: <mailto:name@example.com|name@example.com> suffix",
+        'output': "url: mailto:name@example.com (name@example.com) suffix",
+        'auto_link_display': 'both',
+    },
+    {
         'input': "url: <https://example.com|example.com> suffix",
         'output': "url: example.com suffix",
         'auto_link_display': 'text',
@@ -74,6 +79,11 @@ import wee_slack
         'auto_link_display': 'text',
     },
     {
+        'input': "url: <mailto:name@example.com|name@example.com> suffix",
+        'output': "url: name@example.com suffix",
+        'auto_link_display': 'text',
+    },
+    {
         'input': "url: <https://example.com|different text> suffix",
         'output': "url: https://example.com (different text) suffix",
         'auto_link_display': 'url',
@@ -81,6 +91,11 @@ import wee_slack
     {
         'input': "url: <https://example.com|example.com> suffix",
         'output': "url: https://example.com suffix",
+        'auto_link_display': 'url',
+    },
+    {
+        'input': "url: <mailto:name@example.com|name@example.com> suffix",
+        'output': "url: mailto:name@example.com suffix",
         'auto_link_display': 'url',
     },
     {
