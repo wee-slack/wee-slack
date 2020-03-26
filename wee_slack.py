@@ -3395,7 +3395,7 @@ def unfurl_refs(text):
         if resolved_ref != ref:
             return resolved_ref
 
-        if fallback and not config.unfurl_ignore_alt_text:
+        if fallback and fallback != ref and not config.unfurl_ignore_alt_text:
             if ref.startswith("#"):
                 return "#{}".format(fallback)
             elif ref.startswith("@"):

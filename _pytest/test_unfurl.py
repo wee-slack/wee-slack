@@ -104,6 +104,11 @@ import wee_slack
         'auto_link_display': 'both',
     },
     {
+        'input': "url with equal fallback: <https://example.com|https://example.com> suffix",
+        'output': "url with equal fallback: https://example.com suffix",
+        'auto_link_display': 'both',
+    },
+    {
         'input': "try the #general channel",
         'output': "try the #general channel",
     },
