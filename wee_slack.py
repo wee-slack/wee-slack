@@ -3447,7 +3447,7 @@ def unwrap_attachments(message_json, text_before):
                 t.append(attachment['pretext'])
             title = attachment.get('title')
             title_link = attachment.get('title_link', '')
-            if title_link in text_before_unescaped:
+            if title_link in text_before or title_link in text_before_unescaped:
                 title_link = ''
             if title and title_link:
                 t.append('%s%s (%s)' % (prepend_title_text, title, title_link,))
@@ -3456,7 +3456,8 @@ def unwrap_attachments(message_json, text_before):
                 t.append('%s%s' % (prepend_title_text, title,))
                 prepend_title_text = ''
             from_url = attachment.get('from_url', '')
-            if from_url not in text_before_unescaped and from_url != title_link:
+            if (from_url not in text_before and from_url not in text_before_unescaped
+                    and from_url != title_link):
                 t.append(from_url)
 
             atext = attachment.get("text")
@@ -3466,7 +3467,7 @@ def unwrap_attachments(message_json, text_before):
                 prepend_title_text = ''
 
             image_url = attachment.get('image_url', '')
-            if (image_url not in text_before_unescaped
+            if (image_url not in text_before and image_url not in text_before_unescaped
                     and image_url != from_url and image_url != title_link):
                 t.append(image_url)
 
