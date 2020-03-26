@@ -4130,14 +4130,7 @@ def command_thread(data, current_buffer, args):
 command_thread.completion = '%(threads)'
 
 
-@slack_buffer_required
-@utf8_decode
-def command_subscribe(data, current_buffer, args):
-    """
-    /slack subscribe <thread>
-    Subscribe to a thread, so that you are alerted to new messages.  When in a
-    thread buffer, you can omit the thread id.
-    """
+def subscribe_helper(current_buffer, args, usage, api):
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     team = channel.team
 
@@ -4146,13 +4139,24 @@ def command_subscribe(data, current_buffer, args):
     elif isinstance(channel, SlackThreadChannel):
         msg = channel.parent_message
     else:
-        w.prnt('', 'Usage: /slack subscribe <thread>')
+        w.prnt('', usage)
         return w.WEECHAT_RC_ERROR
 
-    s = SlackRequest(team, "subscriptions.thread.add",
+    s = SlackRequest(team, api,
             {"channel": channel.identifier, "thread_ts": msg.ts}, channel=channel)
     EVENTROUTER.receive(s)
     return w.WEECHAT_RC_OK_EAT
+
+
+@slack_buffer_required
+@utf8_decode
+def command_subscribe(data, current_buffer, args):
+    """
+    /slack subscribe <thread>
+    Subscribe to a thread, so that you are alerted to new messages.  When in a
+    thread buffer, you can omit the thread id.
+    """
+    return subscribe_helper(current_buffer, args, 'Usage: /slack subscribe <thread>', "subscriptions.thread.add")
 
 command_subscribe.completion = '%(threads)'
 
@@ -4166,23 +4170,9 @@ def command_unsubscribe(data, current_buffer, args):
     you are not alerted to new messages.  When in a thread buffer, you can omit
     the thread id.
     """
-    channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    team = channel.team
+    return subscribe_helper(current_buffer, args, 'Usage: /slack unsubscribe <thread>', "subscriptions.thread.remove")
 
-    if args:
-        msg = get_msg_from_id(channel, args)
-    elif isinstance(channel, SlackThreadChannel):
-        msg = channel.parent_message
-    else:
-        w.prnt('', 'Usage: /slack subscribe <thread>')
-        return w.WEECHAT_RC_ERROR
-
-    s = SlackRequest(team, "subscriptions.thread.remove",
-            {"channel": channel.identifier, "thread_ts": msg.ts}, channel=channel)
-    EVENTROUTER.receive(s)
-    return w.WEECHAT_RC_OK_EAT
-
-command_subscribe.completion = '%(threads)'
+command_unsubscribe.completion = '%(threads)'
 
 
 def handle_subscriptionsthreadmark(json, eventrouter, team, channel, metadata):
