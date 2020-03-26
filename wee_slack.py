@@ -4177,6 +4177,7 @@ command_unsubscribe.completion = '%(threads)'
 
 def handle_subscriptionsthreadmark(json, eventrouter, team, channel, metadata):
     dbg(repr(json))
+    if not json["ok"]: w.prnt('', 'Failed to set subscription status.  Check debug log for details.')
 
 
 @slack_buffer_required
