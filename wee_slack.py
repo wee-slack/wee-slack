@@ -3466,7 +3466,8 @@ def unwrap_attachments(message_json, text_before):
                 prepend_title_text = ''
 
             image_url = attachment.get('image_url', '')
-            if image_url not in text_before_unescaped and image_url != title_link:
+            if (image_url not in text_before_unescaped
+                    and image_url != from_url and image_url != title_link):
                 t.append(image_url)
 
             fields = attachment.get("fields")

@@ -51,6 +51,7 @@ import pytest
             'text': 'Attachment text',
             'title_link': 'http://link?a=1&b=2',
             'from_url': 'http://link?a=1&b=2',
+            'image_url': 'http://link?a=1&b=2',
         }]},
         'input_text_before': "http://link?a=1&amp;b=2",
         'output': "\n".join([
@@ -65,10 +66,25 @@ import pytest
             'text': 'Attachment text',
             'title_link': 'http://link',
             'from_url': 'http://link',
+            'image_url': 'http://link',
         }]},
         'input_text_before': "",
         'output': "\n".join([
             "Title (http://link)",
+            "Attachment text",
+        ]),
+    },
+    {
+        'input_message': {'attachments': [{
+            'title': 'Title',
+            'text': 'Attachment text',
+            'from_url': 'http://link',
+            'image_url': 'http://link',
+        }]},
+        'input_text_before': "",
+        'output': "\n".join([
+            "Title",
+            "http://link",
             "Attachment text",
         ]),
     },
