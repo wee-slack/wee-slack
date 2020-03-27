@@ -3155,6 +3155,18 @@ process_im_marked = process_channel_marked
 process_mpim_marked = process_channel_marked
 
 
+def process_thread_marked(message_json, eventrouter, team, channel, metadata):
+    subscription = message_json.get("subscription", {})
+    ts = subscription.get("last_read")
+    thread_ts = subscription.get("thread_ts")
+    channel = team.channels.get(subscription.get("channel"))
+    if ts and thread_ts and channel:
+        thread_channel = channel.thread_channels.get(thread_ts)
+        if thread_channel: thread_channel.mark_read(ts=ts, force=True, update_remote=False)
+    else:
+        dbg("tried to mark something weird {}".format(message_json))
+
+
 def process_channel_joined(message_json, eventrouter, team, channel, metadata):
     channel.update_from_message_json(message_json["channel"])
     channel.open()
