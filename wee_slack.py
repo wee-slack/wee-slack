@@ -2241,8 +2241,15 @@ class SlackThreadChannel(SlackChannelCommon):
         self.members = self.parent_message.channel.members
         self.team = self.parent_message.team
         self.last_line_from = None
-        self.last_read = self.parent_message.message_json.get("last_read", SlackTS())
         self.new_messages = False
+
+    @property
+    def last_read(self):
+        return self.parent_message.last_read
+
+    @last_read.setter
+    def last_read(self, ts):
+        self.parent_message.last_read = ts
 
     @property
     def identifier(self):
@@ -2441,6 +2448,7 @@ class SlackMessage(object):
             self.sender, self.sender_plain = senders[0], senders[1]
         self.ts = SlackTS(message_json['ts'])
         self.subscribed = message_json.get("subscribed", False)
+        self.last_read = message_json.get("last_read", SlackTS())
 
     def __hash__(self):
         return hash(self.ts)
@@ -3050,7 +3058,7 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
                 parent_message.thread_channel.buffer_prnt(message.sender, parent_message.thread_channel.render(message), message.ts, history_message=history_message, tag_nick=message.sender_plain)
             elif message.ts > channel.last_read and message.has_mention():
                 parent_message.notify_thread(action="mention", sender_id=message_json["user"])
-            elif message.ts > parent_message.message_json.get("last_read", SlackTS()) and parent_message.subscribed:
+            elif message.ts > parent_message.last_read and parent_message.subscribed:
                 parent_message.notify_thread(action="subscribed", sender_id=message_json["user"])
 
             if config.thread_messages_in_channel or message_json["subtype"] == "thread_broadcast":
