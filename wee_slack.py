@@ -1598,6 +1598,9 @@ class SlackChannelCommon(object):
             return self.messages[ts].hash
 
     def mark_read(self, ts=None, update_remote=True, force=False, post_data={}):
+        if config.thread_messages_in_channel and getattr(self, thread_channels):
+            for channel in self.thread_channels.values():
+                channel.mark_read(ts, update_remote, force, post_data)
         if self.new_messages or force:
             if self.channel_buffer:
                 w.buffer_set(self.channel_buffer, "unread", "")
@@ -2275,8 +2278,10 @@ class SlackThreadChannel(SlackChannelCommon):
     def refresh(self):
         self.rename()
 
-    def mark_read(self, ts=None, update_remote=True, force=False):
-        super(SlackThreadChannel, self).mark_read(ts=ts, update_remote=update_remote, force=force, post_data={"thread_ts": self.parent_message.ts})
+    def mark_read(self, ts=None, update_remote=True, force=False, post_data={}):
+        args = {"thread_ts": self.parent_message.ts}
+        args.update(post_data)
+        super(SlackThreadChannel, self).mark_read(ts=ts, update_remote=update_remote, force=force, post_data=args)
 
     def buffer_prnt(self, nick, text, timestamp, history_message=False, tag_nick=None):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
