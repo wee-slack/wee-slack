@@ -818,6 +818,7 @@ def buffer_input_callback(signal, buffer_ptr, data):
     this includes add/remove reactions, modifying messages, and
     sending messages.
     """
+    data = data.replace('\r', '\n')
     eventrouter = eval(signal)
     channel = eventrouter.weechat_controller.get_channel_from_buffer_ptr(buffer_ptr)
     if not channel:
@@ -862,15 +863,13 @@ def buffer_input_callback(signal, buffer_ptr, data):
 
 # Workaround for supporting multiline messages. It intercepts before the input
 # callback is called, as this is called with the whole message, while it is
-# normally split on newline before being sent to buffer_input_callback
+# normally split on newline before being sent to buffer_input_callback.
+# WeeChat only splits on newline, so we replace it with carriage return, and
+# replace it back in buffer_input_callback.
 def input_text_for_buffer_cb(data, modifier, current_buffer, string):
     if current_buffer not in EVENTROUTER.weechat_controller.buffers:
         return string
-    message = decode_from_utf8(string)
-    if not message.startswith("/") and "\n" in message:
-        buffer_input_callback("EVENTROUTER", current_buffer, message)
-        return ""
-    return string
+    return re.sub('\r?\n', '\r', decode_from_utf8(string))
 
 
 @utf8_decode
