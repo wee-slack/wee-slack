@@ -121,6 +121,8 @@ SLACK_API_TRANSLATOR = {
 
 }
 
+CONFIG_PREFIX = "plugins.var.python." + SCRIPT_NAME
+
 ###### Decorators have to be up here
 
 
@@ -5155,7 +5157,7 @@ class PluginConfig(object):
         if not w.config_get_plugin("migrated"):
             for k in self.settings.keys():
                 if not w.config_is_set_plugin(k):
-                    p = w.config_get("plugins.var.python.slack_extension.{}".format(k))
+                    p = w.config_get("{}_extension.{}".format(CONFIG_PREFIX, k))
                     data = w.config_string(p)
                     if data != "":
                         w.config_set_plugin(k, data)
@@ -5244,7 +5246,7 @@ if __name__ == "__main__":
 
             hide_distractions = False
 
-            w.hook_config("plugins.var.python." + SCRIPT_NAME + ".*", "config_changed_cb", "")
+            w.hook_config(CONFIG_PREFIX + ".*", "config_changed_cb", "")
             w.hook_config("irc.look.server_buffer", "config_server_buffer_cb", "")
             w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
 
