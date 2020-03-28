@@ -5068,11 +5068,16 @@ class PluginConfig(object):
     def __str__(self):
         return "".join([x + "\t" + str(self.settings[x]) + "\n" for x in self.settings.keys()])
 
-    def config_changed(self, data, key, value):
-        for key in self.settings:
+    def config_changed(self, data, full_key, value):
+        if full_key is None:
+            for key in self.settings:
+                self.settings[key] = self.fetch_setting(key)
+        else:
+            key = full_key.replace(CONFIG_PREFIX + ".", "")
             self.settings[key] = self.fetch_setting(key)
-        if self.debug_mode:
-            create_slack_debug_buffer()
+            if full_key == CONFIG_PREFIX + ".debug_mode":
+                if self.debug_mode:
+                    create_slack_debug_buffer()
         return w.WEECHAT_RC_OK
 
     def fetch_setting(self, key):
