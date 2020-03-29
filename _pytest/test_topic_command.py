@@ -19,6 +19,13 @@ def test_parse_topic_with_text():
     assert topic == 'some topic text'
 
 
+def test_parse_topic_with_text_with_newline():
+    channel_name, topic = parse_topic_command('/topic some topic text\nsecond line')
+
+    assert channel_name is None
+    assert topic == 'some topic text\nsecond line'
+
+
 def test_parse_topic_with_delete():
     channel_name, topic = parse_topic_command('/topic -delete')
 

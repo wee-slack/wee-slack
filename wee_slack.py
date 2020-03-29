@@ -3812,23 +3812,19 @@ def part_command_cb(data, current_buffer, args):
 
 
 def parse_topic_command(command):
-    args = command.split()[1:]
-    channel_name = None
-    topic = None
+    _, _, args = command.partition(' ')
+    if args.startswith('#'):
+        channel_name, _, topic_arg = args.partition(' ')
+    else:
+        channel_name = None
+        topic_arg = args
 
-    if args:
-        if args[0].startswith('#'):
-            channel_name = args[0]
-            topic = args[1:]
-        else:
-            topic = args
-
-    if topic == []:
-        topic = None
-    if topic:
-        topic = ' '.join(topic)
-    if topic == '-delete':
+    if topic_arg == '-delete':
         topic = ''
+    elif topic_arg:
+        topic = topic_arg
+    else:
+        topic = None
 
     return channel_name, topic
 
