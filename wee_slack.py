@@ -1598,9 +1598,6 @@ class SlackChannelCommon(object):
             return self.messages[ts].hash
 
     def mark_read(self, ts=None, update_remote=True, force=False, post_data={}):
-        if config.thread_messages_in_channel and getattr(self, thread_channels):
-            for channel in self.thread_channels.values():
-                channel.mark_read(ts, update_remote, force, post_data)
         if self.new_messages or force:
             if self.channel_buffer:
                 w.buffer_set(self.channel_buffer, "unread", "")
@@ -1961,6 +1958,12 @@ class SlackChannel(SlackChannelCommon):
             else:
                 del self.typing[user]
         return typing
+
+    def mark_read(self, ts=None, update_remote=True, force=False, post_data={}):
+        if config.thread_messages_in_channel and update_remote:
+            for thread_channel in self.thread_channels.values():
+                thread_channel.mark_read(ts=ts, update_remote=update_remote, force=force, post_data=post_data)
+        super(SlackChannel, self).mark_read(ts=ts, update_remote=update_remote, force=force, post_data=post_data)
 
     def user_joined(self, user_id):
         # ugly hack - for some reason this gets turned into a list
@@ -3166,7 +3169,7 @@ def process_thread_marked(message_json, eventrouter, team, channel, metadata):
     thread_ts = subscription.get("thread_ts")
     channel = team.channels.get(subscription.get("channel"))
     if ts and thread_ts and channel:
-        thread_channel = channel.thread_channels.get(thread_ts)
+        thread_channel = channel.thread_channels.get(SlackTS(thread_ts))
         if thread_channel: thread_channel.mark_read(ts=ts, force=True, update_remote=False)
     else:
         dbg("tried to mark something weird {}".format(message_json))
