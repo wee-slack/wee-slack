@@ -1959,12 +1959,6 @@ class SlackChannel(SlackChannelCommon):
                 del self.typing[user]
         return typing
 
-    def mark_read(self, ts=None, update_remote=True, force=False, post_data={}):
-        if config.thread_messages_in_channel and update_remote:
-            for thread_channel in self.thread_channels.values():
-                thread_channel.mark_read(ts=ts, update_remote=update_remote, force=force, post_data=post_data)
-        super(SlackChannel, self).mark_read(ts=ts, update_remote=update_remote, force=force, post_data=post_data)
-
     def user_joined(self, user_id):
         # ugly hack - for some reason this gets turned into a list
         self.members = set(self.members)
