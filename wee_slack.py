@@ -1735,9 +1735,9 @@ class SlackChannel(SlackChannelCommon):
 
     def open(self, update_remote=True):
         if update_remote:
-            if "join" in SLACK_API_TRANSLATOR[self.type]:
-                s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["join"],
-                        {"channel": self.identifier}, channel=self)
+            join_method = self.team.slack_api_translator[self.type].get("join")
+            if join_method:
+                s = SlackRequest(self.team, join_method, {"channel": self.identifier}, channel=self)
                 self.eventrouter.receive(s)
         self.create_buffer()
         self.active = True
@@ -1814,15 +1814,15 @@ class SlackChannel(SlackChannelCommon):
                 w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.preferred_name)
         self.update_nicklist()
 
-        if "info" in SLACK_API_TRANSLATOR[self.type]:
-            s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["info"],
-                    {"channel": self.identifier}, channel=self)
+        info_method = self.team.slack_api_translator[self.type].get("info")
+        if info_method:
+            s = SlackRequest(self.team, info_method, {"channel": self.identifier}, channel=self)
             self.eventrouter.receive(s)
 
         if self.type == "im":
-            if "join" in SLACK_API_TRANSLATOR[self.type]:
-                s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["join"],
-                        {"users": self.user, "return_im": True}, channel=self)
+            join_method = self.team.slack_api_translator[self.type].get("join")
+            if join_method:
+                s = SlackRequest(self.team, join_method, {"users": self.user, "return_im": True}, channel=self)
                 self.eventrouter.receive(s)
 
     def clear_messages(self):
@@ -1835,7 +1835,7 @@ class SlackChannel(SlackChannelCommon):
         self.channel_buffer = None
         self.active = False
         if update_remote and not self.eventrouter.shutting_down:
-            s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["leave"],
+            s = SlackRequest(self.team, self.team.slack_api_translator[self.type]["leave"],
                     {"channel": self.identifier}, channel=self)
             self.eventrouter.receive(s)
 
@@ -1912,7 +1912,7 @@ class SlackChannel(SlackChannelCommon):
                 self.clear_messages()
             w.prnt_date_tags(self.channel_buffer, SlackTS().major,
                     tag(backlog=True, no_log=True), '\tgetting channel history...')
-            s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["history"],
+            s = SlackRequest(self.team, self.team.slack_api_translator[self.type]["history"],
                     {"channel": self.identifier, "count": BACKLOG_SIZE}, channel=self, metadata={'clear': True})
             if not slow_queue:
                 self.eventrouter.receive(s)
@@ -2098,14 +2098,14 @@ class SlackDMChannel(SlackChannel):
     def open(self, update_remote=True):
         self.create_buffer()
         self.get_history()
-        if "info" in SLACK_API_TRANSLATOR[self.type]:
-            s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["info"],
-                    {"name": self.identifier}, channel=self)
+        info_method = self.team.slack_api_translator[self.type].get("info")
+        if info_method:
+            s = SlackRequest(self.team, info_method, {"name": self.identifier}, channel=self)
             self.eventrouter.receive(s)
         if update_remote:
-            if "join" in SLACK_API_TRANSLATOR[self.type]:
-                s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["join"],
-                        {"users": self.user, "return_im": True}, channel=self)
+            join_method = self.team.slack_api_translator[self.type].get("join")
+            if join_method:
+                s = SlackRequest(self.team, join_method, {"users": self.user, "return_im": True}, channel=self)
                 self.eventrouter.receive(s)
 
     def rename(self):
@@ -2174,14 +2174,15 @@ class SlackMPDMChannel(SlackChannel):
         self.create_buffer()
         self.active = True
         self.get_history()
-        if "info" in SLACK_API_TRANSLATOR[self.type]:
-            s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["info"],
-                    {"channel": self.identifier}, channel=self)
+        info_method = self.team.slack_api_translator[self.type].get("info")
+        if info_method:
+            s = SlackRequest(self.team, info_method, {"channel": self.identifier}, channel=self)
             self.eventrouter.receive(s)
-        if update_remote and 'join' in SLACK_API_TRANSLATOR[self.type]:
-            s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]['join'],
-                    {'users': ','.join(self.members)}, channel=self)
-            self.eventrouter.receive(s)
+        if update_remote:
+            join_method = self.team.slack_api_translator[self.type].get("join")
+            if join_method:
+                s = SlackRequest(self.team, join_method, {'users': ','.join(self.members)}, channel=self)
+                self.eventrouter.receive(s)
 
     def set_name(self, slack_name):
         self.name = slack_name
@@ -4109,8 +4110,7 @@ def join_query_command_cb(data, current_buffer, args):
 
             # If the DM or MPDM doesn't exist, create it
             if not channel:
-                s = SlackRequest(team, SLACK_API_TRANSLATOR[channel_type]['join'],
-                        {'users': ','.join(users)})
+                s = SlackRequest(team, team.slack_api_translator[channel_type]['join'], {'users': ','.join(users)})
                 EVENTROUTER.receive(s)
 
     if channel:
