@@ -11,6 +11,7 @@ from functools import partial, wraps
 from io import StringIO
 from itertools import chain, count, islice
 
+import copy
 import errno
 import textwrap
 import time
@@ -1249,6 +1250,7 @@ class SlackTeam(object):
     """
 
     def __init__(self, eventrouter, token, team_hash, websocket_url, team_info, subteams,  nick, myidentifier, my_manual_presence, users, bots, channels, **kwargs):
+        self.slack_api_translator = copy.deepcopy(SLACK_API_TRANSLATOR)
         self.identifier = team_info["id"]
         self.active = True
         self.team_hash = team_hash
@@ -1609,10 +1611,11 @@ class SlackChannelCommon(object):
             if update_remote:
                 args = {"channel": self.identifier, "ts": ts}
                 args.update(post_data)
-                s = SlackRequest(self.team, SLACK_API_TRANSLATOR[self.type]["mark"],
-                        args, channel=self)
-                self.eventrouter.receive(s)
-                self.new_messages = False
+                mark_method = self.team.slack_api_translator[self.type].get("mark")
+                if mark_method:
+                    s = SlackRequest(self.team, mark_method, args, channel=self)
+                    self.eventrouter.receive(s)
+                    self.new_messages = False
 
 
 class SlackChannel(SlackChannelCommon):
@@ -2893,7 +2896,10 @@ def handle_reactionsremove(json, eventrouter, team, channel, metadata):
 
 def handle_subscriptionsthreadmark(json, eventrouter, team, channel, metadata):
     if not json["ok"]:
-        print_error("Couldn't set thread read status: {}".format(json['error']))
+        if json['error'] == 'not_allowed_token_type':
+            team.slack_api_translator['thread']['mark'] = None
+        else:
+            print_error("Couldn't set thread read status: {}".format(json['error']))
 
 
 def handle_subscriptionsthreadadd(json, eventrouter, team, channel, metadata):
