@@ -2582,10 +2582,6 @@ class SlackMessage(object):
         elif sender_id != self.team.myidentifier:
             if action == "mention":
                 template = "You were mentioned in thread {hash}, channel {channel}"
-            elif action == "participant":
-                template = "New message in thread {hash}, channel {channel} in which you participated"
-            elif action == "response":
-                template = "New message in thread {hash} in response to own message in {channel}"
             elif action == "subscribed":
                 template = "New message in thread {hash}, channel {channel} to which you are subscribed"
             else:
@@ -3115,18 +3111,7 @@ subprocess_group_topic = subprocess_channel_topic
 
 
 def subprocess_message_replied(message_json, eventrouter, team, channel, history_message):
-    dbg("MESSAGE REPLIED {}".format(message_json))
-    parent_ts = message_json["message"].get("thread_ts")
-    parent_message = channel.messages.get(SlackTS(parent_ts))
-    # Thread exists but is not open yet
-    if parent_message is not None \
-            and not (parent_message.thread_channel and parent_message.thread_channel.active):
-        channel.hash_message(parent_ts)
-        last_message = max(message_json["message"]["replies"], key=lambda x: x["ts"])
-        if message_json["message"].get("user") == team.myidentifier:
-            parent_message.notify_thread(action="response", sender_id=last_message["user"])
-        elif any(team.myidentifier == r["user"] for r in message_json["message"]["replies"]):
-            parent_message.notify_thread(action="participant", sender_id=last_message["user"])
+    pass
 
 
 def subprocess_message_changed(message_json, eventrouter, team, channel, history_message):
