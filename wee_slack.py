@@ -2893,17 +2893,17 @@ def handle_reactionsremove(json, eventrouter, team, channel, metadata):
 
 def handle_subscriptionsthreadmark(json, eventrouter, team, channel, metadata):
     if not json["ok"]:
-        print_error("Couldn't set thread read status: {}", json['error'])
+        print_error("Couldn't set thread read status: {}".format(json['error']))
 
 
 def handle_subscriptionsthreadadd(json, eventrouter, team, channel, metadata):
     if not json["ok"]:
-        print_error("Couldn't add thread subscription: {}", json['error'])
+        print_error("Couldn't add thread subscription: {}".format(json['error']))
 
 
 def handle_subscriptionsthreadremove(json, eventrouter, team, channel, metadata):
     if not json["ok"]:
-        print_error("Couldn't remove thread subscription: {}", json['error'])
+        print_error("Couldn't remove thread subscription: {}".format(json['error']))
 
 
 ###### New/converted process_ and subprocess_ methods
