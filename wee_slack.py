@@ -2579,6 +2579,9 @@ class SlackMessage(object):
     def notify_thread(self, action=None, sender_id=None):
         if config.auto_open_threads:
             self.open_thread()
+        elif config.thread_messages_in_channel:
+            # The usual notifications should occur in the channel, no need to notify elsewhere
+            pass
         elif sender_id != self.team.myidentifier:
             if action == "mention":
                 template = "You were mentioned in thread {hash}, channel {channel}"
