@@ -410,7 +410,7 @@ class EventRouter(object):
             if not os.path.exists(RECORD_DIR):
                 os.makedirs(RECORD_DIR)
 
-    def record_event(self, message_json, file_name_field, subdir=None):
+    def record_event(self, message_json, team, file_name_field, subdir=None):
         """
         complete
         Called each time you want to record an event.
@@ -418,10 +418,19 @@ class EventRouter(object):
         file_name_field is the json key whose value you want to be part of the file name
         """
         now = time.time()
-        if subdir:
-            directory = "{}/{}".format(RECORD_DIR, subdir)
+
+        if team:
+            team_subdomain = team.subdomain
         else:
-            directory = RECORD_DIR
+            team_json = message_json.get('team')
+            if team_json:
+                team_subdomain = team_json.get('domain')
+            else:
+                team_subdomain = 'unknown_team'
+
+        directory = "{}/{}".format(RECORD_DIR, team_subdomain)
+        if subdir:
+            directory = "{}/{}".format(directory, subdir)
         if not os.path.exists(directory):
             os.makedirs(directory)
         mtype = message_json.get(file_name_field, 'unknown')
@@ -517,7 +526,7 @@ class EventRouter(object):
 
             message_json = json.loads(data.decode('utf-8'))
             if self.recording:
-                self.record_event(message_json, 'type', 'websocket')
+                self.record_event(message_json, team, 'type', 'websocket')
             message_json["wee_slack_metadata_team"] = team
             self.receive(message_json)
         return w.WEECHAT_RC_OK
@@ -547,7 +556,7 @@ class EventRouter(object):
                 try:
                     j["wee_slack_process_method"] = request_metadata.request_normalized
                     if self.recording:
-                        self.record_event(j, 'wee_slack_process_method', 'http')
+                        self.record_event(j, request_metadata.team, 'wee_slack_process_method', 'http')
                     j["wee_slack_request_metadata"] = request_metadata
                     self.reply_buffer.pop(request_metadata.response_id)
                     self.receive(j)
