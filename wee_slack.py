@@ -339,8 +339,11 @@ def handle_socket_error(exception, team, caller_name):
     team.set_disconnected()
 
 
-EMOJI_NAME_REGEX = re.compile(':([^: ]+):')
-EMOJI_REGEX_STRING = '[\U00000080-\U0010ffff]+'
+EMOJI_CHAR_REGEX_STRING = '(?P<emoji_char>[\U00000080-\U0010ffff]+)'
+EMOJI_NAME_REGEX_STRING = ':(?P<emoji_name>[a-z0-9_+-]+):'
+EMOJI_CHAR_OR_NAME_REGEX_STRING = '({}|{})'.format(EMOJI_CHAR_REGEX_STRING, EMOJI_NAME_REGEX_STRING)
+EMOJI_NAME_REGEX = re.compile(EMOJI_NAME_REGEX_STRING)
+EMOJI_CHAR_OR_NAME_REGEX = re.compile(EMOJI_CHAR_OR_NAME_REGEX_STRING)
 
 
 def regex_match_to_emoji(match, include_name=False):
@@ -364,7 +367,12 @@ def replace_string_with_emoji(text):
 
 
 def replace_emoji_with_string(text):
-    return EMOJI_WITH_SKIN_TONES_REVERSE.get(text, text)
+    emoji = None
+    key = text
+    while emoji is None and len(key):
+        emoji = EMOJI_WITH_SKIN_TONES_REVERSE.get(key)
+        key = key[:-1]
+    return emoji or text
 
 
 ###### New central Event router
@@ -822,11 +830,10 @@ def buffer_input_callback(signal, buffer_ptr, data):
             return int(message_id)
 
     message_id_regex = r"(\d*|\$[0-9a-fA-F]{3,})"
-    reaction = re.match(r"^{}(\+|-)(:(.+):|{})\s*$".format(message_id_regex, EMOJI_REGEX_STRING), data)
+    reaction = re.match(r"^{}(\+|-){}\s*$".format(message_id_regex, EMOJI_CHAR_OR_NAME_REGEX_STRING), data)
     substitute = re.match("^{}s/".format(message_id_regex), data)
     if reaction:
-        emoji_match = reaction.group(4) or reaction.group(3)
-        emoji = replace_emoji_with_string(emoji_match)
+        emoji = reaction.group("emoji_char") or reaction.group("emoji_name")
         if reaction.group(2) == "+":
             channel.send_add_reaction(get_id(reaction.group(1)), emoji)
         elif reaction.group(2) == "-":
@@ -1505,7 +1512,7 @@ class SlackChannelCommon(object):
     def send_change_reaction(self, method, msg_id, reaction):
         if type(msg_id) is not int:
             if msg_id in self.hashed_messages:
-                timestamp = str(self.hashed_messages[msg_id])
+                timestamp = self.hashed_messages[msg_id]
             else:
                 return
         elif 0 < msg_id <= len(self.messages):
@@ -1513,7 +1520,17 @@ class SlackChannelCommon(object):
             timestamp = next(islice(keys, msg_id - 1, None))
         else:
             return
-        data = {"channel": self.identifier, "timestamp": timestamp, "name": reaction}
+
+        reaction_name = replace_emoji_with_string(reaction)
+        if method == "toggle":
+            message = self.messages.get(timestamp)
+            reaction = message.get_reaction(reaction_name)
+            if reaction and self.team.myidentifier in reaction["users"]:
+                method = "reactions.remove"
+            else:
+                method = "reactions.add"
+
+        data = {"channel": self.identifier, "timestamp": timestamp, "name": reaction_name}
         s = SlackRequest(self.team, method, data, channel=self, metadata={'reaction': reaction})
         self.eventrouter.receive(s)
 
@@ -2558,25 +2575,26 @@ class SlackMessage(object):
             name_plain = "{}".format(self.team.bots[self.message_json["bot_id"]].formatted_name(enable_color=False))
         return (name, name_plain)
 
-    def add_reaction(self, reaction, user):
-        m = self.message_json.get('reactions')
-        if m:
-            found = False
-            for r in m:
-                if r["name"] == reaction and user not in r["users"]:
-                    r["users"].append(user)
-                    found = True
-            if not found:
-                self.message_json["reactions"].append({"name": reaction, "users": [user]})
-        else:
-            self.message_json["reactions"] = [{"name": reaction, "users": [user]}]
+    def get_reaction(self, reaction_name):
+        for reaction in self.message_json.get("reactions", []):
+            if reaction["name"] == reaction_name:
+                return reaction
+        return None
 
-    def remove_reaction(self, reaction, user):
-        m = self.message_json.get('reactions')
-        if m:
-            for r in m:
-                if r["name"] == reaction and user in r["users"]:
-                    r["users"].remove(user)
+    def add_reaction(self, reaction_name, user):
+        reaction = self.get_reaction(reaction_name)
+        if reaction:
+            if user not in reaction["users"]:
+                reaction["users"].append(user)
+        else:
+            if "reactions" not in self.message_json:
+                self.message_json["reactions"] = []
+            self.message_json["reactions"].append({"name": reaction_name, "users": [user]})
+
+    def remove_reaction(self, reaction_name, user):
+        reaction = self.get_reaction(reaction_name)
+        if user in reaction["users"]:
+            reaction["users"].remove(user)
 
     def has_mention(self):
         return w.string_has_highlight(unfurl_refs(self.message_json.get('text')),
@@ -4609,6 +4627,13 @@ def line_event_cb(data, signal, hashtable):
             return w.WEECHAT_RC_OK
         message_hash = "$" + message_hash
 
+        if data == "auto":
+            reaction = EMOJI_CHAR_OR_NAME_REGEX.match(hashtable["_chat_eol"])
+            if reaction:
+                emoji = reaction.group("emoji_char") or reaction.group("emoji_name")
+                channel.send_change_reaction("toggle", message_hash[1:], emoji)
+            else:
+                data = "message"
         if data == "message":
             w.command(buffer_pointer, "/cursor stop")
             w.command(buffer_pointer, "/input insert {}".format(message_hash))
@@ -4804,7 +4829,7 @@ def setup_hooks():
         "@chat(python.*):T": "hsignal:slack_cursor_thread",
         })
 
-    w.hook_hsignal("slack_mouse", "line_event_cb", "message")
+    w.hook_hsignal("slack_mouse", "line_event_cb", "auto")
     w.hook_hsignal("slack_cursor_delete", "line_event_cb", "delete")
     w.hook_hsignal("slack_cursor_linkarchive", "line_event_cb", "linkarchive")
     w.hook_hsignal("slack_cursor_message", "line_event_cb", "message")
