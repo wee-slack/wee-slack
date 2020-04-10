@@ -516,9 +516,9 @@ class EventRouter(object):
                 return w.WEECHAT_RC_OK
 
             message_json = json.loads(data.decode('utf-8'))
-            message_json["wee_slack_metadata_team"] = team
             if self.recording:
                 self.record_event(message_json, 'type', 'websocket')
+            message_json["wee_slack_metadata_team"] = team
             self.receive(message_json)
         return w.WEECHAT_RC_OK
 
