@@ -5054,6 +5054,7 @@ class PluginConfig(object):
             return self.get_boolean(key)
         except:
             # There was setting-specific getter, but it failed.
+            print(format_exc_tb())
             return self.settings[key]
 
     def __getattr__(self, key):
