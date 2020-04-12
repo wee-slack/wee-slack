@@ -2588,10 +2588,9 @@ class SlackMessage(object):
     def notify_thread(self, action=None, sender_id=None):
         if config.auto_open_threads:
             self.open_thread()
-        elif config.thread_messages_in_channel:
-            # The usual notifications should occur in the channel, no need to notify elsewhere
-            pass
-        elif sender_id != self.team.myidentifier:
+        if sender_id != self.team.myidentifier and (config.notify_subscribed_threads == True or
+                config.notify_subscribed_threads == "auto" and not config.auto_open_threads and
+                not config.thread_messages_in_channel):
             if action == "mention":
                 template = "You were mentioned in thread {hash}, channel {channel}"
             elif action == "subscribed":
@@ -4926,10 +4925,16 @@ class PluginConfig(object):
             " highlights, i.e. not @channel and @here. all_highlights: Show"
             " all highlights, but not other messages. all: Show all activity,"
             " like other channels."),
+        'notify_subscribed_threads': Setting(
+            default='auto',
+            desc="Control if you want to see a notification in the team buffer when a"
+            " thread you're subscribed to receives a new message, either auto, true or"
+            " false. auto means that you only get a notification if auto_open_threads"
+            " and thread_messages_in_channel both are false. Defaults to auto."),
         'notify_usergroup_handle_updated': Setting(
             default='false',
-            desc="Control if you want to see notification when a usergroup's"
-            " handle has changed, either true or false."),
+            desc="Control if you want to see a notification in the team buffer when a"
+            "usergroup's handle has changed, either true or false."),
         'never_away': Setting(
             default='false',
             desc='Poke Slack every five minutes so that it never marks you "away".'),
@@ -5103,11 +5108,17 @@ class PluginConfig(object):
         else:
             return token
 
+    def get_string_or_boolean(self, key, *valid_strings):
+        value = w.config_get_plugin(key)
+        if value in valid_strings:
+            return value
+        return w.config_string_to_boolean(value)
+
+    def get_notify_subscribed_threads(self, key):
+        return self.get_string_or_boolean(key, 'auto')
+
     def get_render_emoji_as_string(self, key):
-        s = w.config_get_plugin(key)
-        if s == 'both':
-            return s
-        return w.config_string_to_boolean(s)
+        return self.get_string_or_boolean(key, 'both')
 
     def migrate(self):
         """
