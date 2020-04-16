@@ -2824,6 +2824,7 @@ def handle_channelsinfo(channel_json, eventrouter, team, channel, metadata):
 
 def handle_groupsinfo(group_json, eventrouter, team, channel, metadatas):
     channel.set_unread_count_display(group_json['group'].get('unread_count_display', 0))
+    channel.set_members(group_json['group']['members'])
 
 
 def handle_conversationsopen(conversation_json, eventrouter, team, channel, metadata, object_name='channel'):
