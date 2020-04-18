@@ -2450,8 +2450,6 @@ class SlackMessage(object):
         self.message_json = message_json
         self.submessages = []
         self.hash = None
-        senders = self.get_sender()
-        self.sender, self.sender_plain = senders[0], senders[1]
         self.ts = SlackTS(message_json['ts'])
         self.subscribed = message_json.get("subscribed", False)
         self.last_read = SlackTS(message_json.get("last_read", SlackTS()))
@@ -2527,31 +2525,43 @@ class SlackMessage(object):
         self.message_json["text"] = new_text
         dbg(self.message_json)
 
-    def get_sender(self):
-        name = ""
-        name_plain = ""
+    def get_sender(self, plain):
         user = self.team.users.get(self.message_json.get('user'))
         if user:
-            name = "{}".format(user.formatted_name())
-            name_plain = "{}".format(user.formatted_name(enable_color=False))
+            name = "{}".format(user.formatted_name(enable_color=not plain))
             if user.is_external:
                 name += config.external_user_suffix
-                name_plain += config.external_user_suffix
+            return name
         elif 'username' in self.message_json:
             username = self.message_json["username"]
-            if self.message_json.get("subtype") == "bot_message":
-                name = "{} :]".format(username)
-                name_plain = "{}".format(username)
+            if plain:
+                return username
+            elif self.message_json.get("subtype") == "bot_message":
+                return "{} :]".format(username)
             else:
-                name = "-{}-".format(username)
-                name_plain = "{}".format(username)
+                return "-{}-".format(username)
         elif 'service_name' in self.message_json:
-            name = "-{}-".format(self.message_json["service_name"])
-            name_plain = "{}".format(self.message_json["service_name"])
+            service_name = self.message_json["service_name"]
+            if plain:
+                return service_name
+            else:
+                return "-{}-".format(service_name)
         elif self.message_json.get('bot_id') in self.team.bots:
-            name = "{} :]".format(self.team.bots[self.message_json["bot_id"]].formatted_name())
-            name_plain = "{}".format(self.team.bots[self.message_json["bot_id"]].formatted_name(enable_color=False))
-        return (name, name_plain)
+            bot = self.team.bots[self.message_json["bot_id"]]
+            name = bot.formatted_name(enable_color=not plain)
+            if plain:
+                return name
+            else:
+                return "{} :]".format(name)
+        return ""
+
+    @property
+    def sender(self):
+        return self.get_sender(False)
+
+    @property
+    def sender_plain(self):
+        return self.get_sender(True)
 
     def get_reaction(self, reaction_name):
         for reaction in self.message_json.get("reactions", []):
