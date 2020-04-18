@@ -109,10 +109,11 @@ By default GitHub Pages will see a temporary code used to create your token
 ### rehistory
 
 ```
-/rehistory
+/rehistory [-remote]
 ```
 
 Reload the history in the current channel.
+With -remote the history will be downloaded again from Slack.
 
 ### reply
 

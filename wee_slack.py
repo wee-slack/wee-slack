@@ -1491,7 +1491,7 @@ class SlackTeam(object):
 
 
 class SlackChannelCommon(object):
-    def prnt_message(self, message, history_message=False):
+    def prnt_message(self, message, history_message=False, no_log=False):
         text = self.render(message)
         thread_channel = isinstance(self, SlackThreadChannel)
 
@@ -1525,7 +1525,7 @@ class SlackChannelCommon(object):
 
         self.buffer_prnt(prefix, text, message.ts, tagset=tagset,
                 tag_nick=message.sender_plain, history_message=history_message,
-                extra_tags=extra_tags)
+                no_log=no_log, extra_tags=extra_tags)
 
     def send_add_reaction(self, msg_id, reaction):
         self.send_change_reaction("reactions.add", msg_id, reaction)
@@ -1878,6 +1878,11 @@ class SlackChannel(SlackChannelCommon):
                 s = SlackRequest(self.team, join_method, {"users": self.user, "return_im": True}, channel=self)
                 self.eventrouter.receive(s)
 
+    def reprint_messages(self):
+        w.buffer_clear(self.channel_buffer)
+        for message in self.messages.values():
+            self.prnt_message(message, no_log=True)
+
     def clear_messages(self):
         w.buffer_clear(self.channel_buffer)
         self.messages = OrderedDict()
@@ -1892,7 +1897,7 @@ class SlackChannel(SlackChannelCommon):
                     {"channel": self.identifier}, channel=self)
             self.eventrouter.receive(s)
 
-    def buffer_prnt(self, nick, text, timestamp, tagset, tag_nick=None, history_message=False, extra_tags=None):
+    def buffer_prnt(self, nick, text, timestamp, tagset, tag_nick=None, history_message=False, no_log=False, extra_tags=None):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
         self.last_line_from = nick
         ts = SlackTS(timestamp)
@@ -1905,7 +1910,7 @@ class SlackChannel(SlackChannelCommon):
             if not backlog:
                 self.new_messages = True
 
-            no_log = history_message and backlog
+            no_log = no_log or history_message and backlog
             self_msg = tag_nick == self.team.nick
             tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, no_log=no_log, extra_tags=extra_tags)
 
@@ -2288,7 +2293,7 @@ class SlackThreadChannel(SlackChannelCommon):
         args.update(post_data)
         super(SlackThreadChannel, self).mark_read(ts=ts, update_remote=update_remote, force=force, post_data=args)
 
-    def buffer_prnt(self, nick, text, timestamp, tagset, tag_nick=None, history_message=False, extra_tags=None):
+    def buffer_prnt(self, nick, text, timestamp, tagset, tag_nick=None, history_message=False, no_log=False, extra_tags=None):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
         self.last_line_from = nick
         ts = SlackTS(timestamp)
@@ -2298,7 +2303,7 @@ class SlackThreadChannel(SlackChannelCommon):
             if not backlog:
                 self.new_messages = True
 
-            no_log = history_message and backlog
+            no_log = no_log or history_message and backlog
             self_msg = tag_nick == self.team.nick
             tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, no_log=no_log, extra_tags=extra_tags)
 
@@ -2309,8 +2314,7 @@ class SlackThreadChannel(SlackChannelCommon):
 
     def get_history(self):
         self.got_history = True
-        for message in chain([self.parent_message], self.parent_message.submessages):
-            self.prnt_message(message, history_message=True)
+        self.print_messages(history_message=True)
         if len(self.parent_message.submessages) < self.parent_message.number_of_replies():
             s = SlackRequest(self.team, "conversations.replies",
                     {"channel": self.identifier, "ts": self.parent_message.ts},
@@ -2372,6 +2376,14 @@ class SlackThreadChannel(SlackChannelCommon):
             topic = '{} {} | {}'.format(time.strftime(time_format, parent_time),
                     self.parent_message.sender, self.render(self.parent_message))
             w.buffer_set(self.channel_buffer, "title", topic)
+
+    def print_messages(self, history_message=False, no_log=False):
+        for message in chain([self.parent_message], self.parent_message.submessages):
+            self.prnt_message(message, history_message, no_log)
+
+    def reprint_messages(self):
+        w.buffer_clear(self.channel_buffer)
+        self.print_messages(no_log=True)
 
     def destroy_buffer(self, update_remote):
         self.channel_buffer = None
@@ -4327,13 +4339,19 @@ command_reply.completion = '%(threads)|-alsochannel %(threads)'
 @utf8_decode
 def command_rehistory(data, current_buffer, args):
     """
-    /rehistory
+    /rehistory [-remote]
     Reload the history in the current channel.
+    With -remote the history will be downloaded again from Slack.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    channel.clear_messages()
-    channel.get_history()
+    if args == "-remote":
+        channel.clear_messages()
+        channel.get_history()
+    else:
+        channel.reprint_messages()
     return w.WEECHAT_RC_OK_EAT
+
+command_rehistory.completion = '-remote'
 
 
 @slack_buffer_required
