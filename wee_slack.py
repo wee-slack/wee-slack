@@ -1491,6 +1491,42 @@ class SlackTeam(object):
 
 
 class SlackChannelCommon(object):
+    def prnt_message(self, message, history_message=False):
+        text = self.render(message)
+        thread_channel = isinstance(self, SlackThreadChannel)
+
+        if message.subtype == "join":
+            tagset = "join"
+            prefix = w.prefix("join").strip()
+        elif message.subtype == "leave":
+            tagset = "leave"
+            prefix = w.prefix("quit").strip()
+        elif message.subtype == "topic":
+            tagset = "topic"
+            prefix = w.prefix("network").strip()
+        else:
+            channel_type = self.parent_message.channel.type if thread_channel else self.type
+            if channel_type in ["im", "mpim"]:
+                tagset = "dm"
+            else:
+                tagset = "channel"
+
+            if message.subtype == "me_message":
+                prefix = w.prefix("action").rstrip()
+            else:
+                prefix = message.sender
+
+        extra_tags = None
+        if isinstance(message, SlackThreadMessage) and not thread_channel:
+            if config.thread_messages_in_channel or message.subtype == "thread_broadcast":
+                extra_tags = [message.subtype]
+            else:
+                return
+
+        self.buffer_prnt(prefix, text, message.ts, tagset=tagset,
+                tag_nick=message.sender_plain, history_message=history_message,
+                extra_tags=extra_tags)
+
     def send_add_reaction(self, msg_id, reaction):
         self.send_change_reaction("reactions.add", msg_id, reaction)
 
@@ -1856,7 +1892,7 @@ class SlackChannel(SlackChannelCommon):
                     {"channel": self.identifier}, channel=self)
             self.eventrouter.receive(s)
 
-    def buffer_prnt(self, nick, text, timestamp=str(time.time()), tagset=None, tag_nick=None, history_message=False, extra_tags=None):
+    def buffer_prnt(self, nick, text, timestamp, tagset, tag_nick=None, history_message=False, extra_tags=None):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
         self.last_line_from = nick
         ts = SlackTS(timestamp)
@@ -1869,12 +1905,6 @@ class SlackChannel(SlackChannelCommon):
             backlog = ts <= last_read
             if not backlog:
                 self.new_messages = True
-
-            if not tagset:
-                if self.type in ["im", "mpim"]:
-                    tagset = "dm"
-                else:
-                    tagset = "channel"
 
             no_log = history_message and backlog
             self_msg = tag_nick == self.team.nick
@@ -2259,7 +2289,7 @@ class SlackThreadChannel(SlackChannelCommon):
         args.update(post_data)
         super(SlackThreadChannel, self).mark_read(ts=ts, update_remote=update_remote, force=force, post_data=args)
 
-    def buffer_prnt(self, nick, text, timestamp, history_message=False, tag_nick=None):
+    def buffer_prnt(self, nick, text, timestamp, tagset, tag_nick=None, history_message=False, extra_tags=None):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
         self.last_line_from = nick
         ts = SlackTS(timestamp)
@@ -2269,14 +2299,9 @@ class SlackThreadChannel(SlackChannelCommon):
             if not backlog:
                 self.new_messages = True
 
-            if self.parent_message.channel.type in ["im", "mpim"]:
-                tagset = "dm"
-            else:
-                tagset = "channel"
-
             no_log = history_message and backlog
             self_msg = tag_nick == self.team.nick
-            tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, no_log=no_log)
+            tags = tag(tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, no_log=no_log, extra_tags=extra_tags)
 
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
             modify_last_print_time(self.channel_buffer, ts.minor)
@@ -2286,8 +2311,7 @@ class SlackThreadChannel(SlackChannelCommon):
     def get_history(self):
         self.got_history = True
         for message in chain([self.parent_message], self.parent_message.submessages):
-            text = self.render(message)
-            self.buffer_prnt(message.sender, text, message.ts, history_message=True, tag_nick=message.sender_plain)
+            self.prnt_message(message, history_message=True)
         if len(self.parent_message.submessages) < self.parent_message.number_of_replies():
             s = SlackRequest(self.team, "conversations.replies",
                     {"channel": self.identifier, "ts": self.parent_message.ts},
@@ -2420,18 +2444,15 @@ class SlackMessage(object):
     Note: these can't be tied to a SlackUser object because users
     can be deleted, so we have to store sender in each one.
     """
-    def __init__(self, message_json, team, channel, override_sender=None):
+    def __init__(self, subtype, message_json, team, channel):
         self.team = team
         self.channel = channel
+        self.subtype = subtype
         self.message_json = message_json
         self.submessages = []
         self.hash = None
-        if override_sender:
-            self.sender = override_sender
-            self.sender_plain = override_sender
-        else:
-            senders = self.get_sender()
-            self.sender, self.sender_plain = senders[0], senders[1]
+        senders = self.get_sender()
+        self.sender, self.sender_plain = senders[0], senders[1]
         self.ts = SlackTS(message_json['ts'])
         self.subscribed = message_json.get("subscribed", False)
         self.last_read = message_json.get("last_read", SlackTS())
@@ -2479,7 +2500,7 @@ class SlackMessage(object):
 
         text = unfurl_refs(text)
 
-        if (self.message_json.get('subtype') == 'me_message' and
+        if (self.subtype == 'me_message' and
                 not self.message_json['text'].startswith(self.sender)):
             text = "{} {}".format(self.sender, text)
 
@@ -2579,8 +2600,8 @@ class SlackMessage(object):
 
 class SlackThreadMessage(SlackMessage):
 
-    def __init__(self, parent_message, *args):
-        super(SlackThreadMessage, self).__init__(*args)
+    def __init__(self, parent_message, message_json, *args):
+        super(SlackThreadMessage, self).__init__(message_json['subtype'], message_json, *args)
         self.parent_message = parent_message
 
 
@@ -2992,21 +3013,10 @@ def process_message(message_json, eventrouter, team, channel, metadata, history_
     if subtype in subtype_functions:
         subtype_functions[subtype](message_json, eventrouter, team, channel, history_message)
     else:
-        message = SlackMessage(message_json, team, channel)
+        message = SlackMessage(subtype or "normal", message_json, team, channel)
         channel.store_message(message)
-
-        text = channel.render(message)
-        dbg("Rendered message: %s" % text)
-        dbg("Sender: %s (%s)" % (message.sender, message.sender_plain))
-
-        if subtype == 'me_message':
-            prefix = w.prefix("action").rstrip()
-        else:
-            prefix = message.sender
-
-        channel.buffer_prnt(prefix, text, message.ts, tag_nick=message.sender_plain, history_message=history_message)
+        channel.prnt_message(message, history_message)
         channel.unread_count_display += 1
-        dbg("NORMAL REPLY {}".format(message_json))
 
     if not history_message:
         download_files(message_json, team)
@@ -3062,51 +3072,38 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
             channel.hash_message(parent_ts)
             channel.store_message(message)
             channel.change_message(parent_ts)
+            channel.prnt_message(message, history_message)
 
             if parent_message.thread_channel and parent_message.thread_channel.active:
-                parent_message.thread_channel.buffer_prnt(message.sender, parent_message.thread_channel.render(message), message.ts, history_message=history_message, tag_nick=message.sender_plain)
+                parent_message.thread_channel.prnt_message(message, history_message)
             elif message.ts > channel.last_read and message.has_mention():
                 parent_message.notify_thread(action="mention", sender_id=message_json["user"])
             elif message.ts > parent_message.last_read and parent_message.subscribed:
                 parent_message.notify_thread(action="subscribed", sender_id=message_json["user"])
-
-            if config.thread_messages_in_channel or message_json["subtype"] == "thread_broadcast":
-                thread_tag = "thread_broadcast" if message_json["subtype"] == "thread_broadcast" else "thread_message"
-                channel.buffer_prnt(
-                    message.sender,
-                    channel.render(message),
-                    message.ts,
-                    tag_nick=message.sender_plain,
-                    history_message=history_message,
-                    extra_tags=[thread_tag],
-                )
 
 
 subprocess_thread_broadcast = subprocess_thread_message
 
 
 def subprocess_channel_join(message_json, eventrouter, team, channel, history_message):
-    prefix_join = w.prefix("join").strip()
-    message = SlackMessage(message_json, team, channel, override_sender=prefix_join)
-    channel.buffer_prnt(prefix_join, channel.render(message), message_json["ts"], tagset='join', tag_nick=message.get_sender()[1], history_message=history_message)
-    channel.user_joined(message_json['user'])
+    message = SlackMessage("join", message_json, team, channel)
+    channel.user_joined(message_json["user"])
     channel.store_message(message)
+    channel.prnt_message(message, history_message)
 
 
 def subprocess_channel_leave(message_json, eventrouter, team, channel, history_message):
-    prefix_leave = w.prefix("quit").strip()
-    message = SlackMessage(message_json, team, channel, override_sender=prefix_leave)
-    channel.buffer_prnt(prefix_leave, channel.render(message), message_json["ts"], tagset='leave', tag_nick=message.get_sender()[1], history_message=history_message)
-    channel.user_left(message_json['user'])
+    message = SlackMessage("leave", message_json, team, channel)
+    channel.user_left(message_json["user"])
     channel.store_message(message)
+    channel.prnt_message(message, history_message)
 
 
 def subprocess_channel_topic(message_json, eventrouter, team, channel, history_message):
-    prefix_topic = w.prefix("network").strip()
-    message = SlackMessage(message_json, team, channel, override_sender=prefix_topic)
-    channel.buffer_prnt(prefix_topic, channel.render(message), message_json["ts"], tagset="topic", tag_nick=message.get_sender()[1], history_message=history_message)
+    message = SlackMessage("topic", message_json, team, channel)
     channel.set_topic(message_json["topic"])
     channel.store_message(message)
+    channel.prnt_message(message, history_message)
 
 
 subprocess_group_join = subprocess_channel_join
