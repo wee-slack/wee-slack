@@ -1659,7 +1659,7 @@ class SlackChannelCommon(object):
             if not ts:
                 ts = next(reversed(self.messages), SlackTS())
             if ts > self.last_read:
-                self.last_read = ts
+                self.last_read = SlackTS(ts)
             if update_remote:
                 args = {"channel": self.identifier, "ts": ts}
                 args.update(post_data)
@@ -1896,13 +1896,12 @@ class SlackChannel(SlackChannelCommon):
         data = "{}\t{}".format(format_nick(nick, self.last_line_from), text)
         self.last_line_from = nick
         ts = SlackTS(timestamp)
-        last_read = SlackTS(self.last_read)
         # without this, DMs won't open automatically
-        if not self.channel_buffer and ts > last_read:
+        if not self.channel_buffer and ts > self.last_read:
             self.open(update_remote=False)
         if self.channel_buffer:
             # backlog messages - we will update the read marker as we print these
-            backlog = ts <= last_read
+            backlog = ts <= self.last_read
             if not backlog:
                 self.new_messages = True
 
@@ -2455,7 +2454,7 @@ class SlackMessage(object):
         self.sender, self.sender_plain = senders[0], senders[1]
         self.ts = SlackTS(message_json['ts'])
         self.subscribed = message_json.get("subscribed", False)
-        self.last_read = message_json.get("last_read", SlackTS())
+        self.last_read = SlackTS(message_json.get("last_read", SlackTS()))
 
     def __hash__(self):
         return hash(self.ts)
