@@ -5244,17 +5244,18 @@ if __name__ == "__main__":
             EMOJI, EMOJI_WITH_SKIN_TONES_REVERSE = load_emoji()
             setup_hooks()
 
-            # attach to the weechat hooks we need
-
-            tokens = [token.strip() for token in config.slack_api_token.split(',')]
-            w.prnt('', 'Connecting to {} slack team{}.'
-                    .format(len(tokens), '' if len(tokens) == 1 else 's'))
-            for t in tokens:
-                s = initiate_connection(t)
-                EVENTROUTER.receive(s)
             if config.record_events:
                 EVENTROUTER.record()
-            EVENTROUTER.handle_next()
-            # END attach to the weechat hooks we need
 
             hdata = Hdata(w)
+
+            auto_connect = weechat.info_get("auto_connect", "") != "0"
+
+            if auto_connect:
+                tokens = [token.strip() for token in config.slack_api_token.split(',')]
+                w.prnt('', 'Connecting to {} slack team{}.'
+                        .format(len(tokens), '' if len(tokens) == 1 else 's'))
+                for t in tokens:
+                    s = initiate_connection(t)
+                    EVENTROUTER.receive(s)
+                EVENTROUTER.handle_next()
