@@ -2833,7 +2833,7 @@ handle_mpimhistory = handle_history
 
 def handle_conversationsreplies(message_json, eventrouter, team, channel, metadata):
     for message in message_json['messages']:
-        process_message(message, eventrouter, team, channel, metadata)
+        process_message(message, eventrouter, team, channel, metadata, history_message=True)
 
 
 def handle_conversationsmembers(members_json, eventrouter, team, channel, metadata):
