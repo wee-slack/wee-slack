@@ -1187,9 +1187,10 @@ def stop_talking_to_slack():
     which triggers leaving the channel because of how close
     buffer is handled
     """
-    EVENTROUTER.shutdown()
-    for team in EVENTROUTER.teams.values():
-        team.ws.shutdown()
+    if 'EVENTROUTER' in globals():
+        EVENTROUTER.shutdown()
+        for team in EVENTROUTER.teams.values():
+            team.ws.shutdown()
     return w.WEECHAT_RC_OK
 
 ##### New Classes
@@ -5218,8 +5219,14 @@ if __name__ == "__main__":
                   SCRIPT_DESC, "script_unloaded", ""):
 
         weechat_version = w.info_get("version_number", "") or 0
+        weechat_upgrading = w.info_get("weechat_upgrading", "")
+
         if int(weechat_version) < 0x1030000:
             w.prnt("", "\nERROR: Weechat version 1.3+ is required to use {}.\n\n".format(SCRIPT_NAME))
+        elif weechat_upgrading == "1":
+            w.prnt("", "NOTE: wee-slack will not work after running /upgrade until it's"
+                " reloaded. Please run `/python reload slack` to continue using it. You"
+                " will not receive any new messages in wee-slack buffers until doing this.")
         else:
 
             global EVENTROUTER
