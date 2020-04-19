@@ -1955,16 +1955,22 @@ class SlackChannel(SlackChannelCommon):
         return w.buffer_get_integer(self.channel_buffer, "hidden") == 0
 
     def get_history(self, slow_queue=False):
-        if not self.got_history:
-            w.prnt_date_tags(self.channel_buffer, SlackTS().major,
-                    tag(backlog=True, no_log=True), '\tgetting channel history...')
-            s = SlackRequest(self.team, self.team.slack_api_translator[self.type]["history"],
-                    {"channel": self.identifier, "count": BACKLOG_SIZE}, channel=self, metadata={'clear': True})
-            if not slow_queue:
-                self.eventrouter.receive(s)
-            else:
-                self.eventrouter.receive_slow(s)
-            self.got_history = True
+        post_data = {"channel": self.identifier, "count": BACKLOG_SIZE}
+        if self.got_history and self.messages:
+            post_data["oldest"] = next(reversed(self.messages))
+            clear = False
+        else:
+            clear = True
+
+        w.prnt_date_tags(self.channel_buffer, SlackTS().major,
+                tag(backlog=True, no_log=True), '\tgetting channel history...')
+        s = SlackRequest(self.team, self.team.slack_api_translator[self.type]["history"],
+                post_data, channel=self, metadata={'clear': clear})
+        if not slow_queue:
+            self.eventrouter.receive(s)
+        else:
+            self.eventrouter.receive_slow(s)
+        self.got_history = True
 
     def main_message_keys_reversed(self):
         return (key for key in reversed(self.messages)
@@ -2836,6 +2842,8 @@ def handle_mpimopen(mpim_json, eventrouter, team, channel, metadata, object_name
 def handle_history(message_json, eventrouter, team, channel, metadata):
     if metadata['clear']:
         channel.clear_messages()
+    else:
+        channel.reprint_messages()
     channel.got_history = True
     for message in reversed(message_json["messages"]):
         process_message(message, eventrouter, team, channel, metadata, history_message=True)
