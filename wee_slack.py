@@ -1889,10 +1889,10 @@ class SlackChannel(SlackChannelCommon):
                 s = SlackRequest(self.team, join_method, {"users": self.user, "return_im": True}, channel=self)
                 self.eventrouter.receive(s)
 
-    def reprint_messages(self):
+    def reprint_messages(self, history_message=False, no_log=True):
         w.buffer_clear(self.channel_buffer)
         for message in self.messages.values():
-            self.prnt_message(message, no_log=True)
+            self.prnt_message(message, history_message, no_log)
 
     def clear_messages(self):
         w.buffer_clear(self.channel_buffer)
@@ -1965,18 +1965,15 @@ class SlackChannel(SlackChannelCommon):
     def is_visible(self):
         return w.buffer_get_integer(self.channel_buffer, "hidden") == 0
 
-    def get_history(self, slow_queue=False):
+    def get_history(self, slow_queue=False, full=False, no_log=False):
         post_data = {"channel": self.identifier, "count": BACKLOG_SIZE}
-        if self.got_history and self.messages:
+        if self.got_history and self.messages and not full:
             post_data["oldest"] = next(reversed(self.messages))
-            clear = False
-        else:
-            clear = True
 
         w.prnt_date_tags(self.channel_buffer, SlackTS().major,
                 tag(backlog=True, no_log=True), '\tgetting channel history...')
         s = SlackRequest(self.team, self.team.slack_api_translator[self.type]["history"],
-                post_data, channel=self, metadata={'clear': clear})
+                post_data, channel=self, metadata={"no_log": no_log})
         if not slow_queue:
             self.eventrouter.receive(s)
         else:
@@ -2238,7 +2235,7 @@ class SlackSharedChannel(SlackChannel):
     def __init__(self, eventrouter, **kwargs):
         super(SlackSharedChannel, self).__init__(eventrouter, "shared", **kwargs)
 
-    def get_history(self, slow_queue=False):
+    def get_history(self, slow_queue=False, full=False, no_log=False):
         # Get info for external users in the channel
         for user in self.members - set(self.team.users.keys()):
             s = SlackRequest(self.team, 'users.info', {'user': user}, channel=self)
@@ -2246,7 +2243,7 @@ class SlackSharedChannel(SlackChannel):
         # Fetch members since they aren't included in rtm.start
         s = SlackRequest(self.team, 'conversations.members', {'channel': self.identifier}, channel=self)
         self.eventrouter.receive(s)
-        super(SlackSharedChannel, self).get_history(slow_queue)
+        super(SlackSharedChannel, self).get_history(slow_queue, full, no_log)
 
 
 class SlackThreadChannel(SlackChannelCommon):
@@ -2326,14 +2323,18 @@ class SlackThreadChannel(SlackChannelCommon):
             if backlog or self_msg:
                 self.mark_read(ts, update_remote=False, force=True)
 
-    def get_history(self):
+    def get_history(self, full=False, no_log=False):
         self.got_history = True
         self.history_needs_update = False
-        self.print_messages(history_message=True)
-        if len(self.parent_message.submessages) < self.parent_message.number_of_replies():
+        self.reprint_messages(history_message=True, no_log=no_log)
+        if len(self.parent_message.submessages) < self.parent_message.number_of_replies() or full:
+            w.prnt_date_tags(self.channel_buffer, SlackTS().major,
+                    tag(backlog=True, no_log=True), '\tgetting channel history...')
+            post_data = {"channel": self.identifier,
+                    "ts": self.parent_message.ts, "limit": BACKLOG_SIZE}
             s = SlackRequest(self.team, "conversations.replies",
-                    {"channel": self.identifier, "ts": self.parent_message.ts},
-                    channel=self.parent_message.channel)
+                    post_data, channel=self.parent_message.channel,
+                    metadata={"thread_channel": self, "no_log": no_log})
             self.eventrouter.receive(s)
 
     def main_message_keys_reversed(self):
@@ -2396,9 +2397,9 @@ class SlackThreadChannel(SlackChannelCommon):
         for message in chain([self.parent_message], self.parent_message.submessages):
             self.prnt_message(message, history_message, no_log)
 
-    def reprint_messages(self):
+    def reprint_messages(self, history_message=False, no_log=True):
         w.buffer_clear(self.channel_buffer)
-        self.print_messages(no_log=True)
+        self.print_messages(history_message, no_log)
 
     def destroy_buffer(self, update_remote):
         self.channel_buffer = None
@@ -2854,13 +2855,12 @@ def handle_mpimopen(mpim_json, eventrouter, team, channel, metadata, object_name
 
 
 def handle_history(message_json, eventrouter, team, channel, metadata):
-    if metadata['clear']:
-        channel.clear_messages()
-    else:
-        channel.reprint_messages()
     channel.got_history = True
     for message in reversed(message_json["messages"]):
         process_message(message, eventrouter, team, channel, metadata, history_message=True)
+    channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
+    for thread_channel in channel.thread_channels.values():
+        thread_channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
 
 
 handle_channelshistory = handle_history
@@ -2873,6 +2873,9 @@ handle_mpimhistory = handle_history
 def handle_conversationsreplies(message_json, eventrouter, team, channel, metadata):
     for message in message_json['messages']:
         process_message(message, eventrouter, team, channel, metadata, history_message=True)
+    metadata['thread_channel'].reprint_messages(history_message=True, no_log=metadata["no_log"])
+    if config.thread_messages_in_channel:
+        channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
 
 
 def handle_conversationsmembers(members_json, eventrouter, team, channel, metadata):
@@ -3036,7 +3039,7 @@ def process_pong(message_json, eventrouter, team, channel, metadata):
 
 
 def process_message(message_json, eventrouter, team, channel, metadata, history_message=False):
-    if "ts" in message_json and SlackTS(message_json["ts"]) in channel.messages:
+    if not history_message and "ts" in message_json and SlackTS(message_json["ts"]) in channel.messages:
         return
 
     if "thread_ts" in message_json and "reply_count" not in message_json and "subtype" not in message_json:
@@ -3056,7 +3059,8 @@ def process_message(message_json, eventrouter, team, channel, metadata, history_
 
     if message:
         channel.store_message(message)
-        channel.prnt_message(message, history_message)
+        if not history_message:
+            channel.prnt_message(message, history_message)
 
     if not history_message:
         download_files(message_json, team)
@@ -3111,7 +3115,8 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
             channel.change_message(parent_ts)
 
             if parent_message.thread_channel and parent_message.thread_channel.active:
-                parent_message.thread_channel.prnt_message(message, history_message)
+                if not history_message:
+                    parent_message.thread_channel.prnt_message(message, history_message)
             elif message.ts > channel.last_read and message.has_mention():
                 parent_message.notify_thread(action="mention", sender_id=message_json["user"])
             elif message.ts > parent_message.last_read and parent_message.subscribed:
@@ -4359,8 +4364,7 @@ def command_rehistory(data, current_buffer, args):
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     if args == "-remote":
-        channel.clear_messages()
-        channel.get_history()
+        channel.get_history(full=True, no_log=True)
     else:
         channel.reprint_messages()
     return w.WEECHAT_RC_OK_EAT
