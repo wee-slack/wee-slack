@@ -341,6 +341,9 @@ def handle_socket_error(exception, team, caller_name):
     team.set_disconnected()
 
 
+MESSAGE_ID_REGEX_STRING = r'(?P<msg_id>\d+|\$[0-9a-fA-F]{3,})'
+REACTION_PREFIX_REGEX_STRING = r'{}?(?P<reaction_change>\+|-)'.format(MESSAGE_ID_REGEX_STRING)
+
 EMOJI_CHAR_REGEX_STRING = '(?P<emoji_char>[\U00000080-\U0010ffff]+)'
 EMOJI_NAME_REGEX_STRING = ':(?P<emoji_name>[a-z0-9_+-]+):'
 EMOJI_CHAR_OR_NAME_REGEX_STRING = '({}|{})'.format(EMOJI_CHAR_REGEX_STRING, EMOJI_NAME_REGEX_STRING)
@@ -832,17 +835,16 @@ def buffer_input_callback(signal, buffer_ptr, data):
         else:
             return int(message_id)
 
-    message_id_regex = r"(\d*|\$[0-9a-fA-F]{3,})"
-    reaction = re.match(r"^{}(\+|-){}\s*$".format(message_id_regex, EMOJI_CHAR_OR_NAME_REGEX_STRING), data)
-    substitute = re.match("^{}s/".format(message_id_regex), data)
+    reaction = re.match(r"{}{}\s*$".format(REACTION_PREFIX_REGEX_STRING, EMOJI_CHAR_OR_NAME_REGEX_STRING), data)
+    substitute = re.match("{}s/".format(MESSAGE_ID_REGEX_STRING), data)
     if reaction:
         emoji = reaction.group("emoji_char") or reaction.group("emoji_name")
-        if reaction.group(2) == "+":
-            channel.send_add_reaction(get_id(reaction.group(1)), emoji)
-        elif reaction.group(2) == "-":
-            channel.send_remove_reaction(get_id(reaction.group(1)), emoji)
+        if reaction.group("reaction_change") == "+":
+            channel.send_add_reaction(get_id(reaction.group("msg_id")), emoji)
+        elif reaction.group("reaction_change") == "-":
+            channel.send_remove_reaction(get_id(reaction.group("msg_id")), emoji)
     elif substitute:
-        msg_id = get_id(substitute.group(1))
+        msg_id = get_id(substitute.group("msg_id"))
         try:
             old, new, flags = re.split(r'(?<!\\)/', data)[1:]
         except ValueError:
@@ -1074,9 +1076,8 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
         return w.WEECHAT_RC_OK
 
     base_word = w.hook_completion_get_string(completion, "base_word")
-    if ":" not in base_word:
-        return w.WEECHAT_RC_OK
-    prefix = base_word.split(":")[0] + ":"
+    reaction = re.match(REACTION_PREFIX_REGEX_STRING + ":", base_word)
+    prefix = reaction.group(0) if reaction else ":"
 
     for emoji in current_channel.team.emoji_completions:
         w.hook_completion_list_add(completion, prefix + emoji + ":", 0, w.WEECHAT_LIST_POS_SORT)
