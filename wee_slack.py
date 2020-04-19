@@ -3032,12 +3032,14 @@ def process_message(message_json, eventrouter, team, channel, metadata, history_
     subtype_functions = get_functions_with_prefix("subprocess_")
 
     if subtype in subtype_functions:
-        subtype_functions[subtype](message_json, eventrouter, team, channel, history_message)
+        message = subtype_functions[subtype](message_json, eventrouter, team, channel, history_message)
     else:
         message = SlackMessage(subtype or "normal", message_json, team, channel)
+        channel.unread_count_display += 1
+
+    if message:
         channel.store_message(message)
         channel.prnt_message(message, history_message)
-        channel.unread_count_display += 1
 
     if not history_message:
         download_files(message_json, team)
@@ -3082,18 +3084,14 @@ def download_files(message_json, team):
 
 
 def subprocess_thread_message(message_json, eventrouter, team, channel, history_message):
-    dbg("THREAD MESSAGE {}".format(message_json))
     parent_ts = message_json.get('thread_ts')
     if parent_ts:
         parent_message = channel.messages.get(SlackTS(parent_ts))
         if parent_message:
-            message = SlackThreadMessage(
-                parent_message, message_json, team, channel)
+            message = SlackThreadMessage(parent_message, message_json, team, channel)
             parent_message.submessages.append(message)
             channel.hash_message(parent_ts)
-            channel.store_message(message)
             channel.change_message(parent_ts)
-            channel.prnt_message(message, history_message)
 
             if parent_message.thread_channel and parent_message.thread_channel.active:
                 parent_message.thread_channel.prnt_message(message, history_message)
@@ -3102,6 +3100,8 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
             elif message.ts > parent_message.last_read and parent_message.subscribed:
                 parent_message.notify_thread(action="subscribed", sender_id=message_json["user"])
 
+            return message
+
 
 subprocess_thread_broadcast = subprocess_thread_message
 
@@ -3109,22 +3109,19 @@ subprocess_thread_broadcast = subprocess_thread_message
 def subprocess_channel_join(message_json, eventrouter, team, channel, history_message):
     message = SlackMessage("join", message_json, team, channel)
     channel.user_joined(message_json["user"])
-    channel.store_message(message)
-    channel.prnt_message(message, history_message)
+    return message
 
 
 def subprocess_channel_leave(message_json, eventrouter, team, channel, history_message):
     message = SlackMessage("leave", message_json, team, channel)
     channel.user_left(message_json["user"])
-    channel.store_message(message)
-    channel.prnt_message(message, history_message)
+    return message
 
 
 def subprocess_channel_topic(message_json, eventrouter, team, channel, history_message):
     message = SlackMessage("topic", message_json, team, channel)
     channel.set_topic(message_json["topic"])
-    channel.store_message(message)
-    channel.prnt_message(message, history_message)
+    return message
 
 
 subprocess_group_join = subprocess_channel_join
