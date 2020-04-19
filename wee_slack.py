@@ -836,7 +836,7 @@ def buffer_input_callback(signal, buffer_ptr, data):
             return int(message_id)
 
     reaction = re.match(r"{}{}\s*$".format(REACTION_PREFIX_REGEX_STRING, EMOJI_CHAR_OR_NAME_REGEX_STRING), data)
-    substitute = re.match("{}s/".format(MESSAGE_ID_REGEX_STRING), data)
+    substitute = re.match("{}?s/".format(MESSAGE_ID_REGEX_STRING), data)
     if reaction:
         emoji = reaction.group("emoji_char") or reaction.group("emoji_name")
         if reaction.group("reaction_change") == "+":
