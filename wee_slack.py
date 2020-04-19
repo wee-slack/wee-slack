@@ -5071,9 +5071,9 @@ class PluginConfig(object):
         else:
             key = full_key.replace(CONFIG_PREFIX + ".", "")
             self.settings[key] = self.fetch_setting(key)
-            if full_key == CONFIG_PREFIX + ".debug_mode":
-                if self.debug_mode:
-                    create_slack_debug_buffer()
+
+        if (full_key is None or full_key == CONFIG_PREFIX + ".debug_mode") and self.debug_mode:
+            create_slack_debug_buffer()
         return w.WEECHAT_RC_OK
 
     def fetch_setting(self, key):
