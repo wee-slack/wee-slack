@@ -4090,7 +4090,7 @@ def command_usergroups(data, current_buffer, args):
         return print_team_items_info(team, "Usergroups", team.subteams.values(), extra_info_function)
     return w.WEECHAT_RC_OK_EAT
 
-command_usergroups.completion = '%(usergroups)'
+command_usergroups.completion = '%(usergroups) %-'
 
 
 @slack_buffer_required
@@ -4105,7 +4105,7 @@ def command_talk(data, current_buffer, args):
         return w.WEECHAT_RC_ERROR
     return join_query_command_cb(data, current_buffer, '/query ' + args)
 
-command_talk.completion = '%(nicks)'
+command_talk.completion = '%(nicks) %-'
 
 
 @slack_buffer_or_ignore
@@ -4212,7 +4212,7 @@ def command_thread(data, current_buffer, args):
     msg.open_thread(switch=config.switch_buffer_on_join)
     return w.WEECHAT_RC_OK_EAT
 
-command_thread.completion = '%(threads)'
+command_thread.completion = '%(threads) %-'
 
 
 def subscribe_helper(current_buffer, args, usage, api):
@@ -4243,7 +4243,7 @@ def command_subscribe(data, current_buffer, args):
     """
     return subscribe_helper(current_buffer, args, 'Usage: /slack subscribe <thread>', "subscriptions.thread.add")
 
-command_subscribe.completion = '%(threads)'
+command_subscribe.completion = '%(threads) %-'
 
 
 @slack_buffer_required
@@ -4257,7 +4257,7 @@ def command_unsubscribe(data, current_buffer, args):
     """
     return subscribe_helper(current_buffer, args, 'Usage: /slack unsubscribe <thread>', "subscriptions.thread.remove")
 
-command_unsubscribe.completion = '%(threads)'
+command_unsubscribe.completion = '%(threads) %-'
 
 
 @slack_buffer_required
@@ -4312,7 +4312,7 @@ def command_reply(data, current_buffer, args):
     channel.send_message(text, request_dict_ext={'thread_ts': parent_id, 'reply_broadcast': broadcast})
     return w.WEECHAT_RC_OK_EAT
 
-command_reply.completion = '-alsochannel %(threads)||%(threads)'
+command_reply.completion = '-alsochannel %(threads) %-||%(threads) %-'
 
 
 @slack_buffer_required
@@ -4469,7 +4469,7 @@ def command_linkarchive(data, current_buffer, args):
     w.command(current_buffer, "/input insert {}".format(url))
     return w.WEECHAT_RC_OK_EAT
 
-command_linkarchive.completion = '%(threads)'
+command_linkarchive.completion = '%(threads) %-'
 
 
 @utf8_decode
@@ -4531,7 +4531,7 @@ def command_upload(data, current_buffer, args):
     w.hook_process_hashtable('curl', options_hashtable, config.slack_timeout, 'upload_callback', '')
     return w.WEECHAT_RC_OK_EAT
 
-command_upload.completion = '%(filename)'
+command_upload.completion = '%(filename) %-'
 
 
 @utf8_decode
@@ -4608,7 +4608,7 @@ def command_status(data, current_buffer, args):
     EVENTROUTER.receive(s)
     return w.WEECHAT_RC_OK
 
-command_status.completion = "-delete|%(emoji)"
+command_status.completion = "-delete|%(emoji) %-"
 
 
 @utf8_decode
