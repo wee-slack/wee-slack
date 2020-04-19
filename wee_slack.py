@@ -1938,11 +1938,9 @@ class SlackChannel(SlackChannelCommon):
             request.update(request_dict_ext)
             self.team.send_to_websocket(request)
 
-    def store_message(self, message, from_me=False):
+    def store_message(self, message):
         if not self.active:
             return
-        if from_me:
-            message.message_json["user"] = self.team.myidentifier
         self.messages[SlackTS(message.ts)] = message
 
         sorted_messages = sorted(self.messages.items())
