@@ -508,7 +508,7 @@ class EventRouter(object):
                             team.domain))
                 team.set_disconnected()
             if not team.connected:
-                team.connect()
+                team.connect(reconnect=True)
                 dbg("reconnecting {}".format(team))
 
     @utf8_decode
@@ -1407,7 +1407,7 @@ class SlackTeam(object):
     def mark_read(self, ts=None, update_remote=True, force=False):
         pass
 
-    def connect(self):
+    def connect(self, reconnect=False):
         if not self.connected and not self.connecting_ws:
             if self.ws_url:
                 self.connecting_ws = True
@@ -1423,7 +1423,7 @@ class SlackTeam(object):
                     ws.sock.setblocking(0)
                     self.ws = ws
                     self.set_reconnect_url(None)
-                    self.set_connected()
+                    self.set_connected(reconnect)
                     self.connecting_ws = False
                 except:
                     w.prnt(self.channel_buffer,
@@ -1435,16 +1435,20 @@ class SlackTeam(object):
                 # The fast reconnect failed, so start over-ish
                 for chan in self.channels:
                     self.channels[chan].history_needs_update = True
-                s = initiate_connection(self.token, retries=999, team=self)
+                s = initiate_connection(self.token, retries=999, team=self, reconnect=reconnect)
                 self.eventrouter.receive(s)
                 self.connecting_rtm = True
 
-    def set_connected(self):
+    def set_connected(self, reconnect):
         self.connected = True
         self.last_pong_time = time.time()
         self.buffer_prnt('Connected to Slack team {} ({}) with username {}'.format(
             self.team_info["name"], self.domain, self.nick))
         dbg("connected to {}".format(self.domain))
+        if reconnect and config.background_load_all_history:
+            for channel in self.channels.values():
+                if channel.channel_buffer:
+                    channel.get_history(slow_queue=True)
 
     def set_disconnected(self):
         w.unhook(self.hook)
@@ -2790,7 +2794,7 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
                     token_for_print(metadata.token), self_nick)
             )
             return
-        elif metadata.metadata.get('initial_connection'):
+        elif not metadata.metadata.get('reconnect'):
             print_error(
                 'Ignoring duplicate Slack tokens for the same team ({}) and user ({}). The two '
                 'tokens are {} and {}.'.format(t.team_info["name"], t.nick,
@@ -2802,7 +2806,7 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
             t.set_reconnect_url(login_data['url'])
             t.connecting_rtm = False
 
-    t.connect()
+    t.connect(metadata.metadata['reconnect'])
 
 def handle_rtmconnect(login_data, eventrouter, team, channel, metadata):
     metadata = login_data["wee_slack_request_metadata"]
@@ -2815,7 +2819,7 @@ def handle_rtmconnect(login_data, eventrouter, team, channel, metadata):
         return
 
     team.set_reconnect_url(login_data['url'])
-    team.connect()
+    team.connect(metadata.metadata['reconnect'])
 
 
 def handle_emojilist(emoji_json, eventrouter, team, channel, metadata):
@@ -5235,13 +5239,13 @@ def trace_calls(frame, event, arg):
     return
 
 
-def initiate_connection(token, retries=3, team=None):
+def initiate_connection(token, retries=3, team=None, reconnect=False):
     return SlackRequest(team,
                         'rtm.{}'.format('connect' if team else 'start'),
                         {"batch_presence_aware": 1},
                         retries=retries,
                         token=token,
-                        metadata={'initial_connection': True})
+                        metadata={'reconnect': reconnect})
 
 
 if __name__ == "__main__":
