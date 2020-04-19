@@ -1956,9 +1956,6 @@ class SlackChannel(SlackChannelCommon):
 
     def get_history(self, slow_queue=False):
         if not self.got_history:
-            # we have probably reconnected. flush the buffer
-            if self.team.connected:
-                self.clear_messages()
             w.prnt_date_tags(self.channel_buffer, SlackTS().major,
                     tag(backlog=True, no_log=True), '\tgetting channel history...')
             s = SlackRequest(self.team, self.team.slack_api_translator[self.type]["history"],
