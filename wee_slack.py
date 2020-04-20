@@ -1515,7 +1515,7 @@ class SlackChannelCommon(object):
             tagset = "topic"
             prefix = w.prefix("network").strip()
         else:
-            channel_type = self.parent_message.channel.type if thread_channel else self.type
+            channel_type = self.parent_channel.type if thread_channel else self.type
             if channel_type in ["im", "mpim"]:
                 tagset = "dm"
             else:
@@ -2252,23 +2252,28 @@ class SlackThreadChannel(SlackChannelCommon):
     SlackChannel, because most of how it operates will be different.
     """
 
-    def __init__(self, eventrouter, parent_message):
+    def __init__(self, eventrouter, parent_channel, thread_ts):
         self.eventrouter = eventrouter
-        self.parent_message = parent_message
+        self.parent_channel = parent_channel
+        self.thread_ts = thread_ts
         self.hashed_messages = {}
         self.channel_buffer = None
         self.type = "thread"
         self.got_history = False
         self.history_needs_update = False
         self.label = None
-        self.team = self.parent_message.team
+        self.team = self.parent_channel.team
         self.last_line_from = None
         self.new_messages = False
         self.buffer_name_needs_update = False
 
     @property
     def members(self):
-        return self.parent_message.channel.members
+        return self.parent_channel.members
+
+    @property
+    def parent_message(self):
+        return self.parent_channel.messages[self.thread_ts]
 
     @property
     def last_read(self):
@@ -2280,27 +2285,27 @@ class SlackThreadChannel(SlackChannelCommon):
 
     @property
     def identifier(self):
-        return self.parent_message.channel.identifier
+        return self.parent_channel.identifier
 
     @property
     def messages(self):
-        return self.parent_message.channel.messages
+        return self.parent_channel.messages
 
     @property
     def muted(self):
-        return self.parent_message.channel.muted
+        return self.parent_channel.muted
 
     def formatted_name(self, style="default"):
-        hash_or_ts = self.parent_message.hash or self.parent_message.ts
+        hash_or_ts = self.parent_message.hash or self.thread_ts
         styles = {
             "default": " +{}".format(hash_or_ts),
-            "long_default": "{}.{}".format(self.parent_message.channel.formatted_name(style="long_default"), hash_or_ts),
+            "long_default": "{}.{}".format(self.parent_channel.formatted_name(style="long_default"), hash_or_ts),
             "sidebar": " +{}".format(hash_or_ts),
         }
         return styles[style]
 
     def mark_read(self, ts=None, update_remote=True, force=False, post_data={}):
-        args = {"thread_ts": self.parent_message.ts}
+        args = {"thread_ts": self.thread_ts}
         args.update(post_data)
         super(SlackThreadChannel, self).mark_read(ts=ts, update_remote=update_remote, force=force, post_data=args)
 
@@ -2330,10 +2335,9 @@ class SlackThreadChannel(SlackChannelCommon):
         if len(self.parent_message.submessages) < self.parent_message.number_of_replies() or full:
             w.prnt_date_tags(self.channel_buffer, SlackTS().major,
                     tag(backlog=True, no_log=True), '\tgetting channel history...')
-            post_data = {"channel": self.identifier,
-                    "ts": self.parent_message.ts, "limit": BACKLOG_SIZE}
+            post_data = {"channel": self.identifier, "ts": self.thread_ts, "limit": BACKLOG_SIZE}
             s = SlackRequest(self.team, "conversations.replies",
-                    post_data, channel=self.parent_message.channel,
+                    post_data, channel=self.parent_channel,
                     metadata={"thread_channel": self, "no_log": no_log})
             self.eventrouter.receive(s)
 
@@ -2347,8 +2351,8 @@ class SlackThreadChannel(SlackChannelCommon):
         message = linkify_text(message, self.team)
         dbg(message)
         request = {"type": "message", "text": message,
-                "channel": self.parent_message.channel.identifier,
-                "thread_ts": str(self.parent_message.ts),
+                "channel": self.parent_channel.identifier,
+                "thread_ts": str(self.thread_ts),
                 "user": self.team.myidentifier}
         request.update(request_dict_ext)
         self.team.send_to_websocket(request)
@@ -2371,7 +2375,7 @@ class SlackThreadChannel(SlackChannelCommon):
     def set_highlights(self, highlight_string=None):
         if self.channel_buffer:
             if highlight_string is None:
-                highlight_string = ",".join(self.parent_message.channel.highlights())
+                highlight_string = ",".join(self.parent_channel.highlights())
             w.buffer_set(self.channel_buffer, "highlight_words", highlight_string)
 
     def create_buffer(self):
@@ -2388,7 +2392,7 @@ class SlackThreadChannel(SlackChannelCommon):
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar"))
             self.set_highlights()
             time_format = w.config_string(w.config_get("weechat.look.buffer_time_format"))
-            parent_time = time.localtime(SlackTS(self.parent_message.ts).major)
+            parent_time = time.localtime(SlackTS(self.thread_ts).major)
             topic = '{} {} | {}'.format(time.strftime(time_format, parent_time),
                     self.parent_message.sender, self.render(self.parent_message))
             w.buffer_set(self.channel_buffer, "title", topic)
@@ -2491,7 +2495,7 @@ class SlackMessage(object):
 
     def open_thread(self, switch=False):
         if not self.thread_channel or not self.thread_channel.active:
-            self.channel.thread_channels[self.ts] = SlackThreadChannel(EVENTROUTER, self)
+            self.channel.thread_channels[self.ts] = SlackThreadChannel(EVENTROUTER, self.channel, self.ts)
             self.thread_channel.open()
         if switch:
             w.buffer_set(self.thread_channel.channel_buffer, "display", "1")
@@ -4558,7 +4562,7 @@ def command_upload(data, current_buffer, args):
         'channels': channel.identifier,
     }
     if isinstance(channel, SlackThreadChannel):
-        post_data['thread_ts'] = channel.parent_message.ts
+        post_data['thread_ts'] = channel.thread_ts
 
     url = SlackRequest(channel.team, 'files.upload', post_data, channel=channel).request_string()
     options = [
