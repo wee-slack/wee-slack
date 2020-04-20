@@ -1501,8 +1501,8 @@ class SlackTeam(object):
 
 
 class SlackChannelCommon(object):
-    def prnt_message(self, message, history_message=False, no_log=False):
-        text = self.render(message)
+    def prnt_message(self, message, history_message=False, no_log=False, force_render=False):
+        text = self.render(message, force_render)
         thread_channel = isinstance(self, SlackThreadChannel)
 
         if message.subtype == "join":
@@ -1889,10 +1889,10 @@ class SlackChannel(SlackChannelCommon):
                 s = SlackRequest(self.team, join_method, {"users": self.user, "return_im": True}, channel=self)
                 self.eventrouter.receive(s)
 
-    def reprint_messages(self, history_message=False, no_log=True):
+    def reprint_messages(self, history_message=False, no_log=True, force_render=False):
         w.buffer_clear(self.channel_buffer)
         for message in self.messages.values():
-            self.prnt_message(message, history_message, no_log)
+            self.prnt_message(message, history_message, no_log, force_render)
 
     def clear_messages(self):
         w.buffer_clear(self.channel_buffer)
@@ -2393,13 +2393,13 @@ class SlackThreadChannel(SlackChannelCommon):
                     self.parent_message.sender, self.render(self.parent_message))
             w.buffer_set(self.channel_buffer, "title", topic)
 
-    def print_messages(self, history_message=False, no_log=False):
+    def print_messages(self, history_message=False, no_log=False, force_render=False):
         for message in chain([self.parent_message], self.parent_message.submessages):
-            self.prnt_message(message, history_message, no_log)
+            self.prnt_message(message, history_message, no_log, force_render)
 
-    def reprint_messages(self, history_message=False, no_log=True):
+    def reprint_messages(self, history_message=False, no_log=True, force_render=False):
         w.buffer_clear(self.channel_buffer)
-        self.print_messages(history_message, no_log)
+        self.print_messages(history_message, no_log, force_render)
 
     def destroy_buffer(self, update_remote):
         self.channel_buffer = None
@@ -4366,7 +4366,7 @@ def command_rehistory(data, current_buffer, args):
     if args == "-remote":
         channel.get_history(full=True, no_log=True)
     else:
-        channel.reprint_messages()
+        channel.reprint_messages(force_render=True)
     return w.WEECHAT_RC_OK_EAT
 
 command_rehistory.completion = '-remote'
