@@ -886,7 +886,7 @@ def buffer_switch_callback(signal, sig_type, data):
 
     new_channel = eventrouter.weechat_controller.get_channel_from_buffer_ptr(data)
     if new_channel:
-        if not new_channel.got_history:
+        if not new_channel.got_history or new_channel.history_needs_update:
             new_channel.get_history()
         set_own_presence_active(new_channel.team)
 
@@ -1292,6 +1292,7 @@ class SlackTeam(object):
         self.name = self.domain
         self.channel_buffer = None
         self.got_history = True
+        self.history_needs_update = False
         self.create_buffer()
         self.set_muted_channels(kwargs.get('muted_channels', ""))
         self.set_highlight_words(kwargs.get('highlight_words', ""))
@@ -1433,7 +1434,7 @@ class SlackTeam(object):
             elif not self.connecting_rtm:
                 # The fast reconnect failed, so start over-ish
                 for chan in self.channels:
-                    self.channels[chan].got_history = False
+                    self.channels[chan].history_needs_update = True
                 s = initiate_connection(self.token, retries=999, team=self)
                 self.eventrouter.receive(s)
                 self.connecting_rtm = True
@@ -1689,6 +1690,7 @@ class SlackChannel(SlackChannelCommon):
         self.last_read = SlackTS(kwargs.get("last_read", SlackTS()))
         self.channel_buffer = None
         self.got_history = False
+        self.history_needs_update = False
         self.messages = OrderedDict()
         self.hashed_messages = {}
         self.thread_channels = {}
@@ -1971,6 +1973,7 @@ class SlackChannel(SlackChannelCommon):
         else:
             self.eventrouter.receive_slow(s)
         self.got_history = True
+        self.history_needs_update = False
 
     def main_message_keys_reversed(self):
         return (key for key in reversed(self.messages)
@@ -2250,6 +2253,7 @@ class SlackThreadChannel(SlackChannelCommon):
         self.channel_buffer = None
         self.type = "thread"
         self.got_history = False
+        self.history_needs_update = False
         self.label = None
         self.team = self.parent_message.team
         self.last_line_from = None
@@ -2315,6 +2319,7 @@ class SlackThreadChannel(SlackChannelCommon):
 
     def get_history(self):
         self.got_history = True
+        self.history_needs_update = False
         self.print_messages(history_message=True)
         if len(self.parent_message.submessages) < self.parent_message.number_of_replies():
             s = SlackRequest(self.team, "conversations.replies",
