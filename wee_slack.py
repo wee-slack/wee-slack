@@ -2342,7 +2342,7 @@ class SlackThreadChannel(SlackChannelCommon):
             self.eventrouter.receive(s)
 
     def main_message_keys_reversed(self):
-        return (message.ts for message in reversed(self.parent_message.submessages))
+        return reversed(self.parent_message.submessages)
 
     def send_message(self, message, subtype=None, request_dict_ext={}):
         if subtype == 'me_message':
@@ -2398,7 +2398,8 @@ class SlackThreadChannel(SlackChannelCommon):
             w.buffer_set(self.channel_buffer, "title", topic)
 
     def print_messages(self, history_message=False, no_log=False, force_render=False):
-        for message in chain([self.parent_message], self.parent_message.submessages):
+        messages = (self.messages[ts] for ts in self.parent_message.submessages)
+        for message in chain([self.parent_message], messages):
             self.prnt_message(message, history_message, no_log, force_render)
 
     def reprint_messages(self, history_message=False, no_log=True, force_render=False):
@@ -3114,7 +3115,7 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
         parent_message = channel.messages.get(SlackTS(parent_ts))
         if parent_message:
             message = SlackThreadMessage(parent_message, message_json, team, channel)
-            parent_message.submessages.append(message)
+            parent_message.submessages.append(message.ts)
             channel.hash_message(parent_ts)
             channel.change_message(parent_ts)
 
