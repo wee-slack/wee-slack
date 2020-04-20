@@ -42,6 +42,12 @@ except NameError:  # Python 3
     basestring = unicode = str
 
 try:
+    from collections.abc import Mapping, Reversible, KeysView, ItemsView, ValuesView
+except:
+    from collections import Mapping, KeysView, ItemsView, ValuesView
+    Reversible = object
+
+try:
     from urllib.parse import quote, urlencode
 except ImportError:
     from urllib import quote, urlencode
@@ -2256,6 +2262,7 @@ class SlackThreadChannel(SlackChannelCommon):
         self.eventrouter = eventrouter
         self.parent_channel = parent_channel
         self.thread_ts = thread_ts
+        self.messages = SlackThreadChannelMessages(self)
         self.hashed_messages = {}
         self.channel_buffer = None
         self.type = "thread"
@@ -2286,10 +2293,6 @@ class SlackThreadChannel(SlackChannelCommon):
     @property
     def identifier(self):
         return self.parent_channel.identifier
-
-    @property
-    def messages(self):
-        return self.parent_channel.messages
 
     @property
     def muted(self):
@@ -2332,7 +2335,7 @@ class SlackThreadChannel(SlackChannelCommon):
         self.got_history = True
         self.history_needs_update = False
         self.reprint_messages(history_message=True, no_log=no_log)
-        if len(self.parent_message.submessages) < self.parent_message.number_of_replies() or full:
+        if len(self.messages) < self.parent_message.number_of_replies() or full:
             w.prnt_date_tags(self.channel_buffer, SlackTS().major,
                     tag(backlog=True, no_log=True), '\tgetting channel history...')
             post_data = {"channel": self.identifier, "ts": self.thread_ts, "limit": BACKLOG_SIZE}
@@ -2342,7 +2345,7 @@ class SlackThreadChannel(SlackChannelCommon):
             self.eventrouter.receive(s)
 
     def main_message_keys_reversed(self):
-        return reversed(self.parent_message.submessages)
+        return reversed(self.messages)
 
     def send_message(self, message, subtype=None, request_dict_ext={}):
         if subtype == 'me_message':
@@ -2398,8 +2401,7 @@ class SlackThreadChannel(SlackChannelCommon):
             w.buffer_set(self.channel_buffer, "title", topic)
 
     def print_messages(self, history_message=False, no_log=False, force_render=False):
-        messages = (self.messages[ts] for ts in self.parent_message.submessages)
-        for message in chain([self.parent_message], messages):
+        for message in chain([self.parent_message], self.messages.values()):
             self.prnt_message(message, history_message, no_log, force_render)
 
     def reprint_messages(self, history_message=False, no_log=True, force_render=False):
@@ -2413,6 +2415,56 @@ class SlackThreadChannel(SlackChannelCommon):
 
     def render(self, message, force=False):
         return message.render(force)
+
+
+class SlackThreadChannelMessages(Mapping, Reversible):
+    """
+    Class with a reversible mapping interface (like a read-only OrderedDict)
+    which looks up messages using the parent channel and parent message.
+    """
+
+    def __init__(self, thread_channel):
+        self.thread_channel = thread_channel
+
+    def __getitem__(self, key):
+        if key not in self.thread_channel.parent_message.submessages:
+            raise KeyError(key)
+        return self.thread_channel.parent_channel.messages[key]
+
+    def __iter__(self):
+        return iter(self.thread_channel.parent_message.submessages)
+
+    def __len__(self):
+        return len(self.thread_channel.parent_message.submessages)
+
+    def __reversed__(self):
+        return reversed(self.thread_channel.parent_message.submessages)
+
+    def keys(self):
+        return KeysViewReversible(self)
+
+    def items(self):
+        return ItemsViewReversible(self)
+
+    def values(self):
+        return ValuesViewReversible(self)
+
+
+class KeysViewReversible(KeysView, Reversible):
+    def __reversed__(self):
+        return reversed(self._mapping)
+
+
+class ItemsViewReversible(ItemsView, Reversible):
+    def __reversed__(self):
+        for key in reversed(self._mapping):
+            yield (key, self._mapping[key])
+
+
+class ValuesViewReversible(ValuesView, Reversible):
+    def __reversed__(self):
+        for key in reversed(self._mapping):
+            yield self._mapping[key]
 
 
 class SlackUser(object):
