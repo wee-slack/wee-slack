@@ -3167,7 +3167,8 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
         parent_message = channel.messages.get(SlackTS(parent_ts))
         if parent_message:
             message = SlackThreadMessage(parent_message, message_json, team, channel)
-            parent_message.submessages.append(message.ts)
+            if message.ts not in parent_message.submessages:
+                parent_message.submessages.append(message.ts)
             channel.hash_message(parent_ts)
             channel.change_message(parent_ts)
 
