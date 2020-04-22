@@ -1427,16 +1427,16 @@ class SlackTeam(object):
 
                     self.hook = w.hook_fd(ws.sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
                     ws.sock.setblocking(0)
-                    self.ws = ws
-                    self.set_reconnect_url(None)
-                    self.set_connected(reconnect)
-                    self.connecting_ws = False
                 except:
                     w.prnt(self.channel_buffer,
                             'Failed connecting to slack team {}, retrying.'.format(self.domain))
                     dbg('connect failed with exception:\n{}'.format(format_exc_tb()), level=5)
-                    self.connecting_ws = False
                     return False
+                finally:
+                    self.connecting_ws = False
+                self.ws = ws
+                self.set_reconnect_url(None)
+                self.set_connected(reconnect)
             elif not self.connecting_rtm:
                 # The fast reconnect failed, so start over-ish
                 for chan in self.channels:
