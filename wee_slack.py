@@ -1451,15 +1451,15 @@ class SlackTeam(object):
         self.buffer_prnt('Connected to Slack team {} ({}) with username {}'.format(
             self.team_info["name"], self.domain, self.nick))
         dbg("connected to {}".format(self.domain))
-        if reconnect:
-            if config.background_load_all_history:
-                for channel in self.channels.values():
-                    if channel.channel_buffer:
-                        channel.get_history(slow_queue=True)
-            else:
-                current_channel = self.eventrouter.weechat_controller.buffers.get(w.current_buffer())
-                if isinstance(current_channel, SlackChannelCommon) and current_channel.team == self:
-                    current_channel.get_history(slow_queue=True)
+
+        if not config.background_load_all_history:
+            current_channel = self.eventrouter.weechat_controller.buffers.get(w.current_buffer())
+            if isinstance(current_channel, SlackChannelCommon) and current_channel.team == self:
+                current_channel.get_history(slow_queue=True)
+        elif reconnect:
+            for channel in self.channels.values():
+                if channel.channel_buffer:
+                    channel.get_history(slow_queue=True)
 
     def set_disconnected(self):
         w.unhook(self.hook)
