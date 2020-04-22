@@ -2331,7 +2331,7 @@ class SlackThreadChannel(SlackChannelCommon):
             if backlog or self_msg:
                 self.mark_read(ts, update_remote=False, force=True)
 
-    def get_history(self, full=False, no_log=False):
+    def get_history(self, slow_queue=False, full=False, no_log=False):
         self.got_history = True
         self.history_needs_update = False
         self.reprint_messages(history_message=True, no_log=no_log)
@@ -2342,7 +2342,10 @@ class SlackThreadChannel(SlackChannelCommon):
             s = SlackRequest(self.team, "conversations.replies",
                     post_data, channel=self.parent_channel,
                     metadata={"thread_channel": self, "no_log": no_log})
-            self.eventrouter.receive(s)
+            if slow_queue:
+                self.eventrouter.receive_slow(s)
+            else:
+                self.eventrouter.receive(s)
 
     def main_message_keys_reversed(self):
         return reversed(self.messages)
