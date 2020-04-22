@@ -4313,7 +4313,7 @@ def command_reply(data, current_buffer, args):
     channel.send_message(text, request_dict_ext={'thread_ts': parent_id, 'reply_broadcast': broadcast})
     return w.WEECHAT_RC_OK_EAT
 
-command_reply.completion = '-alsochannel %(threads) %-||%(threads) %-'
+command_reply.completion = '%(threads)|-alsochannel %(threads) %-'
 
 
 @slack_buffer_required
