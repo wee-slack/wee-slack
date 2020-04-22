@@ -5054,9 +5054,11 @@ class PluginConfig(object):
             desc='Automatically open threads when mentioned or in'
             'response to own messages.'),
         'background_load_all_history': Setting(
-            default='false',
-            desc='Load history for each channel in the background as soon as it'
-            ' opens, rather than waiting for the user to look at it.'),
+            default='true',
+            desc='Load the history for all channels in the background when the script is loaded,'
+            ' rather than waiting until the buffer is switched to. You can set this to false if'
+            ' you experience performance issues, however that causes some loss of functionality,'
+            ' see known issues in the readme.'),
         'channel_name_typing_indicator': Setting(
             default='true',
             desc='Change the prefix of a channel from # to > when someone is'

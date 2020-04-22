@@ -24,9 +24,9 @@ slack` after changing it to take effect.
 
 ### background_load_all_history
 
-**Default:** `false`
+**Default:** `true`
 
-**Description:** Load history for each channel in the background as soon as it opens, rather than waiting for the user to look at it.
+**Description:** Load the history for all channels in the background when the script is loaded, rather than waiting until the buffer is switched to. You can set this to false if you experience performance issues, however that causes some loss of functionality, see known issues in the readme.
 
 ### channel_name_typing_indicator
 
