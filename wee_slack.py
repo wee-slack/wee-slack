@@ -4933,7 +4933,7 @@ class PluginConfig(object):
             default='',
             desc='If set, file attachments will be automatically downloaded'
             ' to this location. "%h" will be replaced by WeeChat home,'
-            ' "~/.weechat" by default.'),
+            ' "~/.weechat" by default. Requires WeeChat 2.2 or newer.'),
         'group_name_prefix': Setting(
             default='&',
             desc='The prefix of buffer names for groups (private channels).'),

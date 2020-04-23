@@ -110,7 +110,7 @@ slack` after changing it to take effect.
 
 **Default:** ``
 
-**Description:** If set, file attachments will be automatically downloaded to this location. "%h" will be replaced by WeeChat home, "~/.weechat" by default.
+**Description:** If set, file attachments will be automatically downloaded to this location. "%h" will be replaced by WeeChat home, "~/.weechat" by default. Requires WeeChat 2.2 or newer.
 
 ### group_name_prefix
 
