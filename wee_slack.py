@@ -1622,8 +1622,9 @@ class SlackChannelCommon(object):
         if type(m) == SlackMessage or config.thread_messages_in_channel:
             new_text = self.render(m, force=True)
             modify_buffer_line(self.channel_buffer, ts, new_text)
-        if type(m) == SlackThreadMessage:
-            thread_channel = m.parent_message.thread_channel
+        if type(m) == SlackThreadMessage or m.thread_channel is not None:
+            thread_channel = (m.parent_message.thread_channel
+                    if isinstance(m, SlackThreadMessage) else m.thread_channel)
             if thread_channel and thread_channel.active:
                 new_text = thread_channel.render(m, force=True)
                 modify_buffer_line(thread_channel.channel_buffer, ts, new_text)
