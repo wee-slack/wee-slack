@@ -1634,38 +1634,41 @@ class SlackChannelCommon(object):
         def calc_hash(ts):
             return sha1_hex(str(ts))
 
-        if ts in self.messages and not self.messages[ts].hash:
-            message = self.messages[ts]
-            tshash = calc_hash(message.ts)
-            hl = 3
+        message = self.messages.get(ts)
+        if message is not None:
+            if not message.hash:
+                tshash = calc_hash(message.ts)
+                hl = 3
 
-            for i in range(hl, len(tshash) + 1):
-                shorthash = tshash[:i]
-                if self.hashed_messages.get(shorthash) == ts:
-                    message.hash = shorthash
-                    return shorthash
+                for i in range(hl, len(tshash) + 1):
+                    shorthash = tshash[:i]
+                    if self.hashed_messages.get(shorthash) == ts:
+                        message.hash = shorthash
+                        return shorthash
 
-            shorthash = tshash[:hl]
-            while any(x.startswith(shorthash) for x in self.hashed_messages):
-                hl += 1
                 shorthash = tshash[:hl]
+                while any(x.startswith(shorthash) for x in self.hashed_messages):
+                    hl += 1
+                    shorthash = tshash[:hl]
 
-            if shorthash[:-1] in self.hashed_messages:
-                col_ts = self.hashed_messages.pop(shorthash[:-1])
-                col_new_hash = calc_hash(col_ts)[:hl]
-                self.hashed_messages[col_new_hash] = col_ts
-                col_msg = self.messages.get(col_ts)
-                if col_msg:
-                    col_msg.hash = col_new_hash
-                    self.change_message(str(col_msg.ts))
-                    if col_msg.thread_channel:
-                        col_msg.thread_channel.rename()
+                if shorthash[:-1] in self.hashed_messages:
+                    col_ts = self.hashed_messages.pop(shorthash[:-1])
+                    col_new_hash = calc_hash(col_ts)[:hl]
+                    self.hashed_messages[col_new_hash] = col_ts
+                    col_msg = self.messages.get(col_ts)
+                    if col_msg:
+                        col_msg.hash = col_new_hash
+                        self.change_message(str(col_msg.ts))
+                        if col_msg.thread_channel:
+                            col_msg.thread_channel.rename()
 
-            self.hashed_messages[shorthash] = message.ts
-            message.hash = shorthash
-            return shorthash
-        elif ts in self.messages:
-            return self.messages[ts].hash
+                message.hash = shorthash
+                self.hashed_messages[message.hash] = message.ts
+
+            elif message.hash not in self.hashed_messages:
+                self.hashed_messages[message.hash] = message.ts
+
+            return message.hash
 
     def mark_read(self, ts=None, update_remote=True, force=False, post_data={}):
         if self.new_messages or force:
