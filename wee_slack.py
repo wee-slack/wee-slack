@@ -1544,9 +1544,10 @@ class SlackChannelCommon(object):
                 no_log=no_log, extra_tags=extra_tags)
 
     def reprint_messages(self, history_message=False, no_log=True, force_render=False):
-        w.buffer_clear(self.channel_buffer)
-        for message in self.messages.values():
-            self.prnt_message(message, history_message, no_log, force_render)
+        if self.channel_buffer:
+            w.buffer_clear(self.channel_buffer)
+            for message in self.messages.values():
+                self.prnt_message(message, history_message, no_log, force_render)
 
     def send_add_reaction(self, msg_id, reaction):
         self.send_change_reaction("reactions.add", msg_id, reaction)
