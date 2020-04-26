@@ -1543,6 +1543,11 @@ class SlackChannelCommon(object):
                 tag_nick=message.sender_plain, history_message=history_message,
                 no_log=no_log, extra_tags=extra_tags)
 
+    def reprint_messages(self, history_message=False, no_log=True, force_render=False):
+        w.buffer_clear(self.channel_buffer)
+        for message in self.messages.values():
+            self.prnt_message(message, history_message, no_log, force_render)
+
     def send_add_reaction(self, msg_id, reaction):
         self.send_change_reaction("reactions.add", msg_id, reaction)
 
@@ -1898,11 +1903,6 @@ class SlackChannel(SlackChannelCommon):
             if join_method:
                 s = SlackRequest(self.team, join_method, {"users": self.user, "return_im": True}, channel=self)
                 self.eventrouter.receive(s)
-
-    def reprint_messages(self, history_message=False, no_log=True, force_render=False):
-        w.buffer_clear(self.channel_buffer)
-        for message in self.messages.values():
-            self.prnt_message(message, history_message, no_log, force_render)
 
     def clear_messages(self):
         w.buffer_clear(self.channel_buffer)
@@ -2339,7 +2339,7 @@ class SlackThreadChannel(SlackChannelCommon):
         self.got_history = True
         self.history_needs_update = False
         self.reprint_messages(history_message=True, no_log=no_log)
-        if len(self.messages) < self.parent_message.number_of_replies() or full:
+        if len(self.parent_message.submessages) < self.parent_message.number_of_replies() or full:
             w.prnt_date_tags(self.channel_buffer, SlackTS().major,
                     tag(backlog=True, no_log=True), '\tgetting channel history...')
             post_data = {"channel": self.identifier, "ts": self.thread_ts, "limit": BACKLOG_SIZE}
@@ -2407,14 +2407,6 @@ class SlackThreadChannel(SlackChannelCommon):
                     self.parent_message.sender, self.render(self.parent_message))
             w.buffer_set(self.channel_buffer, "title", topic)
 
-    def print_messages(self, history_message=False, no_log=False, force_render=False):
-        for message in chain([self.parent_message], self.messages.values()):
-            self.prnt_message(message, history_message, no_log, force_render)
-
-    def reprint_messages(self, history_message=False, no_log=True, force_render=False):
-        w.buffer_clear(self.channel_buffer)
-        self.print_messages(history_message, no_log, force_render)
-
     def destroy_buffer(self, update_remote):
         self.channel_buffer = None
         self.got_history = False
@@ -2433,19 +2425,27 @@ class SlackThreadChannelMessages(Mapping, Reversible):
     def __init__(self, thread_channel):
         self.thread_channel = thread_channel
 
+    @property
+    def _parent_message(self):
+        return self.thread_channel.parent_message
+
     def __getitem__(self, key):
-        if key not in self.thread_channel.parent_message.submessages:
+        if key != self._parent_message.ts and key not in self._parent_message.submessages:
             raise KeyError(key)
         return self.thread_channel.parent_channel.messages[key]
 
     def __iter__(self):
-        return iter(self.thread_channel.parent_message.submessages)
+        yield self._parent_message.ts
+        for ts in self._parent_message.submessages:
+            yield ts
 
     def __len__(self):
-        return len(self.thread_channel.parent_message.submessages)
+        return 1 + len(self._parent_message.submessages)
 
     def __reversed__(self):
-        return reversed(self.thread_channel.parent_message.submessages)
+        for ts in reversed(self._parent_message.submessages):
+            yield ts
+        yield self._parent_message.ts
 
     def keys(self):
         return KeysViewReversible(self)
