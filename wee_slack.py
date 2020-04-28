@@ -848,7 +848,8 @@ def buffer_input_callback(signal, buffer_ptr, data):
         try:
             old, new, flags = re.split(r'(?<!\\)/', data)[1:]
         except ValueError:
-            pass
+            print_error('Incomplete regex for changing a message, '
+                    'it should be in the form s/old text/new text/')
         else:
             # Replacement string in re.sub() is a string, not a regex, so get
             # rid of escapes.
@@ -1555,6 +1556,8 @@ class SlackChannelCommon(object):
                 s = SlackRequest(self.team, "chat.update",
                         {"channel": self.identifier, "ts": message['ts'], "text": new_message}, channel=self)
                 self.eventrouter.receive(s)
+            else:
+                print_error("The regex didn't match any part of the message")
 
     def my_last_message(self, msg_id):
         if type(msg_id) is not int:
@@ -2912,6 +2915,16 @@ def handle_chatcommand(json, eventrouter, team, channel, metadata):
         response_text = '. Response: {}'.format(response) if response else ''
         w.prnt(team.channel_buffer, 'ERROR: Couldn\'t run command "{}". Error: {}{}'
                 .format(command, json['error'], response_text))
+
+
+def handle_chatdelete(json, eventrouter, team, channel, metadata):
+    if not json['ok']:
+        print_error("Couldn't delete message: {}".format(json['error']))
+
+
+def handle_chatupdate(json, eventrouter, team, channel, metadata):
+    if not json['ok']:
+        print_error("Couldn't change message: {}".format(json['error']))
 
 
 def handle_reactionsadd(json, eventrouter, team, channel, metadata):
