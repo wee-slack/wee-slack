@@ -3120,12 +3120,11 @@ def process_message(message_json, eventrouter, team, channel, metadata, history_
         message = subtype_functions[subtype](message_json, eventrouter, team, channel, history_message)
     else:
         message = SlackMessage(subtype or "normal", message_json, team, channel)
+        channel.store_message(message)
         channel.unread_count_display += 1
 
-    if message:
-        channel.store_message(message)
-        if not history_message:
-            channel.prnt_message(message, history_message)
+    if message and not history_message:
+        channel.prnt_message(message, history_message)
 
     if not history_message:
         download_files(message_json, team)
@@ -3175,6 +3174,7 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
         parent_message = channel.messages.get(SlackTS(parent_ts))
         if parent_message:
             message = SlackThreadMessage(parent_message, message_json, team, channel)
+            channel.store_message(message)
             if message.ts not in parent_message.submessages:
                 parent_message.submessages.append(message.ts)
                 parent_message.submessages.sort()
@@ -3197,18 +3197,21 @@ subprocess_thread_broadcast = subprocess_thread_message
 
 def subprocess_channel_join(message_json, eventrouter, team, channel, history_message):
     message = SlackMessage("join", message_json, team, channel)
+    channel.store_message(message)
     channel.user_joined(message_json["user"])
     return message
 
 
 def subprocess_channel_leave(message_json, eventrouter, team, channel, history_message):
     message = SlackMessage("leave", message_json, team, channel)
+    channel.store_message(message)
     channel.user_left(message_json["user"])
     return message
 
 
 def subprocess_channel_topic(message_json, eventrouter, team, channel, history_message):
     message = SlackMessage("topic", message_json, team, channel)
+    channel.store_message(message)
     channel.set_topic(message_json["topic"])
     return message
 
