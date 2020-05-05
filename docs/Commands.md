@@ -154,6 +154,15 @@ Run a custom slack command.
 Lets you set your Slack Status (not to be confused with away/here).
 Prints current status if no arguments are given, unsets the status if -delete is given.
 
+### subscribe
+
+```
+/slack subscribe <thread>
+```
+
+Subscribe to a thread, so that you are alerted to new messages.  When in a
+thread buffer, you can omit the thread id.
+
 ### talk
 
 ```
@@ -178,6 +187,16 @@ List the connected Slack teams.
 
 Open the thread for the message.
 If no message id is specified the last thread in channel will be opened.
+
+### unsubscribe
+
+```
+/slack unsubscribe <thread>
+```
+
+Unsubscribe from a thread that has been previously subscribed to, so that
+you are not alerted to new messages.  When in a thread buffer, you can omit
+the thread id.
 
 ### upload
 

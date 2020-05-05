@@ -136,11 +136,17 @@ slack` after changing it to take effect.
 
 **Description:** Poke Slack every five minutes so that it never marks you "away".
 
+### notify_subscribed_threads
+
+**Default:** `auto`
+
+**Description:** Control if you want to see a notification in the team buffer when a thread you're subscribed to receives a new message, either auto, true or false. auto means that you only get a notification if auto_open_threads and thread_messages_in_channel both are false. Defaults to auto.
+
 ### notify_usergroup_handle_updated
 
 **Default:** `false`
 
-**Description:** Control if you want to see notification when a usergroup's handle has changed, either true or false.
+**Description:** Control if you want to see a notification in the team buffer when ausergroup's handle has changed, either true or false.
 
 ### record_events
 
