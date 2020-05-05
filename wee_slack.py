@@ -2947,12 +2947,18 @@ def handle_subscriptionsthreadmark(json, eventrouter, team, channel, metadata):
 
 def handle_subscriptionsthreadadd(json, eventrouter, team, channel, metadata):
     if not json["ok"]:
-        print_error("Couldn't add thread subscription: {}".format(json['error']))
+        if json['error'] == 'not_allowed_token_type':
+            print_error("Can only subscribe to a thread when using a session token, see the readme: https://github.com/wee-slack/wee-slack#4-add-your-slack-api-tokens")
+        else:
+            print_error("Couldn't add thread subscription: {}".format(json['error']))
 
 
 def handle_subscriptionsthreadremove(json, eventrouter, team, channel, metadata):
     if not json["ok"]:
-        print_error("Couldn't remove thread subscription: {}".format(json['error']))
+        if json['error'] == 'not_allowed_token_type':
+            print_error("Can only unsubscribe from a thread when using a session token, see the readme: https://github.com/wee-slack/wee-slack#4-add-your-slack-api-tokens")
+        else:
+            print_error("Couldn't remove thread subscription: {}".format(json['error']))
 
 
 ###### New/converted process_ and subprocess_ methods
@@ -4275,8 +4281,10 @@ def subscribe_helper(current_buffer, args, usage, api):
 def command_subscribe(data, current_buffer, args):
     """
     /slack subscribe <thread>
-    Subscribe to a thread, so that you are alerted to new messages.  When in a
+    Subscribe to a thread, so that you are alerted to new messages. When in a
     thread buffer, you can omit the thread id.
+
+    Only works when using a session token, see the readme: https://github.com/wee-slack/wee-slack#4-add-your-slack-api-tokens"
     """
     return subscribe_helper(current_buffer, args, 'Usage: /slack subscribe <thread>', "subscriptions.thread.add")
 
@@ -4289,8 +4297,10 @@ def command_unsubscribe(data, current_buffer, args):
     """
     /slack unsubscribe <thread>
     Unsubscribe from a thread that has been previously subscribed to, so that
-    you are not alerted to new messages.  When in a thread buffer, you can omit
+    you are not alerted to new messages. When in a thread buffer, you can omit
     the thread id.
+
+    Only works when using a session token, see the readme: https://github.com/wee-slack/wee-slack#4-add-your-slack-api-tokens"
     """
     return subscribe_helper(current_buffer, args, 'Usage: /slack unsubscribe <thread>', "subscriptions.thread.remove")
 

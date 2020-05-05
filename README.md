@@ -13,8 +13,11 @@ Table of Contents
      * [1. Install dependencies](#1-install-dependencies)
      * [2. Download wee_slack.py to ~/.weechat/python](#2-download-wee_slackpy-to-weechatpython)
      * [3. Start WeeChat](#3-start-weechat)
-     * [4. Add your Slack API key(s)](#4-add-your-slack-api-keys)
+     * [4. Add your Slack API token(s)](#4-add-your-slack-api-tokens)
+        * [Get a token with OAuth](#get-a-token-with-oauth)
+        * [Get a session token](#get-a-session-token)
         * [Optional: Connecting to multiple teams](#optional-connecting-to-multiple-teams)
+        * [Optional: Secure the tokens](#optional-secure-the-tokens)
   * [Commands and options](#commands-and-options)
      * [Threads](#threads)
      * [Emoji characters and tab completions of emoji names](#emoji-characters-and-tab-completions-of-emoji-names)
@@ -98,7 +101,24 @@ weechat
 
 **NOTE:** If weechat is already running, the script can be loaded using `/python load wee_slack.py`.
 
-### 4. Add your Slack API key(s)
+### 4. Add your Slack API token(s)
+
+There are two types of tokens that can be used, OAuth tokens and session
+tokens. The official way to get a token is to use OAuth. However, this has
+several drawbacks, so an alternative way is to pull a session token out of the
+web client.
+
+Drawbacks of OAuth tokens:
+- If the team is restricting app installations, wee-slack has to be approved by an admin.
+- For free teams, wee-slack will use one of the ten app slots.
+- The subscribe and unsubscribe commands won't work.
+- Marking threads, shared channels and channels that has been converted from public to private as read won't work.
+
+Drawbacks of session tokens:
+- These tokens can't be revoked, so be careful not to loose them.
+- They are not officially supported, and may stop working at any time.
+
+#### Get a token with OAuth
 
 Log in to Slack:
 
@@ -128,19 +148,12 @@ Note that by default GitHub Pages will see a temporary code used to create your
 token (but not the token itself). If you're worried about this, you can use the
 `-nothirdparty` option, though the process will be a bit less user friendly.
 
-The tokens you add will be stored in the option
-`plugins.var.python.slack.slack_api_token`. If you don't want to store your API
-token in plaintext you can use the secure features of WeeChat:
+#### Get a session token
 
-```
-/secure passphrase this is a super secret password
-/secure set slack_token <YOUR_SLACK_TOKEN>
-/set plugins.var.python.slack.slack_api_token ${sec.data.slack_token}
-```
-
-Note that you will have to move your tokens manually from
-`plugins.var.python.slack.slack_api_token` to the secure variable after each
-time you run `/slack register <code>`.
+1. Open and sign into the [Slack customization page](https://my.slack.com/customize). Check that you end up on the correct team.
+2. Type `javascript:` in the address field in the browser and paste this code after: `window.prompt("Session token:", TS.boot_data.api_token)`
+3. A prompt with the token will appear. Copy the token, return to WeeChat and run `/slack register <token>`.
+4. Reload the script with `/python reload slack`.
 
 #### Optional: Connecting to multiple teams
 
@@ -151,6 +164,22 @@ commas.
 ```
 /set plugins.var.python.slack.slack_api_token <token1>,<token2>,<token3>
 ```
+
+#### Optional: Secure the tokens
+
+The tokens you add will be stored as plain text in the option
+`plugins.var.python.slack.slack_api_token`. If you don't want to store your API
+token in plain text you can use the secure features of WeeChat:
+
+```
+/secure passphrase this is a super secret password
+/secure set slack_token <YOUR_SLACK_TOKEN>
+/set plugins.var.python.slack.slack_api_token ${sec.data.slack_token}
+```
+
+Note that you will have to move your tokens manually from
+`plugins.var.python.slack.slack_api_token` to the secure variable after each
+time you run `/slack register <code>`.
 
 Commands and options
 --------------------
