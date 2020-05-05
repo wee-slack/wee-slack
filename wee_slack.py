@@ -286,6 +286,34 @@ class ProxyWrapper(object):
         return "-x{}{}{}".format(user, self.proxy_address, port)
 
 
+class MappingReversible(Mapping, Reversible):
+    def keys(self):
+        return KeysViewReversible(self)
+
+    def items(self):
+        return ItemsViewReversible(self)
+
+    def values(self):
+        return ValuesViewReversible(self)
+
+
+class KeysViewReversible(KeysView, Reversible):
+    def __reversed__(self):
+        return reversed(self._mapping)
+
+
+class ItemsViewReversible(ItemsView, Reversible):
+    def __reversed__(self):
+        for key in reversed(self._mapping):
+            yield (key, self._mapping[key])
+
+
+class ValuesViewReversible(ValuesView, Reversible):
+    def __reversed__(self):
+        for key in reversed(self._mapping):
+            yield self._mapping[key]
+
+
 ##### Helpers
 
 
@@ -1546,8 +1574,12 @@ class SlackChannelCommon(object):
     def reprint_messages(self, history_message=False, no_log=True, force_render=False):
         if self.channel_buffer:
             w.buffer_clear(self.channel_buffer)
-            for message in self.messages.values():
-                self.prnt_message(message, history_message, no_log, force_render)
+            for message in self.visible_messages.values():
+                if message is not None:
+                    self.prnt_message(message, history_message, no_log, force_render)
+                else:
+                    w.prnt_date_tags(self.channel_buffer, SlackTS().major,
+                            tag(backlog=True, no_log=True), '\tmissing message')
 
     def send_add_reaction(self, msg_id, reaction):
         self.send_change_reaction("reactions.add", msg_id, reaction)
@@ -1561,7 +1593,7 @@ class SlackChannelCommon(object):
                 timestamp = self.hashed_messages[msg_id]
             else:
                 return
-        elif 0 < msg_id <= len(self.messages):
+        elif 0 < msg_id <= len(self.visible_messages):
             keys = self.main_message_keys_reversed()
             timestamp = next(islice(keys, msg_id - 1, None))
         else:
@@ -1717,6 +1749,7 @@ class SlackChannel(SlackChannelCommon):
         self.got_history = False
         self.history_needs_update = False
         self.messages = OrderedDict()
+        self.visible_messages = SlackChannelVisibleMessages(self)
         self.hashed_messages = {}
         self.thread_channels = {}
         self.new_messages = False
@@ -1960,18 +1993,34 @@ class SlackChannel(SlackChannelCommon):
             request.update(request_dict_ext)
             self.team.send_to_websocket(request)
 
-    def store_message(self, message):
+    def store_message(self, message_to_store):
         if not self.active:
             return
-        self.messages[SlackTS(message.ts)] = message
+        self.messages[message_to_store.ts] = message_to_store
+        self.messages = OrderedDict(sorted(self.messages.items()))
 
-        sorted_messages = sorted(self.messages.items())
-        messages_to_delete = sorted_messages[:-SCROLLBACK_SIZE]
-        messages_to_keep = sorted_messages[-SCROLLBACK_SIZE:]
-        for message_hash in [m[1].hash for m in messages_to_delete]:
+        messages_to_check = islice(self.messages.items(),
+                max(0, len(self.messages) - SCROLLBACK_SIZE))
+        messages_to_delete = []
+        for (ts, message) in messages_to_check:
+            if ts == message_to_store.ts:
+                pass
+            elif isinstance(message, SlackThreadMessage):
+                thread_channel = self.thread_channels.get(message.thread_ts)
+                if thread_channel is None or not thread_channel.active:
+                    messages_to_delete.append(ts)
+            elif message.number_of_replies():
+                if ((message.thread_channel is None or not message.thread_channel.active) and
+                        not any(submessage in self.messages for submessage in message.submessages)):
+                    messages_to_delete.append(ts)
+            else:
+                messages_to_delete.append(ts)
+
+        for ts in messages_to_delete:
+            message_hash = self.messages[ts].hash
             if message_hash in self.hashed_messages:
                 del self.hashed_messages[message_hash]
-        self.messages = OrderedDict(messages_to_keep)
+            del self.messages[ts]
 
     def is_visible(self):
         return w.buffer_get_integer(self.channel_buffer, "hidden") == 0
@@ -1993,7 +2042,7 @@ class SlackChannel(SlackChannelCommon):
         self.history_needs_update = False
 
     def main_message_keys_reversed(self):
-        return (key for key in reversed(self.messages)
+        return (key for key in reversed(self.visible_messages)
                 if type(self.messages[key]) == SlackMessage)
 
     # Typing related
@@ -2105,6 +2154,28 @@ class SlackChannel(SlackChannelCommon):
             return colorize_string(get_thread_color(thread_id), '[{}]'.format(thread_id)) + ' {}'.format(text)
 
         return text
+
+
+class SlackChannelVisibleMessages(MappingReversible):
+    """
+    Class with a reversible mapping interface (like a read-only OrderedDict)
+    which limits the number of messages to SCROLLBACK_SIZE
+    """
+
+    def __init__(self, channel):
+        self.channel = channel
+
+    def __getitem__(self, key):
+        return self.channel.messages[key]
+
+    def __iter__(self):
+        return islice(self.channel.messages, len(self.channel.messages) - len(self), None)
+
+    def __len__(self):
+        return min(len(self.channel.messages), SCROLLBACK_SIZE)
+
+    def __reversed__(self):
+        return islice(reversed(self.channel.messages), SCROLLBACK_SIZE)
 
 
 class SlackDMChannel(SlackChannel):
@@ -2264,6 +2335,7 @@ class SlackThreadChannel(SlackChannelCommon):
     """
 
     def __init__(self, eventrouter, parent_channel, thread_ts):
+        self.active = False
         self.eventrouter = eventrouter
         self.parent_channel = parent_channel
         self.thread_ts = thread_ts
@@ -2298,6 +2370,10 @@ class SlackThreadChannel(SlackChannelCommon):
     @property
     def identifier(self):
         return self.parent_channel.identifier
+
+    @property
+    def visible_messages(self):
+        return self.messages
 
     @property
     def muted(self):
@@ -2339,10 +2415,16 @@ class SlackThreadChannel(SlackChannelCommon):
     def get_history(self, slow_queue=False, full=False, no_log=False):
         self.got_history = True
         self.history_needs_update = False
-        self.reprint_messages(history_message=True, no_log=no_log)
-        if len(self.parent_message.submessages) < self.parent_message.number_of_replies() or full:
-            w.prnt_date_tags(self.channel_buffer, SlackTS().major,
-                    tag(backlog=True, no_log=True), '\tgetting channel history...')
+
+        any_msg_is_none = any(message is None for message in self.messages.values())
+        if not any_msg_is_none:
+            self.reprint_messages(history_message=True, no_log=no_log)
+
+        if (full or any_msg_is_none or
+                len(self.parent_message.submessages) < self.parent_message.number_of_replies()):
+            if self.channel_buffer:
+                w.prnt_date_tags(self.channel_buffer, SlackTS().major,
+                        tag(backlog=True, no_log=True), '\tgetting channel history...')
             post_data = {"channel": self.identifier, "ts": self.thread_ts, "limit": BACKLOG_SIZE}
             s = SlackRequest(self.team, "conversations.replies",
                     post_data, channel=self.parent_channel,
@@ -2417,7 +2499,7 @@ class SlackThreadChannel(SlackChannelCommon):
         return message.render(force)
 
 
-class SlackThreadChannelMessages(Mapping, Reversible):
+class SlackThreadChannelMessages(MappingReversible):
     """
     Class with a reversible mapping interface (like a read-only OrderedDict)
     which looks up messages using the parent channel and parent message.
@@ -2433,7 +2515,7 @@ class SlackThreadChannelMessages(Mapping, Reversible):
     def __getitem__(self, key):
         if key != self._parent_message.ts and key not in self._parent_message.submessages:
             raise KeyError(key)
-        return self.thread_channel.parent_channel.messages[key]
+        return self.thread_channel.parent_channel.messages.get(key)
 
     def __iter__(self):
         yield self._parent_message.ts
@@ -2447,32 +2529,6 @@ class SlackThreadChannelMessages(Mapping, Reversible):
         for ts in reversed(self._parent_message.submessages):
             yield ts
         yield self._parent_message.ts
-
-    def keys(self):
-        return KeysViewReversible(self)
-
-    def items(self):
-        return ItemsViewReversible(self)
-
-    def values(self):
-        return ValuesViewReversible(self)
-
-
-class KeysViewReversible(KeysView, Reversible):
-    def __reversed__(self):
-        return reversed(self._mapping)
-
-
-class ItemsViewReversible(ItemsView, Reversible):
-    def __reversed__(self):
-        for key in reversed(self._mapping):
-            yield (key, self._mapping[key])
-
-
-class ValuesViewReversible(ValuesView, Reversible):
-    def __reversed__(self):
-        for key in reversed(self._mapping):
-            yield self._mapping[key]
 
 
 class SlackUser(object):
@@ -2702,9 +2758,14 @@ class SlackMessage(object):
 
 class SlackThreadMessage(SlackMessage):
 
-    def __init__(self, parent_message, message_json, *args):
+    def __init__(self, parent_channel, thread_ts, message_json, *args):
         super(SlackThreadMessage, self).__init__(message_json['subtype'], message_json, *args)
-        self.parent_message = parent_message
+        self.parent_channel = parent_channel
+        self.thread_ts = thread_ts
+
+    @property
+    def parent_message(self):
+        return self.parent_channel.messages.get(self.thread_ts)
 
 
 class Hdata(object):
@@ -3173,11 +3234,11 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
     if parent_ts:
         parent_message = channel.messages.get(SlackTS(parent_ts))
         if parent_message:
-            message = SlackThreadMessage(parent_message, message_json, team, channel)
-            channel.store_message(message)
+            message = SlackThreadMessage(channel, parent_message.ts, message_json, team, channel)
             if message.ts not in parent_message.submessages:
                 parent_message.submessages.append(message.ts)
                 parent_message.submessages.sort()
+            channel.store_message(message)
             channel.hash_message(parent_ts)
             channel.change_message(parent_ts)
 
@@ -4306,7 +4367,7 @@ def command_thread(data, current_buffer, args):
             w.prnt('', 'ERROR: Invalid id given, must be an existing id')
             return w.WEECHAT_RC_OK_EAT
     else:
-        for message in reversed(channel.messages.values()):
+        for message in reversed(channel.visible_messages.values()):
             if type(message) == SlackMessage and message.number_of_replies():
                 msg = message
                 break
