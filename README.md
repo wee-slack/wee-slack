@@ -124,14 +124,6 @@ wee-slack script.
 /python reload slack
 ```
 
-Alternatively, you can click the "Request token" button at the
-[Slack legacy token page](https://api.slack.com/custom-integrations/legacy-tokens),
-and use that instead of following the procedure above:
-
-```
-/slack register <YOUR_SLACK_TOKEN>
-```
-
 The tokens you add will be stored in the option
 `plugins.var.python.slack.slack_api_token`. If you don't want to store your API
 token in plaintext you can use the secure features of WeeChat:
