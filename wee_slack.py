@@ -2607,7 +2607,7 @@ class SlackMessage(object):
                 ",".join(self.channel.highlights()))
 
     def number_of_replies(self):
-        return max(len(self.submessages), len(self.message_json.get("replies", [])))
+        return max(len(self.submessages), self.message_json.get("reply_count", 0))
 
     def notify_thread(self, action=None, sender_id=None):
         if config.auto_open_threads:
