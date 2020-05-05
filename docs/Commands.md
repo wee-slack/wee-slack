@@ -167,7 +167,7 @@ Prints current status if no arguments are given, unsets the status if -delete is
 Subscribe to a thread, so that you are alerted to new messages. When in a
 thread buffer, you can omit the thread id.
 
-Only works when using a session token, see the readme: https://github.com/wee-slack/wee-slack#4-add-your-slack-api-tokens"
+This command only works when using a session token, see the readme: https://github.com/wee-slack/wee-slack#4-add-your-slack-api-tokens
 
 ### talk
 
@@ -204,7 +204,7 @@ Unsubscribe from a thread that has been previously subscribed to, so that
 you are not alerted to new messages. When in a thread buffer, you can omit
 the thread id.
 
-Only works when using a session token, see the readme: https://github.com/wee-slack/wee-slack#4-add-your-slack-api-tokens"
+This command only works when using a session token, see the readme: https://github.com/wee-slack/wee-slack#4-add-your-slack-api-tokens
 
 ### upload
 

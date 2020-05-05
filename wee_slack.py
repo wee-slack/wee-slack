@@ -4284,7 +4284,7 @@ def command_subscribe(data, current_buffer, args):
     Subscribe to a thread, so that you are alerted to new messages. When in a
     thread buffer, you can omit the thread id.
 
-    Only works when using a session token, see the readme: https://github.com/wee-slack/wee-slack#4-add-your-slack-api-tokens"
+    This command only works when using a session token, see the readme: https://github.com/wee-slack/wee-slack#4-add-your-slack-api-tokens
     """
     return subscribe_helper(current_buffer, args, 'Usage: /slack subscribe <thread>', "subscriptions.thread.add")
 
@@ -4300,7 +4300,7 @@ def command_unsubscribe(data, current_buffer, args):
     you are not alerted to new messages. When in a thread buffer, you can omit
     the thread id.
 
-    Only works when using a session token, see the readme: https://github.com/wee-slack/wee-slack#4-add-your-slack-api-tokens"
+    This command only works when using a session token, see the readme: https://github.com/wee-slack/wee-slack#4-add-your-slack-api-tokens
     """
     return subscribe_helper(current_buffer, args, 'Usage: /slack unsubscribe <thread>', "subscriptions.thread.remove")
 
