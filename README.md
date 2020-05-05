@@ -142,6 +142,10 @@ token in plaintext you can use the secure features of WeeChat:
 /set plugins.var.python.slack.slack_api_token ${sec.data.slack_token}
 ```
 
+Note that you will have to move your tokens manually from
+`plugins.var.python.slack.slack_api_token` to the secure variable after each
+time you run `/slack register <code>`.
+
 #### Optional: Connecting to multiple teams
 
 You can run the register command multiple times to connect to multiple teams.
