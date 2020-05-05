@@ -593,8 +593,8 @@ class EventRouter(object):
                 retry_text = ('retrying' if request_metadata.should_try() else
                         'will not retry after too many failed attempts')
                 w.prnt('', ('Failed connecting to slack team with token {}, {}. ' +
-                        'If this persists, try increasing slack_timeout. Error: {}')
-                        .format(token_for_print(request_metadata.token), retry_text, err))
+                        'If this persists, try increasing slack_timeout. Error (code {}): {}')
+                        .format(token_for_print(request_metadata.token), retry_text, return_code, err))
                 dbg('rtm.start failed with return_code {}. stack:\n{}'
                         .format(return_code, ''.join(traceback.format_stack())), level=5)
                 self.receive(request_metadata)
