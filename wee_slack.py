@@ -4119,7 +4119,7 @@ def command_talk(data, current_buffer, args):
         return w.WEECHAT_RC_ERROR
     return join_query_command_cb(data, current_buffer, '/query ' + args)
 
-command_talk.completion = '%(nicks) %-'
+command_talk.completion = '%(nicks)'
 
 
 @slack_buffer_or_ignore
@@ -4326,7 +4326,7 @@ def command_reply(data, current_buffer, args):
     channel.send_message(text, request_dict_ext={'thread_ts': parent_id, 'reply_broadcast': broadcast})
     return w.WEECHAT_RC_OK_EAT
 
-command_reply.completion = '%(threads)|-alsochannel %(threads) %-'
+command_reply.completion = '%(threads)|-alsochannel %(threads)'
 
 
 @slack_buffer_required
