@@ -42,9 +42,9 @@ except NameError:  # Python 3
     basestring = unicode = str
 
 try:
-    from urllib.parse import urlencode
+    from urllib.parse import quote, urlencode
 except ImportError:
-    from urllib import urlencode
+    from urllib import quote, urlencode
 
 try:
     from json import JSONDecodeError
@@ -3924,37 +3924,60 @@ def me_command_cb(data, current_buffer, args):
 @utf8_decode
 def command_register(data, current_buffer, args):
     """
-    /slack register [code/token]
+    /slack register [-nothirdparty] [code/token]
     Register a Slack team in wee-slack. Call this without any arguments and
     follow the instructions to register a new team. If you already have a token
     for a team, you can call this with that token to add it.
+
+    By default GitHub Pages will see a temporary code used to create your token
+    (but not the token itself). If you're worried about this, you can use the
+    -nothirdparty option, though the process will be a bit less user friendly.
     """
     CLIENT_ID = "2468770254.51917335286"
     CLIENT_SECRET = "dcb7fe380a000cba0cca3169a5fe8d70"  # Not really a secret.
-    REDIRECT_URI = "https%3A%2F%2Fwee-slack.github.io%2Fwee-slack%2Foauth%23"
-    if not args:
+    REDIRECT_URI_GITHUB = "https://wee-slack.github.io/wee-slack/oauth"
+    REDIRECT_URI_NOTHIRDPARTY = "http://not.a.realhost/"
+
+    args = args.strip()
+    if " " in args:
+        nothirdparty_arg, _, code = args.partition(" ")
+        nothirdparty = nothirdparty_arg == "-nothirdparty"
+    else:
+        nothirdparty = args == "-nothirdparty"
+        code = "" if nothirdparty else args
+    redirect_uri = quote(REDIRECT_URI_NOTHIRDPARTY if nothirdparty else REDIRECT_URI_GITHUB, safe='')
+
+    if not code:
+        if nothirdparty:
+            nothirdparty_note = ""
+            last_step = "You will see a message that the site can't be reached, this is expected. The URL for the page will have a code in it of the form `?code=<code>`. Copy the code after the equals sign, return to weechat and run `/slack register -nothirdparty <code>`."
+        else:
+            nothirdparty_note = "\nNote that by default GitHub Pages will see a temporary code used to create your token (but not the token itself). If you're worried about this, you can use the -nothirdparty option, though the process will be a bit less user friendly."
+            last_step = "The web page will show a command in the form `/slack register <code>`. Run this command in weechat."
         message = textwrap.dedent("""
-            ### Connecting to a Slack team with OAuth ###
+            ### Connecting to a Slack team with OAuth ###{}
             1) Paste this link into a browser: https://slack.com/oauth/authorize?client_id={}&scope=client&redirect_uri={}
             2) Select the team you wish to access from wee-slack in your browser. If you want to add multiple teams, you will have to repeat this whole process for each team.
             3) Click "Authorize" in the browser.
                If you get a message saying you are not authorized to install wee-slack, the team has restricted Slack app installation and you will have to request it from an admin. To do that, go to https://my.slack.com/apps/A1HSZ9V8E-wee-slack and click "Request to Install".
-            4) The web page will show a command in the form `/slack register <code>`. Run this command in weechat.
-        """).strip().format(CLIENT_ID, REDIRECT_URI)
-        w.prnt("", message)
+            4) {}
+        """).strip().format(nothirdparty_note, CLIENT_ID, redirect_uri, last_step)
+        w.prnt("", "\n" + message)
         return w.WEECHAT_RC_OK_EAT
-    elif args.startswith('xox'):
-        add_token(args)
+    elif code.startswith('xox'):
+        add_token(code)
         return w.WEECHAT_RC_OK_EAT
 
     uri = (
         "https://slack.com/api/oauth.access?"
         "client_id={}&client_secret={}&redirect_uri={}&code={}"
-    ).format(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, args)
+    ).format(CLIENT_ID, CLIENT_SECRET, redirect_uri, code)
     params = {'useragent': 'wee_slack {}'.format(SCRIPT_VERSION)}
     w.hook_process_hashtable('url:', params, config.slack_timeout, "", "")
     w.hook_process_hashtable("url:{}".format(uri), params, config.slack_timeout, "register_callback", "")
     return w.WEECHAT_RC_OK_EAT
+
+command_register.completion = '-nothirdparty %-'
 
 
 @utf8_decode

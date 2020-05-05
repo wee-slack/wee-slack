@@ -95,12 +95,16 @@ Hide or unhide all channels marked as distracting.
 ### register
 
 ```
-/slack register [code/token]
+/slack register [-nothirdparty] [code/token]
 ```
 
 Register a Slack team in wee-slack. Call this without any arguments and
 follow the instructions to register a new team. If you already have a token
 for a team, you can call this with that token to add it.
+
+By default GitHub Pages will see a temporary code used to create your token
+(but not the token itself). If you're worried about this, you can use the
+-nothirdparty option, though the process will be a bit less user friendly.
 
 ### rehistory
 

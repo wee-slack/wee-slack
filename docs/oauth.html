@@ -16,15 +16,15 @@
     </style>
     <script type="text/javascript">
       document.addEventListener('DOMContentLoaded', function() {
-        var locationsHash = location.hash
-          .replace(/^#\?/, '')
+        var locationsSearch = location.search
+          .replace(/^\?/, '')
           .split('&')
           .reduce((obj, query) => {
             split = query.split('=');
             obj[split[0]] = split[1];
             return obj}, {}
           )
-        var code = locationsHash['code'];
+        var code = locationsSearch['code'];
         if (code) {
           document.getElementById('with-code').style.display = 'block';
         } else {

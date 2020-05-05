@@ -124,6 +124,10 @@ wee-slack script.
 /python reload slack
 ```
 
+Note that by default GitHub Pages will see a temporary code used to create your
+token (but not the token itself). If you're worried about this, you can use the
+`-nothirdparty` option, though the process will be a bit less user friendly.
+
 The tokens you add will be stored in the option
 `plugins.var.python.slack.slack_api_token`. If you don't want to store your API
 token in plaintext you can use the secure features of WeeChat:
