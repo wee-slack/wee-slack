@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.6.0 (2020-05-06)
+
+### Features
+
+- Support subscribing to threads, showing which threads are subscribed to and marking threads as read (PR #758). Note that subscribing and marking threads as read only work when you use a session token. Read more about it [in the readme](https://github.com/wee-slack/wee-slack#4-add-your-slack-api-tokens).
+- Don't notify about threads when they're opened in the channel (PR #763). This can be controlled with the new option `notify_subscribed_threads`.
+- Support commands consisting of multiple lines (fixes #728).
+- Support toggling a reaction by right clicking on an emoji or emoji name.
+- Don't connect to the teams if auto connect is disabled (fixes #613).
+- Show footer and files in attachments.
+- Print error message when editing a message fails.
+- Don't print link fallback if it's equal to the link.
+- Improve deduplication of links in attachments.
+- Place `record_events` files in separate directories for each team.
+
+### Bug fixes
+
+- Prevent errors after running `/upgrade` (fixes #275, fixes #309, fixes #310).
+- Fix `record_events` not working (fixes #761). This bug was introduced in version 2.5.0.
+- Fix bug which made `/slack` complete thread hashes. This bug was introduced in version 2.5.0.
+- Fix `/slack status` not completing emojis when trying to complete without typing anything first.
+- Fix error on some deleted message events (notably Giphy previews).
+
+### Slack API changes
+
+- Fix `/slack register` not working after Slack made their OAuth implementation stricter.
+- Use the `reply_count` property of a message instead of `replies`, because `replies` isn't provided anymore.
+
 ## 2.5.0 (2020-03-25)
 
 Note that you need to update the `weemoji.json` file when upgrading to this version.
