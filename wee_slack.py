@@ -2025,10 +2025,18 @@ class SlackChannel(SlackChannelCommon):
         w.prnt_date_tags(self.channel_buffer, SlackTS().major,
                 tag(backlog=True, no_log=True), '\tgetting channel history...')
         s = SlackRequest(self.team, self.team.slack_api_translator[self.type]["history"],
-                post_data, channel=self, metadata={"no_log": no_log})
+                post_data, channel=self, metadata={"slow_queue": slow_queue, "no_log": no_log})
         self.eventrouter.receive(s, slow_queue)
         self.got_history = True
         self.history_needs_update = False
+
+    def get_thread_history(self, thread_ts, slow_queue=False, no_log=False):
+        thread_channel = self.thread_channels.get(thread_ts)
+        post_data = {"channel": self.identifier, "ts": thread_ts, "limit": BACKLOG_SIZE}
+        s = SlackRequest(self.team, "conversations.replies",
+                post_data, channel=self,
+                metadata={"thread_channel": thread_channel, "no_log": no_log})
+        self.eventrouter.receive(s, slow_queue)
 
     def main_message_keys_reversed(self):
         return (key for key in reversed(self.visible_messages)
@@ -2414,11 +2422,7 @@ class SlackThreadChannel(SlackChannelCommon):
             if self.channel_buffer:
                 w.prnt_date_tags(self.channel_buffer, SlackTS().major,
                         tag(backlog=True, no_log=True), '\tgetting channel history...')
-            post_data = {"channel": self.identifier, "ts": self.thread_ts, "limit": BACKLOG_SIZE}
-            s = SlackRequest(self.team, "conversations.replies",
-                    post_data, channel=self.parent_channel,
-                    metadata={"thread_channel": self, "no_log": no_log})
-            self.eventrouter.receive(s, slow_queue)
+            self.parent_channel.get_thread_history(self.thread_ts, slow_queue, no_log)
 
     def main_message_keys_reversed(self):
         return reversed(self.messages)
@@ -2966,26 +2970,34 @@ def handle_mpimopen(mpim_json, eventrouter, team, channel, metadata, object_name
     handle_conversationsopen(mpim_json, eventrouter, team, channel, metadata, object_name)
 
 
-def handle_history(message_json, eventrouter, team, channel, metadata):
+def handle_history(message_json, eventrouter, team, channel, metadata, includes_threads=True):
     channel.got_history = True
     for message in reversed(message_json["messages"]):
-        process_message(message, eventrouter, team, channel, metadata, history_message=True)
+        message = process_message(message, eventrouter, team, channel, metadata, history_message=True)
+        if (not includes_threads and config.thread_messages_in_channel
+                and message and message.number_of_replies()):
+            channel.get_thread_history(message.ts, metadata["slow_queue"], metadata["no_log"])
     channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
     for thread_channel in channel.thread_channels.values():
         thread_channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
 
 
 handle_channelshistory = handle_history
-handle_conversationshistory = handle_history
 handle_groupshistory = handle_history
 handle_imhistory = handle_history
 handle_mpimhistory = handle_history
 
 
+def handle_conversationshistory(message_json, eventrouter, team, channel, metadata, includes_threads=True):
+    handle_history(message_json, eventrouter, team, channel, metadata, False)
+
+
 def handle_conversationsreplies(message_json, eventrouter, team, channel, metadata):
     for message in message_json['messages']:
         process_message(message, eventrouter, team, channel, metadata, history_message=True)
-    metadata['thread_channel'].reprint_messages(history_message=True, no_log=metadata["no_log"])
+    thread_channel = metadata.get('thread_channel')
+    if thread_channel and thread_channel.active:
+        thread_channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
     if config.thread_messages_in_channel:
         channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
 
@@ -3175,6 +3187,8 @@ def process_message(message_json, eventrouter, team, channel, metadata, history_
 
     if not history_message:
         download_files(message_json, team)
+
+    return message
 
 
 def download_files(message_json, team):
