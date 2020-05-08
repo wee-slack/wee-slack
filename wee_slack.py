@@ -1997,6 +1997,11 @@ class SlackChannel(SlackChannelCommon):
     def store_message(self, message_to_store):
         if not self.active:
             return
+
+        old_message = self.messages.get(message_to_store.ts)
+        if old_message and old_message.submessages and not message_to_store.submessages:
+            message_to_store.submessages = old_message.submessages
+
         self.messages[message_to_store.ts] = message_to_store
         self.messages = OrderedDict(sorted(self.messages.items()))
 
