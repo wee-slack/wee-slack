@@ -1563,6 +1563,11 @@ class SlackChannelCommon(object):
                 tag_nick=message.sender_plain, history_message=history_message,
                 no_log=no_log, extra_tags=extra_tags)
 
+    def print_getting_history(self):
+        if self.channel_buffer:
+            w.prnt_date_tags(self.channel_buffer, SlackTS().major,
+                    tag(backlog=True, no_log=True), '\tgetting channel history...')
+
     def reprint_messages(self, history_message=False, no_log=True, force_render=False):
         if self.channel_buffer:
             w.buffer_clear(self.channel_buffer)
@@ -1572,6 +1577,9 @@ class SlackChannelCommon(object):
                 else:
                     w.prnt_date_tags(self.channel_buffer, SlackTS().major,
                             tag(backlog=True, no_log=True), '\tmissing message')
+            if (self.identifier in self.pending_history_requests or
+                    config.thread_messages_in_channel and self.pending_history_requests):
+                self.print_getting_history()
 
     def send_add_reaction(self, msg_id, reaction):
         self.send_change_reaction("reactions.add", msg_id, reaction)
@@ -1740,6 +1748,7 @@ class SlackChannel(SlackChannelCommon):
         self.channel_buffer = None
         self.got_history = False
         self.history_needs_update = False
+        self.pending_history_requests = set()
         self.messages = OrderedDict()
         self.visible_messages = SlackChannelVisibleMessages(self)
         self.hashed_messages = {}
@@ -2018,12 +2027,13 @@ class SlackChannel(SlackChannelCommon):
         return w.buffer_get_integer(self.channel_buffer, "hidden") == 0
 
     def get_history(self, slow_queue=False, full=False, no_log=False):
+        self.print_getting_history()
+        self.pending_history_requests.add(self.identifier)
+
         post_data = {"channel": self.identifier, "count": BACKLOG_SIZE}
         if self.got_history and self.messages and not full:
             post_data["oldest"] = next(reversed(self.messages))
 
-        w.prnt_date_tags(self.channel_buffer, SlackTS().major,
-                tag(backlog=True, no_log=True), '\tgetting channel history...')
         s = SlackRequest(self.team, self.team.slack_api_translator[self.type]["history"],
                 post_data, channel=self, metadata={"slow_queue": slow_queue, "no_log": no_log})
         self.eventrouter.receive(s, slow_queue)
@@ -2031,11 +2041,17 @@ class SlackChannel(SlackChannelCommon):
         self.history_needs_update = False
 
     def get_thread_history(self, thread_ts, slow_queue=False, no_log=False):
+        if config.thread_messages_in_channel:
+            self.print_getting_history()
         thread_channel = self.thread_channels.get(thread_ts)
+        if thread_channel and thread_channel.active:
+            thread_channel.print_getting_history()
+        self.pending_history_requests.add(thread_ts)
+
         post_data = {"channel": self.identifier, "ts": thread_ts, "limit": BACKLOG_SIZE}
         s = SlackRequest(self.team, "conversations.replies",
                 post_data, channel=self,
-                metadata={"thread_channel": thread_channel, "no_log": no_log})
+                metadata={"thread_ts": thread_ts, "no_log": no_log})
         self.eventrouter.receive(s, slow_queue)
 
     def main_message_keys_reversed(self):
@@ -2376,6 +2392,13 @@ class SlackThreadChannel(SlackChannelCommon):
     def muted(self):
         return self.parent_channel.muted
 
+    @property
+    def pending_history_requests(self):
+        if self.thread_ts in self.parent_channel.pending_history_requests:
+            return {self.identifier, self.thread_ts}
+        else:
+            return set()
+
     def formatted_name(self, style="default"):
         hash_or_ts = self.parent_message.hash or self.thread_ts
         styles = {
@@ -2419,9 +2442,6 @@ class SlackThreadChannel(SlackChannelCommon):
 
         if (full or any_msg_is_none or
                 len(self.parent_message.submessages) < self.parent_message.number_of_replies()):
-            if self.channel_buffer:
-                w.prnt_date_tags(self.channel_buffer, SlackTS().major,
-                        tag(backlog=True, no_log=True), '\tgetting channel history...')
             self.parent_channel.get_thread_history(self.thread_ts, slow_queue, no_log)
 
     def main_message_keys_reversed(self):
@@ -2977,6 +2997,7 @@ def handle_history(message_json, eventrouter, team, channel, metadata, includes_
         if (not includes_threads and config.thread_messages_in_channel
                 and message and message.number_of_replies()):
             channel.get_thread_history(message.ts, metadata["slow_queue"], metadata["no_log"])
+    channel.pending_history_requests.discard(channel.identifier)
     channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
     for thread_channel in channel.thread_channels.values():
         thread_channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
@@ -2995,7 +3016,8 @@ def handle_conversationshistory(message_json, eventrouter, team, channel, metada
 def handle_conversationsreplies(message_json, eventrouter, team, channel, metadata):
     for message in message_json['messages']:
         process_message(message, eventrouter, team, channel, metadata, history_message=True)
-    thread_channel = metadata.get('thread_channel')
+    channel.pending_history_requests.discard(metadata.get('thread_ts'))
+    thread_channel = channel.thread_channels.get(metadata.get('thread_ts'))
     if thread_channel and thread_channel.active:
         thread_channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
     if config.thread_messages_in_channel:
