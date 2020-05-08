@@ -635,25 +635,17 @@ class EventRouter(object):
                 self.receive(request_metadata)
         return w.WEECHAT_RC_OK
 
-    def receive(self, dataobj):
+    def receive(self, dataobj, slow=False):
         """
-        complete
         Receives a raw object and places it on the queue for
         processing. Object must be known to handle_next or
         be JSON.
         """
         dbg("RECEIVED FROM QUEUE")
-        self.queue.append(dataobj)
-
-    def receive_slow(self, dataobj):
-        """
-        complete
-        Receives a raw object and places it on the slow queue for
-        processing. Object must be known to handle_next or
-        be JSON.
-        """
-        dbg("RECEIVED FROM QUEUE")
-        self.slow_queue.append(dataobj)
+        if slow:
+            self.slow_queue.append(dataobj)
+        else:
+            self.queue.append(dataobj)
 
     def handle_next(self):
         """
@@ -2034,10 +2026,7 @@ class SlackChannel(SlackChannelCommon):
                 tag(backlog=True, no_log=True), '\tgetting channel history...')
         s = SlackRequest(self.team, self.team.slack_api_translator[self.type]["history"],
                 post_data, channel=self, metadata={"no_log": no_log})
-        if not slow_queue:
-            self.eventrouter.receive(s)
-        else:
-            self.eventrouter.receive_slow(s)
+        self.eventrouter.receive(s, slow_queue)
         self.got_history = True
         self.history_needs_update = False
 
@@ -2429,10 +2418,7 @@ class SlackThreadChannel(SlackChannelCommon):
             s = SlackRequest(self.team, "conversations.replies",
                     post_data, channel=self.parent_channel,
                     metadata={"thread_channel": self, "no_log": no_log})
-            if slow_queue:
-                self.eventrouter.receive_slow(s)
-            else:
-                self.eventrouter.receive(s)
+            self.eventrouter.receive(s, slow_queue)
 
     def main_message_keys_reversed(self):
         return reversed(self.messages)
