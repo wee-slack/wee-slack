@@ -3565,10 +3565,15 @@ def unwrap_attachments(message_json, text_before):
 def unwrap_files(message_json, text_before):
     files_texts = []
     for f in message_json.get('files', []):
-        if f.get('mode', '') != 'tombstone':
+        if f.get('mode', '') == 'tombstone':
+            text = colorize_string(config.color_deleted, '(This file was deleted.)')
+        elif f.get('mode', '') == 'hidden_by_limit':
+            text = colorize_string(config.color_deleted, '(This file is hidden because the workspace has passed its storage limit.)')
+        elif f.get('url_private', None) is not None and f.get('title', None) is not None:
             text = '{} ({})'.format(f['url_private'], f['title'])
         else:
-            text = colorize_string(config.color_deleted, '(This file was deleted.)')
+            dbg('File {} has unrecognized mode {}'.format(f['id'], f['mode']), 5)
+            text = colorize_string(config.color_deleted, '(This file cannot be handled.)')
         files_texts.append(text)
 
     if text_before:
