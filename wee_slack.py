@@ -349,7 +349,7 @@ def format_exc_only():
 
 
 def get_nick_color(nick):
-    info_name_prefix = "irc_" if int(weechat_version) < 0x1050000 else ""
+    info_name_prefix = "irc_" if weechat_version < 0x1050000 else ""
     return w.info_get(info_name_prefix + "nick_color_name", nick)
 
 
@@ -863,7 +863,8 @@ def buffer_input_callback(signal, buffer_ptr, data):
     this includes add/remove reactions, modifying messages, and
     sending messages.
     """
-    data = data.replace('\r', '\n')
+    if weechat_version < 0x2090000:
+        data = data.replace('\r', '\n')
     eventrouter = eval(signal)
     channel = eventrouter.weechat_controller.get_channel_from_buffer_ptr(buffer_ptr)
     if not channel:
@@ -1377,6 +1378,7 @@ class SlackTeam(object):
         if not self.channel_buffer:
             self.channel_buffer = w.buffer_new(self.name, "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
+            w.buffer_set(self.channel_buffer, "input_multiline", "1")
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'server')
             w.buffer_set(self.channel_buffer, "localvar_set_slack_type", self.type)
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.nick)
@@ -1960,6 +1962,7 @@ class SlackChannel(SlackChannelCommon):
             self.active = True
             self.channel_buffer = w.buffer_new(self.formatted_name(style="long_default"), "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
+            w.buffer_set(self.channel_buffer, "input_multiline", "1")
             if self.type in ("im", "mpim"):
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
             else:
@@ -2591,6 +2594,7 @@ class SlackThreadChannel(SlackChannelCommon):
         if not self.channel_buffer:
             self.channel_buffer = w.buffer_new(self.formatted_name(style="long_default"), "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
+            w.buffer_set(self.channel_buffer, "input_multiline", "1")
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
             w.buffer_set(self.channel_buffer, "localvar_set_slack_type", self.type)
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
@@ -5632,10 +5636,10 @@ if __name__ == "__main__":
     if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
                   SCRIPT_DESC, "script_unloaded", ""):
 
-        weechat_version = w.info_get("version_number", "") or 0
+        weechat_version = int(w.info_get("version_number", "") or 0)
         weechat_upgrading = w.info_get("weechat_upgrading", "")
 
-        if int(weechat_version) < 0x1030000:
+        if weechat_version < 0x1030000:
             w.prnt("", "\nERROR: Weechat version 1.3+ is required to use {}.\n\n".format(SCRIPT_NAME))
         elif weechat_upgrading == "1":
             w.prnt("", "NOTE: wee-slack will not work after running /upgrade until it's"
@@ -5660,7 +5664,8 @@ if __name__ == "__main__":
 
             w.hook_config(CONFIG_PREFIX + ".*", "config_changed_cb", "")
             w.hook_config("irc.look.server_buffer", "config_server_buffer_cb", "")
-            w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
+            if weechat_version < 0x2090000:
+                w.hook_modifier("input_text_for_buffer", "input_text_for_buffer_cb", "")
 
             EMOJI, EMOJI_WITH_SKIN_TONES_REVERSE = load_emoji()
             setup_hooks()
