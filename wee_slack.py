@@ -5129,8 +5129,13 @@ def create_slack_debug_buffer():
 
 def load_emoji():
     try:
-        DIR = w.info_get('weechat_dir', '')
-        with open('{}/weemoji.json'.format(DIR), 'r') as ef:
+        weechat_dir = w.info_get('weechat_dir', '')
+        weechat_sharedir = w.info_get('weechat_sharedir', '')
+        local_weemoji, global_weemoji = ('{}/weemoji.json'.format(path)
+                for path in (weechat_dir, weechat_sharedir))
+        path = (global_weemoji if os.path.exists(global_weemoji) and
+                not os.path.exists(local_weemoji) else local_weemoji)
+        with open(path, 'r') as ef:
             emojis = json.loads(ef.read())
             if 'emoji' in emojis:
                 print_error('The weemoji.json file is in an old format. Please update it.')
