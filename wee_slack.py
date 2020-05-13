@@ -3272,10 +3272,11 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
             if parent_message.thread_channel and parent_message.thread_channel.active:
                 if not history_message:
                     parent_message.thread_channel.prnt_message(message, history_message)
-            elif message.ts > channel.last_read and message.has_mention():
-                parent_message.notify_thread(action="mention", sender_id=message_json["user"])
-            elif message.ts > parent_message.last_read and parent_message.subscribed:
-                parent_message.notify_thread(action="subscribed", sender_id=message_json["user"])
+            elif message.ts > parent_message.last_read:
+                if message.has_mention():
+                    parent_message.notify_thread(action="mention", sender_id=message_json["user"])
+                elif parent_message.subscribed:
+                    parent_message.notify_thread(action="subscribed", sender_id=message_json["user"])
 
             return message
 
