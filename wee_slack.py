@@ -2507,12 +2507,7 @@ class SlackMessage(object):
         if not force and self.message_json.get("_rendered_text"):
             return self.message_json["_rendered_text"]
 
-        if "fallback" in self.message_json:
-            text = self.message_json["fallback"]
-        elif self.message_json.get("text"):
-            text = self.message_json["text"]
-        else:
-            text = ""
+        text = self.message_json.get("text", "")
 
         if self.message_json.get('mrkdwn', True):
             text = render_formatting(text)
