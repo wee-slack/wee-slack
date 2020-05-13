@@ -2507,7 +2507,19 @@ class SlackMessage(object):
         if not force and self.message_json.get("_rendered_text"):
             return self.message_json["_rendered_text"]
 
-        text = self.message_json.get("text", "")
+        blocks = self.message_json.get("blocks", [])
+        blocks_rendered = unfurl_blocks(blocks)
+        has_rich_text = any(block["type"] == "rich_text" for block in blocks)
+        if has_rich_text:
+            text = self.message_json.get("text", "")
+            if blocks_rendered:
+                if text:
+                    text += "\n"
+                text += blocks_rendered
+        elif blocks_rendered:
+            text = blocks_rendered
+        else:
+            text = self.message_json.get("text", "")
 
         if self.message_json.get('mrkdwn', True):
             text = render_formatting(text)
@@ -2516,9 +2528,6 @@ class SlackMessage(object):
                 self.message_json.get('inviter')):
             inviter_id = self.message_json.get('inviter')
             text += " by invitation from <@{}>".format(inviter_id)
-
-        if "blocks" in self.message_json:
-            text += unfurl_blocks(self.message_json)
 
         text = unfurl_refs(text)
 
@@ -3375,9 +3384,9 @@ def linkify_text(message, team, only_users=False):
     return re.sub(linkify_regex, linkify_word, message_escaped, flags=re.UNICODE)
 
 
-def unfurl_blocks(message_json):
-    block_text = [""]
-    for block in message_json["blocks"]:
+def unfurl_blocks(blocks):
+    block_text = []
+    for block in blocks:
         try:
             if block["type"] == "section":
                 fields = block.get("fields", [])
