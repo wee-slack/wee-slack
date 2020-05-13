@@ -1744,7 +1744,7 @@ class SlackChannel(SlackChannelCommon):
         self.set_name(kwargs["name"])
         self.slack_purpose = kwargs.get("purpose", {"value": ""})
         self.topic = kwargs.get("topic", {"value": ""})
-        self.last_read = SlackTS(kwargs.get("last_read", SlackTS()))
+        self.last_read = SlackTS(kwargs.get("last_read", 0))
         self.channel_buffer = None
         self.got_history = False
         self.history_needs_update = False
@@ -2616,7 +2616,7 @@ class SlackMessage(object):
         self.hash = None
         self.ts = SlackTS(message_json['ts'])
         self.subscribed = message_json.get("subscribed", False)
-        self.last_read = SlackTS(message_json.get("last_read", SlackTS()))
+        self.last_read = SlackTS(message_json.get("last_read", 0))
 
     def __hash__(self):
         return hash(self.ts)
@@ -2794,7 +2794,10 @@ class Hdata(object):
 class SlackTS(object):
 
     def __init__(self, ts=None):
-        if ts:
+        if isinstance(ts, int):
+            self.major = ts
+            self.minor = 0
+        elif ts is not None:
             self.major, self.minor = [int(x) for x in ts.split('.', 1)]
         else:
             self.major = int(time.time())
