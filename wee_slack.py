@@ -2611,6 +2611,7 @@ class SlackMessage(object):
         self.team = team
         self.channel = channel
         self.subtype = subtype
+        self.user_identifier = message_json.get('user')
         self.message_json = message_json
         self.submessages = []
         self.hash = None
@@ -2690,7 +2691,7 @@ class SlackMessage(object):
         dbg(self.message_json)
 
     def get_sender(self, plain):
-        user = self.team.users.get(self.message_json.get('user'))
+        user = self.team.users.get(self.user_identifier)
         if user:
             name = "{}".format(user.formatted_name(enable_color=not plain))
             if user.is_external:
@@ -2755,20 +2756,25 @@ class SlackMessage(object):
     def number_of_replies(self):
         return max(len(self.submessages), self.message_json.get("reply_count", 0))
 
-    def notify_thread(self, action=None, sender_id=None):
+    def notify_thread(self, message):
+        if (self.thread_channel and self.thread_channel.active or
+                message.ts <= self.last_read):
+            return
+
+        if message.has_mention():
+            template = "You were mentioned in thread {hash}, channel {channel}"
+        elif self.subscribed:
+            template = "New message in thread {hash}, channel {channel} to which you are subscribed"
+        else:
+            return
+
         if config.auto_open_threads:
             self.open_thread()
-        if sender_id != self.team.myidentifier and (config.notify_subscribed_threads == True or
+
+        if message.user_identifier != self.team.myidentifier and (config.notify_subscribed_threads == True or
                 config.notify_subscribed_threads == "auto" and not config.auto_open_threads and
                 not config.thread_messages_in_channel):
-            if action == "mention":
-                template = "You were mentioned in thread {hash}, channel {channel}"
-            elif action == "subscribed":
-                template = "New message in thread {hash}, channel {channel} to which you are subscribed"
-            else:
-                template = "Notification for message in thread {hash}, channel {channel}"
             message = template.format(hash=self.hash, channel=self.channel.formatted_name())
-
             self.team.buffer_prnt(message, message=True)
 
 class SlackThreadMessage(SlackMessage):
@@ -3275,11 +3281,8 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
             if parent_message.thread_channel and parent_message.thread_channel.active:
                 if not history_message:
                     parent_message.thread_channel.prnt_message(message, history_message)
-            elif message.ts > parent_message.last_read:
-                if message.has_mention():
-                    parent_message.notify_thread(action="mention", sender_id=message_json["user"])
-                elif parent_message.subscribed:
-                    parent_message.notify_thread(action="subscribed", sender_id=message_json["user"])
+
+            parent_message.notify_thread(message)
 
             return message
 
