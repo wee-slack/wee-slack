@@ -3462,17 +3462,23 @@ def process_emoji_changed(message_json, eventrouter, team, channel, metadata):
 def process_thread_subscribed(message_json, eventrouter, team, channel, metadata):
     dbg("THREAD SUBSCRIBED {}".format(message_json))
     channel = team.channels[message_json["subscription"]["channel"]]
-    parent_ts = message_json["subscription"]["thread_ts"]
-    channel.messages.get(SlackTS(parent_ts)).subscribed = True
-    channel.change_message(parent_ts)
+    parent_ts = SlackTS(message_json["subscription"]["thread_ts"])
+    parent_message = channel.messages.get(parent_ts)
+    if parent_message:
+        parent_message.subscribed = True
+        channel.change_message(parent_ts)
+    else:
+        channel.get_thread_history(parent_ts)
 
 
 def process_thread_unsubscribed(message_json, eventrouter, team, channel, metadata):
     dbg("THREAD UNSUBSCRIBED {}".format(message_json))
     channel = team.channels[message_json["subscription"]["channel"]]
-    parent_ts = message_json["subscription"]["thread_ts"]
-    channel.messages.get(SlackTS(parent_ts)).subscribed = False
-    channel.change_message(parent_ts)
+    parent_ts = SlackTS(message_json["subscription"]["thread_ts"])
+    parent_message = channel.messages.get(parent_ts)
+    if parent_message:
+        parent_message.subscribed = False
+        channel.change_message(parent_ts)
 
 
 ###### New module/global methods
