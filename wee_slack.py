@@ -2618,6 +2618,7 @@ class SlackMessage(object):
         self.ts = SlackTS(message_json['ts'])
         self.subscribed = message_json.get("subscribed", False)
         self.last_read = SlackTS(message_json.get("last_read", 0))
+        self.last_notify = SlackTS(0)
 
     def __hash__(self):
         return hash(self.ts)
@@ -2756,9 +2757,14 @@ class SlackMessage(object):
     def number_of_replies(self):
         return max(len(self.submessages), self.message_json.get("reply_count", 0))
 
-    def notify_thread(self, message):
+    def notify_thread(self, message=None):
+        if message is None:
+            if not self.submessages:
+                return
+            message = self.channel.messages.get(self.submessages[-1])
+
         if (self.thread_channel and self.thread_channel.active or
-                message.ts <= self.last_read):
+                message.ts <= self.last_read or message.ts <= self.last_notify):
             return
 
         if message.has_mention():
@@ -2767,6 +2773,8 @@ class SlackMessage(object):
             template = "New message in thread {hash}, channel {channel} to which you are subscribed"
         else:
             return
+
+        self.last_notify = SlackTS()
 
         if config.auto_open_threads:
             self.open_thread()
@@ -3472,8 +3480,10 @@ def process_thread_subscribed(message_json, eventrouter, team, channel, metadata
     parent_ts = SlackTS(message_json["subscription"]["thread_ts"])
     parent_message = channel.messages.get(parent_ts)
     if parent_message:
+        parent_message.last_read = SlackTS(message_json["subscription"]["last_read"])
         parent_message.subscribed = True
         channel.change_message(parent_ts)
+        parent_message.notify_thread()
     else:
         channel.get_thread_history(parent_ts)
 
