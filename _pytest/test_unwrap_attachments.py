@@ -240,7 +240,7 @@ import pytest
         'input_text_before': "",
         'output': "\n".join([
             "Title",
-            "First field title First field value",
+            "First field title: First field value",
             "Second field value",
         ]),
     },

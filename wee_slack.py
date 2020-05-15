@@ -3486,13 +3486,11 @@ def unwrap_attachments(message_json, text_before):
             elif image_url:
                 link_shown = True
 
-            fields = attachment.get("fields")
-            if fields:
-                for f in fields:
-                    if f.get('title'):
-                        t.append('%s %s' % (f['title'], f['value'],))
-                    else:
-                        t.append(f['value'])
+            for field in attachment.get("fields", []):
+                if field.get('title'):
+                    t.append('{}: {}'.format(field['title'], field['value']))
+                else:
+                    t.append(field['value'])
 
             files = unwrap_files(attachment, None)
             if files:
