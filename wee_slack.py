@@ -1590,7 +1590,7 @@ class SlackChannelCommon(object):
             else:
                 return
         elif 0 < msg_id <= len(self.visible_messages):
-            keys = self.main_message_keys_reversed()
+            keys = reversed(self.visible_messages)
             timestamp = next(islice(keys, msg_id - 1, None))
         else:
             return
@@ -1636,7 +1636,7 @@ class SlackChannelCommon(object):
             if m is not None and m.message_json.get("user") == self.team.myidentifier:
                 return m.message_json
         else:
-            for key in self.main_message_keys_reversed():
+            for key in reversed(self.visible_messages):
                 m = self.messages[key]
                 if m.message_json.get("user") == self.team.myidentifier:
                     msg_id -= 1
@@ -2021,10 +2021,6 @@ class SlackChannel(SlackChannelCommon):
                 metadata={"thread_ts": thread_ts, "no_log": no_log})
         self.eventrouter.receive(s, slow_queue)
 
-    def main_message_keys_reversed(self):
-        return (key for key in reversed(self.visible_messages)
-                if type(self.messages[key]) == SlackMessage)
-
     # Typing related
     def set_typing(self, user):
         if self.channel_buffer and self.is_visible():
@@ -2153,9 +2149,19 @@ class SlackChannelVisibleMessages(MappingReversible):
             raise KeyError(key)
         return self.channel.messages[key]
 
+    def _is_visible(self, ts):
+        if ts < self.first_ts_to_display:
+            return False
+
+        if (not config.thread_messages_in_channel and
+                isinstance(self.get(ts), SlackThreadMessage)):
+            return False
+
+        return True
+
     def __iter__(self):
         for ts in self.channel.messages:
-            if ts >= self.first_ts_to_display:
+            if self._is_visible(ts):
                 yield ts
 
     def __len__(self):
@@ -2166,9 +2172,8 @@ class SlackChannelVisibleMessages(MappingReversible):
 
     def __reversed__(self):
         for ts in reversed(self.channel.messages):
-            if ts < self.first_ts_to_display:
-                break
-            yield ts
+            if self._is_visible(ts):
+                yield ts
 
 
 class SlackChannelHashedMessages(dict):
@@ -2466,9 +2471,6 @@ class SlackThreadChannel(SlackChannelCommon):
         if (full or any_msg_is_none or
                 len(self.parent_message.submessages) < self.parent_message.number_of_replies()):
             self.parent_channel.get_thread_history(self.thread_ts, slow_queue, no_log)
-
-    def main_message_keys_reversed(self):
-        return reversed(self.messages)
 
     def send_message(self, message, subtype=None, request_dict_ext={}):
         if subtype == 'me_message':
@@ -4548,7 +4550,7 @@ def command_reply(data, current_buffer, args):
         else:
             parent_id = str(msg.ts)
     elif msg_id.isdigit() and int(msg_id) >= 1:
-        mkeys = channel.main_message_keys_reversed()
+        mkeys = reversed(channel.visible_messages)
         parent_id = str(next(islice(mkeys, int(msg_id) - 1, None)))
     else:
         w.prnt('', 'ERROR: Invalid id given, must be a number greater than 0 or an existing id')
