@@ -1572,11 +1572,7 @@ class SlackChannelCommon(object):
         if self.channel_buffer:
             w.buffer_clear(self.channel_buffer)
             for message in self.visible_messages.values():
-                if message is not None:
-                    self.prnt_message(message, history_message, no_log, force_render)
-                else:
-                    w.prnt_date_tags(self.channel_buffer, SlackTS().major,
-                            tag(backlog=True, no_log=True), '\tmissing message')
+                self.prnt_message(message, history_message, no_log, force_render)
             if (self.identifier in self.pending_history_requests or
                     config.thread_messages_in_channel and self.pending_history_requests):
                 self.print_getting_history()
@@ -2139,23 +2135,34 @@ class SlackChannel(SlackChannelCommon):
 class SlackChannelVisibleMessages(MappingReversible):
     """
     Class with a reversible mapping interface (like a read-only OrderedDict)
-    which limits the number of messages to SCROLLBACK_SIZE
+    which doesn't include the messages older than first_ts_to_display.
     """
 
     def __init__(self, channel):
         self.channel = channel
+        self.first_ts_to_display = SlackTS(0)
 
     def __getitem__(self, key):
+        if key < self.first_ts_to_display:
+            raise KeyError(key)
         return self.channel.messages[key]
 
     def __iter__(self):
-        return islice(self.channel.messages, len(self.channel.messages) - len(self), None)
+        for ts in self.channel.messages:
+            if ts >= self.first_ts_to_display:
+                yield ts
 
     def __len__(self):
-        return min(len(self.channel.messages), SCROLLBACK_SIZE)
+        i = 0
+        for _ in self:
+            i += 1
+        return i
 
     def __reversed__(self):
-        return islice(reversed(self.channel.messages), SCROLLBACK_SIZE)
+        for ts in reversed(self.channel.messages):
+            if ts < self.first_ts_to_display:
+                break
+            yield ts
 
 
 class SlackChannelHashedMessages(dict):
@@ -2535,7 +2542,7 @@ class SlackThreadChannelMessages(MappingReversible):
     def __getitem__(self, key):
         if key != self._parent_message.ts and key not in self._parent_message.submessages:
             raise KeyError(key)
-        return self.thread_channel.parent_channel.messages.get(key)
+        return self.thread_channel.parent_channel.messages[key]
 
     def __iter__(self):
         yield self._parent_message.ts
@@ -3026,7 +3033,10 @@ def handle_history(message_json, eventrouter, team, channel, metadata, includes_
         if (not includes_threads and config.thread_messages_in_channel
                 and message and message.number_of_replies()):
             channel.get_thread_history(message.ts, metadata["slow_queue"], metadata["no_log"])
+
     channel.pending_history_requests.discard(channel.identifier)
+    if channel.visible_messages.first_ts_to_display.major == 0 and message_json["messages"]:
+        channel.visible_messages.first_ts_to_display = SlackTS(message_json["messages"][-1]["ts"])
     channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
     for thread_channel in channel.thread_channels.values():
         thread_channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
