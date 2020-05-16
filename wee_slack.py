@@ -2127,8 +2127,10 @@ class SlackChannel(SlackChannelCommon):
     def render(self, message, force=False):
         text = message.render(force)
         if isinstance(message, SlackThreadMessage):
-            thread_id = message.parent_message.hash or message.parent_message.ts
-            return colorize_string(get_thread_color(thread_id), '[{}]'.format(thread_id)) + ' {}'.format(text)
+            thread_hash = self.hashed_messages[message.thread_ts]
+            hash_str = colorize_string(
+                    get_thread_color(str(thread_hash)), '[{}]'.format(thread_hash))
+            return '{} {}'.format(hash_str, text)
 
         return text
 
@@ -2405,11 +2407,11 @@ class SlackThreadChannel(SlackChannelCommon):
             return set()
 
     def formatted_name(self, style="default"):
-        hash_or_ts = self.parent_message.hash or self.thread_ts
+        thread_hash = self.parent_message.hash
         styles = {
-            "default": " +{}".format(hash_or_ts),
-            "long_default": "{}.{}".format(self.parent_channel.formatted_name(style="long_default"), hash_or_ts),
-            "sidebar": " +{}".format(hash_or_ts),
+            "default": " +{}".format(thread_hash),
+            "long_default": "{}.{}".format(self.parent_channel.formatted_name(style="long_default"), thread_hash),
+            "sidebar": " +{}".format(thread_hash),
         }
         return styles[style]
 
