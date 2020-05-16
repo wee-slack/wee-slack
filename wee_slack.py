@@ -1988,6 +1988,9 @@ class SlackChannel(SlackChannelCommon):
         return w.buffer_get_integer(self.channel_buffer, "hidden") == 0
 
     def get_history(self, slow_queue=False, full=False, no_log=False):
+        if self.identifier in self.pending_history_requests:
+            return
+
         self.print_getting_history()
         self.pending_history_requests.add(self.identifier)
 
@@ -2002,6 +2005,9 @@ class SlackChannel(SlackChannelCommon):
         self.history_needs_update = False
 
     def get_thread_history(self, thread_ts, slow_queue=False, no_log=False):
+        if thread_ts in self.pending_history_requests:
+            return
+
         if config.thread_messages_in_channel:
             self.print_getting_history()
         thread_channel = self.thread_channels.get(thread_ts)
@@ -3291,24 +3297,27 @@ def download_files(message_json, team):
 
 
 def subprocess_thread_message(message_json, eventrouter, team, channel, history_message):
-    parent_ts = message_json.get('thread_ts')
-    if parent_ts:
-        parent_message = channel.messages.get(SlackTS(parent_ts))
-        if parent_message:
-            message = SlackThreadMessage(channel, parent_message.ts, message_json, team, channel)
-            if message.ts not in parent_message.submessages:
-                parent_message.submessages.append(message.ts)
-                parent_message.submessages.sort()
-            channel.store_message(message)
-            channel.change_message(parent_ts)
+    parent_ts = SlackTS(message_json['thread_ts'])
+    message = SlackThreadMessage(channel, parent_ts, message_json, team, channel)
 
-            if parent_message.thread_channel and parent_message.thread_channel.active:
-                if not history_message:
-                    parent_message.thread_channel.prnt_message(message, history_message)
+    parent_message = message.parent_message
+    if parent_message and message.ts not in parent_message.submessages:
+        parent_message.submessages.append(message.ts)
+        parent_message.submessages.sort()
 
+    channel.store_message(message)
+
+    if parent_message:
+        channel.change_message(parent_ts)
+        if parent_message.thread_channel and parent_message.thread_channel.active:
+            if not history_message:
+                parent_message.thread_channel.prnt_message(message, history_message)
+        else:
             parent_message.notify_thread(message)
+    else:
+        channel.get_thread_history(parent_ts)
 
-            return message
+    return message
 
 
 subprocess_thread_broadcast = subprocess_thread_message
