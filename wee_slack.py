@@ -1106,7 +1106,7 @@ def thread_completion_cb(data, completion_item, current_buffer, completion):
     if current_channel is None or not hasattr(current_channel, 'hashed_messages'):
         return w.WEECHAT_RC_OK
 
-    threads = current_channel.hashed_messages.items()
+    threads = (x for x in current_channel.hashed_messages.items() if isinstance(x[0], str))
     for thread_id, message_ts in sorted(threads, key=lambda item: item[1]):
         message = current_channel.messages.get(message_ts)
         if message and message.number_of_replies():
@@ -1667,48 +1667,6 @@ class SlackChannelCommon(object):
                 new_text = thread_channel.render(m, force=True)
                 modify_buffer_line(thread_channel.channel_buffer, ts, new_text)
 
-    def hash_message(self, ts):
-        ts = SlackTS(ts)
-
-        def calc_hash(ts):
-            return sha1_hex(str(ts))
-
-        message = self.messages.get(ts)
-        if message is not None:
-            if not message.hash:
-                tshash = calc_hash(message.ts)
-                hl = 3
-
-                for i in range(hl, len(tshash) + 1):
-                    shorthash = tshash[:i]
-                    if self.hashed_messages.get(shorthash) == ts:
-                        message.hash = shorthash
-                        return shorthash
-
-                shorthash = tshash[:hl]
-                while any(x.startswith(shorthash) for x in self.hashed_messages):
-                    hl += 1
-                    shorthash = tshash[:hl]
-
-                if shorthash[:-1] in self.hashed_messages:
-                    col_ts = self.hashed_messages.pop(shorthash[:-1])
-                    col_new_hash = calc_hash(col_ts)[:hl]
-                    self.hashed_messages[col_new_hash] = col_ts
-                    col_msg = self.messages.get(col_ts)
-                    if col_msg:
-                        col_msg.hash = col_new_hash
-                        self.change_message(str(col_msg.ts))
-                        if col_msg.thread_channel:
-                            col_msg.thread_channel.rename()
-
-                message.hash = shorthash
-                self.hashed_messages[message.hash] = message.ts
-
-            elif message.hash not in self.hashed_messages:
-                self.hashed_messages[message.hash] = message.ts
-
-            return message.hash
-
     def mark_read(self, ts=None, update_remote=True, force=False, post_data={}):
         if self.new_messages or force:
             if self.channel_buffer:
@@ -1751,7 +1709,7 @@ class SlackChannel(SlackChannelCommon):
         self.pending_history_requests = set()
         self.messages = OrderedDict()
         self.visible_messages = SlackChannelVisibleMessages(self)
-        self.hashed_messages = {}
+        self.hashed_messages = SlackChannelHashedMessages(self)
         self.thread_channels = {}
         self.new_messages = False
         self.typing = {}
@@ -2023,8 +1981,9 @@ class SlackChannel(SlackChannelCommon):
                 messages_to_delete.append(ts)
 
         for ts in messages_to_delete:
-            message_hash = self.messages[ts].hash
-            if message_hash in self.hashed_messages:
+            message_hash = self.hashed_messages.get(ts)
+            if message_hash:
+                del self.hashed_messages[ts]
                 del self.hashed_messages[message_hash]
             del self.messages[ts]
 
@@ -2196,6 +2155,44 @@ class SlackChannelVisibleMessages(MappingReversible):
         return islice(reversed(self.channel.messages), SCROLLBACK_SIZE)
 
 
+class SlackChannelHashedMessages(dict):
+    def __init__(self, channel):
+        self.channel = channel
+
+    def __missing__(self, key):
+        if not isinstance(key, SlackTS):
+            raise KeyError(key)
+
+        hash_len = 3
+        full_hash = sha1_hex(str(key))
+        short_hash = full_hash[:hash_len]
+
+        while any(x.startswith(short_hash) for x in self if isinstance(x, str)):
+            hash_len += 1
+            short_hash = full_hash[:hash_len]
+
+        if short_hash[:-1] in self:
+            ts_with_same_hash = self.pop(short_hash[:-1])
+            other_full_hash = sha1_hex(str(ts_with_same_hash))
+            other_short_hash = other_full_hash[:hash_len]
+            while short_hash == other_short_hash:
+                hash_len += 1
+                short_hash = full_hash[:hash_len]
+                other_short_hash = other_full_hash[:hash_len]
+            self[other_short_hash] = ts_with_same_hash
+            self[ts_with_same_hash] = other_short_hash
+
+            other_message = self.channel.messages.get(ts_with_same_hash)
+            if other_message:
+                self.channel.change_message(other_message.ts)
+                if other_message.thread_channel:
+                    other_message.thread_channel.rename()
+
+        self[short_hash] = key
+        self[key] = short_hash
+        return self[key]
+
+
 class SlackDMChannel(SlackChannel):
     """
     Subclass of a normal channel for person-to-person communication, which
@@ -2358,7 +2355,7 @@ class SlackThreadChannel(SlackChannelCommon):
         self.parent_channel = parent_channel
         self.thread_ts = thread_ts
         self.messages = SlackThreadChannelMessages(self)
-        self.hashed_messages = {}
+        self.hashed_messages = SlackChannelHashedMessages(self)
         self.channel_buffer = None
         self.type = "thread"
         self.got_history = False
@@ -2614,7 +2611,6 @@ class SlackMessage(object):
         self.user_identifier = message_json.get('user')
         self.message_json = message_json
         self.submessages = []
-        self.hash = None
         self.ts = SlackTS(message_json['ts'])
         self.subscribed = message_json.get("subscribed", False)
         self.last_read = SlackTS(message_json.get("last_read", 0))
@@ -2622,6 +2618,10 @@ class SlackMessage(object):
 
     def __hash__(self):
         return hash(self.ts)
+
+    @property
+    def hash(self):
+        return self.channel.hashed_messages[self.ts]
 
     @property
     def thread_channel(self):
@@ -2678,7 +2678,6 @@ class SlackMessage(object):
                 self.message_json.get("reactions", ""), self.team.myidentifier)
 
         if self.number_of_replies():
-            self.channel.hash_message(self.ts)
             text += " " + colorize_string(get_thread_color(self.hash), "[ Thread: {} Replies: {}{} ]".format(
                     self.hash, self.number_of_replies(), " Subscribed" if self.subscribed else ""))
 
@@ -3283,7 +3282,6 @@ def subprocess_thread_message(message_json, eventrouter, team, channel, history_
                 parent_message.submessages.append(message.ts)
                 parent_message.submessages.sort()
             channel.store_message(message)
-            channel.hash_message(parent_ts)
             channel.change_message(parent_ts)
 
             if parent_message.thread_channel and parent_message.thread_channel.active:
@@ -4846,7 +4844,7 @@ def line_event_cb(data, signal, hashtable):
     if line_timestamp and line_time_id and isinstance(channel, SlackChannelCommon):
         ts = SlackTS("{}.{}".format(line_timestamp, line_time_id))
 
-        message_hash = channel.hash_message(ts)
+        message_hash = channel.hashed_messages[ts]
         if message_hash is None:
             return w.WEECHAT_RC_OK
         message_hash = "$" + message_hash
