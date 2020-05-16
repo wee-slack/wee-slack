@@ -1657,7 +1657,8 @@ class SlackChannelCommon(object):
         if text:
             m.change_text(text)
 
-        if type(m) == SlackMessage or config.thread_messages_in_channel:
+        if (type(m) == SlackMessage or m.subtype == "thread_broadcast"
+                or config.thread_messages_in_channel):
             new_text = self.render(m, force=True)
             modify_buffer_line(self.channel_buffer, ts, new_text)
         if type(m) == SlackThreadMessage or m.thread_channel is not None:
