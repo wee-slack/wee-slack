@@ -2190,6 +2190,8 @@ class SlackChannelHashedMessages(dict):
                 self.channel.change_message(other_message.ts)
                 if other_message.thread_channel:
                     other_message.thread_channel.rename()
+                for thread_message in other_message.submessages:
+                    self.channel.change_message(thread_message)
 
         self[short_hash] = key
         self[key] = short_hash
