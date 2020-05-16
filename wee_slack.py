@@ -2355,7 +2355,6 @@ class SlackThreadChannel(SlackChannelCommon):
         self.parent_channel = parent_channel
         self.thread_ts = thread_ts
         self.messages = SlackThreadChannelMessages(self)
-        self.hashed_messages = SlackChannelHashedMessages(self)
         self.channel_buffer = None
         self.type = "thread"
         self.got_history = False
@@ -2373,6 +2372,10 @@ class SlackThreadChannel(SlackChannelCommon):
     @property
     def parent_message(self):
         return self.parent_channel.messages[self.thread_ts]
+
+    @property
+    def hashed_messages(self):
+        return self.parent_channel.hashed_messages
 
     @property
     def last_read(self):
