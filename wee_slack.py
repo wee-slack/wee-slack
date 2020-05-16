@@ -329,6 +329,14 @@ def print_error(message, buffer='', warning=False):
     w.prnt(buffer, '{}{}: {}'.format(w.prefix('error'), prefix, message))
 
 
+def print_message_not_found_error(msg_id):
+    if msg_id:
+        print_error("Invalid id given, must be an existing id or a number greater " +
+                "than 0 and less than the number of messages in the channel")
+    else:
+        print_error("No messages found in channel")
+
+
 def token_for_print(token):
     return '{}...{}'.format(token[:15], token[-10:])
 
@@ -847,24 +855,15 @@ def buffer_input_callback(signal, buffer_ptr, data):
     if not channel:
         return w.WEECHAT_RC_ERROR
 
-    def get_id(message_id):
-        if not message_id:
-            return 1
-        elif message_id[0] == "$":
-            return message_id[1:]
-        else:
-            return int(message_id)
-
     reaction = re.match(r"{}{}\s*$".format(REACTION_PREFIX_REGEX_STRING, EMOJI_CHAR_OR_NAME_REGEX_STRING), data)
     substitute = re.match("{}?s/".format(MESSAGE_ID_REGEX_STRING), data)
     if reaction:
         emoji = reaction.group("emoji_char") or reaction.group("emoji_name")
         if reaction.group("reaction_change") == "+":
-            channel.send_add_reaction(get_id(reaction.group("msg_id")), emoji)
+            channel.send_add_reaction(reaction.group("msg_id"), emoji)
         elif reaction.group("reaction_change") == "-":
-            channel.send_remove_reaction(get_id(reaction.group("msg_id")), emoji)
+            channel.send_remove_reaction(reaction.group("msg_id"), emoji)
     elif substitute:
-        msg_id = get_id(substitute.group("msg_id"))
         try:
             old, new, flags = re.split(r'(?<!\\)/', data)[1:]
         except ValueError:
@@ -875,7 +874,7 @@ def buffer_input_callback(signal, buffer_ptr, data):
             # rid of escapes.
             new = new.replace(r'\/', '/')
             old = old.replace(r'\/', '/')
-            channel.edit_nth_previous_message(msg_id, old, new, flags)
+            channel.edit_nth_previous_message(substitute.group("msg_id"), old, new, flags)
     else:
         if data.startswith(('//', ' ')):
             data = data[1:]
@@ -1584,36 +1583,37 @@ class SlackChannelCommon(object):
         self.send_change_reaction("reactions.remove", msg_id, reaction)
 
     def send_change_reaction(self, method, msg_id, reaction):
-        if type(msg_id) is not int:
-            if msg_id in self.hashed_messages:
-                timestamp = self.hashed_messages[msg_id]
-            else:
-                return
-        elif 0 < msg_id <= len(self.visible_messages):
-            keys = reversed(self.visible_messages)
-            timestamp = next(islice(keys, msg_id - 1, None))
-        else:
+        message = self.message_from_hash_or_index(msg_id)
+        if message is None:
+            print_message_not_found_error(msg_id)
             return
 
         reaction_name = replace_emoji_with_string(reaction)
         if method == "toggle":
-            message = self.messages.get(timestamp)
             reaction = message.get_reaction(reaction_name)
             if reaction and self.team.myidentifier in reaction["users"]:
                 method = "reactions.remove"
             else:
                 method = "reactions.add"
 
-        data = {"channel": self.identifier, "timestamp": timestamp, "name": reaction_name}
+        data = {"channel": self.identifier, "timestamp": message.ts, "name": reaction_name}
         s = SlackRequest(self.team, method, data, channel=self, metadata={'reaction': reaction})
         self.eventrouter.receive(s)
 
     def edit_nth_previous_message(self, msg_id, old, new, flags):
-        message = self.my_last_message(msg_id)
+        message_filter = lambda message: message.user_identifier == self.team.myidentifier
+        message = self.message_from_hash_or_index(msg_id, message_filter)
         if message is None:
+            if msg_id:
+                print_error("Invalid id given, must be an existing id to one of your " +
+                        "messages or a number greater than 0 and less than the number " +
+                        "of your messages in the channel")
+            else:
+                print_error("You don't have any messages in this channel")
             return
         if new == "" and old == "":
-            s = SlackRequest(self.team, "chat.delete", {"channel": self.identifier, "ts": message['ts']}, channel=self)
+            post_data = {"channel": self.identifier, "ts": message.ts}
+            s = SlackRequest(self.team, "chat.delete", post_data, channel=self)
             self.eventrouter.receive(s)
         else:
             num_replace = 0 if 'g' in flags else 1
@@ -1621,27 +1621,46 @@ class SlackChannelCommon(object):
             f |= re.IGNORECASE if 'i' in flags else 0
             f |= re.MULTILINE if 'm' in flags else 0
             f |= re.DOTALL if 's' in flags else 0
-            new_message = re.sub(old, new, message["text"], num_replace, f)
-            if new_message != message["text"]:
-                s = SlackRequest(self.team, "chat.update",
-                        {"channel": self.identifier, "ts": message['ts'], "text": new_message}, channel=self)
+            old_message_text = message.message_json["text"]
+            new_message_text = re.sub(old, new, old_message_text, num_replace, f)
+            if new_message_text != old_message_text:
+                post_data = {"channel": self.identifier, "ts": message.ts, "text": new_message_text}
+                s = SlackRequest(self.team, "chat.update", post_data, channel=self)
                 self.eventrouter.receive(s)
             else:
                 print_error("The regex didn't match any part of the message")
 
-    def my_last_message(self, msg_id):
-        if type(msg_id) is not int:
-            ts = self.hashed_messages.get(msg_id)
-            m = self.messages.get(ts)
-            if m is not None and m.message_json.get("user") == self.team.myidentifier:
-                return m.message_json
-        else:
-            for key in reversed(self.visible_messages):
-                m = self.messages[key]
-                if m.message_json.get("user") == self.team.myidentifier:
-                    msg_id -= 1
-                    if msg_id == 0:
-                        return m.message_json
+    def message_from_hash(self, ts_hash, message_filter=None):
+        if not ts_hash:
+            return
+        ts_hash_without_prefix = ts_hash[1:] if ts_hash[0] == "$" else ts_hash
+        ts = self.hashed_messages.get(ts_hash_without_prefix)
+        message = self.messages.get(ts)
+        if message is None:
+            return
+        if message_filter and not message_filter(message):
+            return
+        return message
+
+    def message_from_index(self, index, message_filter=None, reverse=True):
+        for ts in (reversed(self.visible_messages) if reverse else self.visible_messages):
+            message = self.messages[ts]
+            if not message_filter or message_filter(message):
+                index -= 1
+                if index == 0:
+                    return message
+
+    def message_from_hash_or_index(self, hash_or_index=None, message_filter=None, reverse=True):
+        message = self.message_from_hash(hash_or_index, message_filter)
+        if not message:
+            if not hash_or_index:
+                index = 1
+            elif hash_or_index.isdigit():
+                index = int(hash_or_index)
+            else:
+                return
+            message = self.message_from_index(index, message_filter, reverse)
+        return message
 
     def change_message(self, ts, message_json=None, text=None):
         ts = SlackTS(ts)
@@ -4417,13 +4436,6 @@ def command_showmuted(data, current_buffer, args):
     return w.WEECHAT_RC_OK_EAT
 
 
-def get_msg_from_id(channel, msg_id):
-    if msg_id[0] == '$':
-        msg_id = msg_id[1:]
-    ts = channel.hashed_messages.get(msg_id)
-    return channel.messages.get(ts)
-
-
 @slack_buffer_required
 @utf8_decode
 def command_thread(data, current_buffer, args):
@@ -4438,21 +4450,17 @@ def command_thread(data, current_buffer, args):
         print_error('/thread can not be used in the team buffer, only in a channel')
         return w.WEECHAT_RC_ERROR
 
-    if args:
-        msg = get_msg_from_id(channel, args)
-        if not msg:
-            w.prnt('', 'ERROR: Invalid id given, must be an existing id')
-            return w.WEECHAT_RC_OK_EAT
-    else:
-        for message in reversed(channel.visible_messages.values()):
-            if type(message) == SlackMessage and message.number_of_replies():
-                msg = message
-                break
-        else:
-            w.prnt('', 'ERROR: No threads found in channel')
-            return w.WEECHAT_RC_OK_EAT
+    message_filter = lambda message: message.number_of_replies()
+    message = channel.message_from_hash_or_index(args, message_filter)
 
-    msg.open_thread(switch=config.switch_buffer_on_join)
+    if message:
+        message.open_thread(switch=config.switch_buffer_on_join)
+    elif args:
+        print_error("Invalid id given, must be an existing id or a number greater " +
+                "than 0 and less than the number of thread messages in the channel")
+    else:
+        print_error("No threads found in channel")
+
     return w.WEECHAT_RC_OK_EAT
 
 command_thread.completion = '%(threads) %-'
@@ -4462,16 +4470,18 @@ def subscribe_helper(current_buffer, args, usage, api):
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     team = channel.team
 
-    if args:
-        msg = get_msg_from_id(channel, args)
-    elif isinstance(channel, SlackThreadChannel):
-        msg = channel.parent_message
+    if isinstance(channel, SlackThreadChannel) and not args:
+        message = channel.parent_message
     else:
-        w.prnt('', usage)
-        return w.WEECHAT_RC_ERROR
+        message_filter = lambda message: message.number_of_replies()
+        message = channel.message_from_hash_or_index(args, message_filter)
+
+    if not message:
+        print_message_not_found_error(args)
+        return w.WEECHAT_RC_OK_EAT
 
     s = SlackRequest(team, api,
-            {"channel": channel.identifier, "thread_ts": msg.ts}, channel=channel)
+            {"channel": channel.identifier, "thread_ts": message.ts}, channel=channel)
     EVENTROUTER.receive(s)
     return w.WEECHAT_RC_OK_EAT
 
@@ -4535,26 +4545,23 @@ def command_reply(data, current_buffer, args):
 
     if isinstance(channel, SlackThreadChannel):
         text = args
-        msg = channel.parent_message
+        message = channel.parent_message
     else:
         try:
             msg_id, text = args.split(None, 1)
         except ValueError:
             w.prnt('', 'Usage (when in a channel buffer): /reply [-alsochannel] <count/message_id> <message>')
             return w.WEECHAT_RC_OK_EAT
-        msg = get_msg_from_id(channel, msg_id)
+        message = channel.message_from_hash_or_index(msg_id)
 
-    if msg:
-        if isinstance(msg, SlackThreadMessage):
-            parent_id = str(msg.parent_message.ts)
-        else:
-            parent_id = str(msg.ts)
-    elif msg_id.isdigit() and int(msg_id) >= 1:
-        mkeys = reversed(channel.visible_messages)
-        parent_id = str(next(islice(mkeys, int(msg_id) - 1, None)))
-    else:
-        w.prnt('', 'ERROR: Invalid id given, must be a number greater than 0 or an existing id')
-        return w.WEECHAT_RC_OK_EAT
+        if not message:
+            print_message_not_found_error(args)
+            return w.WEECHAT_RC_OK_EAT
+
+    if isinstance(message, SlackThreadMessage):
+        parent_id = str(message.parent_message.ts)
+    elif message:
+        parent_id = str(message.ts)
 
     channel.send_message(text, request_dict_ext={'thread_ts': parent_id, 'reply_broadcast': broadcast})
     return w.WEECHAT_RC_OK_EAT
@@ -4704,18 +4711,13 @@ def command_linkarchive(data, current_buffer, args):
     if isinstance(channel, SlackChannelCommon):
         url += 'archives/{}/'.format(channel.identifier)
         if args:
-            if args[0] == '$':
-                message_id = args[1:]
-            else:
-                message_id = args
-            ts = channel.hashed_messages.get(message_id)
-            message = channel.messages.get(ts)
+            message = channel.message_from_hash_or_index(args)
             if message:
                 url += 'p{}{:0>6}'.format(message.ts.majorstr(), message.ts.minorstr())
                 if isinstance(message, SlackThreadMessage):
                     url += "?thread_ts={}&cid={}".format(message.parent_message.ts, channel.identifier)
             else:
-                w.prnt('', 'ERROR: Invalid id given, must be an existing id')
+                print_message_not_found_error(args)
                 return w.WEECHAT_RC_OK_EAT
 
     w.command(current_buffer, "/input insert {}".format(url))
@@ -4882,7 +4884,7 @@ def line_event_cb(data, signal, hashtable):
             reaction = EMOJI_CHAR_OR_NAME_REGEX.match(hashtable["_chat_eol"])
             if reaction:
                 emoji = reaction.group("emoji_char") or reaction.group("emoji_name")
-                channel.send_change_reaction("toggle", message_hash[1:], emoji)
+                channel.send_change_reaction("toggle", message_hash, emoji)
             else:
                 data = "message"
         if data == "message":
@@ -4892,7 +4894,7 @@ def line_event_cb(data, signal, hashtable):
             w.command(buffer_pointer, "/input send {}s///".format(message_hash))
         elif data == "linkarchive":
             w.command(buffer_pointer, "/cursor stop")
-            w.command(buffer_pointer, "/slack linkarchive {}".format(message_hash[1:]))
+            w.command(buffer_pointer, "/slack linkarchive {}".format(message_hash))
         elif data == "reply":
             w.command(buffer_pointer, "/cursor stop")
             w.command(buffer_pointer, "/input insert /reply {}\\x20".format(message_hash))
