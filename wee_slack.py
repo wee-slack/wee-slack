@@ -2263,10 +2263,13 @@ class SlackThreadChannel(SlackChannelCommon):
         self.type = "thread"
         self.got_history = False
         self.label = None
-        self.members = self.parent_message.channel.members
         self.team = self.parent_message.team
         self.last_line_from = None
         self.new_messages = False
+
+    @property
+    def members(self):
+        return self.parent_message.channel.members
 
     @property
     def last_read(self):
