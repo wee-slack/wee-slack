@@ -1962,12 +1962,6 @@ class SlackChannel(SlackChannelCommon):
             self.typing[user] = time.time()
             self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
 
-    def unset_typing(self, user):
-        if self.channel_buffer and self.is_visible():
-            u = self.typing.get(user)
-            if u:
-                self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
-
     def is_someone_typing(self):
         """
         Walks through dict of typing folks in a channel and fast
