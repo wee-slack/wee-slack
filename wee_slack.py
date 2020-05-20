@@ -66,6 +66,7 @@ REPO_URL = "https://github.com/wee-slack/wee-slack"
 
 BACKLOG_SIZE = 200
 SCROLLBACK_SIZE = 500
+TYPING_DURATION = 6
 
 RECORD_DIR = "/tmp/weeslack-debug"
 
@@ -1965,10 +1966,11 @@ class SlackChannel(SlackChannelCommon):
         returns if any of them is actively typing. If none are,
         nulls the dict and returns false.
         """
-        for user, timestamp in self.typing.items():
-            if timestamp + 4 > time.time():
+        typing_expire_time = time.time() - TYPING_DURATION
+        for timestamp in self.typing.values():
+            if timestamp > typing_expire_time:
                 return True
-        if len(self.typing) > 0:
+        if self.typing:
             self.typing = {}
             self.eventrouter.weechat_controller.set_refresh_buffer_list(True)
         return False
@@ -1977,9 +1979,10 @@ class SlackChannel(SlackChannelCommon):
         """
         Returns the names of everyone in the channel who is currently typing.
         """
+        typing_expire_time = time.time() - TYPING_DURATION
         typing = []
         for user, timestamp in self.typing.items():
-            if timestamp + 4 > time.time():
+            if timestamp > typing_expire_time:
                 typing.append(user)
             else:
                 del self.typing[user]
