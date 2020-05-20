@@ -1694,8 +1694,10 @@ class SlackChannel(SlackChannelCommon):
         if self.channel_buffer:
             if typing is None:
                 typing = self.is_someone_typing()
-            new_name = self.formatted_name("sidebar", typing)
-            w.buffer_set(self.channel_buffer, "short_name", new_name)
+            name = self.formatted_name("long_default", typing)
+            short_name = self.formatted_name("sidebar", typing)
+            w.buffer_set(self.channel_buffer, "name", name)
+            w.buffer_set(self.channel_buffer, "short_name", short_name)
 
     def set_members(self, members):
         self.members = set(members)
@@ -2111,8 +2113,11 @@ class SlackDMChannel(SlackChannel):
 
     def rename(self, typing=None):
         if self.channel_buffer:
-            new_name = self.formatted_name(style="sidebar", present=self.team.is_user_present(self.user))
-            w.buffer_set(self.channel_buffer, "short_name", new_name)
+            present = self.team.is_user_present(self.user)
+            name = self.formatted_name("long_default", typing, present)
+            short_name = self.formatted_name("sidebar", typing, present)
+            w.buffer_set(self.channel_buffer, "name", name)
+            w.buffer_set(self.channel_buffer, "short_name", short_name)
 
 
 class SlackGroupChannel(SlackChannel):
@@ -2326,6 +2331,7 @@ class SlackThreadChannel(SlackChannelCommon):
 
     def rename(self):
         if self.channel_buffer and not self.label:
+            w.buffer_set(self.channel_buffer, "name", self.formatted_name(style="long_default"))
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar"))
 
     def set_highlights(self, highlight_string=None):
