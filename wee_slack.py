@@ -1740,9 +1740,7 @@ class SlackChannel(SlackChannelCommon):
         select = {
             "default": prepend + self.slack_name,
             "sidebar": colorize_string(sidebar_color, prepend + self.slack_name),
-            "base": self.slack_name,
             "long_default": "{}.{}{}".format(self.team.preferred_name, prepend, self.slack_name),
-            "long_base": "{}.{}".format(self.team.preferred_name, self.slack_name),
         }
         return select[style]
 
@@ -2110,9 +2108,7 @@ class SlackDMChannel(SlackChannel):
         select = {
             "default": self.slack_name,
             "sidebar": prepend + self.slack_name,
-            "base": self.slack_name,
             "long_default": "{}.{}".format(self.team.preferred_name, self.slack_name),
-            "long_base": "{}.{}".format(self.team.preferred_name, self.slack_name),
         }
         if config.colorize_private_chats and enable_color:
             return colorize_string(self.color_name, select[style])
@@ -2219,9 +2215,7 @@ class SlackMPDMChannel(SlackChannel):
         select = {
             "default": self.name,
             "sidebar": prepend + self.name,
-            "base": self.name,
             "long_default": "{}.{}".format(self.team.preferred_name, self.name),
-            "long_base": "{}.{}".format(self.team.preferred_name, self.name),
         }
         return select[style]
 
