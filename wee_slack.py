@@ -1390,7 +1390,7 @@ class SlackTeam(object):
 
     def find_channel_by_members(self, members, channel_type=None):
         for channel in self.channels.values():
-            if channel.get_members() == members and (
+            if channel.members == members and (
                     channel_type is None or channel.type == channel_type):
                 return channel
 
@@ -1714,9 +1714,6 @@ class SlackChannel(SlackChannelCommon):
     def set_members(self, members):
         self.members = set(members)
         self.update_nicklist()
-
-    def get_members(self):
-        return self.members
 
     def set_unread_count_display(self, count):
         self.unread_count_display = count
@@ -2079,6 +2076,7 @@ class SlackDMChannel(SlackChannel):
         self.type = 'im'
         self.update_color()
         self.set_name(self.slack_name)
+        self.members = {self.user}
         if dmuser in users:
             self.set_topic(create_user_status_string(users[dmuser].profile))
 
@@ -2090,9 +2088,6 @@ class SlackDMChannel(SlackChannel):
 
     def set_name(self, slack_name):
         self.name = slack_name
-
-    def get_members(self):
-        return {self.user}
 
     def create_buffer(self):
         if not self.channel_buffer:
