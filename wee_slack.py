@@ -71,7 +71,6 @@ SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 REPO_URL = "https://github.com/wee-slack/wee-slack"
 
 BACKLOG_SIZE = 200
-SCROLLBACK_SIZE = 500
 TYPING_DURATION = 6
 
 RECORD_DIR = "/tmp/weeslack-debug"
@@ -1979,8 +1978,9 @@ class SlackChannel(SlackChannelCommon):
         self.messages[message_to_store.ts] = message_to_store
         self.messages = OrderedDict(sorted(self.messages.items()))
 
+        max_history = w.config_integer(w.config_get("weechat.history.max_buffer_lines_number"))
         messages_to_check = islice(self.messages.items(),
-                max(0, len(self.messages) - SCROLLBACK_SIZE))
+                max(0, len(self.messages) - max_history))
         messages_to_delete = []
         for (ts, message) in messages_to_check:
             if ts == message_to_store.ts:

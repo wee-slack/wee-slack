@@ -107,6 +107,8 @@ class FakeWeechat():
         return self.config.get(key, "")
     def config_get(self, key):
         return ""
+    def config_integer(self, key):
+        return 1000
     def config_set_plugin(self, key, value):
         self.config[key] = value
     def config_string(self, key):
