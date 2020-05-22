@@ -2548,6 +2548,8 @@ class SlackThreadChannel(SlackChannelCommon):
         self.channel_buffer = None
         self.got_history = False
         self.active = False
+        if update_remote and not self.eventrouter.shutting_down:
+            self.mark_read()
 
     def render(self, message, force=False):
         return message.render(force)
