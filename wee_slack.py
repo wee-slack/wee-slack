@@ -1657,27 +1657,24 @@ class SlackChannel(SlackChannelCommon):
     """
 
     def __init__(self, eventrouter, channel_type="channel", **kwargs):
-        # We require these two things for a valid object,
-        # the rest we can just learn from slack
         self.active = False
         for key, value in kwargs.items():
             setattr(self, key, value)
         self.eventrouter = eventrouter
+        self.team = kwargs.get('team')
+        self.identifier = kwargs["id"]
         self.type = channel_type
-        self.slack_name = kwargs["name"]
+        self.set_name(kwargs["name"])
         self.slack_purpose = kwargs.get("purpose", {"value": ""})
         self.topic = kwargs.get("topic", {"value": ""})
-        self.identifier = kwargs["id"]
         self.last_read = SlackTS(kwargs.get("last_read", SlackTS()))
         self.channel_buffer = None
-        self.team = kwargs.get('team')
         self.got_history = False
         self.messages = OrderedDict()
         self.hashed_messages = {}
         self.thread_channels = {}
         self.new_messages = False
         self.typing = {}
-        self.set_name(self.slack_name)
         # short name relates to the localvar we change for typing indication
         self.current_short_name = self.name
         self.set_members(kwargs.get('members', []))
@@ -1698,7 +1695,8 @@ class SlackChannel(SlackChannelCommon):
         return self.identifier in self.team.muted_channels
 
     def set_name(self, slack_name):
-        self.name = "#" + slack_name
+        self.slack_name = slack_name
+        self.name = self.formatted_name()
 
     def refresh(self):
         return self.rename()
@@ -2076,7 +2074,6 @@ class SlackDMChannel(SlackChannel):
         kwargs["name"] = users[dmuser].name if dmuser in users else dmuser
         super(SlackDMChannel, self).__init__(eventrouter, "im", **kwargs)
         self.update_color()
-        self.set_name(self.slack_name)
         self.members = {self.user}
         if dmuser in users:
             self.set_topic(create_user_status_string(users[dmuser].profile))
@@ -2086,9 +2083,6 @@ class SlackDMChannel(SlackChannel):
         if self.user not in self.team.users:
             s = SlackRequest(self.team, 'users.info', {'user': self.slack_name}, channel=self)
             self.eventrouter.receive(s)
-
-    def set_name(self, slack_name):
-        self.name = slack_name
 
     def create_buffer(self):
         if not self.channel_buffer:
@@ -2150,10 +2144,6 @@ class SlackGroupChannel(SlackChannel):
 
     def __init__(self, eventrouter, channel_type="group", **kwargs):
         super(SlackGroupChannel, self).__init__(eventrouter, channel_type, **kwargs)
-        self.set_name(self.slack_name)
-
-    def set_name(self, slack_name):
-        self.name = config.group_name_prefix + slack_name
 
 
 class SlackPrivateChannel(SlackGroupChannel):
@@ -2203,20 +2193,17 @@ class SlackMPDMChannel(SlackChannel):
                 s = SlackRequest(self.team, join_method, {'users': ','.join(self.members)}, channel=self)
                 self.eventrouter.receive(s)
 
-    def set_name(self, slack_name):
-        self.name = slack_name
-
     def formatted_name(self, style="default", typing=False, **kwargs):
         if style == "sidebar":
             if typing and config.channel_name_typing_indicator:
                 prepend = ">"
             else:
                 prepend = "@"
-            return prepend + self.name
+            return prepend + self.slack_name
         elif style == "long_default":
-            return "{}.{}".format(self.team.preferred_name, self.name)
+            return "{}.{}".format(self.team.preferred_name, self.slack_name)
         else:
-            return self.name
+            return self.slack_name
 
     def rename(self):
         pass
@@ -2239,9 +2226,6 @@ class SlackSharedChannel(SlackChannel):
             s = SlackRequest(self.team, 'users.info', {'user': user}, channel=self)
             self.eventrouter.receive(s)
         super(SlackSharedChannel, self).get_history(slow_queue)
-
-    def set_name(self, slack_name):
-        self.name = config.shared_name_prefix + slack_name
 
 
 class SlackThreadChannel(SlackChannelCommon):
@@ -2872,7 +2856,7 @@ def handle_usersinfo(user_json, eventrouter, team, channel, metadata):
     if channel.type == 'shared':
         channel.update_nicklist(user_info['id'])
     elif channel.type == 'im':
-        channel.slack_name = user.name
+        channel.set_name(user.name)
         channel.set_topic(create_user_status_string(user.profile))
 
 
@@ -3218,7 +3202,7 @@ def process_channel_created(message_json, eventrouter, team, channel, metadata):
 
 
 def process_channel_rename(message_json, eventrouter, team, channel, metadata):
-    channel.slack_name = message_json['channel']['name']
+    channel.set_name(message_json['channel']['name'])
 
 
 def process_im_created(message_json, eventrouter, team, channel, metadata):
