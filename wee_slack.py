@@ -1912,13 +1912,9 @@ class SlackChannel(SlackChannelCommon):
                 s = SlackRequest(self.team, join_method, {"users": self.user, "return_im": True}, channel=self)
                 self.eventrouter.receive(s)
 
-    def clear_messages(self):
-        w.buffer_clear(self.channel_buffer)
+    def destroy_buffer(self, update_remote):
         self.messages = OrderedDict()
         self.got_history = False
-
-    def destroy_buffer(self, update_remote):
-        self.clear_messages()
         self.channel_buffer = None
         self.active = False
         if update_remote and not self.eventrouter.shutting_down:
