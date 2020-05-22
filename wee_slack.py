@@ -968,7 +968,7 @@ def typing_bar_item_cb(data, item, current_window, current_buffer, extra_info):
         for channel in team.channels.values():
             if channel.type == "im":
                 if channel.is_someone_typing():
-                    typers.append("D/" + channel.slack_name)
+                    typers.append("D/" + channel.name)
                 pass
 
     typing = ", ".join(typers)
@@ -3184,7 +3184,7 @@ def process_channel_created(message_json, eventrouter, team, channel, metadata):
     item['is_member'] = False
     channel = SlackChannel(eventrouter, team=team, **item)
     team.channels[item["id"]] = channel
-    team.buffer_prnt('Channel created: {}'.format(channel.slack_name))
+    team.buffer_prnt('Channel created: {}'.format(channel.name))
 
 
 def process_channel_rename(message_json, eventrouter, team, channel, metadata):
