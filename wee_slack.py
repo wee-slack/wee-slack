@@ -1694,8 +1694,10 @@ class SlackChannel(SlackChannelCommon):
         if self.channel_buffer:
             if typing is None:
                 typing = self.is_someone_typing()
-            name = self.formatted_name("long_default", typing)
-            short_name = self.formatted_name("sidebar", typing)
+            present = self.team.is_user_present(self.user) if self.type == "im" else None
+
+            name = self.formatted_name("long_default", typing, present)
+            short_name = self.formatted_name("sidebar", typing, present)
             w.buffer_set(self.channel_buffer, "name", name)
             w.buffer_set(self.channel_buffer, "short_name", short_name)
 
@@ -1714,7 +1716,7 @@ class SlackChannel(SlackChannelCommon):
             else:
                 w.buffer_set(self.channel_buffer, "hotlist", "1")
 
-    def formatted_name(self, style="default", typing=False, **kwargs):
+    def formatted_name(self, style="default", typing=False, present=None, **kwargs):
         if style == "sidebar" and typing and config.channel_name_typing_indicator:
             prepend = ">"
         elif self.type == "group" or self.type == "private":
@@ -2111,14 +2113,6 @@ class SlackDMChannel(SlackChannel):
                 s = SlackRequest(self.team, join_method, {"users": self.user, "return_im": True}, channel=self)
                 self.eventrouter.receive(s)
 
-    def rename(self, typing=None):
-        if self.channel_buffer:
-            present = self.team.is_user_present(self.user)
-            name = self.formatted_name("long_default", typing, present)
-            short_name = self.formatted_name("sidebar", typing, present)
-            w.buffer_set(self.channel_buffer, "name", name)
-            w.buffer_set(self.channel_buffer, "short_name", short_name)
-
 
 class SlackGroupChannel(SlackChannel):
     """
@@ -2176,7 +2170,7 @@ class SlackMPDMChannel(SlackChannel):
                 s = SlackRequest(self.team, join_method, {'users': ','.join(self.members)}, channel=self)
                 self.eventrouter.receive(s)
 
-    def formatted_name(self, style="default", typing=False, **kwargs):
+    def formatted_name(self, style="default", typing=False, present=None, **kwargs):
         if style == "sidebar":
             if typing and config.channel_name_typing_indicator:
                 prepend = ">"
@@ -2187,9 +2181,6 @@ class SlackMPDMChannel(SlackChannel):
             return "{}.{}".format(self.team.preferred_name, self.slack_name)
         else:
             return self.slack_name
-
-    def rename(self, typing=None):
-        pass
 
 
 class SlackSharedChannel(SlackChannel):
