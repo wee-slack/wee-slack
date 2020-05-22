@@ -1364,7 +1364,7 @@ class SlackTeam(object):
         for channel in self.channels.values():
             channel.set_highlights()
 
-    def formatted_name(self, **kwargs):
+    def formatted_name(self):
         return self.domain
 
     def buffer_prnt(self, data, message=False):
@@ -1716,7 +1716,7 @@ class SlackChannel(SlackChannelCommon):
             else:
                 w.buffer_set(self.channel_buffer, "hotlist", "1")
 
-    def formatted_name(self, style="default", typing=False, present=None, **kwargs):
+    def formatted_name(self, style="default", typing=False, present=None):
         if style == "sidebar" and typing and config.channel_name_typing_indicator:
             prepend = ">"
         elif self.type == "group" or self.type == "private":
@@ -2084,7 +2084,7 @@ class SlackDMChannel(SlackChannel):
         else:
             self.color_name = ""
 
-    def formatted_name(self, style="default", typing=False, present=True, **kwargs):
+    def formatted_name(self, style="default", typing=False, present=True):
         if style == "sidebar":
             prepend = ""
             if config.show_buflist_presence:
@@ -2170,7 +2170,7 @@ class SlackMPDMChannel(SlackChannel):
                 s = SlackRequest(self.team, join_method, {'users': ','.join(self.members)}, channel=self)
                 self.eventrouter.receive(s)
 
-    def formatted_name(self, style="default", typing=False, present=None, **kwargs):
+    def formatted_name(self, style="default", typing=False, present=None):
         if style == "sidebar":
             if typing and config.channel_name_typing_indicator:
                 prepend = ">"
@@ -2245,7 +2245,7 @@ class SlackThreadChannel(SlackChannelCommon):
     def muted(self):
         return self.parent_message.channel.muted
 
-    def formatted_name(self, style="default", **kwargs):
+    def formatted_name(self, style="default"):
         hash_or_ts = self.parent_message.hash or self.parent_message.ts
         styles = {
             "default": " +{}".format(hash_or_ts),
