@@ -1820,7 +1820,7 @@ class SlackChannel(SlackChannelCommon):
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
-            w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
+            w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar"))
             self.set_highlights()
             self.set_topic()
             if self.channel_buffer:
@@ -2080,14 +2080,14 @@ class SlackDMChannel(SlackChannel):
         else:
             self.color_name = ""
 
-    def formatted_name(self, style="default", typing=False, present=True, enable_color=False, **kwargs):
+    def formatted_name(self, style="default", typing=False, present=True, **kwargs):
         if style == "sidebar":
             prepend = ""
             if config.show_buflist_presence:
                 prepend = "+" if present else " "
             name = prepend + self.slack_name
 
-            if config.colorize_private_chats and enable_color:
+            if config.colorize_private_chats:
                 return colorize_string(self.color_name, name)
             else:
                 return name
@@ -2111,7 +2111,7 @@ class SlackDMChannel(SlackChannel):
 
     def rename(self, typing=None):
         if self.channel_buffer:
-            new_name = self.formatted_name(style="sidebar", present=self.team.is_user_present(self.user), enable_color=config.colorize_private_chats)
+            new_name = self.formatted_name(style="sidebar", present=self.team.is_user_present(self.user))
             w.buffer_set(self.channel_buffer, "short_name", new_name)
 
 
@@ -2326,7 +2326,7 @@ class SlackThreadChannel(SlackChannelCommon):
 
     def rename(self):
         if self.channel_buffer and not self.label:
-            w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
+            w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar"))
 
     def set_highlights(self, highlight_string=None):
         if self.channel_buffer:
@@ -2345,11 +2345,12 @@ class SlackThreadChannel(SlackChannelCommon):
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.preferred_name)
-            w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar", enable_color=True))
+            w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar"))
             self.set_highlights()
             time_format = w.config_string(w.config_get("weechat.look.buffer_time_format"))
             parent_time = time.localtime(SlackTS(self.parent_message.ts).major)
-            topic = '{} {} | {}'.format(time.strftime(time_format, parent_time), self.parent_message.sender, self.render(self.parent_message)	)
+            topic = '{} {} | {}'.format(time.strftime(time_format, parent_time),
+                    self.parent_message.sender, self.render(self.parent_message))
             w.buffer_set(self.channel_buffer, "title", topic)
 
     def destroy_buffer(self, update_remote):
