@@ -2086,9 +2086,14 @@ class SlackDMChannel(SlackChannel):
 
     def formatted_name(self, style="default", typing=False, present=True):
         if style == "sidebar":
-            prepend = ""
-            if config.show_buflist_presence:
-                prepend = "+" if present else " "
+            if typing and config.channel_name_typing_indicator:
+                prepend = ">"
+            elif present and config.show_buflist_presence:
+                prepend = "+"
+            elif config.channel_name_typing_indicator or config.show_buflist_presence:
+                prepend = " "
+            else:
+                prepend = ""
             name = prepend + self.slack_name
 
             if config.colorize_private_chats:
