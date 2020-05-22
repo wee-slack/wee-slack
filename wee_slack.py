@@ -1656,13 +1656,14 @@ class SlackChannel(SlackChannelCommon):
     Represents an individual slack channel.
     """
 
-    def __init__(self, eventrouter, **kwargs):
+    def __init__(self, eventrouter, channel_type="channel", **kwargs):
         # We require these two things for a valid object,
         # the rest we can just learn from slack
         self.active = False
         for key, value in kwargs.items():
             setattr(self, key, value)
         self.eventrouter = eventrouter
+        self.type = channel_type
         self.slack_name = kwargs["name"]
         self.slack_purpose = kwargs.get("purpose", {"value": ""})
         self.topic = kwargs.get("topic", {"value": ""})
@@ -1676,7 +1677,6 @@ class SlackChannel(SlackChannelCommon):
         self.thread_channels = {}
         self.new_messages = False
         self.typing = {}
-        self.type = 'channel'
         self.set_name(self.slack_name)
         # short name relates to the localvar we change for typing indication
         self.current_short_name = self.name
@@ -2073,8 +2073,7 @@ class SlackDMChannel(SlackChannel):
     def __init__(self, eventrouter, users, **kwargs):
         dmuser = kwargs["user"]
         kwargs["name"] = users[dmuser].name if dmuser in users else dmuser
-        super(SlackDMChannel, self).__init__(eventrouter, **kwargs)
-        self.type = 'im'
+        super(SlackDMChannel, self).__init__(eventrouter, "im", **kwargs)
         self.update_color()
         self.set_name(self.slack_name)
         self.members = {self.user}
@@ -2146,9 +2145,8 @@ class SlackGroupChannel(SlackChannel):
     A group channel is a private discussion group.
     """
 
-    def __init__(self, eventrouter, **kwargs):
-        super(SlackGroupChannel, self).__init__(eventrouter, **kwargs)
-        self.type = "group"
+    def __init__(self, eventrouter, channel_type="group", **kwargs):
+        super(SlackGroupChannel, self).__init__(eventrouter, channel_type, **kwargs)
         self.set_name(self.slack_name)
 
     def set_name(self, slack_name):
@@ -2164,8 +2162,7 @@ class SlackPrivateChannel(SlackGroupChannel):
     """
 
     def __init__(self, eventrouter, **kwargs):
-        super(SlackPrivateChannel, self).__init__(eventrouter, **kwargs)
-        self.type = "private"
+        super(SlackPrivateChannel, self).__init__(eventrouter, "private", **kwargs)
 
     def set_related_server(self, team):
         super(SlackPrivateChannel, self).set_related_server(team)
@@ -2187,8 +2184,7 @@ class SlackMPDMChannel(SlackChannel):
                 for user_id in kwargs["members"]
                 if user_id != myidentifier
         ))
-        super(SlackMPDMChannel, self).__init__(eventrouter, **kwargs)
-        self.type = "mpim"
+        super(SlackMPDMChannel, self).__init__(eventrouter, "mpim", **kwargs)
 
     def open(self, update_remote=True):
         self.create_buffer()
@@ -2225,8 +2221,7 @@ class SlackMPDMChannel(SlackChannel):
 
 class SlackSharedChannel(SlackChannel):
     def __init__(self, eventrouter, **kwargs):
-        super(SlackSharedChannel, self).__init__(eventrouter, **kwargs)
-        self.type = 'shared'
+        super(SlackSharedChannel, self).__init__(eventrouter, "shared", **kwargs)
 
     def set_related_server(self, team):
         super(SlackSharedChannel, self).set_related_server(team)
