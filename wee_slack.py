@@ -1736,13 +1736,14 @@ class SlackChannel(SlackChannelCommon):
             prepend = config.shared_name_prefix
         else:
             prepend = "#"
-        sidebar_color = config.color_buflist_muted_channels if self.muted else ""
-        select = {
-            "default": prepend + self.slack_name,
-            "sidebar": colorize_string(sidebar_color, prepend + self.slack_name),
-            "long_default": "{}.{}{}".format(self.team.preferred_name, prepend, self.slack_name),
-        }
-        return select[style]
+
+        if style == "sidebar":
+            sidebar_color = config.color_buflist_muted_channels if self.muted else ""
+            return colorize_string(sidebar_color, prepend + self.slack_name)
+        elif style == "long_default":
+            return "{}.{}{}".format(self.team.preferred_name, prepend, self.slack_name)
+        else:
+            return prepend + self.slack_name
 
     def render_topic(self, fallback_to_purpose=False):
         topic = self.topic['value']
@@ -2101,18 +2102,20 @@ class SlackDMChannel(SlackChannel):
             self.color_name = ""
 
     def formatted_name(self, style="default", typing=False, present=True, enable_color=False, **kwargs):
-        prepend = ""
-        if config.show_buflist_presence:
-            prepend = "+" if present else " "
-        select = {
-            "default": self.slack_name,
-            "sidebar": prepend + self.slack_name,
-            "long_default": "{}.{}".format(self.team.preferred_name, self.slack_name),
-        }
-        if config.colorize_private_chats and enable_color:
-            return colorize_string(self.color_name, select[style])
+        if style == "sidebar":
+            prepend = ""
+            if config.show_buflist_presence:
+                prepend = "+" if present else " "
+            name = prepend + self.slack_name
+
+            if config.colorize_private_chats and enable_color:
+                return colorize_string(self.color_name, name)
+            else:
+                return name
+        elif style == "long_default":
+            return "{}.{}".format(self.team.preferred_name, self.slack_name)
         else:
-            return select[style]
+            return self.slack_name
 
     def open(self, update_remote=True):
         self.create_buffer()
@@ -2204,16 +2207,16 @@ class SlackMPDMChannel(SlackChannel):
         self.name = slack_name
 
     def formatted_name(self, style="default", typing=False, **kwargs):
-        if typing and config.channel_name_typing_indicator:
-            prepend = ">"
+        if style == "sidebar":
+            if typing and config.channel_name_typing_indicator:
+                prepend = ">"
+            else:
+                prepend = "@"
+            return prepend + self.name
+        elif style == "long_default":
+            return "{}.{}".format(self.team.preferred_name, self.name)
         else:
-            prepend = "@"
-        select = {
-            "default": self.name,
-            "sidebar": prepend + self.name,
-            "long_default": "{}.{}".format(self.team.preferred_name, self.name),
-        }
-        return select[style]
+            return self.name
 
     def rename(self):
         pass
