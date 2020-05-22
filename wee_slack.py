@@ -2068,7 +2068,7 @@ class SlackDMChannel(SlackChannel):
     def set_related_server(self, team):
         super(SlackDMChannel, self).set_related_server(team)
         if self.user not in self.team.users:
-            s = SlackRequest(self.team, 'users.info', {'user': self.slack_name}, channel=self)
+            s = SlackRequest(self.team, 'users.info', {'user': self.user}, channel=self)
             self.eventrouter.receive(s)
 
     def create_buffer(self):
