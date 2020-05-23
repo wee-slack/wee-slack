@@ -118,6 +118,12 @@ slack` after changing it to take effect.
 
 **Description:** The prefix of buffer names for groups (private channels).
 
+### history_fetch_count
+
+**Default:** `200`
+
+**Description:** The number of messages to fetch for each channel when fetching history, between 1 and 1000.
+
 ### map_underline_to
 
 **Default:** `_`

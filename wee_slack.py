@@ -70,7 +70,6 @@ SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 REPO_URL = "https://github.com/wee-slack/wee-slack"
 
-BACKLOG_SIZE = 200
 TYPING_DURATION = 6
 
 RECORD_DIR = "/tmp/weeslack-debug"
@@ -2009,7 +2008,7 @@ class SlackChannel(SlackChannelCommon):
         self.print_getting_history()
         self.pending_history_requests.add(self.identifier)
 
-        post_data = {"channel": self.identifier, "count": BACKLOG_SIZE}
+        post_data = {"channel": self.identifier, "count": config.history_fetch_count}
         if self.got_history and self.messages and not full:
             post_data["oldest"] = next(reversed(self.messages))
 
@@ -2030,7 +2029,8 @@ class SlackChannel(SlackChannelCommon):
             thread_channel.print_getting_history()
         self.pending_history_requests.add(thread_ts)
 
-        post_data = {"channel": self.identifier, "ts": thread_ts, "limit": BACKLOG_SIZE}
+        post_data = {"channel": self.identifier, "ts": thread_ts,
+                "limit": config.history_fetch_count}
         s = SlackRequest(self.team, "conversations.replies",
                 post_data, channel=self,
                 metadata={"thread_ts": thread_ts, "no_log": no_log})
@@ -5190,6 +5190,10 @@ class PluginConfig(object):
         'group_name_prefix': Setting(
             default='&',
             desc='The prefix of buffer names for groups (private channels).'),
+        'history_fetch_count': Setting(
+            default='200',
+            desc='The number of messages to fetch for each channel when fetching'
+            ' history, between 1 and 1000.'),
         'map_underline_to': Setting(
             default='_',
             desc='When sending underlined text to slack, use this formatting'
@@ -5370,6 +5374,7 @@ class PluginConfig(object):
     get_external_user_suffix = get_string
     get_files_download_location = get_string
     get_group_name_prefix = get_string
+    get_history_fetch_count = get_int
     get_map_underline_to = get_string
     get_muted_channels_activity = get_string
     get_render_bold_as = get_string
