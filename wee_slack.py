@@ -2139,12 +2139,11 @@ class SlackPrivateChannel(SlackGroupChannel):
     def __init__(self, eventrouter, **kwargs):
         super(SlackPrivateChannel, self).__init__(eventrouter, "private", **kwargs)
 
-    def set_related_server(self, team):
-        super(SlackPrivateChannel, self).set_related_server(team)
-        # Fetch members here (after the team is known) since they aren't
-        # included in rtm.start
-        s = SlackRequest(team, 'conversations.members', {'channel': self.identifier}, channel=self)
+    def get_history(self, slow_queue=False):
+        # Fetch members since they aren't included in rtm.start
+        s = SlackRequest(self.team, 'conversations.members', {'channel': self.identifier}, channel=self)
         self.eventrouter.receive(s)
+        super(SlackPrivateChannel, self).get_history(slow_queue)
 
 
 class SlackMPDMChannel(SlackChannel):
@@ -2192,18 +2191,14 @@ class SlackSharedChannel(SlackChannel):
     def __init__(self, eventrouter, **kwargs):
         super(SlackSharedChannel, self).__init__(eventrouter, "shared", **kwargs)
 
-    def set_related_server(self, team):
-        super(SlackSharedChannel, self).set_related_server(team)
-        # Fetch members here (after the team is known) since they aren't
-        # included in rtm.start
-        s = SlackRequest(team, 'conversations.members', {'channel': self.identifier}, channel=self)
-        self.eventrouter.receive(s)
-
     def get_history(self, slow_queue=False):
         # Get info for external users in the channel
         for user in self.members - set(self.team.users.keys()):
             s = SlackRequest(self.team, 'users.info', {'user': user}, channel=self)
             self.eventrouter.receive(s)
+        # Fetch members since they aren't included in rtm.start
+        s = SlackRequest(self.team, 'conversations.members', {'channel': self.identifier}, channel=self)
+        self.eventrouter.receive(s)
         super(SlackSharedChannel, self).get_history(slow_queue)
 
 
