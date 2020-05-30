@@ -3057,8 +3057,9 @@ def handle_history(message_json, eventrouter, team, channel, metadata, includes_
     channel.got_history = True
     for message in reversed(message_json["messages"]):
         message = process_message(message, eventrouter, team, channel, metadata, history_message=True)
-        if (not includes_threads and config.thread_messages_in_channel
-                and message and message.number_of_replies()):
+        if (not includes_threads and message and message.number_of_replies() and
+                (config.thread_messages_in_channel or message.subscribed and
+                    SlackTS(message.message_json.get("latest_reply", 0)) > message.last_read)):
             channel.get_thread_history(message.ts, metadata["slow_queue"], metadata["no_log"])
 
     channel.pending_history_requests.discard(channel.identifier)
