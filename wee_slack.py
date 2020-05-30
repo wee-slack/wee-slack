@@ -4480,8 +4480,9 @@ def subscribe_helper(current_buffer, args, usage, api):
         print_message_not_found_error(args)
         return w.WEECHAT_RC_OK_EAT
 
-    s = SlackRequest(team, api,
-            {"channel": channel.identifier, "thread_ts": message.ts}, channel=channel)
+    last_read = next(reversed(message.submessages), message.ts)
+    post_data = {"channel": channel.identifier, "thread_ts": message.ts, "last_read": last_read}
+    s = SlackRequest(team, api, post_data, channel=channel)
     EVENTROUTER.receive(s)
     return w.WEECHAT_RC_OK_EAT
 
