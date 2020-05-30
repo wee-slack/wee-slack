@@ -2815,7 +2815,7 @@ class SlackMessage(object):
         else:
             return
 
-        self.last_notify = SlackTS()
+        self.last_notify = max(message.ts, SlackTS())
 
         if config.auto_open_threads:
             self.open_thread()
