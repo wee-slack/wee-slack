@@ -2452,6 +2452,8 @@ class SlackThreadChannel(SlackChannelCommon):
         return styles[style]
 
     def mark_read(self, ts=None, update_remote=True, force=False, post_data={}):
+        if not self.parent_message.subscribed:
+            return
         args = {"thread_ts": self.thread_ts}
         args.update(post_data)
         super(SlackThreadChannel, self).mark_read(ts=ts, update_remote=update_remote, force=force, post_data=args)
