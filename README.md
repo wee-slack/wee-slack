@@ -426,10 +426,6 @@ some noteworthy:
     suspend), they will not appear in the hotlist.
 - If you use an OAuth token or a legacy token instead of a session token:
   - Threads, shared channels and channels that has been converted from public to private can only be marked as read locally, it won't sync to Slack. This means they will be unread again after reloading the script.
-    public to private as read won't work.
-- For shared channels and channels that has been converted from public to private:
-  - The option `thread_messages_in_channel` is only working for messages which
-    arrive after the channel history has been loaded.
 
 Development
 -----------
