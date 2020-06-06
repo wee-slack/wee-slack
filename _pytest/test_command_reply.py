@@ -18,7 +18,7 @@ def test_replying_to_child_should_use_parent_ts(realish_eventrouter, team, chann
         realish_eventrouter.receive_ws_callback(team.team_hash, None)
         realish_eventrouter.handle_next()
 
-    child_hash = channel_general.hash_message(child_ts)
+    child_hash = channel_general.hashed_messages[child_ts]
     command_reply(None, channel_general.channel_buffer, '${} test'.format(child_hash))
 
     sent = json.loads(team.ws.sentdata[0])

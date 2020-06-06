@@ -12,7 +12,7 @@ from websocket import ABNF
 sys.path.append(".")
 
 import wee_slack
-from wee_slack import EventRouter, SlackRequest
+from wee_slack import EventRouter, SlackRequest, initiate_connection
 
 class fakewebsocket(object):
     def __init__(self):
@@ -38,7 +38,7 @@ def mock_websocket():
 def realish_eventrouter(mock_websocket, mock_weechat):
     e = EventRouter()
     wee_slack.EVENTROUTER = e
-    context = e.store_context(SlackRequest(None, 'rtm.start', {}, token='xoxs-token'))
+    context = e.store_context(initiate_connection('xoxs-token'))
     with open('_pytest/data/http/rtm.start.json') as rtmstartfile:
         if sys.version_info.major == 2:
             rtmstartdata = rtmstartfile.read().decode('utf-8')
@@ -107,6 +107,8 @@ class FakeWeechat():
         return self.config.get(key, "")
     def config_get(self, key):
         return ""
+    def config_integer(self, key):
+        return 1000
     def config_set_plugin(self, key, value):
         self.config[key] = value
     def config_string(self, key):

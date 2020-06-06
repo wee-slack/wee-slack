@@ -112,7 +112,7 @@ Drawbacks of OAuth tokens:
 - If the team is restricting app installations, wee-slack has to be approved by an admin.
 - For free teams, wee-slack will use one of the ten app slots.
 - The subscribe and unsubscribe commands won't work.
-- Marking threads, shared channels and channels that has been converted from public to private as read won't work.
+- Threads, shared channels and channels that has been converted from public to private can only be marked as read locally, it won't sync to Slack. This means they will be unread again after reloading the script.
 
 Drawbacks of session tokens:
 - These tokens can't be revoked, so be careful not to loose them.
@@ -417,12 +417,17 @@ Not all issues are listed here (see
 [issues](https://github.com/wee-slack/wee-slack/issues) for all), but these are
 some noteworthy:
 
-- For channels initially created as a public channel, but later converted to a private channel:
-  - Which messages that has been read is not synced to Slack.
-  - If the option `background_load_all_history` is false, the channel will not
-    be shown as unread when wee-slack loads, even if there are unread messages.
-    Messages which arrive after wee-slack has loaded however will mark the
-    channel as unread.
+- If you set `background_load_all_history` to `false`:
+  - Shared channels and channels that has been converted from public to private
+    will not be shown as unread when wee-slack loads, even if there are unread
+    messages. Messages which arrive after wee-slack has loaded however will
+    mark the channel as unread.
+  - If messages arrive while the connection to Slack is lost (e.g. during
+    suspend), they will not appear in the hotlist.
+- If you use an OAuth token or a legacy token instead of a session token:
+  - Threads, shared channels and channels that has been converted from public to private can only be marked as read locally, it won't sync to Slack. This means they will be unread again after reloading the script.
+    public to private as read won't work.
+- For shared channels and channels that has been converted from public to private:
   - The option `thread_messages_in_channel` is only working for messages which
     arrive after the channel history has been loaded.
 
