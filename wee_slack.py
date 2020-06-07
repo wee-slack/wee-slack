@@ -1357,7 +1357,7 @@ class SlackTeam(object):
         elif config.short_buffer_names:
             self.name = self.subdomain
         else:
-            self.name = self.domain
+            self.name = "slack.{}".format(self.subdomain)
 
     def create_buffer(self):
         if not self.channel_buffer:
