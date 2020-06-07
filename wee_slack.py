@@ -3934,7 +3934,9 @@ def modify_buffer_line(buffer_pointer, ts, new_text):
     line_pointer = w.hdata_pointer(hdata.lines, own_lines, 'last_line')
 
     # Find the last line with this ts
+    is_last_line = True
     while line_pointer and hdata_line_ts(line_pointer) != ts:
+        is_last_line = False
         line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
 
     # Find all lines for the message
@@ -3944,10 +3946,36 @@ def modify_buffer_line(buffer_pointer, ts, new_text):
         line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
     pointers.reverse()
 
-    # Split the message into at most the number of existing lines as we can't insert new lines
-    lines = new_text.split('\n', len(pointers) - 1)
-    # Replace newlines to prevent garbled lines in bare display mode
-    lines = [line.replace('\n', ' | ') for line in lines]
+    if not pointers:
+        return w.WEECHAT_RC_OK
+
+    if is_last_line:
+        lines = new_text.split('\n')
+        extra_lines_count = len(lines) - len(pointers)
+        if extra_lines_count > 0:
+            line_data = w.hdata_pointer(hdata.line, pointers[0], 'data')
+            tags_count = w.hdata_integer(hdata.line_data, line_data, 'tags_count')
+            tags = [w.hdata_string(hdata.line_data, line_data, '{}|tags_array'.format(i))
+                    for i in range(tags_count)]
+            tags = tags_set_notify_none(tags)
+            tags_str = ','.join(tags)
+            last_read_line = w.hdata_pointer(hdata.lines, own_lines, 'last_read_line')
+            should_set_unread = last_read_line == pointers[-1]
+
+            # Insert new lines to match the number of lines in the message
+            w.buffer_set(buffer_pointer, "print_hooks_enabled", "0")
+            for _ in range(extra_lines_count):
+                w.prnt_date_tags(buffer_pointer, ts.major, tags_str, " \t ")
+                pointers.append(w.hdata_pointer(hdata.lines, own_lines, 'last_line'))
+            if should_set_unread:
+                w.buffer_set(buffer_pointer, "unread", "")
+            w.buffer_set(buffer_pointer, "print_hooks_enabled", "1")
+    else:
+        # Split the message into at most the number of existing lines as we can't insert new lines
+        lines = new_text.split('\n', len(pointers) - 1)
+        # Replace newlines to prevent garbled lines in bare display mode
+        lines = [line.replace('\n', ' | ') for line in lines]
+
     # Extend lines in case the new message is shorter than the old as we can't delete lines
     lines += [''] * (len(pointers) - len(lines))
 
@@ -3978,6 +4006,13 @@ def format_nick(nick, previous_nick=None):
     return colorize_string(nick_prefix_color_name, nick_prefix) + nick + colorize_string(nick_suffix_color_name, nick_suffix)
 
 
+def tags_set_notify_none(tags):
+    notify_tags = {"notify_highlight", "notify_message", "notify_private"}
+    tags = [tag for tag in tags if tag not in notify_tags]
+    tags += ["notify_none"]
+    return tags
+
+
 def tag(ts, tagset=None, user=None, self_msg=False, backlog=False, no_log=False, extra_tags=None):
     tagsets = {
         "team_info": ["no_highlight", "log3"],
@@ -3993,8 +4028,7 @@ def tag(ts, tagset=None, user=None, self_msg=False, backlog=False, no_log=False,
     nick_tag = ["nick_{}".format(user).replace(" ", "_")] if user else []
     tags = [ts_tag, slack_tag] + nick_tag + tagsets.get(tagset, [])
     if self_msg or backlog:
-        tags = [x for x in tags if x not in ["notify_highlight", "notify_message", "notify_private"]]
-        tags += ["notify_none"]
+        tags = tags_set_notify_none(tags)
         if self_msg:
             tags += ["self_msg", "no_highlight"]
         if backlog:
