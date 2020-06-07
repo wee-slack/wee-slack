@@ -2321,11 +2321,11 @@ class SlackPrivateChannel(SlackGroupChannel):
     def __init__(self, eventrouter, **kwargs):
         super(SlackPrivateChannel, self).__init__(eventrouter, "private", **kwargs)
 
-    def get_history(self, slow_queue=False):
+    def get_history(self, slow_queue=False, full=False, no_log=False):
         # Fetch members since they aren't included in rtm.start
         s = SlackRequest(self.team, 'conversations.members', {'channel': self.identifier}, channel=self)
         self.eventrouter.receive(s)
-        super(SlackPrivateChannel, self).get_history(slow_queue)
+        super(SlackPrivateChannel, self).get_history(slow_queue, full, no_log)
 
 
 class SlackMPDMChannel(SlackChannel):
