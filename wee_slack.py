@@ -3994,9 +3994,9 @@ def tag(ts, tagset=None, user=None, self_msg=False, backlog=False, no_log=False,
     tags = [ts_tag, slack_tag] + nick_tag + tagsets.get(tagset, [])
     if self_msg or backlog:
         tags = [x for x in tags if x not in ["notify_highlight", "notify_message", "notify_private"]]
-        tags += ["notify_none", "no_highlight"]
+        tags += ["notify_none"]
         if self_msg:
-            tags += ["self_msg"]
+            tags += ["self_msg", "no_highlight"]
         if backlog:
             tags += ["logger_backlog"]
     if no_log:
