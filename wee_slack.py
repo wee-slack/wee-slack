@@ -3061,6 +3061,7 @@ def handle_mpimopen(mpim_json, eventrouter, team, channel, metadata, object_name
 
 def handle_history(message_json, eventrouter, team, channel, metadata, includes_threads=True):
     channel.got_history = True
+    channel.history_needs_update = False
     for message in reversed(message_json["messages"]):
         message = process_message(message, eventrouter, team, channel, metadata, history_message=True)
         if (not includes_threads and message and message.number_of_replies() and
@@ -3092,6 +3093,8 @@ def handle_conversationsreplies(message_json, eventrouter, team, channel, metada
     channel.pending_history_requests.discard(metadata.get('thread_ts'))
     thread_channel = channel.thread_channels.get(metadata.get('thread_ts'))
     if thread_channel and thread_channel.active:
+        thread_channel.got_history = True
+        thread_channel.history_needs_update = False
         thread_channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
     if config.thread_messages_in_channel:
         channel.reprint_messages(history_message=True, no_log=metadata["no_log"])
