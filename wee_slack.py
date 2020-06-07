@@ -1299,7 +1299,7 @@ class SlackTeam(object):
         self.team_info = team_info
         self.subdomain = team_info["domain"]
         self.domain = self.subdomain + ".slack.com"
-        self.preferred_name = self.domain
+        self.set_name()
         self.nick = nick
         self.myidentifier = myidentifier
         self.my_manual_presence = my_manual_presence
@@ -1312,7 +1312,6 @@ class SlackTeam(object):
             self.channels = channels
         self.users = users
         self.bots = bots
-        self.name = self.domain
         self.channel_buffer = None
         self.got_history = True
         self.history_needs_update = False
@@ -1351,20 +1350,22 @@ class SlackTeam(object):
     def generate_usergroup_map(self):
         return {s.handle: s.identifier for s in self.subteams.values()}
 
+    def set_name(self):
+        alias = config.server_aliases.get(self.subdomain)
+        if alias:
+            self.name = alias
+        elif config.short_buffer_names:
+            self.name = self.subdomain
+        else:
+            self.name = self.domain
+
     def create_buffer(self):
         if not self.channel_buffer:
-            alias = config.server_aliases.get(self.subdomain)
-            if alias:
-                self.preferred_name = alias
-            elif config.short_buffer_names:
-                self.preferred_name = self.subdomain
-            else:
-                self.preferred_name = self.domain
-            self.channel_buffer = w.buffer_new(self.preferred_name, "buffer_input_callback", "EVENTROUTER", "", "")
+            self.channel_buffer = w.buffer_new(self.name, "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'server')
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.nick)
-            w.buffer_set(self.channel_buffer, "localvar_set_server", self.preferred_name)
+            w.buffer_set(self.channel_buffer, "localvar_set_server", self.name)
             self.buffer_merge()
 
     def buffer_merge(self, config_value=None):
@@ -1799,7 +1800,7 @@ class SlackChannel(SlackChannelCommon):
             sidebar_color = config.color_buflist_muted_channels if self.muted else ""
             return colorize_string(sidebar_color, prepend + self.slack_name)
         elif style == "long_default":
-            return "{}.{}{}".format(self.team.preferred_name, prepend, self.slack_name)
+            return "{}.{}{}".format(self.team.name, prepend, self.slack_name)
         else:
             return prepend + self.slack_name
 
@@ -1897,7 +1898,7 @@ class SlackChannel(SlackChannelCommon):
             self.set_highlights()
             self.set_topic()
             if self.channel_buffer:
-                w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.preferred_name)
+                w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.name)
         self.update_nicklist()
 
         info_method = self.team.slack_api_translator[self.type].get("info")
@@ -2280,7 +2281,7 @@ class SlackDMChannel(SlackChannel):
             else:
                 return name
         elif style == "long_default":
-            return "{}.{}".format(self.team.preferred_name, self.slack_name)
+            return "{}.{}".format(self.team.name, self.slack_name)
         else:
             return self.slack_name
 
@@ -2361,7 +2362,7 @@ class SlackMPDMChannel(SlackChannel):
                 prepend = "@"
             return prepend + self.slack_name
         elif style == "long_default":
-            return "{}.{}".format(self.team.preferred_name, self.slack_name)
+            return "{}.{}".format(self.team.name, self.slack_name)
         else:
             return self.slack_name
 
@@ -2533,7 +2534,7 @@ class SlackThreadChannel(SlackChannelCommon):
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
-            w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.preferred_name)
+            w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.name)
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar"))
             self.set_highlights()
             time_format = w.config_string(w.config_get("weechat.look.buffer_time_format"))
@@ -3304,7 +3305,7 @@ def download_files(message_json, team):
             continue
 
         filetype = '' if f['title'].endswith(f['filetype']) else '.' + f['filetype']
-        filename = '{}_{}{}'.format(team.preferred_name, f['title'], filetype)
+        filename = '{}_{}{}'.format(team.name, f['title'], filetype)
         for fileout in fileout_iter(os.path.join(download_location, filename)):
             if os.path.isfile(fileout):
                 continue
@@ -3513,7 +3514,7 @@ def process_subteam_updated(subteam_json, eventrouter, team, channel, metadata):
 
     if config.notify_usergroup_handle_updated and current_subteam_info.handle != new_subteam_info.handle:
         message = 'User group {old_handle} has updated its handle to {new_handle} in team {team}.'.format(
-            name=current_subteam_info.handle, handle=new_subteam_info.handle, team=team.preferred_name)
+            name=current_subteam_info.handle, handle=new_subteam_info.handle, team=team.name)
         team.buffer_prnt(message, message=True)
 
 
