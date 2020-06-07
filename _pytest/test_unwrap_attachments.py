@@ -12,7 +12,7 @@ import pytest
         'input_text_before': "Text before",
         'output': "\n".join([
             "",
-            "Title",
+            "| Title",
         ]),
     },
     {
@@ -25,9 +25,9 @@ import pytest
         }]},
         'input_text_before': "",
         'output': "\n".join([
-            "Title (http://title.link)",
-            "http://from.url",
-            "Attachment text",
+            "| Title (http://title.link)",
+            "| http://from.url",
+            "| Attachment text",
         ]),
     },
     {
@@ -40,9 +40,9 @@ import pytest
         }]},
         'input_text_before': "",
         'output': "\n".join([
-            "Title (http://title.link)",
-            "Attachment text",
-            "http://image.url",
+            "| Title (http://title.link)",
+            "| Attachment text",
+            "| http://image.url",
         ]),
     },
     {
@@ -56,8 +56,8 @@ import pytest
         'input_text_before': "http://link?a=1&amp;b=2",
         'output': "\n".join([
             "",
-            "Title",
-            "Attachment text",
+            "| Title",
+            "| Attachment text",
         ]),
     },
     {
@@ -71,8 +71,8 @@ import pytest
         'input_text_before': "http://link?a=1&amp;b=2",
         'output': "\n".join([
             "",
-            "Title",
-            "Attachment text",
+            "| Title",
+            "| Attachment text",
         ]),
     },
     {
@@ -85,8 +85,8 @@ import pytest
         }]},
         'input_text_before': "",
         'output': "\n".join([
-            "Title (http://link)",
-            "Attachment text",
+            "| Title (http://link)",
+            "| Attachment text",
         ]),
     },
     {
@@ -98,9 +98,9 @@ import pytest
         }]},
         'input_text_before': "",
         'output': "\n".join([
-            "Title",
-            "http://link",
-            "Attachment text",
+            "| Title",
+            "| http://link",
+            "| Attachment text",
         ]),
     },
     {
@@ -110,8 +110,9 @@ import pytest
         }]},
         'input_text_before': "",
         'output': "\n".join([
-            "Title",
-            "Attachment text\nWith multiple lines",
+            "| Title",
+            "| Attachment text",
+            "| With multiple lines",
         ]),
     },
     {
@@ -125,10 +126,10 @@ import pytest
         }]},
         'input_text_before': "",
         'output': "\n".join([
-            "Pretext",
-            "Author: Title (http://title.link)",
-            "http://from.url",
-            "Attachment text",
+            "| Pretext",
+            "| Author: Title (http://title.link)",
+            "| http://from.url",
+            "| Attachment text",
         ]),
     },
     {
@@ -140,8 +141,8 @@ import pytest
         }]},
         'input_text_before': "",
         'output': "\n".join([
-            "http://from.url",
-            "Author: Attachment text",
+            "| http://from.url",
+            "| Author: Attachment text",
         ]),
     },
     {
@@ -149,7 +150,7 @@ import pytest
             'fallback': 'Fallback',
         }]},
         'input_text_before': "",
-        'output': "Fallback",
+        'output': "| Fallback",
     },
     {
         'input_message': {'attachments': [{
@@ -182,8 +183,8 @@ import pytest
         }]},
         'input_text_before': "",
         'output': "\n".join([
-            "Some message",
-            "Thread in #general",
+            "| Some message",
+            "| Thread in #general",
         ]),
     },
     {
@@ -194,8 +195,8 @@ import pytest
         }]},
         'input_text_before': "",
         'output': "\n".join([
-            "Some message",
-            "Thread in #general | Mar 23, 2020",
+            "| Some message",
+            "| Thread in #general | Mar 23, 2020",
         ]),
     },
     {
@@ -206,8 +207,8 @@ import pytest
         }]},
         'input_text_before': "",
         'output': "\n".join([
-            "Some message",
-            "Thread in #general | Mar 23, 2020",
+            "| Some message",
+            "| Thread in #general | Mar 23, 2020",
         ]),
     },
     {
@@ -222,8 +223,8 @@ import pytest
         }]},
         'input_text_before': "",
         'output': "\n".join([
-            "Original message",
-            "http://link (File)",
+            "| Original message",
+            "| http://link (File)",
         ]),
     },
     {
@@ -239,9 +240,9 @@ import pytest
         }]},
         'input_text_before': "",
         'output': "\n".join([
-            "Title",
-            "First field title: First field value",
-            "Second field value",
+            "| Title",
+            "| First field title: First field value",
+            "| Second field value",
         ]),
     },
     {
@@ -258,12 +259,12 @@ import pytest
         }]},
         'input_text_before': "",
         'output': "\n".join([
-            "First attachment title (http://title.link.1)",
-            "http://from.url.1",
-            "First attachment text",
-            "Second attachment title (http://title.link.2)",
-            "http://from.url.2",
-            "Second attachment text",
+            "| First attachment title (http://title.link.1)",
+            "| http://from.url.1",
+            "| First attachment text",
+            "| Second attachment title (http://title.link.2)",
+            "| http://from.url.2",
+            "| Second attachment text",
         ]),
     },
 ))

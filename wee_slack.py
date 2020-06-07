@@ -3811,7 +3811,8 @@ def unwrap_attachments(message_json, text_before):
             if t == [] and fallback and not link_shown:
                 t.append(fallback)
             if t:
-                attachment_texts.append("\n".join([x.strip() for x in t if x]))
+                lines = [line for part in t for line in part.strip().split("\n") if part]
+                attachment_texts.extend("| {}".format(line) for line in lines)
     return "\n".join(attachment_texts)
 
 
