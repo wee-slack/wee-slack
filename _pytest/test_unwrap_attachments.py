@@ -267,6 +267,26 @@ import pytest
             "| Second attachment text",
         ]),
     },
+    {
+        'input_message': {'attachments': [{
+            'title': 'Title',
+            'color': 'ff0000',
+        }]},
+        'input_text_before': "",
+        'output': "\n".join([
+            "<[color 16711680]>|<[color reset]> Title",
+        ]),
+    },
+    {
+        'input_message': {'attachments': [{
+            'title': 'Title',
+            'color': '#ff0000',
+        }]},
+        'input_text_before': "",
+        'output': "\n".join([
+            "<[color 16711680]>|<[color reset]> Title",
+        ]),
+    },
 ))
 def test_unwrap_attachments(case):
     result = wee_slack.unwrap_attachments(

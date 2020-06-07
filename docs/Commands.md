@@ -61,7 +61,7 @@ Hide the current channel if it is marked as distracting.
 ### label
 
 ```
-/label <name>
+/label <name>|-unset
 ```
 
 Rename a channel or thread buffer. Note that this only changes the short

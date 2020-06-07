@@ -76,6 +76,12 @@ slack` after changing it to take effect.
 
 **Description:** Color to use for the typing notice.
 
+### colorize_attachments
+
+**Default:** `prefix`
+
+**Description:** Whether to colorize attachment lines. Values: "prefix": Only colorize the prefix, "all": Colorize the whole line, "none": Don't colorize.
+
 ### colorize_private_chats
 
 **Default:** `false`

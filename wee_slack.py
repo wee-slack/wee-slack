@@ -3812,7 +3812,18 @@ def unwrap_attachments(message_json, text_before):
                 t.append(fallback)
             if t:
                 lines = [line for part in t for line in part.strip().split("\n") if part]
-                attachment_texts.extend("| {}".format(line) for line in lines)
+                prefix = '|'
+                line_color = None
+                color = attachment.get('color')
+                if color and config.colorize_attachments != "none":
+                    weechat_color = w.info_get("color_rgb2term", str(int(color.lstrip("#"), 16)))
+                    if config.colorize_attachments == "prefix":
+                        prefix = colorize_string(weechat_color, prefix)
+                    elif config.colorize_attachments == "all":
+                        line_color = weechat_color
+                attachment_texts.extend(
+                        colorize_string(line_color, "{} {}".format(prefix, line))
+                        for line in lines)
     return "\n".join(attachment_texts)
 
 
@@ -5230,6 +5241,10 @@ class PluginConfig(object):
         'color_typing_notice': Setting(
             default='yellow',
             desc='Color to use for the typing notice.'),
+        'colorize_attachments': Setting(
+            default='prefix',
+            desc='Whether to colorize attachment lines. Values: "prefix": Only colorize'
+            ' the prefix, "all": Colorize the whole line, "none": Don\'t colorize.'),
         'colorize_private_chats': Setting(
             default='false',
             desc='Whether to use nick-colors in DM windows.'),
@@ -5435,6 +5450,7 @@ class PluginConfig(object):
     get_color_reaction_suffix_added_by_you = get_string
     get_color_thread_suffix = get_string
     get_color_typing_notice = get_string
+    get_colorize_attachments = get_string
     get_debug_level = get_int
     get_external_user_suffix = get_string
     get_files_download_location = get_string

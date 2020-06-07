@@ -117,6 +117,11 @@ class FakeWeechat():
         return ""
     def color(self, name):
         return "<[color {}]>".format(name)
+    def info_get(self, info_name, arguments):
+        if info_name == "color_rgb2term":
+            return arguments
+        else:
+            return ""
     def __getattr__(self, name):
         def method(*args):
             pass
