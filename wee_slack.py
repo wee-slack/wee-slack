@@ -1941,16 +1941,13 @@ class SlackChannel(SlackChannelCommon):
             self_msg = tag_nick == self.team.nick
             tags = tag(ts, tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, no_log=no_log, extra_tags=extra_tags)
 
-            try:
-                if (config.unhide_buffers_with_activity
-                        and not self.is_visible() and not self.muted):
-                    w.buffer_set(self.channel_buffer, "hidden", "0")
+            if (config.unhide_buffers_with_activity
+                    and not self.is_visible() and not self.muted):
+                w.buffer_set(self.channel_buffer, "hidden", "0")
 
-                w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
-                if backlog or self_msg:
-                    self.mark_read(ts, update_remote=False, force=True)
-            except:
-                dbg("Problem processing buffer_prnt")
+            w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
+            if backlog or self_msg:
+                self.mark_read(ts, update_remote=False, force=True)
 
     def send_message(self, message, subtype=None, request_dict_ext={}):
         message = linkify_text(message, self.team)
