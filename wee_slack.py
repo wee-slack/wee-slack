@@ -1565,8 +1565,10 @@ class SlackChannelCommon(object):
     def print_getting_history(self):
         if self.channel_buffer:
             ts = SlackTS()
+            w.buffer_set(self.channel_buffer, "print_hooks_enabled", "0")
             w.prnt_date_tags(self.channel_buffer, ts.major,
                     tag(ts, backlog=True, no_log=True), '\tgetting channel history...')
+            w.buffer_set(self.channel_buffer, "print_hooks_enabled", "1")
 
     def reprint_messages(self, history_message=False, no_log=True, force_render=False):
         if self.channel_buffer:
@@ -1945,7 +1947,11 @@ class SlackChannel(SlackChannelCommon):
                     and not self.is_visible() and not self.muted):
                 w.buffer_set(self.channel_buffer, "hidden", "0")
 
+            if no_log:
+                w.buffer_set(self.channel_buffer, "print_hooks_enabled", "0")
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
+            if no_log:
+                w.buffer_set(self.channel_buffer, "print_hooks_enabled", "1")
             if backlog or self_msg:
                 self.mark_read(ts, update_remote=False, force=True)
 
@@ -2471,7 +2477,11 @@ class SlackThreadChannel(SlackChannelCommon):
             self_msg = tag_nick == self.team.nick
             tags = tag(ts, tagset, user=tag_nick, self_msg=self_msg, backlog=backlog, no_log=no_log, extra_tags=extra_tags)
 
+            if no_log:
+                w.buffer_set(self.channel_buffer, "print_hooks_enabled", "0")
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
+            if no_log:
+                w.buffer_set(self.channel_buffer, "print_hooks_enabled", "1")
             if backlog or self_msg:
                 self.mark_read(ts, update_remote=False, force=True)
 
@@ -4959,6 +4969,7 @@ def create_slack_debug_buffer():
     if slack_debug is None:
         debug_string = None
         slack_debug = w.buffer_new("slack-debug", "", "", "closed_slack_debug_buffer_cb", "")
+        w.buffer_set(slack_debug, "print_hooks_enabled", "0")
         w.buffer_set(slack_debug, "notify", "0")
         w.buffer_set(slack_debug, "highlight_tags_restrict", "highlight_force")
 
