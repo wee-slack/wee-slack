@@ -1455,7 +1455,7 @@ class SlackTeam(object):
                     self.connecting_ws = False
                 self.ws = ws
                 self.set_reconnect_url(None)
-                self.set_connected(reconnect)
+                self.set_connected()
             elif not self.connecting_rtm:
                 # The fast reconnect failed, so start over-ish
                 for chan in self.channels:
@@ -1464,21 +1464,21 @@ class SlackTeam(object):
                 self.eventrouter.receive(s)
                 self.connecting_rtm = True
 
-    def set_connected(self, reconnect):
+    def set_connected(self):
         self.connected = True
         self.last_pong_time = time.time()
         self.buffer_prnt('Connected to Slack team {} ({}) with username {}'.format(
             self.team_info["name"], self.domain, self.nick))
         dbg("connected to {}".format(self.domain))
 
-        if not config.background_load_all_history:
-            current_channel = self.eventrouter.weechat_controller.buffers.get(w.current_buffer())
-            if isinstance(current_channel, SlackChannelCommon) and current_channel.team == self:
-                current_channel.get_history(slow_queue=True)
-        elif reconnect:
+        if config.background_load_all_history:
             for channel in self.channels.values():
                 if channel.channel_buffer:
                     channel.get_history(slow_queue=True)
+        else:
+            current_channel = self.eventrouter.weechat_controller.buffers.get(w.current_buffer())
+            if isinstance(current_channel, SlackChannelCommon) and current_channel.team == self:
+                current_channel.get_history(slow_queue=True)
 
     def set_disconnected(self):
         w.unhook(self.hook)
@@ -1848,8 +1848,6 @@ class SlackChannel(SlackChannelCommon):
         is_open = self.is_open if hasattr(self, "is_open") else self.is_member
         if is_open or self.unread_count_display:
             self.create_buffer()
-            if config.background_load_all_history:
-                self.get_history(slow_queue=True)
 
     def set_related_server(self, team):
         self.team = team
