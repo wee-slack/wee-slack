@@ -116,7 +116,7 @@ class FakeWeechat():
     def config_string(self, key):
         return ""
     def color(self, name):
-        return ""
+        return "<[color {}]>".format(name)
     def __getattr__(self, name):
         def method(*args):
             pass

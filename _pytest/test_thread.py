@@ -25,7 +25,7 @@ def test_message_has_thread_suffix(realish_eventrouter, team, channel_general):
     realish_eventrouter.handle_next()
 
     message_text = channel_general.messages[thread_ts].message_json['_rendered_text']
-    assert message_text == 'generally, yep! [ Thread: 309 Replies: 1 ]'
+    assert message_text == 'generally, yep! <[color lightcyan]>[ Thread: 309 Replies: 1 ]<[color reset]>'
 
     datafile = '_pytest/data/websocket/1485975842.1-message.json'
     data = json.loads(open(datafile).read())
@@ -34,4 +34,4 @@ def test_message_has_thread_suffix(realish_eventrouter, team, channel_general):
     realish_eventrouter.handle_next()
 
     message_text = channel_general.messages[thread_ts].message_json['_rendered_text']
-    assert message_text == 'generally, yep! [ Thread: 309 Replies: 2 ]'
+    assert message_text == 'generally, yep! <[color lightcyan]>[ Thread: 309 Replies: 2 ]<[color reset]>'

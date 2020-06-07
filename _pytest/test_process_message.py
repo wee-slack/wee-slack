@@ -45,4 +45,5 @@ def test_process_message(realish_eventrouter, team, user_alice):
     deleted_message_channel = team.channels['G3ZGMF4RZ']
     deleted_message_ts = SlackTS('1485975698.000002')
     assert list(deleted_message_channel.messages.keys()) == [deleted_message_ts]
-    assert deleted_message_channel.messages[deleted_message_ts].message_json['text'] == '(deleted)'
+    deleted_str = '<[color red]>(deleted)<[color reset]>'
+    assert deleted_message_channel.messages[deleted_message_ts].message_json['text'] == deleted_str
