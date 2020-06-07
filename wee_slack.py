@@ -2895,6 +2895,9 @@ class SlackTS(object):
     def __eq__(self, other):
         return self.__cmp__(other) == 0
 
+    def __ne__(self, other):
+        return self.__cmp__(other) != 0
+
     def __ge__(self, other):
         return self.__cmp__(other) >= 0
 
