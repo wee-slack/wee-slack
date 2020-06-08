@@ -2714,7 +2714,7 @@ class SlackMessage(object):
             return self.message_json["_rendered_text"]
 
         blocks = self.message_json.get("blocks", [])
-        blocks_rendered = unfurl_blocks(blocks)
+        blocks_rendered = "\n".join(unfurl_blocks(blocks))
         has_rich_text = any(block["type"] == "rich_text" for block in blocks)
         if has_rich_text:
             text = self.message_json.get("text", "")
@@ -3671,7 +3671,7 @@ def unfurl_blocks(blocks):
                 dbg('Unsupported block: "{}"'.format(json.dumps(block)), level=4)
         except Exception as e:
             dbg("Failed to unfurl block ({}): {}".format(repr(e), json.dumps(block)), level=4)
-    return "\n".join(block_text)
+    return block_text
 
 
 def unfurl_block_element(text):
@@ -3776,6 +3776,9 @@ def unwrap_attachments(message_json, text_before):
                 tx = re.sub(r' *\n[\n ]+', '\n', atext)
                 t.append(prepend_title_text + tx)
                 prepend_title_text = ''
+
+            blocks = attachment.get("blocks", [])
+            t.extend(unfurl_blocks(blocks))
 
             image_url = attachment.get('image_url', '')
             if (image_url not in text_before and image_url not in text_before_unescaped
