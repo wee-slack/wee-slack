@@ -1552,8 +1552,8 @@ class SlackChannelCommon(object):
                 prefix = message.sender
 
         extra_tags = None
-        if isinstance(message, SlackThreadMessage) and not thread_channel:
-            if config.thread_messages_in_channel or message.subtype == "thread_broadcast":
+        if message.subtype == "thread_message" and not thread_channel:
+            if config.thread_messages_in_channel:
                 extra_tags = [message.subtype]
             else:
                 return
