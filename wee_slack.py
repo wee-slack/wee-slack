@@ -2171,8 +2171,9 @@ class SlackChannelVisibleMessages(MappingReversible):
         if ts < self.first_ts_to_display:
             return False
 
-        if (not config.thread_messages_in_channel and
-                isinstance(self.get(ts), SlackThreadMessage)):
+        message = self.get(ts)
+        if (message and message.subtype == "thread_message" and
+                not config.thread_messages_in_channel):
             return False
 
         return True
