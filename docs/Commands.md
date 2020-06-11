@@ -64,8 +64,9 @@ Hide the current channel if it is marked as distracting.
 /label <name>
 ```
 
-Rename a thread buffer. Note that this is not permanent. It will only last
-as long as you keep the buffer and wee-slack open.
+Rename a channel or thread buffer. Note that this only changes the short
+name and that it's not permanent. It will only last as long as you keep the
+buffer and wee-slack open.
 
 ### linkarchive
 

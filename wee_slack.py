@@ -1526,6 +1526,9 @@ class SlackTeam(object):
 
 
 class SlackChannelCommon(object):
+    def __init__(self):
+        self.label = None
+
     def prnt_message(self, message, history_message=False, no_log=False, force_render=False):
         text = self.render(message, force_render)
         thread_channel = isinstance(self, SlackThreadChannel)
@@ -1711,6 +1714,7 @@ class SlackChannel(SlackChannelCommon):
     """
 
     def __init__(self, eventrouter, channel_type="channel", **kwargs):
+        super(SlackChannel, self).__init__()
         self.active = False
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -1802,7 +1806,8 @@ class SlackChannel(SlackChannelCommon):
 
         if style == "sidebar":
             sidebar_color = config.color_buflist_muted_channels if self.muted else ""
-            return colorize_string(sidebar_color, prepend + self.slack_name)
+            name = self.label or self.slack_name
+            return colorize_string(sidebar_color, prepend + name)
         elif style == "long_default":
             return "{}.{}{}".format(self.team.name, prepend, self.slack_name)
         else:
@@ -2277,7 +2282,7 @@ class SlackDMChannel(SlackChannel):
                 prepend = " "
             else:
                 prepend = ""
-            name = prepend + self.slack_name
+            name = prepend + (self.label or self.slack_name)
 
             if config.colorize_private_chats:
                 return colorize_string(self.color_name, name)
@@ -2363,7 +2368,7 @@ class SlackMPDMChannel(SlackChannel):
                 prepend = ">"
             else:
                 prepend = "@"
-            return prepend + self.slack_name
+            return prepend + (self.label or self.slack_name)
         elif style == "long_default":
             return "{}.{}".format(self.team.name, self.slack_name)
         else:
@@ -2392,6 +2397,7 @@ class SlackThreadChannel(SlackChannelCommon):
     """
 
     def __init__(self, eventrouter, parent_channel, thread_ts):
+        super(SlackThreadChannel, self).__init__()
         self.active = False
         self.eventrouter = eventrouter
         self.parent_channel = parent_channel
@@ -2401,7 +2407,6 @@ class SlackThreadChannel(SlackChannelCommon):
         self.type = "thread"
         self.got_history = False
         self.history_needs_update = False
-        self.label = None
         self.team = self.parent_channel.team
         self.last_line_from = None
         self.new_messages = False
@@ -2451,7 +2456,7 @@ class SlackThreadChannel(SlackChannelCommon):
         styles = {
             "default": " +{}".format(thread_hash),
             "long_default": "{}.{}".format(self.parent_channel.formatted_name(style="long_default"), thread_hash),
-            "sidebar": " +{}".format(thread_hash),
+            "sidebar": " +{}".format(self.label or thread_hash),
         }
         return styles[style]
 
@@ -2522,8 +2527,7 @@ class SlackThreadChannel(SlackChannelCommon):
     def rename(self):
         if self.channel_buffer:
             w.buffer_set(self.channel_buffer, "name", self.formatted_name(style="long_default"))
-            if not self.label:
-                w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar"))
+            w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar"))
 
     def set_highlights(self, highlight_string=None):
         if self.channel_buffer:
@@ -4924,14 +4928,13 @@ def command_back(data, current_buffer, args):
 def command_label(data, current_buffer, args):
     """
     /label <name>
-    Rename a thread buffer. Note that this is not permanent. It will only last
-    as long as you keep the buffer and wee-slack open.
+    Rename a channel or thread buffer. Note that this only changes the short
+    name and that it's not permanent. It will only last as long as you keep the
+    buffer and wee-slack open.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    if channel.type == 'thread':
-        new_name = " +" + args
-        channel.label = new_name
-        w.buffer_set(channel.channel_buffer, "short_name", new_name)
+    channel.label = args
+    channel.rename()
     return w.WEECHAT_RC_OK
 
 
