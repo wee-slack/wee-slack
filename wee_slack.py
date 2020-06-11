@@ -831,6 +831,15 @@ def reconnect_callback(*args):
 
 
 @utf8_decode
+def buffer_renamed_cb(data, signal, current_buffer):
+    channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
+    if channel and not channel.buffer_rename_in_progress:
+        channel.label = w.buffer_get_string(channel.channel_buffer, "short_name")
+        channel.rename()
+    return w.WEECHAT_RC_OK
+
+
+@utf8_decode
 def buffer_closing_callback(data, signal, current_buffer):
     """
     Receives a callback from weechat when a buffer is being closed.
@@ -1526,6 +1535,7 @@ class SlackTeam(object):
 class SlackChannelCommon(object):
     def __init__(self):
         self.label = None
+        self.buffer_rename_in_progress = False
 
     def prnt_message(self, message, history_message=False, no_log=False, force_render=False):
         text = self.render(message, force_render)
@@ -1773,6 +1783,7 @@ class SlackChannel(SlackChannelCommon):
 
     def rename(self, typing=None):
         if self.channel_buffer:
+            self.buffer_rename_in_progress = True
             if typing is None:
                 typing = self.is_someone_typing()
             present = self.team.is_user_present(self.user) if self.type == "im" else None
@@ -1781,6 +1792,7 @@ class SlackChannel(SlackChannelCommon):
             short_name = self.formatted_name("sidebar", typing, present)
             w.buffer_set(self.channel_buffer, "name", name)
             w.buffer_set(self.channel_buffer, "short_name", short_name)
+            self.buffer_rename_in_progress = False
 
     def set_members(self, members):
         self.members = set(members)
@@ -1904,7 +1916,9 @@ class SlackChannel(SlackChannelCommon):
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
+            self.buffer_rename_in_progress = True
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar"))
+            self.buffer_rename_in_progress = False
             self.set_highlights()
             self.set_topic()
             if self.channel_buffer:
@@ -2527,8 +2541,10 @@ class SlackThreadChannel(SlackChannelCommon):
 
     def rename(self):
         if self.channel_buffer:
+            self.buffer_rename_in_progress = True
             w.buffer_set(self.channel_buffer, "name", self.formatted_name(style="long_default"))
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar"))
+            self.buffer_rename_in_progress = False
 
     def set_highlights(self, highlight_string=None):
         if self.channel_buffer:
@@ -2547,7 +2563,9 @@ class SlackThreadChannel(SlackChannelCommon):
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.name)
+            self.buffer_rename_in_progress = True
             w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar"))
+            self.buffer_rename_in_progress = False
             self.set_highlights()
             time_format = w.config_string(w.config_get("weechat.look.buffer_time_format"))
             parent_time = time.localtime(SlackTS(self.thread_ts).major)
@@ -5023,6 +5041,7 @@ def setup_hooks():
     w.hook_timer(1000 * 60 * 5, 0, 0, "slack_never_away_cb", "")
 
     w.hook_signal('buffer_closing', "buffer_closing_callback", "")
+    w.hook_signal('buffer_renamed', "buffer_renamed_cb", "")
     w.hook_signal('buffer_switch', "buffer_switch_callback", "")
     w.hook_signal('window_switch', "buffer_switch_callback", "")
     w.hook_signal('quit', "quit_notification_callback", "")
