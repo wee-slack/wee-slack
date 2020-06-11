@@ -2520,9 +2520,10 @@ class SlackThreadChannel(SlackChannelCommon):
             self.rename()
 
     def rename(self):
-        if self.channel_buffer and not self.label:
+        if self.channel_buffer:
             w.buffer_set(self.channel_buffer, "name", self.formatted_name(style="long_default"))
-            w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar"))
+            if not self.label:
+                w.buffer_set(self.channel_buffer, "short_name", self.formatted_name(style="sidebar"))
 
     def set_highlights(self, highlight_string=None):
         if self.channel_buffer:
