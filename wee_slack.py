@@ -831,11 +831,11 @@ def reconnect_callback(*args):
 
 
 @utf8_decode
-def buffer_closing_callback(signal, sig_type, data):
+def buffer_closing_callback(data, signal, current_buffer):
     """
     Receives a callback from weechat when a buffer is being closed.
     """
-    EVENTROUTER.weechat_controller.unregister_buffer(data, True, False)
+    EVENTROUTER.weechat_controller.unregister_buffer(current_buffer, True, False)
     return w.WEECHAT_RC_OK
 
 
@@ -893,27 +893,25 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
 
 
 @utf8_decode
-def buffer_switch_callback(signal, sig_type, data):
+def buffer_switch_callback(data, signal, current_buffer):
     """
     Every time we change channels in weechat, we call this to:
     1) set read marker 2) determine if we have already populated
     channel history data 3) set presence to active
     """
-    eventrouter = eval(signal)
-
-    prev_buffer_ptr = eventrouter.weechat_controller.get_previous_buffer_ptr()
+    prev_buffer_ptr = EVENTROUTER.weechat_controller.get_previous_buffer_ptr()
     # this is to see if we need to gray out things in the buffer list
-    prev = eventrouter.weechat_controller.get_channel_from_buffer_ptr(prev_buffer_ptr)
+    prev = EVENTROUTER.weechat_controller.get_channel_from_buffer_ptr(prev_buffer_ptr)
     if prev:
         prev.mark_read()
 
-    new_channel = eventrouter.weechat_controller.get_channel_from_buffer_ptr(data)
+    new_channel = EVENTROUTER.weechat_controller.get_channel_from_buffer_ptr(current_buffer)
     if new_channel:
         if not new_channel.got_history or new_channel.history_needs_update:
             new_channel.get_history()
         set_own_presence_active(new_channel.team)
 
-    eventrouter.weechat_controller.set_previous_buffer(data)
+    EVENTROUTER.weechat_controller.set_previous_buffer(current_buffer)
     return w.WEECHAT_RC_OK
 
 
@@ -932,7 +930,7 @@ def buffer_list_update_callback(data, somecount):
     return w.WEECHAT_RC_OK
 
 
-def quit_notification_callback(signal, sig_type, data):
+def quit_notification_callback(data, signal, args):
     stop_talking_to_slack()
     return w.WEECHAT_RC_OK
 
@@ -5024,8 +5022,8 @@ def setup_hooks():
     w.hook_timer(1000 * 60 * 5, 0, 0, "slack_never_away_cb", "")
 
     w.hook_signal('buffer_closing', "buffer_closing_callback", "")
-    w.hook_signal('buffer_switch', "buffer_switch_callback", "EVENTROUTER")
-    w.hook_signal('window_switch', "buffer_switch_callback", "EVENTROUTER")
+    w.hook_signal('buffer_switch', "buffer_switch_callback", "")
+    w.hook_signal('window_switch', "buffer_switch_callback", "")
     w.hook_signal('quit', "quit_notification_callback", "")
     if config.send_typing_notice:
         w.hook_signal('input_text_changed', "typing_notification_cb", "")
