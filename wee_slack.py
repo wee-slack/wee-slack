@@ -1705,6 +1705,11 @@ class SlackChannelCommon(object):
                     self.eventrouter.receive(s)
                     self.new_messages = False
 
+    def destroy_buffer(self, update_remote):
+        self.channel_buffer = None
+        self.got_history = False
+        self.active = False
+
 
 class SlackChannel(SlackChannelCommon):
     """
@@ -1918,10 +1923,8 @@ class SlackChannel(SlackChannelCommon):
                 self.eventrouter.receive(s)
 
     def destroy_buffer(self, update_remote):
+        super(SlackChannel, self).destroy_buffer(update_remote)
         self.messages = OrderedDict()
-        self.got_history = False
-        self.channel_buffer = None
-        self.active = False
         if update_remote and not self.eventrouter.shutting_down:
             s = SlackRequest(self.team, self.team.slack_api_translator[self.type]["leave"],
                     {"channel": self.identifier}, channel=self)
@@ -2553,9 +2556,7 @@ class SlackThreadChannel(SlackChannelCommon):
             w.buffer_set(self.channel_buffer, "title", topic)
 
     def destroy_buffer(self, update_remote):
-        self.channel_buffer = None
-        self.got_history = False
-        self.active = False
+        super(SlackThreadChannel, self).destroy_buffer(update_remote)
         if update_remote and not self.eventrouter.shutting_down:
             self.mark_read()
 
