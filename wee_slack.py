@@ -2468,12 +2468,14 @@ class SlackThreadChannel(SlackChannelCommon):
 
     def formatted_name(self, style="default"):
         thread_hash = self.parent_message.hash
-        styles = {
-            "default": "{}.{}".format(self.parent_channel.formatted_name(), thread_hash),
-            "long_default": "{}.{}".format(self.parent_channel.formatted_name(style="long_default"), thread_hash),
-            "sidebar": " +{}".format(self.label or thread_hash),
-        }
-        return styles[style]
+        if style == "sidebar":
+            return " +{}".format(self.label or thread_hash)
+        elif style == "long_default":
+            channel_name = self.parent_channel.formatted_name(style="long_default")
+            return "{}.{}".format(channel_name, thread_hash)
+        else:
+            channel_name = self.parent_channel.formatted_name()
+            return "{}.{}".format(channel_name, thread_hash)
 
     def mark_read(self, ts=None, update_remote=True, force=False, post_data={}):
         if not self.parent_message.subscribed:
