@@ -2470,7 +2470,7 @@ class SlackThreadChannel(SlackChannelCommon):
         thread_hash = self.parent_message.hash
         if style == "sidebar":
             indent = w.config_string(w.config_get("buflist.format.indent"))
-            return "{}+{}".format(indent, self.label or thread_hash)
+            return "{}${}".format(indent, self.label or thread_hash)
         elif style == "long_default":
             channel_name = self.parent_channel.formatted_name(style="long_default")
             return "{}.{}".format(channel_name, thread_hash)
