@@ -2469,7 +2469,7 @@ class SlackThreadChannel(SlackChannelCommon):
     def formatted_name(self, style="default"):
         thread_hash = self.parent_message.hash
         styles = {
-            "default": " +{}".format(thread_hash),
+            "default": "{}.{}".format(self.parent_channel.formatted_name(), thread_hash),
             "long_default": "{}.{}".format(self.parent_channel.formatted_name(style="long_default"), thread_hash),
             "sidebar": " +{}".format(self.label or thread_hash),
         }
