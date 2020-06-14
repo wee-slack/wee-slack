@@ -4947,15 +4947,17 @@ def command_back(data, current_buffer, args):
 @utf8_decode
 def command_label(data, current_buffer, args):
     """
-    /label <name>
+    /label <name>|-unset
     Rename a channel or thread buffer. Note that this only changes the short
     name and that it's not permanent. It will only last as long as you keep the
     buffer and wee-slack open.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    channel.label = args
+    channel.label = args if args != "-unset" else None
     channel.rename()
     return w.WEECHAT_RC_OK
+
+command_label.completion = "-unset %-"
 
 
 @utf8_decode
