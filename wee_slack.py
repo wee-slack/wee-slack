@@ -839,6 +839,7 @@ def buffer_renamed_cb(data, signal, current_buffer):
             channel.label_full_drop_prefix = True
             channel.label_full = w.buffer_get_string(channel.channel_buffer, "name")
         else:
+            channel.label_short_drop_prefix = True
             channel.label_short = w.buffer_get_string(channel.channel_buffer, "short_name")
 
         channel.rename()
@@ -1542,6 +1543,7 @@ class SlackChannelCommon(object):
     def __init__(self):
         self.label_full_drop_prefix = False
         self.label_full = None
+        self.label_short_drop_prefix = False
         self.label_short = None
         self.buffer_rename_in_progress = False
 
@@ -1818,7 +1820,8 @@ class SlackChannel(SlackChannelCommon):
                 w.buffer_set(self.channel_buffer, "hotlist", "1")
 
     def formatted_name(self, style="default", typing=False, present=None):
-        if style == "sidebar" and typing and config.channel_name_typing_indicator:
+        show_typing = typing and config.channel_name_typing_indicator
+        if style == "sidebar" and show_typing:
             prepend = ">"
         elif self.type == "group" or self.type == "private":
             prepend = config.group_name_prefix
@@ -1832,7 +1835,12 @@ class SlackChannel(SlackChannelCommon):
         if style == "sidebar":
             sidebar_color = config.color_buflist_muted_channels if self.muted else ""
             name = self.label_short or name
-            return colorize_string(sidebar_color, prepend + name)
+            if self.label_short_drop_prefix:
+                if show_typing:
+                    name = prepend + name[1:]
+            else:
+                name = prepend + name
+            return colorize_string(sidebar_color, name)
         elif style == "long_default":
             if self.label_full_drop_prefix:
                 return name
@@ -2304,9 +2312,11 @@ class SlackDMChannel(SlackChannel):
             self.color_name = ""
 
     def formatted_name(self, style="default", typing=False, present=True):
+        show_typing = typing and config.channel_name_typing_indicator
         name = self.label_full or self.slack_name
         if style == "sidebar":
-            if typing and config.channel_name_typing_indicator:
+            name = self.label_short or name
+            if show_typing:
                 prepend = ">"
             elif present and config.show_buflist_presence:
                 prepend = "+"
@@ -2314,7 +2324,12 @@ class SlackDMChannel(SlackChannel):
                 prepend = " "
             else:
                 prepend = ""
-            name = prepend + (self.label_short or name)
+
+            if self.label_short_drop_prefix:
+                if show_typing:
+                    name = prepend + name[1:]
+            else:
+                name = prepend + name
 
             if config.colorize_private_chats:
                 return colorize_string(self.color_name, name)
@@ -2398,13 +2413,22 @@ class SlackMPDMChannel(SlackChannel):
                 self.eventrouter.receive(s)
 
     def formatted_name(self, style="default", typing=False, present=None):
+        show_typing = typing and config.channel_name_typing_indicator
         name = self.label_full or self.slack_name
         if style == "sidebar":
-            if typing and config.channel_name_typing_indicator:
+            name = self.label_short or name
+            if show_typing:
                 prepend = ">"
             else:
                 prepend = "@"
-            return prepend + (self.label_short or name)
+
+            if self.label_short_drop_prefix:
+                if show_typing:
+                    return prepend + name[1:]
+                else:
+                    return name
+            else:
+                return prepend + name
         elif style == "long_default":
             if self.label_full_drop_prefix:
                 return name
@@ -2493,8 +2517,12 @@ class SlackThreadChannel(SlackChannelCommon):
     def formatted_name(self, style="default"):
         name = self.label_full or self.parent_message.hash
         if style == "sidebar":
-            indent = w.config_string(w.config_get("buflist.format.indent"))
-            return "{}${}".format(indent, self.label_short or name)
+            name = self.label_short or name
+            if self.label_short_drop_prefix:
+                return name
+            else:
+                indent = w.config_string(w.config_get("buflist.format.indent"))
+                return "{}${}".format(indent, name)
         elif style == "long_default":
             if self.label_full_drop_prefix:
                 return name
@@ -5041,6 +5069,7 @@ def command_label(data, current_buffer, args):
         channel.label_full_drop_prefix = False
         channel.label_full = split_args[1] if split_args[1] != "-unset" else None
     else:
+        channel.label_short_drop_prefix = False
         channel.label_short = args if args != "-unset" else None
 
     channel.rename()
