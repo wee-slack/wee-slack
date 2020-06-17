@@ -834,7 +834,8 @@ def reconnect_callback(*args):
 def buffer_renamed_cb(data, signal, current_buffer):
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
     if channel and not channel.buffer_rename_in_progress:
-        channel.label = w.buffer_get_string(channel.channel_buffer, "short_name")
+        if not w.buffer_get_string(channel.channel_buffer, "old_full_name"):
+            channel.label = w.buffer_get_string(channel.channel_buffer, "short_name")
         channel.rename()
     return w.WEECHAT_RC_OK
 
