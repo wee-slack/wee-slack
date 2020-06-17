@@ -834,8 +834,13 @@ def reconnect_callback(*args):
 def buffer_renamed_cb(data, signal, current_buffer):
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
     if channel and not channel.buffer_rename_in_progress:
-        if not w.buffer_get_string(channel.channel_buffer, "old_full_name"):
-            channel.label = w.buffer_get_string(channel.channel_buffer, "short_name")
+
+        if w.buffer_get_string(channel.channel_buffer, "old_full_name"):
+            channel.label_full_drop_prefix = True
+            channel.label_full = w.buffer_get_string(channel.channel_buffer, "name")
+        else:
+            channel.label_short = w.buffer_get_string(channel.channel_buffer, "short_name")
+
         channel.rename()
     return w.WEECHAT_RC_OK
 
@@ -1535,7 +1540,9 @@ class SlackTeam(object):
 
 class SlackChannelCommon(object):
     def __init__(self):
-        self.label = None
+        self.label_full_drop_prefix = False
+        self.label_full = None
+        self.label_short = None
         self.buffer_rename_in_progress = False
 
     def prnt_message(self, message, history_message=False, no_log=False, force_render=False):
@@ -1820,14 +1827,22 @@ class SlackChannel(SlackChannelCommon):
         else:
             prepend = "#"
 
+        name = self.label_full or self.slack_name
+
         if style == "sidebar":
             sidebar_color = config.color_buflist_muted_channels if self.muted else ""
-            name = self.label or self.slack_name
+            name = self.label_short or name
             return colorize_string(sidebar_color, prepend + name)
         elif style == "long_default":
-            return "{}.{}{}".format(self.team.name, prepend, self.slack_name)
+            if self.label_full_drop_prefix:
+                return name
+            else:
+                return "{}.{}{}".format(self.team.name, prepend, name)
         else:
-            return prepend + self.slack_name
+            if self.label_full_drop_prefix:
+                return name
+            else:
+                return prepend + name
 
     def render_topic(self, fallback_to_purpose=False):
         topic = self.topic['value']
@@ -2289,6 +2304,7 @@ class SlackDMChannel(SlackChannel):
             self.color_name = ""
 
     def formatted_name(self, style="default", typing=False, present=True):
+        name = self.label_full or self.slack_name
         if style == "sidebar":
             if typing and config.channel_name_typing_indicator:
                 prepend = ">"
@@ -2298,16 +2314,19 @@ class SlackDMChannel(SlackChannel):
                 prepend = " "
             else:
                 prepend = ""
-            name = prepend + (self.label or self.slack_name)
+            name = prepend + (self.label_short or name)
 
             if config.colorize_private_chats:
                 return colorize_string(self.color_name, name)
             else:
                 return name
         elif style == "long_default":
-            return "{}.{}".format(self.team.name, self.slack_name)
+            if self.label_full_drop_prefix:
+                return name
+            else:
+                return "{}.{}".format(self.team.name, name)
         else:
-            return self.slack_name
+            return name
 
     def open(self, update_remote=True):
         self.create_buffer()
@@ -2379,16 +2398,20 @@ class SlackMPDMChannel(SlackChannel):
                 self.eventrouter.receive(s)
 
     def formatted_name(self, style="default", typing=False, present=None):
+        name = self.label_full or self.slack_name
         if style == "sidebar":
             if typing and config.channel_name_typing_indicator:
                 prepend = ">"
             else:
                 prepend = "@"
-            return prepend + (self.label or self.slack_name)
+            return prepend + (self.label_short or name)
         elif style == "long_default":
-            return "{}.{}".format(self.team.name, self.slack_name)
+            if self.label_full_drop_prefix:
+                return name
+            else:
+                return "{}.{}".format(self.team.name, name)
         else:
-            return self.slack_name
+            return name
 
 
 class SlackSharedChannel(SlackChannel):
@@ -2468,16 +2491,22 @@ class SlackThreadChannel(SlackChannelCommon):
             return set()
 
     def formatted_name(self, style="default"):
-        thread_hash = self.parent_message.hash
+        name = self.label_full or self.parent_message.hash
         if style == "sidebar":
             indent = w.config_string(w.config_get("buflist.format.indent"))
-            return "{}${}".format(indent, self.label or thread_hash)
+            return "{}${}".format(indent, self.label_short or name)
         elif style == "long_default":
-            channel_name = self.parent_channel.formatted_name(style="long_default")
-            return "{}.{}".format(channel_name, thread_hash)
+            if self.label_full_drop_prefix:
+                return name
+            else:
+                channel_name = self.parent_channel.formatted_name(style="long_default")
+                return "{}.{}".format(channel_name, name)
         else:
-            channel_name = self.parent_channel.formatted_name()
-            return "{}.{}".format(channel_name, thread_hash)
+            if self.label_full_drop_prefix:
+                return name
+            else:
+                channel_name = self.parent_channel.formatted_name()
+                return "{}.{}".format(channel_name, name)
 
     def mark_read(self, ts=None, update_remote=True, force=False, post_data={}):
         if not self.parent_message.subscribed:
@@ -4997,17 +5026,27 @@ def command_back(data, current_buffer, args):
 @utf8_decode
 def command_label(data, current_buffer, args):
     """
-    /label <name>|-unset
-    Rename a channel or thread buffer. Note that this only changes the short
-    name and that it's not permanent. It will only last as long as you keep the
-    buffer and wee-slack open.
+    /label [-full] <name>|-unset
+    Rename a channel or thread buffer. Note that this is not permanent, it will
+    only last as long as you keep the buffer and wee-slack open. Changes the
+    short_name by default, and the name and full_name if you use the -full
+    option. If you haven't set the short_name explicitly, that will also be
+    changed when using the -full option. Use the -unset option to set it back
+    to the default.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    channel.label = args if args != "-unset" else None
+
+    split_args = args.split(None, 1)
+    if split_args[0] == "-full":
+        channel.label_full_drop_prefix = False
+        channel.label_full = split_args[1] if split_args[1] != "-unset" else None
+    else:
+        channel.label_short = args if args != "-unset" else None
+
     channel.rename()
     return w.WEECHAT_RC_OK
 
-command_label.completion = "-unset %-"
+command_label.completion = "-unset|-full -unset %-"
 
 
 @utf8_decode

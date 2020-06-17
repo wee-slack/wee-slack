@@ -61,12 +61,15 @@ Hide the current channel if it is marked as distracting.
 ### label
 
 ```
-/label <name>|-unset
+/label [-full] <name>|-unset
 ```
 
-Rename a channel or thread buffer. Note that this only changes the short
-name and that it's not permanent. It will only last as long as you keep the
-buffer and wee-slack open.
+Rename a channel or thread buffer. Note that this is not permanent, it will
+only last as long as you keep the buffer and wee-slack open. Changes the
+short_name by default, and the name and full_name if you use the -full
+option. If you haven't set the short_name explicitly, that will also be
+changed when using the -full option. Use the -unset option to set it back
+to the default.
 
 ### linkarchive
 
