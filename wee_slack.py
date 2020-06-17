@@ -833,7 +833,7 @@ def reconnect_callback(*args):
 @utf8_decode
 def buffer_renamed_cb(data, signal, current_buffer):
     channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
-    if channel and not channel.buffer_rename_in_progress:
+    if isinstance(channel, SlackChannelCommon) and not channel.buffer_rename_in_progress:
 
         if w.buffer_get_string(channel.channel_buffer, "old_full_name"):
             channel.label_full_drop_prefix = True
