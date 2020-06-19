@@ -1827,19 +1827,40 @@ class SlackChannel(SlackChannelCommon):
             prepend = config.group_name_prefix
         elif self.type == "shared":
             prepend = config.shared_name_prefix
+        elif self.type == "im":
+            if style != "sidebar":
+                prepend = ""
+            elif present and config.show_buflist_presence:
+                prepend = "+"
+            elif config.channel_name_typing_indicator or config.show_buflist_presence:
+                prepend = " "
+            else:
+                prepend = ""
+        elif self.type == "mpim":
+            if style == "sidebar":
+                prepend = "@"
+            else:
+                prepend = ""
         else:
             prepend = "#"
 
         name = self.label_full or self.slack_name
 
         if style == "sidebar":
-            sidebar_color = config.color_buflist_muted_channels if self.muted else ""
             name = self.label_short or name
             if self.label_short_drop_prefix:
                 if show_typing:
                     name = prepend + name[1:]
             else:
                 name = prepend + name
+
+            if self.muted:
+                sidebar_color = config.color_buflist_muted_channels
+            elif self.type == "im" and config.colorize_private_chats:
+                sidebar_color = self.color_name
+            else:
+                sidebar_color = ""
+
             return colorize_string(sidebar_color, name)
         elif style == "long_default":
             if self.label_full_drop_prefix:
@@ -2311,38 +2332,6 @@ class SlackDMChannel(SlackChannel):
         else:
             self.color_name = ""
 
-    def formatted_name(self, style="default", typing=False, present=True):
-        show_typing = typing and config.channel_name_typing_indicator
-        name = self.label_full or self.slack_name
-        if style == "sidebar":
-            name = self.label_short or name
-            if show_typing:
-                prepend = ">"
-            elif present and config.show_buflist_presence:
-                prepend = "+"
-            elif config.channel_name_typing_indicator or config.show_buflist_presence:
-                prepend = " "
-            else:
-                prepend = ""
-
-            if self.label_short_drop_prefix:
-                if show_typing:
-                    name = prepend + name[1:]
-            else:
-                name = prepend + name
-
-            if config.colorize_private_chats:
-                return colorize_string(self.color_name, name)
-            else:
-                return name
-        elif style == "long_default":
-            if self.label_full_drop_prefix:
-                return name
-            else:
-                return "{}.{}".format(self.team.name, name)
-        else:
-            return name
-
     def open(self, update_remote=True):
         self.create_buffer()
         self.get_history()
@@ -2411,31 +2400,6 @@ class SlackMPDMChannel(SlackChannel):
             if join_method:
                 s = SlackRequest(self.team, join_method, {'users': ','.join(self.members)}, channel=self)
                 self.eventrouter.receive(s)
-
-    def formatted_name(self, style="default", typing=False, present=None):
-        show_typing = typing and config.channel_name_typing_indicator
-        name = self.label_full or self.slack_name
-        if style == "sidebar":
-            name = self.label_short or name
-            if show_typing:
-                prepend = ">"
-            else:
-                prepend = "@"
-
-            if self.label_short_drop_prefix:
-                if show_typing:
-                    return prepend + name[1:]
-                else:
-                    return name
-            else:
-                return prepend + name
-        elif style == "long_default":
-            if self.label_full_drop_prefix:
-                return name
-            else:
-                return "{}.{}".format(self.team.name, name)
-        else:
-            return name
 
 
 class SlackSharedChannel(SlackChannel):
