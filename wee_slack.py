@@ -1851,6 +1851,8 @@ class SlackChannel(SlackChannelCommon):
             if self.label_short_drop_prefix:
                 if show_typing:
                     name = prepend + name[1:]
+                elif self.type == "im" and present and config.show_buflist_presence and name[0] == " ":
+                    name = prepend + name[1:]
             else:
                 name = prepend + name
 
