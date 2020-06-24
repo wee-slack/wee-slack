@@ -1397,6 +1397,7 @@ class SlackTeam(object):
         self.muted_channels = {x for x in muted_str.split(',') if x}
         for channel in self.channels.values():
             channel.set_highlights()
+            channel.rename()
 
     def set_highlight_words(self, highlight_str):
         self.highlight_words = {x for x in highlight_str.split(',') if x}
