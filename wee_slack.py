@@ -1939,7 +1939,8 @@ class SlackChannel(SlackChannelCommon):
                 notify_level = "0" if config.muted_channels_activity == "none" else "1"
                 w.buffer_set(self.channel_buffer, "notify", notify_level)
             else:
-                w.buffer_set(self.channel_buffer, "notify", "3")
+                buffer_full_name = w.buffer_get_string(self.channel_buffer, "full_name")
+                w.command(self.channel_buffer, "/mute /unset weechat.notify.{}".format(buffer_full_name))
 
             if self.muted and config.muted_channels_activity == "none":
                 w.buffer_set(self.channel_buffer, "highlight_tags_restrict", "highlight_force")
