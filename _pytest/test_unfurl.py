@@ -4,7 +4,9 @@ from datetime import datetime, timedelta
 import pytest
 import time
 import wee_slack
+import os
 
+os.environ['TZ'] = 'UTC'
 
 @pytest.mark.parametrize('case', (
     {
