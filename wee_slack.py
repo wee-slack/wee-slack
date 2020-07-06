@@ -4050,7 +4050,7 @@ def format_nick(nick, previous_nick=None):
 def tags_set_notify_none(tags):
     notify_tags = {"notify_highlight", "notify_message", "notify_private"}
     tags = [tag for tag in tags if tag not in notify_tags]
-    tags += ["notify_none"]
+    tags += ["no_highlight", "notify_none"]
     return tags
 
 
@@ -4071,7 +4071,7 @@ def tag(ts, tagset=None, user=None, self_msg=False, backlog=False, no_log=False,
     if self_msg or backlog:
         tags = tags_set_notify_none(tags)
         if self_msg:
-            tags += ["self_msg", "no_highlight"]
+            tags += ["self_msg"]
         if backlog:
             tags += ["logger_backlog"]
     if no_log:
