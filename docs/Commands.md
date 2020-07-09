@@ -33,6 +33,14 @@ Sets your status as 'back'.
 
 List the channels in the current team.
 
+### create
+
+```
+/slack create [-private] <channel_name>
+```
+
+Create a public or private channel.
+
 ### distracting
 
 ```

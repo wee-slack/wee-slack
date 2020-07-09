@@ -3191,6 +3191,13 @@ def handle_usersprofileset(json, eventrouter, team, channel, metadata):
         w.prnt('', 'ERROR: Failed to set profile: {}'.format(json['error']))
 
 
+def handle_conversationscreate(json, eventrouter, team, channel, metadata):
+    metadata = json["wee_slack_request_metadata"]
+    if not json['ok']:
+        name = metadata.post_data["name"]
+        print_error("Couldn't create channel {}: {}".format(name, json['error']))
+
+
 def handle_conversationsinvite(json, eventrouter, team, channel, metadata):
     nicks = ', '.join(metadata['nicks'])
     if json['ok']:
@@ -4519,6 +4526,30 @@ def join_query_command_cb(data, current_buffer, args):
         if config.switch_buffer_on_join:
             w.buffer_set(channel.channel_buffer, "display", "1")
     return w.WEECHAT_RC_OK_EAT
+
+
+@slack_buffer_required
+@utf8_decode
+def command_create(data, current_buffer, args):
+    """
+    /slack create [-private] <channel_name>
+    Create a public or private channel.
+    """
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+
+    parts = args.split(None, 1)
+    if parts[0] == "-private":
+        args = parts[1]
+        private = True
+    else:
+        private = False
+
+    post_data = {"name": args, "is_private": private}
+    s = SlackRequest(team, "conversations.create", post_data)
+    EVENTROUTER.receive(s)
+    return w.WEECHAT_RC_OK_EAT
+
+command_create.completion = '-private'
 
 
 @slack_buffer_required
