@@ -1295,6 +1295,7 @@ class SlackTeam(object):
     def __init__(self, eventrouter, token, team_hash, websocket_url, team_info, subteams,  nick, myidentifier, my_manual_presence, users, bots, channels, **kwargs):
         self.slack_api_translator = copy.deepcopy(SLACK_API_TRANSLATOR)
         self.identifier = team_info["id"]
+        self.type = "team"
         self.active = True
         self.team_hash = team_hash
         self.ws_url = websocket_url
@@ -1339,7 +1340,6 @@ class SlackTeam(object):
         self.users[self.myidentifier].force_color(w.config_string(w.config_get('weechat.color.chat_nick_self')))
         # This highlight step must happen after we have set related server
         self.load_emoji_completions()
-        self.type = "team"
 
     def __repr__(self):
         return "domain={} nick={}".format(self.subdomain, self.nick)
@@ -1378,6 +1378,7 @@ class SlackTeam(object):
             self.channel_buffer = w.buffer_new(self.name, "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'server')
+            w.buffer_set(self.channel_buffer, "localvar_set_slack_type", self.type)
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.nick)
             w.buffer_set(self.channel_buffer, "localvar_set_server", self.name)
             self.buffer_merge()
@@ -1963,6 +1964,7 @@ class SlackChannel(SlackChannelCommon):
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
             else:
                 w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
+            w.buffer_set(self.channel_buffer, "localvar_set_slack_type", self.type)
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
             self.buffer_rename_in_progress = True
@@ -2590,6 +2592,7 @@ class SlackThreadChannel(SlackChannelCommon):
             self.channel_buffer = w.buffer_new(self.formatted_name(style="long_default"), "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
+            w.buffer_set(self.channel_buffer, "localvar_set_slack_type", self.type)
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.name)
