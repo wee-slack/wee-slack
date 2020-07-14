@@ -2491,7 +2491,10 @@ class SlackThreadChannel(SlackChannelCommon):
             if self.label_short_drop_prefix:
                 return name
             else:
-                return " ${}".format(name)
+                indent_expr = w.config_string(w.config_get("buflist.format.indent"))
+                # Only indent with space if slack_type isn't mentioned in the indent option
+                indent = "" if "slack_type" in indent_expr else " "
+                return "{}${}".format(indent, name)
         elif style == "long_default":
             if self.label_full_drop_prefix:
                 return name
