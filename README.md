@@ -8,6 +8,7 @@ A WeeChat native client for Slack.com. Provides supplemental features only avail
 Table of Contents
 -----------------
   * [Features](#features)
+  * [Contributing](#contributing)
   * [Dependencies](#dependencies)
   * [Setup](#setup)
      * [1. Install dependencies](#1-install-dependencies)
@@ -54,6 +55,11 @@ Features
   * Away/back status handling
   * Expands/shows metadata for things like tweets/links
   * *Super fun* debug mode. See what the websocket is saying
+
+Contributing
+------------
+
+See [docs/contributing.md](./docs/contributing.md).
 
 Dependencies
 ------------
