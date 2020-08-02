@@ -1575,7 +1575,7 @@ class SlackChannelCommon(object):
                 prefix = message.sender
 
         extra_tags = None
-        if message.subtype == "thread_message" and not thread_channel:
+        if type(message) == SlackThreadMessage and not thread_channel:
             if config.thread_messages_in_channel:
                 extra_tags = [message.subtype]
             else:
@@ -2242,8 +2242,7 @@ class SlackChannelVisibleMessages(MappingReversible):
         if ts < self.first_ts_to_display:
             return False
 
-        message = self.get(ts)
-        if (message and message.subtype == "thread_message" and
+        if (type(self.get(ts)) == SlackThreadMessage and
                 not config.thread_messages_in_channel):
             return False
 
@@ -2892,7 +2891,8 @@ class SlackMessage(object):
 class SlackThreadMessage(SlackMessage):
 
     def __init__(self, parent_channel, thread_ts, message_json, *args):
-        super(SlackThreadMessage, self).__init__(message_json['subtype'], message_json, *args)
+        subtype = message_json.get('subtype', 'thread_message')
+        super(SlackThreadMessage, self).__init__(subtype, message_json, *args)
         self.parent_channel = parent_channel
         self.thread_ts = thread_ts
 
@@ -3331,16 +3331,12 @@ def process_message(message_json, eventrouter, team, channel, metadata, history_
     if not history_message and "ts" in message_json and SlackTS(message_json["ts"]) in channel.messages:
         return
 
-    if "thread_ts" in message_json and "reply_count" not in message_json and "subtype" not in message_json:
-        if message_json.get("reply_broadcast"):
-            message_json["subtype"] = "thread_broadcast"
-        else:
-            message_json["subtype"] = "thread_message"
-
     subtype = message_json.get("subtype")
     subtype_functions = get_functions_with_prefix("subprocess_")
 
-    if subtype in subtype_functions:
+    if "thread_ts" in message_json and "reply_count" not in message_json:
+        message = subprocess_thread_message(message_json, eventrouter, team, channel, history_message)
+    elif subtype in subtype_functions:
         message = subtype_functions[subtype](message_json, eventrouter, team, channel, history_message)
     else:
         message = SlackMessage(subtype or "normal", message_json, team, channel)
