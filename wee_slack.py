@@ -3926,7 +3926,7 @@ def resolve_ref(ref):
                     else:
                         token = token.replace('_pretty', '')
                 if token in token_to_format:
-                    return ref_datetime.strftime(token_to_format[token])
+                    return decode_from_utf8(ref_datetime.strftime(token_to_format[token]))
                 else:
                     return match.group(0)
 
