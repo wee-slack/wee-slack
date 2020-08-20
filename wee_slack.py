@@ -348,6 +348,13 @@ def format_exc_only():
     return ''.join(decode_from_utf8(traceback.format_exception_only(etype, value)))
 
 
+def get_localvar_type(slack_type):
+    if slack_type in ("im", "mpim"):
+        return "private"
+    else:
+        return "channel"
+
+
 def get_nick_color(nick):
     info_name_prefix = "irc_" if weechat_version < 0x1050000 else ""
     return w.info_get(info_name_prefix + "nick_color_name", nick)
@@ -1963,10 +1970,7 @@ class SlackChannel(SlackChannelCommon):
             self.channel_buffer = w.buffer_new(self.formatted_name(style="long_default"), "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             w.buffer_set(self.channel_buffer, "input_multiline", "1")
-            if self.type in ("im", "mpim"):
-                w.buffer_set(self.channel_buffer, "localvar_set_type", 'private')
-            else:
-                w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
+            w.buffer_set(self.channel_buffer, "localvar_set_type", get_localvar_type(self.type))
             w.buffer_set(self.channel_buffer, "localvar_set_slack_type", self.type)
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
@@ -2595,7 +2599,7 @@ class SlackThreadChannel(SlackChannelCommon):
             self.channel_buffer = w.buffer_new(self.formatted_name(style="long_default"), "buffer_input_callback", "EVENTROUTER", "", "")
             self.eventrouter.weechat_controller.register_buffer(self.channel_buffer, self)
             w.buffer_set(self.channel_buffer, "input_multiline", "1")
-            w.buffer_set(self.channel_buffer, "localvar_set_type", 'channel')
+            w.buffer_set(self.channel_buffer, "localvar_set_type", get_localvar_type(self.parent_channel.type))
             w.buffer_set(self.channel_buffer, "localvar_set_slack_type", self.type)
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
             w.buffer_set(self.channel_buffer, "localvar_set_channel", self.formatted_name())
