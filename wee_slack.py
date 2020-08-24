@@ -2902,7 +2902,8 @@ class SlackMessage(object):
 class SlackThreadMessage(SlackMessage):
 
     def __init__(self, parent_channel, thread_ts, message_json, *args):
-        subtype = message_json.get('subtype', 'thread_message')
+        subtype = message_json.get('subtype',
+                'thread_broadcast' if message_json.get("reply_broadcast") else 'thread_message')
         super(SlackThreadMessage, self).__init__(subtype, message_json, *args)
         self.parent_channel = parent_channel
         self.thread_ts = thread_ts
