@@ -1584,7 +1584,9 @@ class SlackChannelCommon(object):
                 prefix = message.sender
 
         extra_tags = None
-        if type(message) == SlackThreadMessage and not thread_channel:
+        if message.subtype == "thread_broadcast":
+            extra_tags = [message.subtype]
+        elif type(message) == SlackThreadMessage and not thread_channel:
             if config.thread_messages_in_channel:
                 extra_tags = [message.subtype]
             else:
@@ -2249,7 +2251,8 @@ class SlackChannelVisibleMessages(MappingReversible):
         if ts < self.first_ts_to_display:
             return False
 
-        if (type(self.get(ts)) == SlackThreadMessage and
+        message = self.get(ts)
+        if (type(message) == SlackThreadMessage and message.subtype != "thread_broadcast" and
                 not config.thread_messages_in_channel):
             return False
 
