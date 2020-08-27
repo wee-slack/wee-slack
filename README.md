@@ -151,9 +151,10 @@ token (but not the token itself). If you're worried about this, you can use the
 #### Get a session token
 
 1. Open and sign into the [Slack customization page](https://my.slack.com/customize). Check that you end up on the correct team.
-2. Type `javascript:` in the address field in the browser and paste this code after: `window.prompt("Session token:", TS.boot_data.api_token)`
-3. A prompt with the token will appear. Copy the token, return to WeeChat and run `/slack register <token>`.
-4. Reload the script with `/python reload slack`.
+2. Open the developer console (`Ctrl+Shift+J`/`Cmd+Opt+J` in Chrome and `Ctrl+Shift+K`/`Cmd+Opt+K` in Firefox).
+3. Paste and run this code: `window.prompt("Session token:", TS.boot_data.api_token)`
+4. A prompt with the token will appear. Copy the token, return to WeeChat and run `/slack register <token>`.
+5. Reload the script with `/python reload slack`.
 
 #### Optional: Connecting to multiple teams
 
