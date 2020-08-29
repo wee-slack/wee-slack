@@ -3597,7 +3597,7 @@ def process_subteam_updated(subteam_json, eventrouter, team, channel, metadata):
 
     if config.notify_usergroup_handle_updated and current_subteam_info.handle != new_subteam_info.handle:
         message = 'User group {old_handle} has updated its handle to {new_handle} in team {team}.'.format(
-            name=current_subteam_info.handle, handle=new_subteam_info.handle, team=team.name)
+            old_handle=current_subteam_info.handle, new_handle=new_subteam_info.handle, team=team.name)
         team.buffer_prnt(message, message=True)
 
 
