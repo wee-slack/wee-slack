@@ -3325,7 +3325,7 @@ def process_user_change(message_json, eventrouter, team, channel, metadata):
 
 
 def process_user_typing(message_json, eventrouter, team, channel, metadata):
-    if channel:
+    if channel and metadata["user"]:
         channel.set_typing(metadata["user"])
         w.bar_item_update("slack_typing_notice")
 
