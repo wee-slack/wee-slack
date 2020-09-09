@@ -1834,7 +1834,7 @@ class SlackChannel(SlackChannelCommon):
                 w.buffer_set(self.channel_buffer, "hotlist", "1")
 
     def formatted_name(self, style="default", typing=False, present=None):
-        show_typing = typing and config.channel_name_typing_indicator
+        show_typing = typing and not self.muted and config.channel_name_typing_indicator
         if style == "sidebar" and show_typing:
             prepend = ">"
         elif self.type == "group" or self.type == "private":
