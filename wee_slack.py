@@ -1464,10 +1464,11 @@ class SlackTeam(object):
                 try:
                     # only http proxy is currently supported
                     proxy = ProxyWrapper()
+                    timeout = config.slack_timeout / 1000
                     if proxy.has_proxy == True:
-                        ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs, http_proxy_host=proxy.proxy_address, http_proxy_port=proxy.proxy_port, http_proxy_auth=(proxy.proxy_user, proxy.proxy_password))
+                        ws = create_connection(self.ws_url, timeout=timeout, sslopt=sslopt_ca_certs, http_proxy_host=proxy.proxy_address, http_proxy_port=proxy.proxy_port, http_proxy_auth=(proxy.proxy_user, proxy.proxy_password))
                     else:
-                        ws = create_connection(self.ws_url, sslopt=sslopt_ca_certs)
+                        ws = create_connection(self.ws_url, timeout=timeout, sslopt=sslopt_ca_certs)
 
                     self.hook = w.hook_fd(ws.sock.fileno(), 1, 0, 0, "receive_ws_callback", self.get_team_hash())
                     ws.sock.setblocking(0)
