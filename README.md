@@ -29,6 +29,9 @@ Table of Contents
      * [How do I keep the buffers sorted alphabetically or with a custom order?](#how-do-i-keep-the-buffers-sorted-alphabetically-or-with-a-custom-order)
      * [How do I group the buffers by team in the buffer list?](#how-do-i-group-the-buffers-by-team-in-the-buffer-list)
      * [How can I get system wide notifications for messages?](#how-can-i-get-system-wide-notifications-for-messages)
+        * [Local notifications on Linux](#local-notifications-on-linux)
+        * [Local notifications on macOS](#local-notifications-on-macos)
+        * [Remote notifications](#remote-notifications)
      * [How do I send messages with multiple lines?](#how-do-i-send-messages-with-multiple-lines)
   * [Known issues](#known-issues)
   * [Development](#development)
@@ -366,13 +369,21 @@ mentioned in the previous question.
 
 ### How can I get system wide notifications for messages?
 
-Install [one of the notify
-scripts](https://weechat.org/scripts/stable/tag/notify/). Note that not all
-scripts work with wee-slack. For local notifications,
-[lnotify.py](https://weechat.org/scripts/source/lnotify.py.html/) is known to
-work for Linux, and
-[notification_center.py](https://weechat.org/scripts/source/notification_center.py.html/)
-for macOS.
+#### Local notifications on Linux
+
+Use [this trigger](https://github.com/weechat/weechat/wiki/Triggers#show-a-libnotify-desktop-notification-via-notify-send).
+You need the `notify-send` command, or alternatively replace it with another
+command in the trigger.
+
+#### Local notifications on macOS
+
+Use [the notification_center.py script](https://weechat.org/scripts/source/notification_center.py.html/). You can install it with `/script install notification_center.py`.
+
+#### Remote notifications
+
+There are many scripts in the [scripts repo](https://weechat.org/scripts/tag/notify/)
+for various use cases. Note that not all may work with wee-slack, so you will
+have to test them.
 
 ### How do I send messages with multiple lines?
 
