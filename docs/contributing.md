@@ -33,34 +33,6 @@ project root, and then execute:
 $ pytest
 ```
 
-## Adding new dependencies
-
-Add your desired dependencies to the appropriate header, specifying a version if
-necessary, defaulting to `*` if not. Be extra careful if you are pinning a
-specific version of a dependency, as we currently support multiple versions of
-Python which may or may not have the version you specify available to it.
-
-```
-# use [package] for production dependencies
-[package]
-foo-package = "*"
-
-# use [dev-packages] for development dependencies
-[dev-packages]
-bar-package = "*"
-```
-
-> **PRO TIP**
->
-> You can also add dependencies without manually updating this file by running
-> `pipenv install [--dev] <package...>`. This will automatically update the
-> entry for the package in the `Pipfile` (and your local lockfile).
->
-> For example, to add the `foo` and `bar` packages as development dependencies
-> without specificying a version, you would run:
->
-> ``` pipenv install --dev foo bar ```
-
 ## Updating dependencies
 
 It's important to keep our dependencies up-to-date over time. Because we support
