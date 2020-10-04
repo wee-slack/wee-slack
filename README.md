@@ -445,21 +445,27 @@ some noteworthy:
 - If you use an OAuth token or a legacy token instead of a session token:
   - Threads, shared channels and channels that has been converted from public to private can only be marked as read locally, it won't sync to Slack. This means they will be unread again after reloading the script.
 
-Development
------------
+Debugging
+---------
 
-To run the tests, create a virtualenv and pip install from the `requirements.txt`. Then `pytest` to run them locally.
-
-Enable debug mode and change debug level (default 3, decrease to increase logging and vice versa):
+To help debugging you can enable debugging output about what wee-slack is doing
+by enabling debug mode and changing debug level (between 0 and 5, default is 3,
+decrease to increase logging and vice versa). Enabling this will open a new
+buffer `slack-debug` where the messages are printed. Enable it and change level
+by running:
 
 ```
 /set plugins.var.python.slack.debug_mode on
-/set plugins.var.python.slack.debug_level 2
+/set plugins.var.python.slack.debug_level 0
 ```
 
-Dump the JSON responses in `/tmp/weeslack-debug/`. Requires a script reload.
+You can also dump all the JSON responses received from the API in
+`/tmp/weeslack-debug/`. This requires a script reload after enabling. Enable it
+with:
+
 ```
 /set plugins.var.python.slack.record_events true
+/python reload slack
 ```
 
 Support
