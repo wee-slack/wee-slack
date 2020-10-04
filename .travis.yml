@@ -6,7 +6,8 @@ python:
 cache: pip
 
 install:
-  - pip install flake8 pytest websocket-client
+  - pip install pipenv
+  - pipenv install --dev --system
 
 before_script:
   # stop the build if there are Python syntax errors or undefined names
@@ -15,7 +16,7 @@ before_script:
   - flake8 . --exit-zero --select=C,E,F,W
 
 script:
-  - python -m pytest
+  - pytest
 
 notifications:
   irc: "chat.freenode.net#wee-slack-dev"
