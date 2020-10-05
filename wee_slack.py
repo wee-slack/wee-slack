@@ -3474,10 +3474,13 @@ def process_reply(message_json, eventrouter, team, channel, metadata):
     reply_to = int(message_json["reply_to"])
     original_message_json = team.ws_replies.pop(reply_to, None)
     if original_message_json:
-        original_message_json.update(message_json)
-        channel = team.channels[original_message_json.get('channel')]
-        process_message(original_message_json, eventrouter, team=team, channel=channel, metadata={})
         dbg("REPLY {}".format(message_json))
+        channel = team.channels[original_message_json.get('channel')]
+        if message_json["ok"]:
+            original_message_json.update(message_json)
+            process_message(original_message_json, eventrouter, team=team, channel=channel, metadata={})
+        else:
+            print_error("Couldn't send message to channel {}: {}".format(channel.name, message_json["error"]))
     else:
         dbg("Unexpected reply {}".format(message_json))
 
