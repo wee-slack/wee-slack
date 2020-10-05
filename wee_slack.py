@@ -2720,8 +2720,8 @@ class SlackMessage(object):
     Note: these can't be tied to a SlackUser object because users
     can be deleted, so we have to store sender in each one.
     """
-    def __init__(self, subtype, message_json, team, channel):
-        self.team = team
+    def __init__(self, subtype, message_json, channel):
+        self.team = channel.team
         self.channel = channel
         self.subtype = subtype
         self.user_identifier = message_json.get('user')
@@ -3352,7 +3352,7 @@ def process_message(message_json, eventrouter, team, channel, metadata, history_
     elif subtype in subtype_functions:
         message = subtype_functions[subtype](message_json, eventrouter, team, channel, history_message)
     else:
-        message = SlackMessage(subtype or "normal", message_json, team, channel)
+        message = SlackMessage(subtype or "normal", message_json, channel)
         channel.store_message(message)
         channel.unread_count_display += 1
 
@@ -3405,7 +3405,7 @@ def download_files(message_json, team):
 
 def subprocess_thread_message(message_json, eventrouter, team, channel, history_message):
     parent_ts = SlackTS(message_json['thread_ts'])
-    message = SlackThreadMessage(channel, parent_ts, message_json, team, channel)
+    message = SlackThreadMessage(channel, parent_ts, message_json, channel)
 
     parent_message = message.parent_message
     if parent_message and message.ts not in parent_message.submessages:
@@ -3431,21 +3431,21 @@ subprocess_thread_broadcast = subprocess_thread_message
 
 
 def subprocess_channel_join(message_json, eventrouter, team, channel, history_message):
-    message = SlackMessage("join", message_json, team, channel)
+    message = SlackMessage("join", message_json, channel)
     channel.store_message(message)
     channel.user_joined(message_json["user"])
     return message
 
 
 def subprocess_channel_leave(message_json, eventrouter, team, channel, history_message):
-    message = SlackMessage("leave", message_json, team, channel)
+    message = SlackMessage("leave", message_json,  channel)
     channel.store_message(message)
     channel.user_left(message_json["user"])
     return message
 
 
 def subprocess_channel_topic(message_json, eventrouter, team, channel, history_message):
-    message = SlackMessage("topic", message_json, team, channel)
+    message = SlackMessage("topic", message_json, channel)
     channel.store_message(message)
     channel.set_topic(message_json["topic"])
     return message
