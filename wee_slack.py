@@ -1614,6 +1614,17 @@ class SlackChannelCommon(object):
                     config.thread_messages_in_channel and self.pending_history_requests):
                 self.print_getting_history()
 
+    def send_message(self, message, subtype=None, request_dict_ext={}):
+        message = linkify_text(message, self.team)
+        if subtype == 'me_message':
+            s = SlackRequest(self.team, "chat.meMessage", {"channel": self.identifier, "text": message}, channel=self)
+            self.eventrouter.receive(s)
+        else:
+            request = {"type": "message", "channel": self.identifier,
+                    "text": message, "user": self.team.myidentifier}
+            request.update(request_dict_ext)
+            self.team.send_to_websocket(request)
+
     def send_add_reaction(self, msg_id, reaction):
         self.send_change_reaction("reactions.add", msg_id, reaction)
 
@@ -2033,18 +2044,6 @@ class SlackChannel(SlackChannelCommon):
                 w.buffer_set(self.channel_buffer, "print_hooks_enabled", "1")
             if backlog or self_msg:
                 self.mark_read(ts, update_remote=False, force=True)
-
-    def send_message(self, message, subtype=None, request_dict_ext={}):
-        message = linkify_text(message, self.team)
-        dbg(message)
-        if subtype == 'me_message':
-            s = SlackRequest(self.team, "chat.meMessage", {"channel": self.identifier, "text": message}, channel=self)
-            self.eventrouter.receive(s)
-        else:
-            request = {"type": "message", "channel": self.identifier,
-                    "text": message, "user": self.team.myidentifier}
-            request.update(request_dict_ext)
-            self.team.send_to_websocket(request)
 
     def store_message(self, message_to_store):
         if not self.active:
@@ -2563,14 +2562,10 @@ class SlackThreadChannel(SlackChannelCommon):
         if subtype == 'me_message':
             w.prnt("", "ERROR: /me is not supported in threads")
             return w.WEECHAT_RC_ERROR
-        message = linkify_text(message, self.team)
-        dbg(message)
-        request = {"type": "message", "text": message,
-                "channel": self.parent_channel.identifier,
-                "thread_ts": str(self.thread_ts),
-                "user": self.team.myidentifier}
+
+        request = {"thread_ts": str(self.thread_ts)}
         request.update(request_dict_ext)
-        self.team.send_to_websocket(request)
+        super(SlackThreadChannel, self).send_message(message, subtype, request)
 
     def open(self, update_remote=True):
         self.create_buffer()
