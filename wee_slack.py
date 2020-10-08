@@ -2287,7 +2287,7 @@ class SlackChannelHashedMessages(dict):
         full_hash = sha1_hex(str(key))
         short_hash = full_hash[:hash_len]
 
-        while any(x.startswith(short_hash) for x in self if isinstance(x, str)):
+        while any(x.startswith(short_hash) for x in self if type(x).__name__ == "str"):
             hash_len += 1
             short_hash = full_hash[:hash_len]
 
