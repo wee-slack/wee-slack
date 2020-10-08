@@ -368,7 +368,7 @@ def get_thread_color(thread_id):
 
 
 def sha1_hex(s):
-    return hashlib.sha1(s.encode('utf-8')).hexdigest()
+    return str(hashlib.sha1(s.encode('utf-8')).hexdigest())
 
 
 def get_functions_with_prefix(prefix):
