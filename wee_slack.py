@@ -1691,15 +1691,23 @@ class SlackChannelCommon(object):
             return
         return message
 
-    def message_from_index(self, index, message_filter=None, reverse=True):
-        for ts in (reversed(self.visible_messages) if reverse else self.visible_messages):
-            message = self.messages[ts]
-            if not message_filter or message_filter(message):
-                index -= 1
-                if index == 0:
-                    return message
+    def message_from_index(self, index, message_filter=None):
 
-    def message_from_hash_or_index(self, hash_or_index=None, message_filter=None, reverse=True):
+        window = w.current_window()
+        scroll = w.hdata_pointer(hdata.window, window, 'scroll')
+        offset = w.hdata_integer(hdata.window_scroll, scroll, 'lines_after')
+
+        for ts in reversed(self.visible_messages):
+            if offset > 0:
+                offset -= 1
+            else:
+                message = self.messages[ts]
+                if not message_filter or message_filter(message):
+                    index -= 1
+                    if index == 0:
+                        return message
+
+    def message_from_hash_or_index(self, hash_or_index=None, message_filter=None):
         message = self.message_from_hash(hash_or_index, message_filter)
         if not message:
             if not hash_or_index:
@@ -1708,7 +1716,7 @@ class SlackChannelCommon(object):
                 index = int(hash_or_index)
             else:
                 return
-            message = self.message_from_index(index, message_filter, reverse)
+            message = self.message_from_index(index, message_filter)
         return message
 
     def change_message(self, ts, message_json=None, text=None):
@@ -2915,6 +2923,8 @@ class Hdata(object):
         self.line = w.hdata_get('line')
         self.line_data = w.hdata_get('line_data')
         self.lines = w.hdata_get('lines')
+        self.window = w.hdata_get('window')
+        self.window_scroll = w.hdata_get('window_scroll')
 
 
 class SlackTS(object):
