@@ -4588,8 +4588,7 @@ def command_thread(data, current_buffer, args):
         print_error('/thread can not be used in the team buffer, only in a channel')
         return w.WEECHAT_RC_ERROR
 
-    message_filter = lambda message: message.number_of_replies()
-    message = channel.message_from_hash_or_index(args, message_filter)
+    message = channel.message_from_hash_or_index(args)
 
     if message:
         message.open_thread(switch=config.switch_buffer_on_join)
