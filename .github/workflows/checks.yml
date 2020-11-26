@@ -1,0 +1,32 @@
+name: wee-slack
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [2.7, 3.7]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.version }}
+    - name: Install dependencies
+      run: |
+        pip install pipenv
+        pipenv install --dev
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        pipenv run flake8 .
+        # exit-zero treats all errors as warnings.
+        pipenv run flake8 . --exit-zero --select=C,E,F,W
+    - name: Test with pytest
+      run: |
+        pipenv run pytest
