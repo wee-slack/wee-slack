@@ -201,7 +201,7 @@ List the connected Slack teams.
 ### thread
 
 ```
-/thread [message_id]
+/thread [count/message_id]
 ```
 
 Open the thread for the message.

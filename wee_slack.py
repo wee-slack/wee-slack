@@ -4578,7 +4578,7 @@ def command_showmuted(data, current_buffer, args):
 @utf8_decode
 def command_thread(data, current_buffer, args):
     """
-    /thread [message_id]
+    /thread [count/message_id]
     Open the thread for the message.
     If no message id is specified the last thread in channel will be opened.
     """
@@ -4588,7 +4588,10 @@ def command_thread(data, current_buffer, args):
         print_error('/thread can not be used in the team buffer, only in a channel')
         return w.WEECHAT_RC_ERROR
 
-    message = channel.message_from_hash_or_index(args)
+    message = channel.message_from_hash(args)
+    if not message:
+        message_filter = lambda message: message.number_of_replies()
+        message = channel.message_from_hash_or_index(args, message_filter)
 
     if message:
         message.open_thread(switch=config.switch_buffer_on_join)
