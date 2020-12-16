@@ -9,8 +9,10 @@ import wee_slack
 cmds = wee_slack.EventRouter().cmds
 options = wee_slack.PluginConfig.default_settings
 
-with open('docs/Commands.md', 'w') as file_cmds:
-    file_cmds.write(dedent("""
+with open("docs/Commands.md", "w") as file_cmds:
+    file_cmds.write(
+        dedent(
+            """
         # Commands
 
         These are the commands made available by this script. In In addition to
@@ -22,12 +24,16 @@ with open('docs/Commands.md', 'w') as file_cmds:
 
         ## Available commands:
 
-        """).lstrip())
+        """
+        ).lstrip()
+    )
 
     for name, cmd in sorted(cmds.items()):
-        doc = dedent(cmd.__doc__ or '').strip()
-        command, helptext = doc.split('\n', 1)
-        file_cmds.write(dedent("""
+        doc = dedent(cmd.__doc__ or "").strip()
+        command, helptext = doc.split("\n", 1)
+        file_cmds.write(
+            dedent(
+                """
             ### {}
 
             ```
@@ -36,10 +42,16 @@ with open('docs/Commands.md', 'w') as file_cmds:
 
             {}
 
-            """).lstrip().format(name, command, helptext))
+            """
+            )
+            .lstrip()
+            .format(name, command, helptext)
+        )
 
-with open('docs/Options.md', 'w') as file_options:
-    file_options.write(dedent("""
+with open("docs/Options.md", "w") as file_options:
+    file_options.write(
+        dedent(
+            """
         # Options
 
         You can set these options by using:
@@ -58,14 +70,22 @@ with open('docs/Options.md', 'w') as file_options:
 
         ## Available options:
 
-        """).lstrip())
+        """
+        ).lstrip()
+    )
 
     for name, option in sorted(options.items()):
-        file_options.write(dedent("""
+        file_options.write(
+            dedent(
+                """
             ### {}
 
             **Default:** `{}`
 
             **Description:** {}
 
-            """).lstrip().format(name, option.default, option.desc))
+            """
+            )
+            .lstrip()
+            .format(name, option.default, option.desc)
+        )
