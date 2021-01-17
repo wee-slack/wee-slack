@@ -1615,11 +1615,11 @@ class SlackChannelCommon(object):
                 self.print_getting_history()
 
     def send_message(self, message, subtype=None, request_dict_ext={}):
-        message = linkify_text(message, self.team)
         if subtype == 'me_message':
             s = SlackRequest(self.team, "chat.meMessage", {"channel": self.identifier, "text": message}, channel=self)
             self.eventrouter.receive(s)
         else:
+            message = linkify_text(message, self.team)
             request = {"type": "message", "channel": self.identifier,
                     "text": message, "user": self.team.myidentifier}
             request.update(request_dict_ext)
