@@ -287,8 +287,39 @@ import pytest
             "<[color 16711680]>|<[color reset]> Title",
         ]),
     },
+    {
+        'input_message': {'attachments': [{
+            'text': 'Attachment text',
+            'original_url': 'http://from.url',
+        }]},
+        'input_text_before': "",
+        'output': "\n".join([
+            "| Attachment text",
+        ]),
+        'link_previews': True
+    },
+    {
+        'input_message': {'attachments': [{
+            'text': 'Attachment text',
+            'original_url': 'http://from.url',
+        }]},
+        'input_text_before': "",
+        'output': '',
+        'link_previews': False
+    },
+    {
+        'input_message': {'attachments': [{
+            'text': 'Attachment text',
+        }]},
+        'input_text_before': "",
+        'output': "\n".join([
+            "| Attachment text",
+        ]),
+        'link_previews': False
+    },
 ))
 def test_unwrap_attachments(case):
+    wee_slack.config.link_previews = case.get('link_previews')
     result = wee_slack.unwrap_attachments(
         case['input_message'], case['input_text_before'])
     assert result == case['output']
