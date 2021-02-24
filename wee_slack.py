@@ -65,7 +65,7 @@ except ImportError:
 
 SCRIPT_NAME = "slack"
 SCRIPT_AUTHOR = "Ryan Huber <rhuber@gmail.com>"
-SCRIPT_VERSION = "2.6.0"
+SCRIPT_VERSION = "2.7.0"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 REPO_URL = "https://github.com/wee-slack/wee-slack"

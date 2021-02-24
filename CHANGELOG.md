@@ -1,5 +1,55 @@
 # Changelog
 
+## 2.7.0 (2021-02-24)
+
+Note that this version changes the default value of the `background_load_all_history` option to `true`, but this will not change for existing installations. It is recommended to set it to `true` unless you experience performance issues. If you keep it at `false` you will experience these issues:
+
+- Channels will not be shown as unread when wee-slack loads, even if there are unread messages. Messages which arrive after wee-slack has loaded however will mark the channel as unread.
+- If messages arrive while the connection to Slack is lost (e.g. during suspend), they will not appear in the hotlist.
+
+The reason for these issues now being present with `background_load_all_history` set to `false` is that the API has changed, so we can't check for unread messages without loading the history anymore.
+
+### Slack API changes
+
+- Change to the new Conversations API. The old API will stop working on 2021-02-24, which means that older versions of wee-slack will not work after this (fixes #792).
+
+### Features
+
+- Rewrite how the channel history is fetched. This fixes some issues with fetching history after loosing connection and reconnecting (fixes #629, fixes #715, closes #732, PR #774).
+- Change `/rehistory` command to only print the buffer again, not fetch the history from Slack again, unless the `-remote` option is provided.
+- Better support for renaming buffers (fixes #563).
+- Use the `weechat.history.max_buffer_lines_number` option to decide how much backlog to keep.
+- Add an option `history_fetch_count` for how much history to fetch (fixes #376).
+- Rename buffers from `<team>.slack.com` to `slack.<team>` (fixes #709).
+- Include a prefix character in front of attachments.
+- Support colorizing attachment prefix or line (fixes #424, fixes #426).
+- Support creating channels with the new command `/slack create` (fixes #415).
+- Support custom indent in buflist for threads (see [the last comment](https://github.com/wee-slack/wee-slack/issues/783#issuecomment-658435310) in #783 for details).
+- Support global placement of the `weemoji.json` file.
+- Add support to disable teammate link previews (PR #815).
+
+### Bug fixes
+
+- More robust handling of file modes (PR #771).
+- Prevent rendering two versions of the message text in certain cases.
+- Increase duration of typing notices, so they remain continously for a person that is continously typing, instead of disappearing and reappering every four seconds.
+- Fix typing indicators in buflist for DMs and MPDMs.
+- Only fetch members for joined channels when getting history, prevents unnecessary requests and rate limiting (fixes #775).
+- Fix issues with the `thread_messages_in_channel` option in certain channels (fixes #664).
+- Support notifying thread messages for old threads (parent message is out of the backlog) and before channel history is loaded (fixes #619, fixes #754).
+- Mark thread as read when closing buffer.
+- Store message ts in line tags instead of misusing `date_printed` (fixes #514).
+- Disable print hooks when printing old/debug messages (fixes #629, fixes #756).
+- When changing latest message in a channel, print new lines if needed (previously, the lines would be joined if the new version of the message had more lines than the old, and this is still the case for older messages).
+- Remove buffer notify option for unmuted buffers (fixes #746).
+- Fix buffers not changing color in buflist when (un)muted.
+- Fix thread bot messages appearing in channel instead of thread (fixes #749).
+- Set correct localvar type for threads in pms (fixes #789).
+- Use `slack_timeout` for websocket connection (relates to #793).
+- Don't display the typing indicator for muted conversations (PR #794).
+- Print error message when sending message fails (relates to #797).
+- Don't escape <>& in me messages (fixes #704, closes #822).
+
 ## 2.6.0 (2020-05-06)
 
 ### Features
