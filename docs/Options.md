@@ -130,6 +130,12 @@ slack` after changing it to take effect.
 
 **Description:** The number of messages to fetch for each channel when fetching history, between 1 and 1000.
 
+### link_previews
+
+**Default:** `true`
+
+**Description:** Show previews of website content linked by teammates.
+
 ### map_underline_to
 
 **Default:** `_`
