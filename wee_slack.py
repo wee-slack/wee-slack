@@ -1608,6 +1608,7 @@ class SlackChannelCommon(object):
     def reprint_messages(self, history_message=False, no_log=True, force_render=False):
         if self.channel_buffer:
             w.buffer_clear(self.channel_buffer)
+            self.last_line_from = None
             for message in self.visible_messages.values():
                 self.prnt_message(message, history_message, no_log, force_render)
             if (self.identifier in self.pending_history_requests or
