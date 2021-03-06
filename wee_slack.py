@@ -2424,7 +2424,7 @@ class SlackSharedChannel(SlackChannel):
 
     def get_history(self, slow_queue=False, full=False, no_log=False):
         # Fetch members since they aren't included in rtm.start
-        s = SlackRequest(self.team, 'conversations.members', {'channel': self.identifier}, channel=self)
+        s = SlackRequest(self.team, 'conversations.members', {'channel': self.identifier, 'limit': 1000}, channel=self)
         self.eventrouter.receive(s)
         super(SlackSharedChannel, self).get_history(slow_queue, full, no_log)
 
