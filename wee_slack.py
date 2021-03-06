@@ -2423,10 +2423,6 @@ class SlackSharedChannel(SlackChannel):
         super(SlackSharedChannel, self).__init__(eventrouter, "shared", **kwargs)
 
     def get_history(self, slow_queue=False, full=False, no_log=False):
-        # Get info for external users in the channel
-        for user in self.members - set(self.team.users.keys()):
-            s = SlackRequest(self.team, 'users.info', {'user': user}, channel=self)
-            self.eventrouter.receive(s)
         # Fetch members since they aren't included in rtm.start
         s = SlackRequest(self.team, 'conversations.members', {'channel': self.identifier}, channel=self)
         self.eventrouter.receive(s)
@@ -3179,6 +3175,10 @@ def handle_conversationsreplies(message_json, eventrouter, team, channel, metada
 def handle_conversationsmembers(members_json, eventrouter, team, channel, metadata):
     if members_json['ok']:
         channel.set_members(members_json['members'])
+        unknown_users = set(members_json['members']) - set(team.users.keys())
+        for user in unknown_users:
+            s = SlackRequest(team, 'users.info', {'user': user}, channel=channel)
+            eventrouter.receive(s)
     else:
         w.prnt(team.channel_buffer, '{}Couldn\'t load members for channel {}. Error: {}'
                 .format(w.prefix('error'), channel.name, members_json['error']))
