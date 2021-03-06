@@ -2809,6 +2809,13 @@ class SlackMessage(object):
             if user.is_external:
                 name += config.external_user_suffix
             return name
+        elif 'user_profile' in self.message_json:
+            nick = nick_from_profile(self.message_json['user_profile'], self.user_identifier)
+            color_name = get_nick_color(nick)
+            name = nick if plain else colorize_string(color_name, nick)
+            if self.message_json.get('user_team') != self.message_json.get('team'):
+                name += config.external_user_suffix
+            return name
         elif 'username' in self.message_json:
             username = self.message_json["username"]
             if plain:
