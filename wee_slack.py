@@ -2466,6 +2466,15 @@ class SlackChannel(SlackChannelCommon):
         self.print_getting_history()
         self.pending_history_requests.add(self.identifier)
 
+        if not self.members or self.members == set(self.team.myidentifier):
+            s = SlackRequest(
+                self.team,
+                "conversations.members",
+                {"channel": self.identifier, "limit": 1000},
+                channel=self,
+            )
+            self.eventrouter.receive(s)
+
         post_data = {"channel": self.identifier, "count": config.history_fetch_count}
         if self.got_history and self.messages and not full:
             post_data["oldest"] = next(reversed(self.messages))
@@ -2821,17 +2830,6 @@ class SlackPrivateChannel(SlackGroupChannel):
     def __init__(self, eventrouter, **kwargs):
         super(SlackPrivateChannel, self).__init__(eventrouter, "private", **kwargs)
 
-    def get_history(self, slow_queue=False, full=False, no_log=False):
-        # Fetch members since they aren't included in rtm.start
-        s = SlackRequest(
-            self.team,
-            "conversations.members",
-            {"channel": self.identifier},
-            channel=self,
-        )
-        self.eventrouter.receive(s)
-        super(SlackPrivateChannel, self).get_history(slow_queue, full, no_log)
-
 
 class SlackMPDMChannel(SlackChannel):
     """
@@ -2874,17 +2872,6 @@ class SlackMPDMChannel(SlackChannel):
 class SlackSharedChannel(SlackChannel):
     def __init__(self, eventrouter, **kwargs):
         super(SlackSharedChannel, self).__init__(eventrouter, "shared", **kwargs)
-
-    def get_history(self, slow_queue=False, full=False, no_log=False):
-        # Fetch members since they aren't included in rtm.start
-        s = SlackRequest(
-            self.team,
-            "conversations.members",
-            {"channel": self.identifier, "limit": 1000},
-            channel=self,
-        )
-        self.eventrouter.receive(s)
-        super(SlackSharedChannel, self).get_history(slow_queue, full, no_log)
 
 
 class SlackThreadChannel(SlackChannelCommon):
