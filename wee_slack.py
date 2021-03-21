@@ -2466,7 +2466,10 @@ class SlackChannel(SlackChannelCommon):
         self.print_getting_history()
         self.pending_history_requests.add(self.identifier)
 
-        if not self.members or self.members == set(self.team.myidentifier):
+        if not self.got_history:
+            # Slack has started returning only a few members for some channels
+            # in rtm.start. I don't know how we can check if the member list is
+            # complete, so we have to fetch members for all channels.
             s = SlackRequest(
                 self.team,
                 "conversations.members",
