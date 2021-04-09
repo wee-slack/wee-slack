@@ -100,7 +100,7 @@ If you don't want wee\_slack to start automatically when weechat starts, you can
 mkdir -p ~/.weechat/python/autoload
 cd ~/.weechat/python
 curl -O https://raw.githubusercontent.com/wee-slack/wee-slack/master/wee_slack.py
-ln -s ../wee_slack.py autoload
+ln -s ./wee_slack.py autoload
 ```
 
 ### 3. Start WeeChat
