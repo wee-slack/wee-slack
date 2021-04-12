@@ -1684,7 +1684,7 @@ class SlackTeam(object):
                     # only http proxy is currently supported
                     proxy = ProxyWrapper()
                     timeout = config.slack_timeout / 1000
-                    if proxy.has_proxy == True:
+                    if proxy.has_proxy:
                         ws = create_connection(
                             self.ws_url,
                             timeout=timeout,
@@ -3425,7 +3425,7 @@ class SlackMessage(object):
             self.open_thread()
 
         if message.user_identifier != self.team.myidentifier and (
-            config.notify_subscribed_threads == True
+            config.notify_subscribed_threads is True
             or config.notify_subscribed_threads == "auto"
             and not config.auto_open_threads
             and not config.thread_messages_in_channel

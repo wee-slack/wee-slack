@@ -105,7 +105,7 @@ class FakeWeechat:
     def prnt(*args):
         output = "("
         for arg in args:
-            if arg != None:
+            if arg is not None:
                 output += "{}, ".format(arg)
         print("w.prnt {}".format(output))
 
