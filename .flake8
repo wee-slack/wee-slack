@@ -1,7 +1,11 @@
 [flake8]
-select = E901,E999,F821,F822,F823
 count = True
 max-complexity = 10
 max-line-length = 120
 show-source = True
 statistics = True
+extend-ignore = E203
+
+per-file-ignores =
+    wee_slack.py: C901, E266, E501, E722, E731, E741
+    _pytest/test_utf8_helpers.py: E721

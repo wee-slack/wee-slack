@@ -13,7 +13,7 @@ b_aa = "å".encode("utf-8")
 b_word = b_ae + b_oe + b_aa
 
 
-if sys.version_info.major > 2:
+if sys.version_info.major > 2:  # noqa: C901
 
     def test_decode_should_not_transform_str():
         assert "æøå" == decode_from_utf8("æøå")

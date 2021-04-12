@@ -11,8 +11,8 @@ from websocket import ABNF
 
 sys.path.append(".")
 
-import wee_slack
-from wee_slack import EventRouter, initiate_connection
+import wee_slack  # noqa: E402
+from wee_slack import EventRouter, initiate_connection  # noqa: E402
 
 
 class fakewebsocket(object):

@@ -31,7 +31,11 @@ import string
 # See https://github.com/numpy/numpy/issues/11925
 sys.modules["numpy"] = None
 
-from websocket import ABNF, create_connection, WebSocketConnectionClosedException
+from websocket import (  # noqa: E402
+    ABNF,
+    create_connection,
+    WebSocketConnectionClosedException,
+)
 
 try:
     basestring  # Python 2
