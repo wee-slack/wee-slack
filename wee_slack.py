@@ -5,7 +5,7 @@
 
 from __future__ import print_function, unicode_literals
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from datetime import date, datetime, timedelta
 from functools import partial, wraps
 from io import StringIO
@@ -21,7 +21,6 @@ import os
 import re
 import sys
 import traceback
-import collections
 import ssl
 import random
 import socket
@@ -42,9 +41,16 @@ except NameError:  # Python 3
     basestring = unicode = str
 
 try:
-    from collections.abc import Mapping, Reversible, KeysView, ItemsView, ValuesView
-except:
-    from collections import Mapping, KeysView, ItemsView, ValuesView
+    from collections.abc import (
+        ItemsView,
+        Iterable,
+        KeysView,
+        Mapping,
+        Reversible,
+        ValuesView,
+    )
+except ImportError:
+    from collections import ItemsView, Iterable, KeysView, Mapping, ValuesView
 
     Reversible = object
 
@@ -54,8 +60,8 @@ except ImportError:
     from urllib import quote, urlencode
 
 try:
-    from json import JSONDecodeError
-except:
+    JSONDecodeError = json.JSONDecodeError
+except AttributeError:
     JSONDecodeError = ValueError
 
 # hack to make tests possible.. better way?
@@ -201,9 +207,9 @@ def encode_to_utf8(data):
         return data.encode("utf-8")
     if isinstance(data, bytes):
         return data
-    elif isinstance(data, collections.Mapping):
+    elif isinstance(data, Mapping):
         return type(data)(map(encode_to_utf8, data.items()))
-    elif isinstance(data, collections.Iterable):
+    elif isinstance(data, Iterable):
         return type(data)(map(encode_to_utf8, data))
     else:
         return data
@@ -216,9 +222,9 @@ def decode_from_utf8(data):
         return data.decode("utf-8")
     if isinstance(data, unicode):
         return data
-    elif isinstance(data, collections.Mapping):
+    elif isinstance(data, Mapping):
         return type(data)(map(decode_from_utf8, data.items()))
-    elif isinstance(data, collections.Iterable):
+    elif isinstance(data, Iterable):
         return type(data)(map(decode_from_utf8, data))
     else:
         return data
@@ -643,7 +649,6 @@ class EventRouter(object):
                 self.record_event(message_json, team, "type", "websocket")
             message_json["wee_slack_metadata_team"] = team
             self.receive(message_json)
-        return w.WEECHAT_RC_OK
 
     @utf8_decode
     def receive_httprequest_callback(self, data, command, return_code, out, err):
@@ -688,7 +693,6 @@ class EventRouter(object):
                     self.delete_context(data)
                 except:
                     dbg("HTTP REQUEST CALLBACK FAILED", True)
-                    pass
             # We got an empty reply and this is weird so just ditch it and retry
             else:
                 dbg("length was zero, probably a bug..")
@@ -768,7 +772,6 @@ class EventRouter(object):
         if len(self.queue) > 0:
             j = self.queue.pop(0)
             # Reply is a special case of a json reply from websocket.
-            kwargs = {}
             if isinstance(j, SlackRequest):
                 if j.should_try():
                     if j.retry_ready():
@@ -1135,7 +1138,6 @@ def typing_bar_item_cb(data, item, current_window, current_buffer, extra_info):
             if channel.type == "im":
                 if channel.is_someone_typing():
                     typers.append("D/" + channel.name)
-                pass
 
     typing = ", ".join(typers)
     if typing != "":
@@ -6221,7 +6223,7 @@ def dbg(message, level=0, main_buffer=False, fout=False):
 
 ###### Config code
 class PluginConfig(object):
-    Setting = collections.namedtuple("Setting", ["default", "desc"])
+    Setting = namedtuple("Setting", ["default", "desc"])
     # Default settings.
     # These are, initially, each a (default, desc) tuple; the former is the
     # default value of the setting, in the (string) format that weechat
@@ -6658,7 +6660,6 @@ if __name__ == "__main__":
             )
         else:
 
-            global EVENTROUTER
             EVENTROUTER = EventRouter()
 
             receive_httprequest_callback = EVENTROUTER.receive_httprequest_callback

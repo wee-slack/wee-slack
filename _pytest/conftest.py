@@ -12,7 +12,7 @@ from websocket import ABNF
 sys.path.append(".")
 
 import wee_slack
-from wee_slack import EventRouter, SlackRequest, initiate_connection
+from wee_slack import EventRouter, initiate_connection
 
 
 class fakewebsocket(object):
