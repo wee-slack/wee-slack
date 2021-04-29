@@ -4000,12 +4000,12 @@ def process_message(
         channel.prnt_message(message, history_message)
 
     if not history_message:
-        download_files(message_json, team)
+        download_files(message_json, channel)
 
     return message
 
 
-def download_files(message_json, team):
+def download_files(message_json, channel):
     download_location = config.files_download_location
     if not download_location:
         return
@@ -4033,7 +4033,9 @@ def download_files(message_json, team):
             continue
 
         filetype = "" if f["title"].endswith(f["filetype"]) else "." + f["filetype"]
-        filename = "{}_{}{}".format(team.name, f["title"], filetype)
+        filename = "{}.{}_{}{}".format(
+            channel.team.name, channel.name, f["title"], filetype
+        )
         for fileout in fileout_iter(os.path.join(download_location, filename)):
             if os.path.isfile(fileout):
                 continue
@@ -4041,7 +4043,7 @@ def download_files(message_json, team):
                 "url:" + f["url_private"],
                 {
                     "file_out": fileout,
-                    "httpheader": "Authorization: Bearer " + team.token,
+                    "httpheader": "Authorization: Bearer " + channel.team.token,
                 },
                 config.slack_timeout,
                 "",
