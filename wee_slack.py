@@ -4038,7 +4038,10 @@ def download_files(message_json, channel):
     download_location = config.files_download_location
     if not download_location:
         return
-    download_location = w.string_eval_path_home(download_location, {}, {}, {})
+    options = {
+        "directory": "data",
+    }
+    download_location = w.string_eval_path_home(download_location, {}, {}, options)
 
     if not os.path.exists(download_location):
         try:
@@ -5819,7 +5822,7 @@ def command_upload(data, current_buffer, args):
     Uploads a file to the current buffer.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
-    weechat_dir = w.info_get("weechat_dir", "")
+    weechat_dir = w.info_get("weechat_data_dir", "") or w.info_get("weechat_dir", "")
     file_path = os.path.join(weechat_dir, os.path.expanduser(args))
 
     if channel.type == "team":
@@ -6086,7 +6089,9 @@ def create_slack_debug_buffer():
 
 def load_emoji():
     try:
-        weechat_dir = w.info_get("weechat_dir", "")
+        weechat_dir = w.info_get("weechat_data_dir", "") or w.info_get(
+            "weechat_dir", ""
+        )
         weechat_sharedir = w.info_get("weechat_sharedir", "")
         local_weemoji, global_weemoji = (
             "{}/weemoji.json".format(path) for path in (weechat_dir, weechat_sharedir)
