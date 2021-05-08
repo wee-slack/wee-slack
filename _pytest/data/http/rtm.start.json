@@ -502,82 +502,6 @@
     ],
     "groups": [
         {
-            "id": "G3ZGMF4RZ",
-            "name": "mpdm-bob--alice--charles-1",
-            "is_group": true,
-            "created": 1485975690,
-            "creator": "U407ABLLW",
-            "is_archived": false,
-            "is_mpim": true,
-            "has_pins": false,
-            "is_open": true,
-            "last_read": "0000000000.000000",
-            "latest": {
-                "type": "message",
-                "subtype": "file_share",
-                "text": "<@U407ABLLW|alice> uploaded a file: <https:\/\/weeslacktest.slack.com\/files\/alice\/F3ZLY6K5J\/-.txt|Untitled>",
-                "file": {
-                    "id": "F3ZLY6K5J",
-                    "created": 1485975715,
-                    "timestamp": 1485975715,
-                    "name": "-.txt",
-                    "title": "Untitled",
-                    "mimetype": "text\/plain",
-                    "filetype": "text",
-                    "pretty_type": "Plain Text",
-                    "user": "U407ABLLW",
-                    "editable": true,
-                    "size": 14,
-                    "mode": "snippet",
-                    "is_external": false,
-                    "external_type": "",
-                    "is_public": false,
-                    "public_url_shared": false,
-                    "display_as_bot": false,
-                    "username": "",
-                    "url_private": "https:\/\/files.slack.com\/files-pri\/T3YS5EAL9-F3ZLY6K5J\/-.txt",
-                    "url_private_download": "https:\/\/files.slack.com\/files-pri\/T3YS5EAL9-F3ZLY6K5J\/download\/-.txt",
-                    "permalink": "https:\/\/weeslacktest.slack.com\/files\/alice\/F3ZLY6K5J\/-.txt",
-                    "permalink_public": "https:\/\/slack-files.com\/T3YS5EAL9-F3ZLY6K5J-39c2c4f739",
-                    "edit_link": "https:\/\/weeslacktest.slack.com\/files\/alice\/F3ZLY6K5J\/-.txt\/edit",
-                    "preview": "some code here",
-                    "preview_highlight": "<div class=\"CodeMirror cm-s-default CodeMirrorServer\" oncopy=\"if(event.clipboardData){event.clipboardData.setData('text\/plain',window.getSelection().toString().replace(\/\\u200b\/g,''));event.preventDefault();event.stopPropagation();}\">\n<div class=\"CodeMirror-code\">\n<div><pre>some code here<\/pre><\/div>\n<\/div>\n<\/div>\n",
-                    "lines": 1,
-                    "lines_more": 0,
-                    "preview_is_truncated": false,
-                    "channels": [],
-                    "groups": [
-                        "G3ZGMF4RZ"
-                    ],
-                    "ims": [],
-                    "comments_count": 0
-                },
-                "user": "U407ABLLW",
-                "upload": true,
-                "display_as_bot": false,
-                "username": "<@U407ABLLW|alice>",
-                "bot_id": null,
-                "ts": "1485975715.000005"
-            },
-            "unread_count": 1,
-            "unread_count_display": 1,
-            "members": [
-                "U407ABLLW",
-                "U3ZKBBDL5",
-                "U4096CBHC"
-            ],
-            "topic": {
-                "value": "Group messaging",
-                "creator": "U407ABLLW",
-                "last_set": 1485975690
-            },
-            "purpose": {
-                "value": "Group messaging with: @bob @alice @charles",
-                "creator": "U407ABLLW",
-                "last_set": 1485975690
-            }
-        },
-        {
             "id": "G3ZJKP7GA",
             "name": "some-private-channel",
             "is_group": true,
@@ -716,6 +640,84 @@
     "cache_ts": 1485977062,
     "read_only_channels": [],
     "can_manage_shared_channels": false,
+    "mpims": [
+        {
+            "id": "G3ZGMF4RZ",
+            "name": "mpdm-bob--alice--charles-1",
+            "is_group": true,
+            "created": 1485975690,
+            "creator": "U407ABLLW",
+            "is_archived": false,
+            "is_mpim": true,
+            "has_pins": false,
+            "is_open": true,
+            "last_read": "0000000000.000000",
+            "latest": {
+                "type": "message",
+                "subtype": "file_share",
+                "text": "<@U407ABLLW|alice> uploaded a file: <https:\/\/weeslacktest.slack.com\/files\/alice\/F3ZLY6K5J\/-.txt|Untitled>",
+                "file": {
+                    "id": "F3ZLY6K5J",
+                    "created": 1485975715,
+                    "timestamp": 1485975715,
+                    "name": "-.txt",
+                    "title": "Untitled",
+                    "mimetype": "text\/plain",
+                    "filetype": "text",
+                    "pretty_type": "Plain Text",
+                    "user": "U407ABLLW",
+                    "editable": true,
+                    "size": 14,
+                    "mode": "snippet",
+                    "is_external": false,
+                    "external_type": "",
+                    "is_public": false,
+                    "public_url_shared": false,
+                    "display_as_bot": false,
+                    "username": "",
+                    "url_private": "https:\/\/files.slack.com\/files-pri\/T3YS5EAL9-F3ZLY6K5J\/-.txt",
+                    "url_private_download": "https:\/\/files.slack.com\/files-pri\/T3YS5EAL9-F3ZLY6K5J\/download\/-.txt",
+                    "permalink": "https:\/\/weeslacktest.slack.com\/files\/alice\/F3ZLY6K5J\/-.txt",
+                    "permalink_public": "https:\/\/slack-files.com\/T3YS5EAL9-F3ZLY6K5J-39c2c4f739",
+                    "edit_link": "https:\/\/weeslacktest.slack.com\/files\/alice\/F3ZLY6K5J\/-.txt\/edit",
+                    "preview": "some code here",
+                    "preview_highlight": "<div class=\"CodeMirror cm-s-default CodeMirrorServer\" oncopy=\"if(event.clipboardData){event.clipboardData.setData('text\/plain',window.getSelection().toString().replace(\/\\u200b\/g,''));event.preventDefault();event.stopPropagation();}\">\n<div class=\"CodeMirror-code\">\n<div><pre>some code here<\/pre><\/div>\n<\/div>\n<\/div>\n",
+                    "lines": 1,
+                    "lines_more": 0,
+                    "preview_is_truncated": false,
+                    "channels": [],
+                    "groups": [
+                        "G3ZGMF4RZ"
+                    ],
+                    "ims": [],
+                    "comments_count": 0
+                },
+                "user": "U407ABLLW",
+                "upload": true,
+                "display_as_bot": false,
+                "username": "<@U407ABLLW|alice>",
+                "bot_id": null,
+                "ts": "1485975715.000005"
+            },
+            "unread_count": 1,
+            "unread_count_display": 1,
+            "members": [
+                "U407ABLLW",
+                "U3ZKBBDL5",
+                "U4096CBHC"
+            ],
+            "topic": {
+                "value": "Group messaging",
+                "creator": "U407ABLLW",
+                "last_set": 1485975690
+            },
+            "purpose": {
+                "value": "Group messaging with: @bob @alice @charles",
+                "creator": "U407ABLLW",
+                "last_set": 1485975690
+            }
+        }
+    ],
     "subteams": {
         "all": [
           {

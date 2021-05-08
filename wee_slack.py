@@ -3597,12 +3597,13 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
         for item in login_data["ims"]:
             channels[item["id"]] = SlackDMChannel(eventrouter, users, **item)
 
+        for item in login_data["mpims"]:
+            channels[item["id"]] = SlackMPDMChannel(
+                eventrouter, users, login_data["self"]["id"], **item
+            )
+
         for item in login_data["groups"]:
-            if item["is_mpim"]:
-                channels[item["id"]] = SlackMPDMChannel(
-                    eventrouter, users, login_data["self"]["id"], **item
-                )
-            else:
+            if not item["is_mpim"]:
                 channels[item["id"]] = SlackGroupChannel(eventrouter, **item)
 
         t = SlackTeam(
@@ -4218,14 +4219,20 @@ def process_im_close(message_json, eventrouter, team, channel, metadata):
     )
 
 
+def process_mpim_joined(message_json, eventrouter, team, channel, metadata):
+    item = message_json["channel"]
+    channel = SlackMPDMChannel(
+        eventrouter, team.users, team.myidentifier, team=team, **item
+    )
+    team.channels[item["id"]] = channel
+    channel.open()
+
+
 def process_group_joined(message_json, eventrouter, team, channel, metadata):
     item = message_json["channel"]
-    if item["name"].startswith("mpdm-"):
-        channel = SlackMPDMChannel(
-            eventrouter, team.users, team.myidentifier, team=team, **item
-        )
-    else:
-        channel = SlackGroupChannel(eventrouter, team=team, **item)
+    if item["is_mpim"]:
+        return
+    channel = SlackGroupChannel(eventrouter, team=team, **item)
     team.channels[item["id"]] = channel
     channel.open()
 
@@ -6623,10 +6630,14 @@ def trace_calls(frame, event, arg):
 
 
 def initiate_connection(token, retries=3, team=None, reconnect=False):
+    request_type = "connect" if team else "start"
+    post_data = {"batch_presence_aware": 1}
+    if request_type == "start":
+        post_data["mpim_aware"] = "true"
     return SlackRequest(
         team,
-        "rtm.{}".format("connect" if team else "start"),
-        {"batch_presence_aware": 1},
+        "rtm.{}".format(request_type),
+        post_data,
         retries=retries,
         token=token,
         metadata={"reconnect": reconnect},
