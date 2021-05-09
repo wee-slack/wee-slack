@@ -13,4 +13,4 @@ def test_everything(realish_eventrouter, team):
         realish_eventrouter.receive_ws_callback(team.team_hash, None)
         realish_eventrouter.handle_next()
 
-    assert len(realish_eventrouter.queue) == 18
+    assert len(realish_eventrouter.queue) == 19

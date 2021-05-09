@@ -312,6 +312,7 @@
             "has_pins": false,
             "is_member": true,
             "is_private": false,
+            "is_mpim": false,
             "last_read": "1485976236.000019",
             "latest": {
                 "type": "message",
@@ -400,6 +401,7 @@
             "has_pins": false,
             "is_member": false,
             "is_private": false,
+            "is_mpim": false,
             "previous_names": []
         },
         {
@@ -415,6 +417,7 @@
             "has_pins": false,
             "is_member": true,
             "is_private": false,
+            "is_mpim": false,
             "last_read": "1485969592.000002",
             "latest": {
                 "user": "U4096CBHC",
@@ -455,6 +458,7 @@
             "has_pins": false,
             "is_member": false,
             "is_private": false,
+            "is_mpim": false,
             "previous_names": [
                 "some-channel2"
             ]

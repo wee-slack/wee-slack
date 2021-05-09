@@ -1511,7 +1511,7 @@ class SlackTeam(object):
         users,
         bots,
         channels,
-        **kwargs
+        **kwargs,
     ):
         self.slack_api_translator = copy.deepcopy(SLACK_API_TRANSLATOR)
         self.identifier = team_info["id"]
@@ -2084,6 +2084,7 @@ class SlackChannel(SlackChannelCommon):
         self.last_read = SlackTS(kwargs.get("last_read", 0))
         self.channel_buffer = None
         self.got_history = False
+        self.got_members = False
         self.history_needs_update = False
         self.pending_history_requests = set()
         self.messages = OrderedDict()
@@ -2465,14 +2466,8 @@ class SlackChannel(SlackChannelCommon):
     def is_visible(self):
         return w.buffer_get_integer(self.channel_buffer, "hidden") == 0
 
-    def get_history(self, slow_queue=False, full=False, no_log=False):
-        if self.identifier in self.pending_history_requests:
-            return
-
-        self.print_getting_history()
-        self.pending_history_requests.add(self.identifier)
-
-        if not self.got_history:
+    def get_members(self):
+        if not self.got_members:
             # Slack has started returning only a few members for some channels
             # in rtm.start. I don't know how we can check if the member list is
             # complete, so we have to fetch members for all channels.
@@ -2483,6 +2478,14 @@ class SlackChannel(SlackChannelCommon):
                 channel=self,
             )
             self.eventrouter.receive(s)
+
+    def get_history(self, slow_queue=False, full=False, no_log=False):
+        if self.identifier in self.pending_history_requests:
+            return
+
+        self.print_getting_history()
+        self.pending_history_requests.add(self.identifier)
+        self.get_members()
 
         post_data = {"channel": self.identifier, "count": config.history_fetch_count}
         if self.got_history and self.messages and not full:
@@ -2853,14 +2856,25 @@ class SlackMPDMChannel(SlackChannel):
     """
 
     def __init__(self, eventrouter, team_users, myidentifier, **kwargs):
-        kwargs["name"] = ",".join(
+        if "members" in kwargs:
+            kwargs["name"] = self.name_from_members(
+                team_users, kwargs["members"], myidentifier
+            )
+        super(SlackMPDMChannel, self).__init__(eventrouter, "mpim", **kwargs)
+
+    def name_from_members(self, team_users=None, members=None, myidentifier=None):
+        return ",".join(
             sorted(
-                getattr(team_users.get(user_id), "name", user_id)
-                for user_id in kwargs["members"]
-                if user_id != myidentifier
+                getattr((team_users or self.team.users).get(user_id), "name", user_id)
+                for user_id in (members or self.members)
+                if user_id != (myidentifier or self.team.myidentifier)
             )
         )
-        super(SlackMPDMChannel, self).__init__(eventrouter, "mpim", **kwargs)
+
+    def create_buffer(self):
+        if not self.channel_buffer:
+            self.get_members()
+            super(SlackMPDMChannel, self).create_buffer()
 
     def open(self, update_remote=True):
         self.create_buffer()
@@ -3595,6 +3609,10 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
         for item in login_data["channels"]:
             if item["is_shared"]:
                 channels[item["id"]] = SlackSharedChannel(eventrouter, **item)
+            elif item["is_mpim"]:
+                channels[item["id"]] = SlackMPDMChannel(
+                    eventrouter, users, login_data["self"]["id"], **item
+                )
             elif item["is_private"]:
                 channels[item["id"]] = SlackPrivateChannel(eventrouter, **item)
             else:
@@ -3784,11 +3802,15 @@ def handle_conversationsreplies(message_json, eventrouter, team, channel, metada
 
 def handle_conversationsmembers(members_json, eventrouter, team, channel, metadata):
     if members_json["ok"]:
+        channel.got_members = True
         channel.set_members(members_json["members"])
         unknown_users = set(members_json["members"]) - set(team.users.keys())
         for user in unknown_users:
             s = SlackRequest(team, "users.info", {"user": user}, channel=channel)
             eventrouter.receive(s)
+        if channel.type == "mpim":
+            name = channel.name_from_members()
+            channel.set_name(name)
     else:
         w.prnt(
             team.channel_buffer,
