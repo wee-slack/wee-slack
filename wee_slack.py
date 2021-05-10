@@ -2672,8 +2672,14 @@ class SlackChannel(SlackChannelCommon):
         text = message.render(force)
         if isinstance(message, SlackThreadMessage):
             thread_hash = self.hashed_messages[message.thread_ts]
+            if config.thread_broadcast_prefix and message.subtype == "thread_broadcast":
+                prefix = config.thread_broadcast_prefix
+            else:
+                prefix = ""
+
             hash_str = colorize_string(
-                get_thread_color(str(thread_hash)), "[{}]".format(thread_hash)
+                get_thread_color(str(thread_hash)),
+                "[{}{}]".format(prefix, thread_hash),
             )
             return "{} {}".format(hash_str, text)
 
@@ -6425,6 +6431,11 @@ class PluginConfig(object):
             default="true",
             desc="When /joining a channel, automatically switch to it as well.",
         ),
+        "thread_broadcast_prefix": Setting(
+            default="+ ",
+            desc="Prefix to distinguish thread messages that were also sent "
+            "to the channel, when thread_messages_in_channel is enabled.",
+        ),
         "thread_messages_in_channel": Setting(
             default="false",
             desc="When enabled shows thread messages in the parent channel.",
@@ -6541,6 +6552,7 @@ class PluginConfig(object):
     get_history_fetch_count = get_int
     get_map_underline_to = get_string
     get_muted_channels_activity = get_string
+    get_thread_broadcast_prefix = get_string
     get_render_bold_as = get_string
     get_render_italic_as = get_string
     get_shared_name_prefix = get_string
