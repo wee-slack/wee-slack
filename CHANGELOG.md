@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.8.0 (2021-05-11)
+
+### WeeChat compability
+
+- Add compatibility with WeeChat >= 3.2 (XDG directories).
+
+### Features
+
+- Include channel name in file names for downloaded files (fixes #836).
+- Add indicator for broadcast thread messages (PR #838).
+
+### Bug fixes
+
+- Fix nick not being shown for unknown/external users.
+- Fix a bug where the first line would use `prefix_same_nick` after reprinting messages if the first and last message were from the same person.
+- Fix some nicks missing in the nicklist of some channels (fixes #829).
+- Fix new MPIMs (group private chats) not appearing (fixes #825, fixes #833).
+- Fix some MPIMs showing up as private channels.
+
 ## 2.7.0 (2021-02-24)
 
 Note that this version changes the default value of the `background_load_all_history` option to `true`, but this will not change for existing installations. It is recommended to set it to `true` unless you experience performance issues. If you keep it at `false` you will experience these issues:
