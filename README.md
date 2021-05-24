@@ -473,4 +473,4 @@ with:
 Support
 -------
 
-wee-slack is provided without any warranty whatsoever, but you are welcome to ask questions in #wee-slack on freenode.
+wee-slack is provided without any warranty whatsoever, but you are welcome to ask questions in #wee-slack on [Libera.Chat](https://libera.chat/).
