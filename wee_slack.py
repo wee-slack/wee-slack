@@ -259,9 +259,12 @@ class WeechatWrapper(object):
             return decode_from_utf8(orig_attr)
 
     # Ensure all lines sent to weechat specifies a prefix. For lines after the
-    # first, we want to disable the prefix, which is done by specifying a space.
+    # first, we want to disable the prefix, which we do by specifying the same
+    # number of spaces, so it aligns correctly.
     def prnt_date_tags(self, buffer, date, tags, message):
-        message = message.replace("\n", "\n \t")
+        prefix, _, _ = message.partition("\t")
+        prefix_spaces = " " * len(weechat.string_remove_color(prefix, ""))
+        message = message.replace("\n", "\n{}\t".format(prefix_spaces))
         return self.wrap_for_utf8(self.wrapped_class.prnt_date_tags)(
             buffer, date, tags, message
         )
