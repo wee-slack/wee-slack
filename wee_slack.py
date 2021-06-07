@@ -1875,7 +1875,7 @@ class SlackChannelCommon(object):
             w.prnt_date_tags(
                 self.channel_buffer,
                 ts.major,
-                tag(ts, backlog=True, no_log=True),
+                tag(ts, backlog=True, no_log=True, history_message=True),
                 "\tgetting channel history...",
             )
             w.buffer_set(self.channel_buffer, "print_hooks_enabled", "1")
@@ -2406,6 +2406,7 @@ class SlackChannel(SlackChannelCommon):
                 self_msg=self_msg,
                 backlog=backlog,
                 no_log=no_log,
+                history_message=history_message,
                 extra_tags=extra_tags,
             )
 
@@ -3029,6 +3030,7 @@ class SlackThreadChannel(SlackChannelCommon):
                 self_msg=self_msg,
                 backlog=backlog,
                 no_log=no_log,
+                history_message=history_message,
                 extra_tags=extra_tags,
             )
 
@@ -4886,6 +4888,7 @@ def tag(
     self_msg=False,
     backlog=False,
     no_log=False,
+    history_message=False,
     extra_tags=None,
 ):
     tagsets = {
@@ -4912,6 +4915,8 @@ def tag(
         tags = [
             tag for tag in tags if not tag.startswith("log") or tag == "logger_backlog"
         ]
+    if history_message:
+        tags += ["logger_history"]
     if extra_tags:
         tags += extra_tags
     return ",".join(OrderedDict.fromkeys(tags))
