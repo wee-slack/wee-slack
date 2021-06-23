@@ -1514,7 +1514,7 @@ class SlackTeam(object):
         users,
         bots,
         channels,
-        **kwargs,
+        **kwargs
     ):
         self.slack_api_translator = copy.deepcopy(SLACK_API_TRANSLATOR)
         self.identifier = team_info["id"]
