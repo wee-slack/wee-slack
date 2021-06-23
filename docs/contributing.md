@@ -24,10 +24,28 @@ $ pipenv install --dev
 The rest of this document assumes that the development environment has been
 activated, and that you have the latest development dependencies installed.
 
+## Formatting
+
+The code is formatted with [`black`](https://black.readthedocs.io/). To format
+all the files, first navigate to the project root, and then execute:
+
+```
+$ black .
+```
+
+## Linting
+
+The code is linted with [`flake8`](https://flake8.pycqa.org/). To lint all the
+files, first navigate to the project root, and then execute:
+
+```
+$ flake8 .
+```
+
 ## Testing
 
-Tests are executed with `pytest`. To run the tests, first navigate to the
-project root, and then execute:
+Tests are executed with [`pytest`](https://pytest.org/). To run the tests,
+first navigate to the project root, and then execute:
 
 ```
 $ pytest
