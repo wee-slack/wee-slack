@@ -2413,6 +2413,7 @@ class SlackChannel(SlackChannelCommon):
                 config.unhide_buffers_with_activity
                 and not self.is_visible()
                 and not self.muted
+                and not no_log
             ):
                 w.buffer_set(self.channel_buffer, "hidden", "0")
 
