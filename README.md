@@ -35,7 +35,7 @@ Table of Contents
         * [Remote notifications](#remote-notifications)
      * [How do I send messages with multiple lines?](#how-do-i-send-messages-with-multiple-lines)
   * [Known issues](#known-issues)
-  * [Development](#development)
+  * [Debugging](#debugging)
   * [Support](#support)
 
 Features
