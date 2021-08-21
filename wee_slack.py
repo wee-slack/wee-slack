@@ -6750,7 +6750,11 @@ if __name__ == "__main__":
             auto_connect = weechat.info_get("auto_connect", "") != "0"
 
             if auto_connect:
-                tokens = [token.strip() for token in config.slack_api_token.split(",")]
+                tokens = [
+                    token.strip()
+                    for token in config.slack_api_token.split(",")
+                    if token
+                ]
                 w.prnt(
                     "",
                     "Connecting to {} slack team{}.".format(
