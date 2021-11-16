@@ -263,7 +263,8 @@ class WeechatWrapper(object):
     # number of spaces, so it aligns correctly.
     def prnt_date_tags(self, buffer, date, tags, message):
         prefix, _, _ = message.partition("\t")
-        prefix_spaces = " " * len(weechat.string_remove_color(prefix, ""))
+        prefix = weechat.string_remove_color(encode_to_utf8(prefix), "")
+        prefix_spaces = " " * weechat.strlen_screen(prefix)
         message = message.replace("\n", "\n{}\t".format(prefix_spaces))
         return self.wrap_for_utf8(self.wrapped_class.prnt_date_tags)(
             buffer, date, tags, message
