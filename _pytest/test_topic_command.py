@@ -97,7 +97,6 @@ def test_call_topic_with_channel_and_string(realish_eventrouter, channel_general
     assert request.request == "conversations.setTopic"
     assert request.post_data == {
         "channel": "C407ABS94",
-        "token": "xoxs-token",
         "topic": "new topic",
     }
     assert result == wee_slack.w.WEECHAT_RC_OK_EAT
