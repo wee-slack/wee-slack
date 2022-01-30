@@ -2896,7 +2896,7 @@ class SlackMPDMChannel(SlackChannel):
     """
 
     def __init__(self, eventrouter, team_users, myidentifier, **kwargs):
-        if "members" in kwargs:
+        if kwargs.get("members"):
             kwargs["name"] = self.name_from_members(
                 team_users, kwargs["members"], myidentifier
             )
