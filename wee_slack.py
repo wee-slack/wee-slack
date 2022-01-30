@@ -925,8 +925,6 @@ def local_process_async_slack_api_request(request, event_router):
         params = {"useragent": "wee_slack {}".format(SCRIPT_VERSION)}
         request.tried()
         context = event_router.store_context(request)
-        # TODO: let flashcode know about this bug - i have to 'clear' the hashtable or retry requests fail
-        w.hook_process_hashtable("url:", params, config.slack_timeout, "", context)
         w.hook_process_hashtable(
             weechat_request,
             params,
@@ -5163,7 +5161,6 @@ def command_register(data, current_buffer, args):
         "client_id={}&client_secret={}&redirect_uri={}&code={}"
     ).format(CLIENT_ID, CLIENT_SECRET, redirect_uri, code)
     params = {"useragent": "wee_slack {}".format(SCRIPT_VERSION)}
-    w.hook_process_hashtable("url:", params, config.slack_timeout, "", "")
     w.hook_process_hashtable(
         "url:{}".format(uri), params, config.slack_timeout, "register_callback", ""
     )
