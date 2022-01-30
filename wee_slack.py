@@ -922,12 +922,11 @@ def local_process_async_slack_api_request(request, event_router):
                 random.choice(string.ascii_uppercase + string.digits) for _ in range(4)
             )
         )
-        params = {"useragent": "wee_slack {}".format(SCRIPT_VERSION)}
         request.tried()
         context = event_router.store_context(request)
         w.hook_process_hashtable(
             weechat_request,
-            params,
+            request.options(),
             config.slack_timeout,
             "receive_httprequest_callback",
             context,
@@ -1428,6 +1427,7 @@ class SlackRequest(object):
         metadata=None,
         retries=3,
         token=None,
+        cookies=None,
         callback=None,
     ):
         if team is None and token is None:
@@ -1439,6 +1439,7 @@ class SlackRequest(object):
         self.metadata = metadata if metadata else {}
         self.retries = retries
         self.token = token if token else team.token
+        self.cookies = cookies or {}
         self.callback = callback
         self.domain = "api.slack.com"
         self.reset()
@@ -1447,29 +1448,45 @@ class SlackRequest(object):
         self.tries = 0
         self.start_time = time.time()
         self.request_normalized = re.sub(r"\W+", "", self.request)
-        self.post_data["token"] = self.token
         self.url = "https://{}/api/{}?{}".format(
             self.domain, self.request, urlencode(encode_to_utf8(self.post_data))
         )
-        self.params = {"useragent": "wee_slack {}".format(SCRIPT_VERSION)}
         self.response_id = sha1_hex("{}{}".format(self.url, self.start_time))
 
     def __repr__(self):
         return (
             "SlackRequest(team={}, request='{}', post_data={}, retries={}, token='{}', "
-            "tries={}, start_time={})"
+            "cookies={}, tries={}, start_time={})"
         ).format(
             self.team,
             self.request,
             self.post_data,
             self.retries,
             token_for_print(self.token),
+            self.cookies,
             self.tries,
             self.start_time,
         )
 
     def request_string(self):
         return "{}".format(self.url)
+
+    def options(self):
+        cookies = "; ".join(
+            ["{}={}".format(key, value) for key, value in self.cookies.items()]
+        )
+        return {
+            "useragent": "wee_slack {}".format(SCRIPT_VERSION),
+            "httpheader": "Authorization: Bearer {}".format(self.token),
+            "cookie": cookies,
+        }
+
+    def options_as_cli_args(self):
+        options = self.options()
+        options["user-agent"] = options.pop("useragent")
+        httpheader = options.pop("httpheader")
+        headers = [": ".join(x) for x in options.items()] + httpheader.split("\n")
+        return ["-H{}".format(header) for header in headers]
 
     def tried(self):
         self.tries += 1
@@ -5849,10 +5866,12 @@ def command_upload(data, current_buffer, args):
     if isinstance(channel, SlackThreadChannel):
         post_data["thread_ts"] = channel.thread_ts
 
-    url = SlackRequest(
-        channel.team, "files.upload", post_data, channel=channel
-    ).request_string()
-    options = ["-s", "-Ffile=@{}".format(file_path), url]
+    request = SlackRequest(channel.team, "files.upload", post_data, channel=channel)
+    options = request.options_as_cli_args() + [
+        "-s",
+        "-Ffile=@{}".format(file_path),
+        request.request_string(),
+    ]
 
     proxy_string = ProxyWrapper().curl()
     if proxy_string:
