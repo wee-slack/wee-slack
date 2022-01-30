@@ -2288,13 +2288,15 @@ class SlackChannel(SlackChannelCommon):
             self.create_buffer()
             return
 
-        # Only check is_member if is_open is not set, because in some cases
-        # (e.g. group DMs), is_member should be ignored in favor of is_open.
-        is_open = self.is_open if hasattr(self, "is_open") else self.is_member
-        if is_open or self.unread_count_display:
+        if (
+            getattr(self, "is_open", False)
+            or self.unread_count_display
+            or self.type not in ["im", "mpim"]
+            and getattr(self, "is_member", False)
+        ):
             self.create_buffer()
-        elif self.type == "im":
-            # If it is an IM, we still might want to open it if there are unread messages.
+        elif self.type in ["im", "mpim"]:
+            # If it is an IM or MPIM, we still might want to open it if there are unread messages.
             info_method = self.team.slack_api_translator[self.type].get("info")
             if info_method:
                 s = SlackRequest(
@@ -3745,13 +3747,24 @@ def handle_conversationsinfo(channel_json, eventrouter, team, channel, metadata)
     channel_info = channel_json["channel"]
     if "unread_count_display" in channel_info:
         unread_count = channel_info["unread_count_display"]
-        if channel_info["is_im"] and unread_count:
-            channel.check_should_open(True)
+        if unread_count and channel.channel_buffer is None:
+            channel.create_buffer()
         channel.set_unread_count_display(unread_count)
     if "last_read" in channel_info:
         channel.last_read = SlackTS(channel_info["last_read"])
     if "members" in channel_info:
         channel.set_members(channel_info["members"])
+
+    # MPIMs don't have unread_count_display so we have to request the history to check if there are unread messages
+    if channel.type == "mpim" and not channel.channel_buffer:
+        s = SlackRequest(
+            team,
+            "conversations.history",
+            {"channel": channel.identifier, "limit": 1},
+            channel=channel,
+            metadata={"only_set_unread": True},
+        )
+        eventrouter.receive(s)
 
 
 def handle_conversationsopen(
@@ -3776,6 +3789,16 @@ def handle_mpimopen(
 def handle_history(
     message_json, eventrouter, team, channel, metadata, includes_threads=True
 ):
+    if metadata.get("only_set_unread"):
+        if message_json["messages"]:
+            latest = message_json["messages"][0]
+            latest_ts = SlackTS(latest["ts"])
+            if latest_ts > channel.last_read:
+                if not channel.channel_buffer:
+                    channel.create_buffer()
+                channel.set_unread_count_display(1)
+        return
+
     channel.got_history = True
     channel.history_needs_update = False
     for message in reversed(message_json["messages"]):
@@ -6869,9 +6892,7 @@ def create_team(token, initial_data):
             channels = {}
             for channel in initial_data["channels"]:
                 if channel.get("is_im"):
-                    channel_instance = SlackDMChannel(
-                        eventrouter, users, is_member=True, **channel
-                    )
+                    channel_instance = SlackDMChannel(eventrouter, users, **channel)
                 elif channel.get("is_shared"):
                     channel_instance = SlackSharedChannel(eventrouter, **channel)
                 elif channel.get("is_mpim"):
