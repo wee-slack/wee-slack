@@ -27,7 +27,6 @@ if sys.version_info.major > 2:  # noqa: C901
     def test_encode_should_not_transform_bytes():
         assert b_word == encode_to_utf8(b_word)
 
-
 else:
 
     def test_decode_preserves_string_without_utf8():

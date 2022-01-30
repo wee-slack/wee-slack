@@ -1472,7 +1472,7 @@ class SlackRequest(object):
         return self.tries < self.retries
 
     def retry_ready(self):
-        return (self.start_time + (self.tries ** 2)) < time.time()
+        return (self.start_time + (self.tries**2)) < time.time()
 
 
 class SlackSubteam(object):
@@ -3300,14 +3300,10 @@ class SlackMessage(object):
         if self.message_json.get("mrkdwn", True):
             text = render_formatting(text)
 
-        if (
-            self.message_json.get("subtype")
-            in (
-                "channel_join",
-                "group_join",
-            )
-            and self.message_json.get("inviter")
-        ):
+        if self.message_json.get("subtype") in (
+            "channel_join",
+            "group_join",
+        ) and self.message_json.get("inviter"):
             inviter_id = self.message_json.get("inviter")
             text += " by invitation from <@{}>".format(inviter_id)
 
