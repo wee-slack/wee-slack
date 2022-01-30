@@ -1441,6 +1441,10 @@ class SlackRequest(object):
         self.retries = retries
         self.token = token if token else team.token
         self.cookies = cookies or {}
+        if ":" in self.token:
+            token, cookie = self.token.split(":", 1)
+            self.token = token
+            self.cookies["d"] = cookie
         self.callback = callback
         self.domain = "api.slack.com"
         self.reset()
@@ -7029,5 +7033,13 @@ if __name__ == "__main__":
                     ),
                 )
                 for t in tokens:
-                    initiate_connection(t)
+                    if t.startswith("xoxc-") and ":" not in t:
+                        w.prnt(
+                            "",
+                            "{}When using an xoxc token, you need to also provide the d cookie in the format token:cookie".format(
+                                w.prefix("error")
+                            ),
+                        )
+                    else:
+                        initiate_connection(t)
                 EVENTROUTER.handle_next()
