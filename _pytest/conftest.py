@@ -12,7 +12,7 @@ from websocket import ABNF
 sys.path.append(".")
 
 import wee_slack  # noqa: E402
-from wee_slack import EventRouter, initiate_connection  # noqa: E402
+from wee_slack import EventRouter, SlackRequest  # noqa: E402
 
 
 class fakewebsocket(object):
@@ -45,7 +45,7 @@ def mock_websocket():
 def realish_eventrouter(mock_websocket, mock_weechat):
     e = EventRouter()
     wee_slack.EVENTROUTER = e
-    context = e.store_context(initiate_connection("xoxs-token"))
+    context = e.store_context(SlackRequest(None, "rtm.start", token="xoxs-token"))
     with open("_pytest/data/http/rtm.start.json") as rtmstartfile:
         if sys.version_info.major == 2:
             rtmstartdata = rtmstartfile.read().decode("utf-8")

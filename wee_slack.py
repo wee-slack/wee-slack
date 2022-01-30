@@ -622,7 +622,7 @@ class EventRouter(object):
                 )
                 team.set_disconnected()
             if not team.connected:
-                team.connect(reconnect=True)
+                team.connect()
                 dbg("reconnecting {}".format(team))
 
     @utf8_decode
@@ -809,10 +809,12 @@ class EventRouter(object):
                     team = request.team
                     channel = request.channel
                     metadata = request.metadata
+                    callback = request.callback
                 else:
                     team = j.get("wee_slack_metadata_team")
                     channel = None
                     metadata = {}
+                    callback = None
 
                 if team:
                     if "channel" in j:
@@ -829,7 +831,9 @@ class EventRouter(object):
                         metadata["user"] = team.users.get(user_id)
 
                 dbg("running {}".format(function_name))
-                if (
+                if callable(callback):
+                    callback(j, self, team, channel, metadata)
+                elif (
                     function_name.startswith("local_")
                     and function_name in self.local_proc
                 ):
@@ -1426,6 +1430,7 @@ class SlackRequest(object):
         metadata=None,
         retries=3,
         token=None,
+        callback=None,
     ):
         if team is None and token is None:
             raise ValueError("Both team and token can't be None")
@@ -1436,10 +1441,14 @@ class SlackRequest(object):
         self.metadata = metadata if metadata else {}
         self.retries = retries
         self.token = token if token else team.token
+        self.callback = callback
+        self.domain = "api.slack.com"
+        self.reset()
+
+    def reset(self):
         self.tries = 0
         self.start_time = time.time()
-        self.request_normalized = re.sub(r"\W+", "", request)
-        self.domain = "api.slack.com"
+        self.request_normalized = re.sub(r"\W+", "", self.request)
         self.post_data["token"] = self.token
         self.url = "https://{}/api/{}?{}".format(
             self.domain, self.request, urlencode(encode_to_utf8(self.post_data))
@@ -1684,7 +1693,7 @@ class SlackTeam(object):
     def mark_read(self, ts=None, update_remote=True, force=False):
         pass
 
-    def connect(self, reconnect=False):
+    def connect(self):
         if not self.connected and not self.connecting_ws:
             if self.ws_url:
                 self.connecting_ws = True
@@ -1736,9 +1745,7 @@ class SlackTeam(object):
                 # The fast reconnect failed, so start over-ish
                 for chan in self.channels:
                     self.channels[chan].history_needs_update = True
-                s = initiate_connection(
-                    self.token, retries=999, team=self, reconnect=reconnect
-                )
+                s = get_rtm_connect_request(self.token, retries=999, team=self)
                 self.eventrouter.receive(s)
                 self.connecting_rtm = True
 
@@ -3234,7 +3241,7 @@ class SlackBot(SlackUser):
     """
 
     def __init__(self, originating_team_id, **kwargs):
-        super(SlackBot, self).__init__(originating_team_id, is_bot=True, **kwargs)
+        super(SlackBot, self).__init__(originating_team_id, **kwargs)
 
 
 class SlackMessage(object):
@@ -3680,7 +3687,7 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
             t.set_reconnect_url(login_data["url"])
             t.connecting_rtm = False
 
-    t.connect(metadata.metadata["reconnect"])
+    t.connect()
 
 
 def handle_rtmconnect(login_data, eventrouter, team, channel, metadata):
@@ -3698,7 +3705,7 @@ def handle_rtmconnect(login_data, eventrouter, team, channel, metadata):
         return
 
     team.set_reconnect_url(login_data["url"])
-    team.connect(metadata.metadata["reconnect"])
+    team.connect()
 
 
 def handle_emojilist(emoji_json, eventrouter, team, channel, metadata):
@@ -6670,19 +6677,248 @@ def trace_calls(frame, event, arg):
     return
 
 
-def initiate_connection(token, retries=3, team=None, reconnect=False):
-    request_type = "connect" if team else "start"
-    post_data = {"batch_presence_aware": 1}
-    if request_type == "start":
-        post_data["mpim_aware"] = "true"
+def get_rtm_connect_request(token, retries=3, team=None, callback=None):
     return SlackRequest(
         team,
-        "rtm.{}".format(request_type),
-        post_data,
+        "rtm.connect",
+        {"batch_presence_aware": 1},
         retries=retries,
         token=token,
-        metadata={"reconnect": reconnect},
+        callback=callback,
     )
+
+
+def get_next_page(response_json):
+    next_cursor = response_json.get("response_metadata", {}).get("next_cursor")
+    if next_cursor:
+        request = response_json["wee_slack_request_metadata"]
+        request.post_data["cursor"] = next_cursor
+        request.reset()
+        EVENTROUTER.receive(request)
+        return True
+    else:
+        return False
+
+
+def initiate_connection(token):
+    initial_data = {
+        "channels": [],
+        "members": [],
+        "usergroups": [],
+        "complete": {
+            "channels": False,
+            "members": False,
+            "usergroups": False,
+            "prefs": False,
+            "presence": False,
+        },
+    }
+
+    def handle_initial(data_type):
+        def handle(response_json, eventrouter, team, channel, metadata):
+            if not response_json["ok"]:
+                initial_data["error"] = response_json["error"]
+                initial_data["complete"][data_type] = True
+                create_team(token, initial_data)
+                return
+
+            initial_data[data_type].extend(response_json[data_type])
+
+            if not get_next_page(response_json):
+                initial_data["complete"][data_type] = True
+                create_team(token, initial_data)
+
+        return handle
+
+    def handle_prefs(response_json, eventrouter, team, channel, metadata):
+        if not response_json["ok"]:
+            initial_data["error"] = response_json["error"]
+            initial_data["complete"]["prefs"] = True
+            create_team(token, initial_data)
+            return
+
+        initial_data["prefs"] = response_json["prefs"]
+        initial_data["complete"]["prefs"] = True
+        create_team(token, initial_data)
+
+    def handle_getPresence(response_json, eventrouter, team, channel, metadata):
+        if not response_json["ok"]:
+            initial_data["error"] = response_json["error"]
+            initial_data["complete"]["presence"] = True
+            create_team(token, initial_data)
+            return
+
+        initial_data["presence"] = response_json
+        initial_data["complete"]["presence"] = True
+        create_team(token, initial_data)
+
+    s = SlackRequest(
+        None,
+        "conversations.list",
+        {
+            "exclude_archived": True,
+            "types": "public_channel,private_channel,mpim,im",
+            "limit": 1000,
+        },
+        token=token,
+        callback=handle_initial("channels"),
+    )
+    EVENTROUTER.receive(s)
+    s = SlackRequest(
+        None,
+        "users.list",
+        {"limit": 1000},
+        token=token,
+        callback=handle_initial("members"),
+    )
+    EVENTROUTER.receive(s)
+    s = SlackRequest(
+        None,
+        "usergroups.list",
+        {"include_users": True},
+        token=token,
+        callback=handle_initial("usergroups"),
+    )
+    EVENTROUTER.receive(s)
+    s = SlackRequest(
+        None,
+        "users.prefs.get",
+        token=token,
+        callback=handle_prefs,
+    )
+    EVENTROUTER.receive(s)
+    s = SlackRequest(
+        None,
+        "users.getPresence",
+        token=token,
+        callback=handle_getPresence,
+    )
+    EVENTROUTER.receive(s)
+
+
+def create_team(token, initial_data):
+    if all(initial_data["complete"].values()):
+        if "error" in initial_data:
+            w.prnt(
+                "",
+                "ERROR: Failed connecting to Slack with token {}: {}".format(
+                    token_for_print(token), initial_data["error"]
+                ),
+            )
+            if not re.match(r"^xo\w\w(-\d+){3}-[0-9a-f]+(:.*)?$", token):
+                w.prnt(
+                    "",
+                    "ERROR: Token does not look like a valid Slack token. "
+                    "Ensure it is a valid token and not just a OAuth code.",
+                )
+
+            return
+
+        def handle_rtmconnect(response_json, eventrouter, team, channel, metadata):
+            if not response_json["ok"]:
+                print(response_json["error"])
+                return
+
+            team_id = response_json["team"]["id"]
+            myidentifier = response_json["self"]["id"]
+
+            users = {}
+            bots = {}
+            for member in initial_data["members"]:
+                if member.get("is_bot"):
+                    bots[member["id"]] = SlackBot(team_id, **member)
+                else:
+                    users[member["id"]] = SlackUser(team_id, **member)
+
+            self_nick = nick_from_profile(
+                users[myidentifier].profile, response_json["self"]["name"]
+            )
+
+            channels = {}
+            for channel in initial_data["channels"]:
+                if channel.get("is_im"):
+                    channel_instance = SlackDMChannel(
+                        eventrouter, users, is_member=True, **channel
+                    )
+                elif channel.get("is_shared"):
+                    channel_instance = SlackSharedChannel(eventrouter, **channel)
+                elif channel.get("is_mpim"):
+                    channel_instance = SlackMPDMChannel(
+                        eventrouter, users, myidentifier, **channel
+                    )
+                elif channel.get("is_private"):
+                    channel_instance = SlackPrivateChannel(eventrouter, **channel)
+                else:
+                    channel_instance = SlackChannel(eventrouter, **channel)
+                channels[channel["id"]] = channel_instance
+
+            subteams = {}
+            for usergroup in initial_data["usergroups"]:
+                is_member = myidentifier in usergroup["users"]
+                subteams[usergroup["id"]] = SlackSubteam(
+                    team_id, is_member=is_member, **usergroup
+                )
+
+            manual_presence = (
+                "away" if initial_data["presence"]["manual_away"] else "active"
+            )
+
+            team_info = {
+                "id": team_id,
+                "name": response_json["team"]["id"],
+                "domain": response_json["team"]["domain"],
+            }
+
+            team_hash = SlackTeam.generate_team_hash(
+                team_id, response_json["team"]["domain"]
+            )
+            if not eventrouter.teams.get(team_hash):
+                team = SlackTeam(
+                    eventrouter,
+                    token,
+                    team_hash,
+                    response_json["url"],
+                    team_info,
+                    subteams,
+                    self_nick,
+                    myidentifier,
+                    manual_presence,
+                    users,
+                    bots,
+                    channels,
+                    muted_channels=initial_data["prefs"]["muted_channels"],
+                    highlight_words=initial_data["prefs"]["highlight_words"],
+                )
+                eventrouter.register_team(team)
+                team.connect()
+            else:
+                team = eventrouter.teams.get(team_hash)
+                if team.myidentifier != myidentifier:
+                    print_error(
+                        "The Slack team {} has tokens for two different users, this is not supported. The "
+                        "token {} is for user {}, and the token {} is for user {}. Please remove one of "
+                        "them.".format(
+                            team.team_info["name"],
+                            token_for_print(team.token),
+                            team.nick,
+                            token_for_print(token),
+                            self_nick,
+                        )
+                    )
+                else:
+                    print_error(
+                        "Ignoring duplicate Slack tokens for the same team ({}) and user ({}). The two "
+                        "tokens are {} and {}.".format(
+                            team.team_info["name"],
+                            team.nick,
+                            token_for_print(team.token),
+                            token_for_print(token),
+                        ),
+                        warning=True,
+                    )
+
+        s = get_rtm_connect_request(token, callback=handle_rtmconnect)
+        EVENTROUTER.receive(s)
 
 
 if __name__ == "__main__":
@@ -6760,6 +6996,5 @@ if __name__ == "__main__":
                     ),
                 )
                 for t in tokens:
-                    s = initiate_connection(t)
-                    EVENTROUTER.receive(s)
+                    initiate_connection(t)
                 EVENTROUTER.handle_next()
