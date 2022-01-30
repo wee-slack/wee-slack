@@ -2289,7 +2289,11 @@ class SlackChannel(SlackChannelCommon):
 
         # Only check is_member if is_open is not set, because in some cases
         # (e.g. group DMs), is_member should be ignored in favor of is_open.
-        is_open = self.is_open if hasattr(self, "is_open") else self.is_member
+        is_open = (
+            self.is_open
+            if hasattr(self, "is_open")
+            else getattr(self, "is_member", False)
+        )
         if is_open or self.unread_count_display:
             self.create_buffer()
 
@@ -6857,9 +6861,7 @@ def create_team(token, initial_data):
             channels = {}
             for channel in initial_data["channels"]:
                 if channel.get("is_im"):
-                    channel_instance = SlackDMChannel(
-                        eventrouter, users, is_member=True, **channel
-                    )
+                    channel_instance = SlackDMChannel(eventrouter, users, **channel)
                 elif channel.get("is_shared"):
                     channel_instance = SlackSharedChannel(eventrouter, **channel)
                 elif channel.get("is_mpim"):
