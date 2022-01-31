@@ -4003,14 +4003,15 @@ def process_pong(message_json, eventrouter, team, channel, metadata):
 def process_message(
     message_json, eventrouter, team, channel, metadata, history_message=False
 ):
+    subtype = message_json.get("subtype")
     if (
         not history_message
+        and not subtype
         and "ts" in message_json
         and SlackTS(message_json["ts"]) in channel.messages
     ):
         return
 
-    subtype = message_json.get("subtype")
     subtype_functions = get_functions_with_prefix("subprocess_")
 
     if "thread_ts" in message_json and "reply_count" not in message_json:
