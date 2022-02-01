@@ -1543,7 +1543,7 @@ class SlackTeam(object):
         users,
         bots,
         channels,
-        **kwargs
+        **kwargs,
     ):
         self.slack_api_translator = copy.deepcopy(SLACK_API_TRANSLATOR)
         self.identifier = team_info["id"]
@@ -6736,12 +6736,13 @@ def initiate_connection(token):
             "prefs": False,
             "presence": False,
         },
+        "errors": [],
     }
 
     def handle_initial(data_type):
         def handle(response_json, eventrouter, team, channel, metadata):
             if not response_json["ok"]:
-                initial_data["error"] = response_json["error"]
+                initial_data["errors"].append(f'{data_type}: {response_json["error"]}')
                 initial_data["complete"][data_type] = True
                 create_team(token, initial_data)
                 return
@@ -6756,7 +6757,7 @@ def initiate_connection(token):
 
     def handle_prefs(response_json, eventrouter, team, channel, metadata):
         if not response_json["ok"]:
-            initial_data["error"] = response_json["error"]
+            initial_data["errors"].append(f'prefs: {response_json["error"]}')
             initial_data["complete"]["prefs"] = True
             create_team(token, initial_data)
             return
@@ -6767,7 +6768,7 @@ def initiate_connection(token):
 
     def handle_getPresence(response_json, eventrouter, team, channel, metadata):
         if not response_json["ok"]:
-            initial_data["error"] = response_json["error"]
+            initial_data["errors"].append(f'presence: {response_json["error"]}')
             initial_data["complete"]["presence"] = True
             create_team(token, initial_data)
             return
@@ -6822,11 +6823,11 @@ def initiate_connection(token):
 
 def create_team(token, initial_data):
     if all(initial_data["complete"].values()):
-        if "error" in initial_data:
+        if initial_data["errors"]:
             w.prnt(
                 "",
                 "ERROR: Failed connecting to Slack with token {}: {}".format(
-                    token_for_print(token), initial_data["error"]
+                    token_for_print(token), ", ".join(initial_data["errors"])
                 ),
             )
             if not re.match(r"^xo\w\w(-\d+){3}-[0-9a-f]+(:.*)?$", token):
