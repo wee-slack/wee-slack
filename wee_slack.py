@@ -6717,6 +6717,7 @@ def get_next_page(response_json):
     if next_cursor:
         request = response_json["wee_slack_request_metadata"]
         request.post_data["cursor"] = next_cursor
+        request.metadata["num_requests"] += 1
         request.reset()
         EVENTROUTER.receive(request)
         return True
@@ -6737,12 +6738,16 @@ def initiate_connection(token):
             "presence": False,
         },
         "errors": [],
+        "num_requests": {},
     }
 
     def handle_initial(data_type):
         def handle(response_json, eventrouter, team, channel, metadata):
+            initial_data["num_requests"][data_type] = metadata["num_requests"]
             if not response_json["ok"]:
-                initial_data["errors"].append(f'{data_type}: {response_json["error"]}')
+                initial_data["errors"].append(
+                    f'{data_type}: {response_json["error"]}, number of requests: {metadata["num_requests"]}'
+                )
                 initial_data["complete"][data_type] = True
                 create_team(token, initial_data)
                 return
@@ -6787,6 +6792,7 @@ def initiate_connection(token):
         },
         token=token,
         callback=handle_initial("channels"),
+        metadata={"num_requests": 1},
     )
     EVENTROUTER.receive(s)
     s = SlackRequest(
@@ -6795,6 +6801,7 @@ def initiate_connection(token):
         {"limit": 1000},
         token=token,
         callback=handle_initial("members"),
+        metadata={"num_requests": 1},
     )
     EVENTROUTER.receive(s)
     s = SlackRequest(
@@ -6803,6 +6810,7 @@ def initiate_connection(token):
         {"include_users": True},
         token=token,
         callback=handle_initial("usergroups"),
+        metadata={"num_requests": 1},
     )
     EVENTROUTER.receive(s)
     s = SlackRequest(
@@ -6847,6 +6855,9 @@ def create_team(token, initial_data):
             team_id = response_json["team"]["id"]
             myidentifier = response_json["self"]["id"]
 
+            print(
+                f"number of members: {len(initial_data['members'])}, number of requests: {initial_data['num_requests']['members']}"
+            )
             users = {}
             bots = {}
             for member in initial_data["members"]:
@@ -6859,6 +6870,9 @@ def create_team(token, initial_data):
                 users[myidentifier].profile, response_json["self"]["name"]
             )
 
+            print(
+                f"number of channels: {len(initial_data['channels'])}, number of requests: {initial_data['num_requests']['channels']}"
+            )
             channels = {}
             for channel in initial_data["channels"]:
                 if channel.get("is_im"):
@@ -6875,6 +6889,9 @@ def create_team(token, initial_data):
                     channel_instance = SlackChannel(eventrouter, **channel)
                 channels[channel["id"]] = channel_instance
 
+            print(
+                f"number of usergroups: {len(initial_data['usergroups'])}, number of requests: {initial_data['num_requests']['usergroups']}"
+            )
             subteams = {}
             for usergroup in initial_data["usergroups"]:
                 is_member = myidentifier in usergroup["users"]
