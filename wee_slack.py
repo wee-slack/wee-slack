@@ -3741,16 +3741,17 @@ def handle_emojilist(emoji_json, eventrouter, team, channel, metadata):
         team.emoji_completions.extend(emoji_json["emoji"].keys())
 
 
-def handle_channelsinfo(channel_json, eventrouter, team, channel, metadata):
-    channel.set_unread_count_display(
-        channel_json["channel"].get("unread_count_display", 0)
-    )
-    channel.set_members(channel_json["channel"]["members"])
-
-
-def handle_groupsinfo(group_json, eventrouter, team, channel, metadatas):
-    channel.set_unread_count_display(group_json["group"].get("unread_count_display", 0))
-    channel.set_members(group_json["group"]["members"])
+def handle_conversationsinfo(channel_json, eventrouter, team, channel, metadata):
+    channel_info = channel_json["channel"]
+    if "unread_count_display" in channel_info:
+        unread_count = channel_info["unread_count_display"]
+        if channel_info["is_im"] and unread_count:
+            channel.check_should_open(True)
+        channel.set_unread_count_display(unread_count)
+    if "last_read" in channel_info:
+        channel.last_read = SlackTS(channel_info["last_read"])
+    if "members" in channel_info:
+        channel.set_members(channel_info["members"])
 
 
 def handle_conversationsopen(
@@ -3854,14 +3855,6 @@ def handle_conversationsmembers(members_json, eventrouter, team, channel, metada
                 w.prefix("error"), channel.name, members_json["error"]
             ),
         )
-
-
-def handle_conversationsinfo(message_json, eventrouter, team, channel, metadata):
-    if message_json["channel"]["is_im"]:
-        unread = message_json["channel"]["unread_count_display"]
-        if unread:
-            channel.check_should_open(True)
-            channel.set_unread_count_display(unread)
 
 
 def handle_usersinfo(user_json, eventrouter, team, channel, metadata):
