@@ -4116,11 +4116,12 @@ def download_files(message_json, channel):
         for fileout in fileout_iter(os.path.join(download_location, filename)):
             if os.path.isfile(fileout):
                 continue
+            curl_options = SlackRequest(channel.team, "").options()
             w.hook_process_hashtable(
                 "url:" + f["url_private"],
                 {
+                    **curl_options,
                     "file_out": fileout,
-                    "httpheader": "Authorization: Bearer " + channel.team.token,
                 },
                 config.slack_timeout,
                 "",
