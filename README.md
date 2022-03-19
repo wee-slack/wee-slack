@@ -164,8 +164,12 @@ token (but not the token itself). If you're worried about this, you can use the
 1. Open and sign into the [Slack customization page](https://my.slack.com/customize). Check that you end up on the correct team.
 2. Open the developer console (`Ctrl+Shift+J`/`Cmd+Opt+J` in Chrome and `Ctrl+Shift+K`/`Cmd+Opt+K` in Firefox).
 3. Paste and run this code: `window.prompt("Session token:", TS.boot_data.api_token)`
-4. A prompt with the token will appear. Copy the token, return to WeeChat and run `/slack register <token>`.
-5. Reload the script with `/python reload slack`.
+4. A prompt with the token will appear. Copy the token.
+5. In the developer console go to Application in Chrome or Storage in Firefox.
+6. Expand Cookies and click on the domain.
+7. Find the cookie named `d` and copy the value.
+8. Return to WeeChat and run `/slack register <token>:<cookie>`.
+9. Reload the script with `/python reload slack`.
 
 #### Optional: Connecting to multiple teams
 
