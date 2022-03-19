@@ -45,7 +45,11 @@ local_config_str = con.execute(local_storage_query).fetchone()[0]
 con.close()
 
 local_config = json.loads(local_config_str)
-
-for team in local_config["teams"].values():
-    if not team["id"].startswith("E"):
-        print(f"{team['name']}: /slack register {team['token']}:{cookie_d_value}")
+teams = [
+    team for team in local_config["teams"].values() if not team["id"].startswith("E")
+]
+register_commands = [
+    f"{team['name']}:\n/slack register {team['token']}:{cookie_d_value}"
+    for team in teams
+]
+print("\n\n".join(register_commands))
