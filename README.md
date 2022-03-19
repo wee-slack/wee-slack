@@ -171,6 +171,13 @@ token (but not the token itself). If you're worried about this, you can use the
 8. Return to WeeChat and run `/slack register <token>:<cookie>`.
 9. Reload the script with `/python reload slack`.
 
+If you use Firefox, you can run the `extract_token_from_browser.py` script to
+get the tokens and cookies for all the teams you're logged into:
+
+```
+./extract_token_from_browser.py firefox
+```
+
 #### Optional: Connecting to multiple teams
 
 You can run the register command multiple times to connect to multiple teams.
