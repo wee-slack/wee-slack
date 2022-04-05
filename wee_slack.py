@@ -98,6 +98,7 @@ SLACK_API_TRANSLATOR = {
         "join": "conversations.open",
         "leave": "conversations.close",
         "mark": "conversations.mark",
+        "info": "conversations.info",
     },
     "mpim": {
         "history": "conversations.history",
@@ -2266,6 +2267,14 @@ class SlackChannel(SlackChannelCommon):
         is_open = self.is_open if hasattr(self, "is_open") else self.is_member
         if is_open or self.unread_count_display:
             self.create_buffer()
+        elif self.type == 'im':
+            # If it is an IM, we still might want to open it if there are unread messages.
+            info_method = self.team.slack_api_translator[self.type].get("info")
+            if info_method:
+                s = SlackRequest(
+                    self.team, info_method, {"channel": self.identifier}, channel=self
+                )
+                self.eventrouter.receive(s)
 
     def set_related_server(self, team):
         self.team = team
@@ -3819,6 +3828,14 @@ def handle_conversationsmembers(members_json, eventrouter, team, channel, metada
                 w.prefix("error"), channel.name, members_json["error"]
             ),
         )
+
+
+def handle_conversationsinfo(message_json, eventrouter, team, channel, metadata):
+    if message_json['channel']['is_im']:
+        unread = message_json['channel']['unread_count_display']
+        if unread:
+            channel.check_should_open(True)
+            channel.set_unread_count_display(unread)
 
 
 def handle_usersinfo(user_json, eventrouter, team, channel, metadata):
