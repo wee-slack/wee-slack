@@ -238,9 +238,19 @@ class WeechatWrapper(object):
     def __init__(self, wrapped_class):
         self.wrapped_class = wrapped_class
 
+        if not os.path.exists(RECORD_DIR):
+            os.makedirs(RECORD_DIR)
+        self.debug_log_file = open(RECORD_DIR + "/weechat-calls.log", "w")
+
     # Helper method used to encode/decode method calls.
-    def wrap_for_utf8(self, method):
+    def wrap_for_utf8(self, method, method_name):
         def hooked(*args, **kwargs):
+            self.debug_log_file.write(
+                "Calling weechat function {} with args {}, {}\n".format(
+                    method_name, args, kwargs
+                )
+            )
+            self.debug_log_file.flush()
             result = method(*encode_to_utf8(args), **encode_to_utf8(kwargs))
             # Prevent wrapped_class from becoming unwrapped
             if result == self.wrapped_class:
@@ -254,7 +264,7 @@ class WeechatWrapper(object):
     def __getattr__(self, attr):
         orig_attr = self.wrapped_class.__getattribute__(attr)
         if callable(orig_attr):
-            return self.wrap_for_utf8(orig_attr)
+            return self.wrap_for_utf8(orig_attr, attr)
         else:
             return decode_from_utf8(orig_attr)
 
@@ -266,7 +276,7 @@ class WeechatWrapper(object):
         prefix = weechat.string_remove_color(encode_to_utf8(prefix), "")
         prefix_spaces = " " * weechat.strlen_screen(prefix)
         message = message.replace("\n", "\n{}\t".format(prefix_spaces))
-        return self.wrap_for_utf8(self.wrapped_class.prnt_date_tags)(
+        return self.wrap_for_utf8(self.wrapped_class.prnt_date_tags, "prnt_date_tags")(
             buffer, date, tags, message
         )
 
