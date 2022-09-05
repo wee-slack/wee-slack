@@ -174,8 +174,11 @@ If you set the token option yourself, you should separate the tokens with
 commas.
 
 ```
-/set plugins.var.python.slack.slack_api_token <token1>,<token2>,<token3>
+/mute /set plugins.var.python.slack.slack_api_token <token1>,<token2>,<token3>
 ```
+
+The `/mute` prefix is to prevent "Option changed ..." from being printed to the
+core buffer, so your token is not logged in your buffer logs.
 
 #### Optional: Secure the tokens
 
