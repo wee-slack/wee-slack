@@ -2267,7 +2267,7 @@ class SlackChannel(SlackChannelCommon):
         is_open = self.is_open if hasattr(self, "is_open") else self.is_member
         if is_open or self.unread_count_display:
             self.create_buffer()
-        elif self.type == 'im':
+        elif self.type == "im":
             # If it is an IM, we still might want to open it if there are unread messages.
             info_method = self.team.slack_api_translator[self.type].get("info")
             if info_method:
@@ -3831,8 +3831,8 @@ def handle_conversationsmembers(members_json, eventrouter, team, channel, metada
 
 
 def handle_conversationsinfo(message_json, eventrouter, team, channel, metadata):
-    if message_json['channel']['is_im']:
-        unread = message_json['channel']['unread_count_display']
+    if message_json["channel"]["is_im"]:
+        unread = message_json["channel"]["unread_count_display"]
         if unread:
             channel.check_should_open(True)
             channel.set_unread_count_display(unread)
