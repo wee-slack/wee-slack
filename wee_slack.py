@@ -4686,7 +4686,7 @@ def unwrap_files(message_json, text_before):
         ):
             text = "{} ({})".format(f["url_private"], f["title"])
         else:
-            dbg("File {} has unrecognized mode {}".format(f["id"], f["mode"]), 5)
+            dbg("File {} has unrecognized mode {}".format(f["id"], f.get("mode")), 5)
             text = colorize_string(
                 config.color_deleted, "(This file cannot be handled.)"
             )
