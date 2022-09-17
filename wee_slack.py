@@ -2827,7 +2827,7 @@ class SlackDMChannel(SlackChannel):
         info_method = self.team.slack_api_translator[self.type].get("info")
         if info_method:
             s = SlackRequest(
-                self.team, info_method, {"name": self.identifier}, channel=self
+                self.team, info_method, {"channel": self.identifier}, channel=self
             )
             self.eventrouter.receive(s)
         if update_remote:
