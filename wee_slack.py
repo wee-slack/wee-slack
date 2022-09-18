@@ -6788,7 +6788,16 @@ def initiate_connection(token):
     def handle_initial(data_type):
         def handle(response_json, eventrouter, team, channel, metadata):
             if not response_json["ok"]:
-                initial_data["errors"].append(f'{data_type}: {response_json["error"]}')
+                if response_json["error"] == "user_is_restricted":
+                    w.prnt(
+                        "",
+                        "You are a restricted user in this team, "
+                        f"{data_type} not loaded",
+                    )
+                else:
+                    initial_data["errors"].append(
+                        f'{data_type}: {response_json["error"]}'
+                    )
                 initial_data["complete"][data_type] = True
                 create_team(token, initial_data)
                 return
