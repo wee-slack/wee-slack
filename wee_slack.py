@@ -668,6 +668,59 @@ class EventRouter(object):
             message_json["wee_slack_metadata_team"] = team
             self.receive(message_json)
 
+    def http_check_ratelimited(self, request_metadata, response):
+        headers_end_index = response.index("\r\n\r\n")
+        headers = response[:headers_end_index].split("\r\n")
+        http_status = headers[0].split(" ")[1]
+
+        if http_status == "429":
+            for header in headers[1:]:
+                name, value = header.split(":", 1)
+                if name.lower() == "retry-after":
+                    retry_after = int(value.strip())
+                    request_metadata.retry_time = time.time() + retry_after
+                    return "", "ratelimited"
+
+        body = response[headers_end_index + 4 :]
+        return body, ""
+
+    def retry_request(self, request_metadata, data, return_code, err):
+        self.reply_buffer.pop(request_metadata.response_id, None)
+        self.delete_context(data)
+        retry_text = (
+            "retrying"
+            if request_metadata.should_try()
+            else "will not retry after too many failed attempts"
+        )
+        team = (
+            "for team {}".format(request_metadata.team)
+            if request_metadata.team
+            else "with token {}".format(token_for_print(request_metadata.token))
+        )
+        w.prnt(
+            "",
+            (
+                "Failed requesting {} {}, {}. "
+                + "If this persists, try increasing slack_timeout. Error (code {}): {}"
+            ).format(
+                request_metadata.request,
+                team,
+                retry_text,
+                return_code,
+                err,
+            ),
+        )
+        dbg(
+            "{} failed with return_code {} and error {}. stack:\n{}".format(
+                request_metadata.request,
+                return_code,
+                err,
+                "".join(traceback.format_stack()),
+            ),
+            level=5,
+        )
+        self.receive(request_metadata)
+
     @utf8_decode
     def receive_httprequest_callback(self, data, command, return_code, out, err):
         """
@@ -692,25 +745,31 @@ class EventRouter(object):
                 if request_metadata.response_id not in self.reply_buffer:
                     self.reply_buffer[request_metadata.response_id] = StringIO()
                 self.reply_buffer[request_metadata.response_id].write(out)
-                try:
-                    j = json.loads(
-                        self.reply_buffer[request_metadata.response_id].getvalue()
-                    )
-                except:
-                    pass
-                    # dbg("Incomplete json, awaiting more", True)
-                try:
-                    j["wee_slack_process_method"] = request_metadata.request_normalized
-                    if self.recording:
-                        self.record_event(
-                            j, request_metadata.team, "wee_slack_process_method", "http"
-                        )
-                    j["wee_slack_request_metadata"] = request_metadata
-                    self.reply_buffer.pop(request_metadata.response_id)
-                    self.receive(j)
-                    self.delete_context(data)
-                except:
-                    dbg("HTTP REQUEST CALLBACK FAILED", True)
+
+                response = self.reply_buffer[request_metadata.response_id].getvalue()
+                body, error = self.http_check_ratelimited(request_metadata, response)
+                if error:
+                    self.retry_request(request_metadata, data, return_code, error)
+                else:
+                    j = json.loads(body)
+
+                    try:
+                        j[
+                            "wee_slack_process_method"
+                        ] = request_metadata.request_normalized
+                        if self.recording:
+                            self.record_event(
+                                j,
+                                request_metadata.team,
+                                "wee_slack_process_method",
+                                "http",
+                            )
+                        j["wee_slack_request_metadata"] = request_metadata
+                        self.reply_buffer.pop(request_metadata.response_id)
+                        self.receive(j)
+                        self.delete_context(data)
+                    except:
+                        dbg("HTTP REQUEST CALLBACK FAILED", True)
             # We got an empty reply and this is weird so just ditch it and retry
             else:
                 dbg("length was zero, probably a bug..")
@@ -721,33 +780,7 @@ class EventRouter(object):
                 self.reply_buffer[request_metadata.response_id] = StringIO()
             self.reply_buffer[request_metadata.response_id].write(out)
         else:
-            self.reply_buffer.pop(request_metadata.response_id, None)
-            self.delete_context(data)
-            if request_metadata.request.startswith("rtm."):
-                retry_text = (
-                    "retrying"
-                    if request_metadata.should_try()
-                    else "will not retry after too many failed attempts"
-                )
-                w.prnt(
-                    "",
-                    (
-                        "Failed connecting to slack team with token {}, {}. "
-                        + "If this persists, try increasing slack_timeout. Error (code {}): {}"
-                    ).format(
-                        token_for_print(request_metadata.token),
-                        retry_text,
-                        return_code,
-                        err,
-                    ),
-                )
-                dbg(
-                    "rtm.start failed with return_code {}. stack:\n{}".format(
-                        return_code, "".join(traceback.format_stack())
-                    ),
-                    level=5,
-                )
-                self.receive(request_metadata)
+            self.retry_request(request_metadata, data, return_code, err)
         return w.WEECHAT_RC_OK
 
     def receive(self, dataobj, slow=False):
@@ -933,10 +966,12 @@ def local_process_async_slack_api_request(request, event_router):
             )
         )
         request.tried()
+        options = request.options()
+        options["header"] = "1"
         context = event_router.store_context(request)
         w.hook_process_hashtable(
             weechat_request,
-            request.options(),
+            options,
             config.slack_timeout,
             "receive_httprequest_callback",
             context,
@@ -1448,6 +1483,7 @@ class SlackRequest(object):
         self.channel = channel
         self.metadata = metadata if metadata else {}
         self.retries = retries
+        self.retry_time = 0
         self.token = token if token else team.token
         self.cookies = cookies or {}
         if ":" in self.token:
@@ -1517,7 +1553,10 @@ class SlackRequest(object):
         return self.tries < self.retries
 
     def retry_ready(self):
-        return (self.start_time + (self.tries**2)) < time.time()
+        if self.retry_time:
+            return time.time() > self.retry_time
+        else:
+            return (self.start_time + (self.tries**2)) < time.time()
 
 
 class SlackSubteam(object):

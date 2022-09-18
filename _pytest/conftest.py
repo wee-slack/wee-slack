@@ -51,7 +51,8 @@ def realish_eventrouter(mock_websocket, mock_weechat):
             rtmstartdata = rtmstartfile.read().decode("utf-8")
         else:
             rtmstartdata = rtmstartfile.read()
-        e.receive_httprequest_callback(context, "", 0, rtmstartdata, "")
+        response = "HTTP/2 200\r\n\r\n" + rtmstartdata
+        e.receive_httprequest_callback(context, "", 0, response, "")
     while len(e.queue):
         e.handle_next()
     for team in e.teams.values():
