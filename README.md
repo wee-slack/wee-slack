@@ -171,6 +171,9 @@ token (but not the token itself). If you're worried about this, you can use the
 8. Return to WeeChat and run `/slack register <token>:<cookie>`.
 9. Reload the script with `/python reload slack`.
 
+Note that in some cases it may be necessary to include the `d-s` cookie as
+well. If so, you can supply it in this format `<token>:d=<d_cookie>;d-s=<d-s_cookie>`.
+
 If you use Firefox, you can run the `extract_token_from_browser.py` script to
 get the tokens and cookies for all the teams you're logged into:
 

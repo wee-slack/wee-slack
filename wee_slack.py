@@ -1453,7 +1453,11 @@ class SlackRequest(object):
         if ":" in self.token:
             token, cookie = self.token.split(":", 1)
             self.token = token
-            self.cookies["d"] = cookie
+            if cookie.startswith("d="):
+                for name, value in [c.split("=") for c in cookie.split(";")]:
+                    self.cookies[name] = value
+            else:
+                self.cookies["d"] = cookie
         self.callback = callback
         self.domain = "api.slack.com"
         self.reset()

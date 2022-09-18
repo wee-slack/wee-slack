@@ -34,9 +34,20 @@ except StopIteration:
 
 cookies_path = default_profile_path.joinpath("cookies.sqlite")
 con = sqlite3.connect(f"file:{cookies_path}?immutable=1", uri=True)
-cookies_query = "SELECT value FROM moz_cookies WHERE host = '.slack.com' AND name = 'd'"
-cookie_d_value = con.execute(cookies_query).fetchone()[0]
+cookie_d_query = (
+    "SELECT value FROM moz_cookies WHERE host = '.slack.com' AND name = 'd'"
+)
+cookie_d_value = con.execute(cookie_d_query).fetchone()[0]
+cookie_ds_query = (
+    "SELECT value FROM moz_cookies WHERE host = '.slack.com' AND name = 'd-s'"
+)
+cookie_ds_values = con.execute(cookie_ds_query).fetchone()
 con.close()
+
+if cookie_ds_values:
+    cookie_value = f"d={cookie_d_value};d-s={cookie_ds_values[0]}"
+else:
+    cookie_value = cookie_d_value
 
 local_storage_path = default_profile_path.joinpath("webappsstore.sqlite")
 con = sqlite3.connect(f"file:{local_storage_path}?immutable=1", uri=True)
@@ -49,7 +60,6 @@ teams = [
     team for team in local_config["teams"].values() if not team["id"].startswith("E")
 ]
 register_commands = [
-    f"{team['name']}:\n/slack register {team['token']}:{cookie_d_value}"
-    for team in teams
+    f"{team['name']}:\n/slack register {team['token']}:{cookie_value}" for team in teams
 ]
 print("\n\n".join(register_commands))
