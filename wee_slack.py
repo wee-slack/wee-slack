@@ -3825,12 +3825,22 @@ def handle_conversationsinfo(channel_json, eventrouter, team, channel, metadata)
 def handle_conversationsopen(
     conversation_json, eventrouter, team, channel, metadata, object_name="channel"
 ):
-    # Set unread count if the channel isn't new
-    if channel:
-        unread_count_display = conversation_json[object_name].get(
-            "unread_count_display", 0
+    channel_info = conversation_json[object_name]
+    if not channel:
+        channel = create_channel_from_info(
+            eventrouter, channel_info, team, team.myidentifier, team.users
         )
+        team.channels[channel_info["id"]] = channel
+
+    if channel.channel_buffer is None:
+        channel.create_buffer()
+
+    unread_count_display = channel_info.get("unread_count_display")
+    if unread_count_display is not None:
         channel.set_unread_count_display(unread_count_display)
+
+    if metadata.get("switch") and config.switch_buffer_on_join:
+        w.buffer_set(channel.channel_buffer, "display", "1")
 
 
 def handle_mpimopen(
@@ -5526,6 +5536,7 @@ def join_query_command_cb(data, current_buffer, args):
                     team,
                     team.slack_api_translator[channel_type]["join"],
                     {"users": ",".join(users)},
+                    metadata={"switch": True},
                 )
                 EVENTROUTER.receive(s)
 
@@ -6915,6 +6926,21 @@ def initiate_connection(token):
     EVENTROUTER.receive(s)
 
 
+def create_channel_from_info(eventrouter, channel_info, team, myidentifier, users):
+    if channel_info.get("is_im"):
+        return SlackDMChannel(eventrouter, users, team=team, **channel_info)
+    elif channel_info.get("is_shared"):
+        return SlackSharedChannel(eventrouter, team=team, **channel_info)
+    elif channel_info.get("is_mpim"):
+        return SlackMPDMChannel(
+            eventrouter, users, myidentifier, team=team, **channel_info
+        )
+    elif channel_info.get("is_private"):
+        return SlackPrivateChannel(eventrouter, team=team, **channel_info)
+    else:
+        return SlackChannel(eventrouter, team=team, **channel_info)
+
+
 def create_team(token, initial_data):
     if all(initial_data["complete"].values()):
         if initial_data["errors"]:
@@ -6954,20 +6980,10 @@ def create_team(token, initial_data):
             )
 
             channels = {}
-            for channel in initial_data["channels"]:
-                if channel.get("is_im"):
-                    channel_instance = SlackDMChannel(eventrouter, users, **channel)
-                elif channel.get("is_shared"):
-                    channel_instance = SlackSharedChannel(eventrouter, **channel)
-                elif channel.get("is_mpim"):
-                    channel_instance = SlackMPDMChannel(
-                        eventrouter, users, myidentifier, **channel
-                    )
-                elif channel.get("is_private"):
-                    channel_instance = SlackPrivateChannel(eventrouter, **channel)
-                else:
-                    channel_instance = SlackChannel(eventrouter, **channel)
-                channels[channel["id"]] = channel_instance
+            for channel_info in initial_data["channels"]:
+                channels[channel_info["id"]] = create_channel_from_info(
+                    eventrouter, channel_info, None, myidentifier, users
+                )
 
             subteams = {}
             for usergroup in initial_data["usergroups"]:
