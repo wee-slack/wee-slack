@@ -6941,12 +6941,12 @@ def initiate_connection(token):
 def create_channel_from_info(eventrouter, channel_info, team, myidentifier, users):
     if channel_info.get("is_im"):
         return SlackDMChannel(eventrouter, users, team=team, **channel_info)
-    elif channel_info.get("is_shared"):
-        return SlackSharedChannel(eventrouter, team=team, **channel_info)
     elif channel_info.get("is_mpim"):
         return SlackMPDMChannel(
             eventrouter, users, myidentifier, team=team, **channel_info
         )
+    elif channel_info.get("is_shared"):
+        return SlackSharedChannel(eventrouter, team=team, **channel_info)
     elif channel_info.get("is_private"):
         return SlackPrivateChannel(eventrouter, team=team, **channel_info)
     else:
