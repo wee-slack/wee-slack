@@ -6825,12 +6825,12 @@ def initiate_connection(token):
         "channels": [],
         "members": [],
         "usergroups": [],
-        "complete": {
-            "channels": False,
-            "members": False,
-            "usergroups": False,
-            "prefs": False,
-            "presence": False,
+        "remaining": {
+            "channels": 2,
+            "members": 1,
+            "usergroups": 1,
+            "prefs": 1,
+            "presence": 1,
         },
         "errors": [],
     }
@@ -6848,14 +6848,14 @@ def initiate_connection(token):
                     initial_data["errors"].append(
                         f'{data_type}: {response_json["error"]}'
                     )
-                initial_data["complete"][data_type] = True
+                initial_data["remaining"][data_type] -= 1
                 create_team(token, initial_data)
                 return
 
             initial_data[data_type].extend(response_json[data_type])
 
             if not get_next_page(response_json):
-                initial_data["complete"][data_type] = True
+                initial_data["remaining"][data_type] -= 1
                 create_team(token, initial_data)
 
         return handle
@@ -6863,23 +6863,23 @@ def initiate_connection(token):
     def handle_prefs(response_json, eventrouter, team, channel, metadata):
         if not response_json["ok"]:
             initial_data["errors"].append(f'prefs: {response_json["error"]}')
-            initial_data["complete"]["prefs"] = True
+            initial_data["remaining"]["prefs"] -= 1
             create_team(token, initial_data)
             return
 
         initial_data["prefs"] = response_json["prefs"]
-        initial_data["complete"]["prefs"] = True
+        initial_data["remaining"]["prefs"] -= 1
         create_team(token, initial_data)
 
     def handle_getPresence(response_json, eventrouter, team, channel, metadata):
         if not response_json["ok"]:
             initial_data["errors"].append(f'presence: {response_json["error"]}')
-            initial_data["complete"]["presence"] = True
+            initial_data["remaining"]["presence"] -= 1
             create_team(token, initial_data)
             return
 
         initial_data["presence"] = response_json
-        initial_data["complete"]["presence"] = True
+        initial_data["remaining"]["presence"] -= 1
         create_team(token, initial_data)
 
     s = SlackRequest(
@@ -6887,7 +6887,19 @@ def initiate_connection(token):
         "conversations.list",
         {
             "exclude_archived": True,
-            "types": "public_channel,private_channel,mpim,im",
+            "types": "public_channel,private_channel,im",
+            "limit": 1000,
+        },
+        token=token,
+        callback=handle_initial("channels"),
+    )
+    EVENTROUTER.receive(s)
+    s = SlackRequest(
+        None,
+        "conversations.list",
+        {
+            "exclude_archived": True,
+            "types": "mpim",
             "limit": 1000,
         },
         token=token,
@@ -6942,7 +6954,7 @@ def create_channel_from_info(eventrouter, channel_info, team, myidentifier, user
 
 
 def create_team(token, initial_data):
-    if all(initial_data["complete"].values()):
+    if not any(initial_data["remaining"].values()):
         if initial_data["errors"]:
             w.prnt(
                 "",
