@@ -2584,7 +2584,7 @@ class SlackChannel(SlackChannelCommon):
         self.pending_history_requests.add(self.identifier)
         self.get_members()
 
-        post_data = {"channel": self.identifier, "count": config.history_fetch_count}
+        post_data = {"channel": self.identifier, "limit": config.history_fetch_count}
         if self.got_history and self.messages and not full:
             post_data["oldest"] = next(reversed(self.messages))
 
