@@ -1237,7 +1237,7 @@ def channel_completion_cb(data, completion_item, current_buffer, completion):
     for team in other_teams:
         for channel in team.channels.values():
             if should_include_channel(channel):
-                w.hook_completion_list_add(
+                completion_list_add(
                     completion, channel.name, 0, w.WEECHAT_LIST_POS_SORT
                 )
 
@@ -1248,12 +1248,12 @@ def channel_completion_cb(data, completion_item, current_buffer, completion):
             reverse=True,
         ):
             if should_include_channel(channel):
-                w.hook_completion_list_add(
+                completion_list_add(
                     completion, channel.name, 0, w.WEECHAT_LIST_POS_BEGINNING
                 )
 
         if should_include_channel(current_channel):
-            w.hook_completion_list_add(
+            completion_list_add(
                 completion, current_channel.name, 0, w.WEECHAT_LIST_POS_BEGINNING
             )
     return w.WEECHAT_RC_OK
@@ -1267,7 +1267,7 @@ def dm_completion_cb(data, completion_item, current_buffer, completion):
     for team in EVENTROUTER.teams.values():
         for channel in team.channels.values():
             if channel.active and channel.type in ["im", "mpim"]:
-                w.hook_completion_list_add(
+                completion_list_add(
                     completion, channel.name, 0, w.WEECHAT_LIST_POS_SORT
                 )
     return w.WEECHAT_RC_OK
@@ -1282,7 +1282,7 @@ def nick_completion_cb(data, completion_item, current_buffer, completion):
     if current_channel is None or current_channel.members is None:
         return w.WEECHAT_RC_OK
 
-    base_command = w.hook_completion_get_string(completion, "base_command")
+    base_command = completion_get_string(completion, "base_command")
     if base_command in ["invite", "msg", "query", "whois"]:
         members = current_channel.team.members
     else:
@@ -1291,12 +1291,8 @@ def nick_completion_cb(data, completion_item, current_buffer, completion):
     for member in members:
         user = current_channel.team.users.get(member)
         if user and not user.deleted:
-            w.hook_completion_list_add(
-                completion, user.name, 1, w.WEECHAT_LIST_POS_SORT
-            )
-            w.hook_completion_list_add(
-                completion, "@" + user.name, 1, w.WEECHAT_LIST_POS_SORT
-            )
+            completion_list_add(completion, user.name, 1, w.WEECHAT_LIST_POS_SORT)
+            completion_list_add(completion, "@" + user.name, 1, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
 
@@ -1309,12 +1305,12 @@ def emoji_completion_cb(data, completion_item, current_buffer, completion):
     if current_channel is None:
         return w.WEECHAT_RC_OK
 
-    base_word = w.hook_completion_get_string(completion, "base_word")
+    base_word = completion_get_string(completion, "base_word")
     reaction = re.match(REACTION_PREFIX_REGEX_STRING + ":", base_word)
     prefix = reaction.group(0) if reaction else ":"
 
     for emoji in current_channel.team.emoji_completions:
-        w.hook_completion_list_add(
+        completion_list_add(
             completion, prefix + emoji + ":", 0, w.WEECHAT_LIST_POS_SORT
         )
     return w.WEECHAT_RC_OK
@@ -1335,7 +1331,7 @@ def thread_completion_cb(data, completion_item, current_buffer, completion):
     for thread_id, message_ts in sorted(threads, key=lambda item: item[1]):
         message = current_channel.messages.get(message_ts)
         if message and message.number_of_replies():
-            w.hook_completion_list_add(
+            completion_list_add(
                 completion, "$" + thread_id, 0, w.WEECHAT_LIST_POS_BEGINNING
             )
     return w.WEECHAT_RC_OK
@@ -1355,7 +1351,7 @@ def topic_completion_cb(data, completion_item, current_buffer, completion):
     if topic.split(" ", 1)[0] in channel_names:
         topic = "{} {}".format(current_channel.name, topic)
 
-    w.hook_completion_list_add(completion, topic, 0, w.WEECHAT_LIST_POS_SORT)
+    completion_list_add(completion, topic, 0, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
 
@@ -1372,7 +1368,7 @@ def usergroups_completion_cb(data, completion_item, current_buffer, completion):
         subteam.handle for subteam in current_channel.team.subteams.values()
     ]
     for group in subteam_handles + ["@channel", "@everyone", "@here"]:
-        w.hook_completion_list_add(completion, group, 1, w.WEECHAT_LIST_POS_SORT)
+        completion_list_add(completion, group, 1, w.WEECHAT_LIST_POS_SORT)
     return w.WEECHAT_RC_OK
 
 
@@ -7082,6 +7078,18 @@ if __name__ == "__main__":
 
         weechat_version = int(w.info_get("version_number", "") or 0)
         weechat_upgrading = w.info_get("weechat_upgrading", "")
+
+        completion_get_string = (
+            w.hook_completion_get_string
+            if weechat_version < 0x2090000
+            else w.completion_get_string
+        )
+
+        completion_list_add = (
+            w.hook_completion_list_add
+            if weechat_version < 0x2090000
+            else w.completion_list_add
+        )
 
         if weechat_version < 0x1030000:
             w.prnt(
