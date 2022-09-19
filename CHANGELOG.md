@@ -1,8 +1,30 @@
 # Changelog
 
+## 2.9.0 (2022-09-19)
+
+Note that Slack will make a breaking change in their API on September 20, 2022 (the day after this release), which means that all earlier versions of wee-slack will stop working. This release adds support for the change and will not be affected by it.
+
+Note that this will most likely be the last release supporting Python 2 (possibly apart from bug fixes and small features). The next major release will most likely require Python >= 3.3 or Python >= 3.6.
+
+### Slack API changes
+
+- Replaces usage of the `rtm.start` API method with other API methods. `rtm.start` will stop working on September 20, 2022 (fixes #866, PR #857).
+- Add support for the new type of session tokens (tokens starting with `xoxc-`), i.e. tokens pulled out of the official client which doesn't require registering the wee-slack app in Slack (fixes #844, PR #857).
+- Fix message changes not always being processed after API change.
+
+### Bug fixes
+
+- Fix alignment of multi line messages when `weechat.look.prefix_align` is set to `none`.
+- Fix compatibility with Python 2, which was broken in version 2.8.0.
+- Don't unhide buffers when reprinting messages (PR #839).
+- Make sure IMs and group IMs with unread messages are shown at start (fixes #551, PR #859, PR #857).
+- Properly retry requests when rate limited (PR #857).
+- Fix `/query` command not working for new group IMs (fixes #852, PR #857).
+- Include URL in message when block contains a URL (fixes #810, fixes #811, PR #863).
+
 ## 2.8.0 (2021-05-11)
 
-### WeeChat compability
+### WeeChat compatibility
 
 - Add compatibility with WeeChat >= 3.2 (XDG directories).
 
