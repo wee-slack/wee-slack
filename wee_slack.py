@@ -1599,7 +1599,7 @@ class SlackTeam(object):
         users,
         bots,
         channels,
-        **kwargs,
+        **kwargs
     ):
         self.slack_api_translator = copy.deepcopy(SLACK_API_TRANSLATOR)
         self.identifier = team_info["id"]
@@ -4198,12 +4198,10 @@ def download_files(message_json, channel):
             if os.path.isfile(fileout):
                 continue
             curl_options = SlackRequest(channel.team, "").options()
+            curl_options["file_out"] = fileout
             w.hook_process_hashtable(
                 "url:" + f["url_private"],
-                {
-                    **curl_options,
-                    "file_out": fileout,
-                },
+                curl_options,
                 config.slack_timeout,
                 "",
                 "",
@@ -6844,11 +6842,11 @@ def initiate_connection(token):
                     w.prnt(
                         "",
                         "You are a restricted user in this team, "
-                        f"{data_type} not loaded",
+                        "{} not loaded".format(data_type),
                     )
                 else:
                     initial_data["errors"].append(
-                        f'{data_type}: {response_json["error"]}'
+                        "{}: {}".format(data_type, response_json["error"])
                     )
                 initial_data["remaining"][data_type] -= 1
                 create_team(token, initial_data)
@@ -6864,7 +6862,7 @@ def initiate_connection(token):
 
     def handle_prefs(response_json, eventrouter, team, channel, metadata):
         if not response_json["ok"]:
-            initial_data["errors"].append(f'prefs: {response_json["error"]}')
+            initial_data["errors"].append("prefs: {}".format(response_json["error"]))
             initial_data["remaining"]["prefs"] -= 1
             create_team(token, initial_data)
             return
@@ -6875,7 +6873,7 @@ def initiate_connection(token):
 
     def handle_getPresence(response_json, eventrouter, team, channel, metadata):
         if not response_json["ok"]:
-            initial_data["errors"].append(f'presence: {response_json["error"]}')
+            initial_data["errors"].append("presence: {}".format(response_json["error"]))
             initial_data["remaining"]["presence"] -= 1
             create_team(token, initial_data)
             return
