@@ -4556,7 +4556,7 @@ def unfurl_blocks(blocks):
                     if element["type"] == "button":
                         elements.append(unfurl_block_element(element["text"]))
                         if "url" in element:
-                             elements.append(element["url"])
+                            elements.append(element["url"])
                     else:
                         elements.append(
                             colorize_string(
