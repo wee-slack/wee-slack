@@ -244,6 +244,12 @@ slack` after changing it to take effect.
 
 **Description:** When /joining a channel, automatically switch to it as well.
 
+### thread_broadcast_prefix
+
+**Default:** `+ `
+
+**Description:** Prefix to distinguish thread messages that were also sent to the channel, when thread_messages_in_channel is enabled.
+
 ### thread_messages_in_channel
 
 **Default:** `false`
