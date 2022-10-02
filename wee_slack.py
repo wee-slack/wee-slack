@@ -3469,7 +3469,7 @@ class SlackMessage(object):
                 return name
             else:
                 return "{} :]".format(name)
-        return self.user_identifier or ""
+        return self.user_identifier or self.message_json.get("bot_id") or ""
 
     @property
     def sender(self):
