@@ -3807,7 +3807,7 @@ def handle_conversationsinfo(channel_json, eventrouter, team, channel, metadata)
         channel.set_members(channel_info["members"])
 
     # MPIMs don't have unread_count_display so we have to request the history to check if there are unread messages
-    if channel.type == "mpim" and not channel.channel_buffer:
+    if channel.type == "mpim" and not channel.got_history:
         s = SlackRequest(
             team,
             "conversations.history",
