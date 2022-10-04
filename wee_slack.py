@@ -3801,6 +3801,8 @@ def handle_conversationsinfo(channel_json, eventrouter, team, channel, metadata)
         if unread_count and channel.channel_buffer is None:
             channel.create_buffer()
         channel.set_unread_count_display(unread_count)
+    if channel_info.get("is_open") and channel.channel_buffer is None:
+        channel.create_buffer()
     if "last_read" in channel_info:
         channel.last_read = SlackTS(channel_info["last_read"])
     if "members" in channel_info:
