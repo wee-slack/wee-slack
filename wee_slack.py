@@ -7093,10 +7093,10 @@ if __name__ == "__main__":
             else w.completion_list_add
         )
 
-        if weechat_version < 0x1030000:
+        if weechat_version < 0x2020000:
             w.prnt(
                 "",
-                "\nERROR: Weechat version 1.3+ is required to use {}.\n\n".format(
+                "\nERROR: Weechat version 2.2+ is required to use {}.\n\n".format(
                     SCRIPT_NAME
                 ),
             )
