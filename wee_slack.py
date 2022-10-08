@@ -410,8 +410,7 @@ def get_localvar_type(slack_type):
 
 
 def get_nick_color(nick):
-    info_name_prefix = "irc_" if weechat_version < 0x1050000 else ""
-    return w.info_get(info_name_prefix + "nick_color_name", nick)
+    return w.info_get("nick_color_name", nick)
 
 
 def get_thread_color(thread_id):
