@@ -3214,8 +3214,11 @@ class SlackThreadChannel(SlackChannelCommon):
             )
             self.buffer_rename_in_progress = False
             self.set_highlights()
-            time_format = w.config_string(
-                w.config_get("weechat.look.buffer_time_format")
+            time_format = w.string_eval_expression(
+                w.config_string(w.config_get("weechat.look.buffer_time_format")),
+                {},
+                {},
+                {},
             )
             parent_time = time.localtime(SlackTS(self.thread_ts).major)
             topic = "{} {} | {}".format(
