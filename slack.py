@@ -108,6 +108,7 @@ active_responses: Dict[str, Tuple[Any, ...]] = {}
 
 
 def shutdown_cb():
+    weechat.config_write(config.config_file)
     return weechat.WEECHAT_RC_OK
 
 
@@ -246,7 +247,83 @@ async def http_request(
 
 class SlackConfig:
     def __init__(self):
-        self.slack_timeout = 30000
+        self.config_file = weechat.config_new("slack", "", "")
+        self.section_look = self.config_new_section("look")
+        self.section_color = self.config_new_section("color")
+        self.section_network = self.config_new_section("network")
+        self.section_workspace_default = self.config_new_section("workspace_default")
+        self.section_workspace = self.config_new_section("workspace")
+
+        self._slack_timeout = self.config_new_option(
+            self.section_network,
+            "slack_timeout",
+            "integer",
+            "timeout (in seconds) for network requests",
+            "",
+            0,
+            3600,
+            "30",
+        )
+
+        weechat.config_read(self.config_file)
+        weechat.config_write(self.config_file)
+
+    @property
+    def slack_timeout(self):
+        return weechat.config_integer(self._slack_timeout)
+
+    def config_new_section(
+        self, name: str, user_can_add_options: int = 0, user_can_delete_options: int = 0
+    ) -> str:
+        return weechat.config_new_section(
+            self.config_file,
+            name,
+            user_can_add_options,
+            user_can_delete_options,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+        )
+
+    def config_new_option(
+        self,
+        section: str,
+        name: str,
+        type: str,
+        description: str,
+        string_values: str,
+        min: int,
+        max: int,
+        default_value: str | None,
+        null_value_allowed: int = 0,
+    ) -> str:
+        value = None if weechat_version >= 0x3050000 else default_value
+        return weechat.config_new_option(
+            self.config_file,
+            section,
+            name,
+            type,
+            description,
+            string_values,
+            min,
+            max,
+            default_value,
+            value,
+            null_value_allowed,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+        )
 
 
 class SlackToken(NamedTuple):
@@ -339,5 +416,6 @@ if __name__ == "__main__":
         "shutdown_cb",
         "",
     ):
+        weechat_version = int(weechat.info_get("version_number", "") or 0)
         config = SlackConfig()
         create_task(init(), final=True)
