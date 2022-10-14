@@ -668,19 +668,19 @@ class EventRouter(object):
             self.receive(message_json)
 
     def http_check_ratelimited(self, request_metadata, response):
-        headers_end_index = response.index("\r\n\r\n")
-        headers = response[:headers_end_index].split("\r\n")
-        http_status = headers[0].split(" ")[1]
+        parts = response.split("\r\n\r\nHTTP/")
+        last_header_part, body = parts[-1].split("\r\n\r\n", 1)
+        header_lines = last_header_part.split("\r\n")
+        http_status = header_lines[0].split(" ")[1]
 
         if http_status == "429":
-            for header in headers[1:]:
+            for header in header_lines[1:]:
                 name, value = header.split(":", 1)
                 if name.lower() == "retry-after":
                     retry_after = int(value.strip())
                     request_metadata.retry_time = time.time() + retry_after
                     return "", "ratelimited"
 
-        body = response[headers_end_index + 4 :]
         return body, ""
 
     def retry_request(self, request_metadata, data, return_code, err):
