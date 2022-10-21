@@ -376,17 +376,13 @@ async def http_request(
 
 
 class SlackConfig:
-    def __init__(self, team: SlackTeam | None):
-        section_name = f"workspace.{team.name}" if team else "workspace_default"
+    def __init__(self, section_name: str, default_config: SlackConfig):
+        is_workspace = default_config != self
         self.section = WeeChatSection(config, section_name)
-
-        default_config = (
-            slack_config_default if "slack_config_default" in globals() else self
-        )
 
         self.slack_timeout = WeeChatOption(
             self.section,
-            default_config.slack_timeout if team else None,
+            default_config.slack_timeout if is_workspace else None,
             "slack_timeout",
             "timeout (in seconds) for network requests",
             30,
@@ -395,9 +391,15 @@ class SlackConfig:
             3600,
         )
 
-        # Have to make sure all team options are created before this
-        # weechat.config_read(self.config.pointer)
-        # weechat.config_write(self.config.pointer)
+
+class SlackConfigWorkspace(SlackConfig):
+    def __init__(self, team: SlackTeam):
+        super().__init__(f"workspace.{team.name}", slack_config_default)
+
+
+class SlackConfigDefault(SlackConfig):
+    def __init__(self):
+        super().__init__("workspace_default", self)
 
 
 class SlackToken(NamedTuple):
@@ -423,7 +425,6 @@ class SlackApi:
         response = await http_request(
             url,
             self.get_request_options(),
-            # config.slack_timeout.get_value(self.team.name),
             self.team.config.slack_timeout.value,
         )
         return json.loads(response)
@@ -448,7 +449,7 @@ class SlackApi:
 class SlackTeam:
     def __init__(self, token: SlackToken, name: str):
         self.name = name
-        self.config = SlackConfig(self)
+        self.config = SlackConfigWorkspace(self)
         self.api = SlackApi(self, token)
 
 
@@ -482,8 +483,11 @@ async def init():
     )
     team = SlackTeam(token, "wee-slack-test")
     print(team)
-    # print(config.slack_timeout.get_value(team.name))
     print(team.config.slack_timeout.value)
+
+    # Have to make sure all team options are created before this
+    weechat.config_read(config.pointer)
+    weechat.config_write(config.pointer)
 
 
 if __name__ == "__main__":
@@ -498,5 +502,5 @@ if __name__ == "__main__":
     ):
         weechat_version = int(weechat.info_get("version_number", "") or 0)
         config = WeeChatConfig("slack")
-        slack_config_default = SlackConfig(None)
+        slack_config_default = SlackConfigDefault()
         create_task(init(), final=True)
