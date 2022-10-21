@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import dataclass
 from enum import IntEnum
 from io import StringIO
 import json
@@ -15,7 +16,7 @@ from typing import (
     TypeVar,
     Union,
 )
-from typing import Coroutine
+from typing import Awaitable, Coroutine
 from urllib.parse import urlencode
 from uuid import uuid4
 
@@ -64,7 +65,7 @@ class HttpError(Exception):
         self.error = error
 
 
-class Future(Generic[T]):
+class Future(Awaitable[T]):
     def __init__(self):
         self.id = str(uuid4())
 
@@ -101,6 +102,141 @@ def available_file_descriptors():
     return max_file_descriptors - num_current_file_descriptors
 
 
+### WeeChat classes
+
+
+class WeeChatColor(str):
+    pass
+
+
+@dataclass
+class WeeChatConfig:
+    name: str
+
+    def __post_init__(self):
+        self.pointer = weechat.config_new(self.name, "", "")
+
+
+@dataclass
+class WeeChatSection:
+    config: WeeChatConfig
+    name: str
+    user_can_add_options: bool = False
+    user_can_delete_options: bool = False
+
+    def __post_init__(self):
+        self.pointer = weechat.config_new_section(
+            self.config.pointer,
+            self.name,
+            self.user_can_add_options,
+            self.user_can_delete_options,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+        )
+
+
+WeeChatOptionType = TypeVar("WeeChatOptionType", bool, int, WeeChatColor, str)
+
+
+@dataclass
+class WeeChatOption(Generic[WeeChatOptionType]):
+    default_section: WeeChatSection
+    workspace_section: WeeChatSection
+    name: str
+    description: str
+    default_value: WeeChatOptionType
+    string_values: str
+    min_value: int
+    max_value: int
+
+    def __post_init__(self):
+        self.default_pointer = self._config_new_option()
+        self.workspace_pointers: Dict[str, str] = {}
+
+    @property
+    def weechat_type(self) -> str:
+        if isinstance(self.default_value, bool):
+            return "boolean"
+        if isinstance(self.default_value, int):
+            return "integer"
+        if isinstance(self.default_value, WeeChatColor):
+            return "color"
+        return "string"
+
+    @property
+    def default_value_str(self) -> str:
+        return str(self.default_value)
+
+    def get_value(self, workspace_name: str) -> WeeChatOptionType:
+        option_pointer = (
+            self.workspace_pointers.get(workspace_name) or self.default_pointer
+        )
+        if weechat.config_option_is_null(option_pointer):
+            option_pointer = self.default_pointer
+
+        if isinstance(self.default_value, bool):
+            return weechat.config_boolean(option_pointer) == 1
+        if isinstance(self.default_value, int):
+            return weechat.config_integer(option_pointer)
+        if isinstance(self.default_value, WeeChatColor):
+            color = weechat.config_color(option_pointer)
+            return WeeChatColor(color)
+        return weechat.config_string(option_pointer)
+
+    def add_workspace(self, workspace_name: str):
+        workspace_pointer = self._config_new_option(workspace_name)
+        self.workspace_pointers[workspace_name] = workspace_pointer
+
+    def _config_new_option(
+        self,
+        workspace_name: str | None = None,
+    ) -> str:
+        if workspace_name:
+            name = f"{workspace_name}.{self.name} << {self.default_section.config.name}.{self.default_section.name}.{self.name}"
+            section = self.workspace_section
+            default_value = None
+            null_value_allowed = True
+        else:
+            name = self.name
+            section = self.default_section
+            default_value = self.default_value_str
+            null_value_allowed = False
+
+        value = None
+
+        if weechat_version < 0x3050000:
+            default_value = self.default_value_str
+            value = default_value
+
+        return weechat.config_new_option(
+            section.config.pointer,
+            section.pointer,
+            name,
+            self.weechat_type,
+            self.description,
+            self.string_values,
+            self.min_value,
+            self.max_value,
+            default_value,
+            value,
+            null_value_allowed,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+        )
+
+
 ### WeeChat callbacks
 
 active_tasks: Dict[str, Task[Any]] = {}
@@ -108,7 +244,7 @@ active_responses: Dict[str, Tuple[Any, ...]] = {}
 
 
 def shutdown_cb():
-    weechat.config_write(config.config_file)
+    weechat.config_write(config.config.pointer)
     return weechat.WEECHAT_RC_OK
 
 
@@ -247,83 +383,31 @@ async def http_request(
 
 class SlackConfig:
     def __init__(self):
-        self.config_file = weechat.config_new("slack", "", "")
-        self.section_look = self.config_new_section("look")
-        self.section_color = self.config_new_section("color")
-        self.section_network = self.config_new_section("network")
-        self.section_workspace_default = self.config_new_section("workspace_default")
-        self.section_workspace = self.config_new_section("workspace")
+        self.config = WeeChatConfig("slack")
+        self.section_workspace_default = WeeChatSection(
+            self.config, "workspace_default"
+        )
+        self.section_workspace = WeeChatSection(self.config, "workspace")
 
-        self._slack_timeout = self.config_new_option(
-            self.section_network,
+        self.slack_timeout = WeeChatOption(
+            self.section_workspace_default,
+            self.section_workspace,
             "slack_timeout",
-            "integer",
             "timeout (in seconds) for network requests",
+            30,
             "",
             0,
             3600,
-            "30",
         )
 
-        weechat.config_read(self.config_file)
-        weechat.config_write(self.config_file)
+        self.slack_timeout.add_workspace("wee-slack-test")
 
-    @property
-    def slack_timeout(self):
-        return weechat.config_integer(self._slack_timeout)
+        # for attr in vars(self).values():
+        #     if isinstance(attr, WeeChatOption):
+        #         print(attr.weechat_type)
 
-    def config_new_section(
-        self, name: str, user_can_add_options: int = 0, user_can_delete_options: int = 0
-    ) -> str:
-        return weechat.config_new_section(
-            self.config_file,
-            name,
-            user_can_add_options,
-            user_can_delete_options,
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-        )
-
-    def config_new_option(
-        self,
-        section: str,
-        name: str,
-        type: str,
-        description: str,
-        string_values: str,
-        min: int,
-        max: int,
-        default_value: str | None,
-        null_value_allowed: int = 0,
-    ) -> str:
-        value = None if weechat_version >= 0x3050000 else default_value
-        return weechat.config_new_option(
-            self.config_file,
-            section,
-            name,
-            type,
-            description,
-            string_values,
-            min,
-            max,
-            default_value,
-            value,
-            null_value_allowed,
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-        )
+        weechat.config_read(self.config.pointer)
+        weechat.config_write(self.config.pointer)
 
 
 class SlackToken(NamedTuple):
@@ -332,7 +416,8 @@ class SlackToken(NamedTuple):
 
 
 class SlackApi:
-    def __init__(self, token: SlackToken):
+    def __init__(self, team: SlackTeam, token: SlackToken):
+        self.team = team
         self.token = token
 
     def get_request_options(self):
@@ -348,7 +433,7 @@ class SlackApi:
         response = await http_request(
             url,
             self.get_request_options(),
-            config.slack_timeout,
+            config.slack_timeout.get_value(self.team.name),
         )
         return json.loads(response)
 
@@ -370,8 +455,9 @@ class SlackApi:
 
 
 class SlackTeam:
-    def __init__(self, token: SlackToken):
-        self.api = SlackApi(token)
+    def __init__(self, token: SlackToken, name: str):
+        self.api = SlackApi(self, token)
+        self.name = name
 
 
 class SlackChannelCommonNew:
@@ -402,8 +488,10 @@ async def init():
     token = SlackToken(
         weechat.config_get_plugin("api_token"), weechat.config_get_plugin("api_cookie")
     )
-    team = SlackTeam(token)
+    team = SlackTeam(token, "wee-slack-test")
     print(team)
+    print(config.slack_timeout.get_value(team.name))
+    # print(team.config.slack_timeout)
 
 
 if __name__ == "__main__":
