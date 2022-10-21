@@ -119,14 +119,14 @@ class WeeChatConfig:
 
 @dataclass
 class WeeChatSection:
-    config: WeeChatConfig
+    weechat_config: WeeChatConfig
     name: str
     user_can_add_options: bool = False
     user_can_delete_options: bool = False
 
     def __post_init__(self):
         self.pointer = weechat.config_new_section(
-            self.config.pointer,
+            self.weechat_config.pointer,
             self.name,
             self.user_can_add_options,
             self.user_can_delete_options,
@@ -192,7 +192,7 @@ class WeeChatOption(Generic[WeeChatOptionType]):
     def _create_weechat_option(self) -> str:
         if self.parent_option:
             parent_option_name = (
-                f"{self.parent_option.section.config.name}"
+                f"{self.parent_option.section.weechat_config.name}"
                 f".{self.parent_option.section.name}"
                 f".{self.parent_option.name}"
             )
@@ -211,7 +211,7 @@ class WeeChatOption(Generic[WeeChatOptionType]):
             value = default_value
 
         return weechat.config_new_option(
-            self.section.config.pointer,
+            self.section.weechat_config.pointer,
             self.section.pointer,
             name,
             self._weechat_type,
@@ -238,7 +238,7 @@ active_responses: Dict[str, Tuple[Any, ...]] = {}
 
 
 def shutdown_cb():
-    weechat.config_write(config.pointer)
+    weechat.config_write(config.weechat_config.pointer)
     return weechat.WEECHAT_RC_OK
 
 
@@ -376,14 +376,13 @@ async def http_request(
 
 
 class SlackConfig:
-    def __init__(self, section_name: str, default_config: SlackConfig):
-        is_workspace = default_config != self
-        self.section = WeeChatSection(config, section_name)
+    def __init__(self, section: WeeChatSection, team: SlackTeam | None):
+        self.team = team
 
         self.slack_timeout = WeeChatOption(
-            self.section,
-            default_config.slack_timeout if is_workspace else None,
-            "slack_timeout",
+            section,
+            config.workspace_default.slack_timeout if team else None,
+            self._get_option_name_with_workspace("slack_timeout"),
             "timeout (in seconds) for network requests",
             30,
             "",
@@ -391,15 +390,29 @@ class SlackConfig:
             3600,
         )
 
+    def _get_option_name_with_workspace(self, option_name: str):
+        if self.team:
+            return f"{self.team.name}.{option_name}"
+        return option_name
+
 
 class SlackConfigWorkspace(SlackConfig):
     def __init__(self, team: SlackTeam):
-        super().__init__(f"workspace.{team.name}", slack_config_default)
+        super().__init__(config.section_workspace, team)
 
 
-class SlackConfigDefault(SlackConfig):
+class SlackConfigDefault:
     def __init__(self):
-        super().__init__("workspace_default", self)
+        self.weechat_config = WeeChatConfig("slack")
+        self.section_workspace_default = WeeChatSection(
+            self.weechat_config, "workspace_default"
+        )
+        self.section_workspace = WeeChatSection(self.weechat_config, "workspace")
+        self.workspace_default = SlackConfig(self.section_workspace_default, None)
+
+    def init_after_all_options_are_created(self):
+        weechat.config_read(self.weechat_config.pointer)
+        weechat.config_write(self.weechat_config.pointer)
 
 
 class SlackToken(NamedTuple):
@@ -482,12 +495,10 @@ async def init():
         weechat.config_get_plugin("api_token"), weechat.config_get_plugin("api_cookie")
     )
     team = SlackTeam(token, "wee-slack-test")
+    config.init_after_all_options_are_created()
     print(team)
     print(team.config.slack_timeout.value)
-
-    # Have to make sure all team options are created before this
-    weechat.config_read(config.pointer)
-    weechat.config_write(config.pointer)
+    print(config.workspace_default.slack_timeout.value)
 
 
 if __name__ == "__main__":
@@ -501,6 +512,5 @@ if __name__ == "__main__":
         "",
     ):
         weechat_version = int(weechat.info_get("version_number", "") or 0)
-        config = WeeChatConfig("slack")
-        slack_config_default = SlackConfigDefault()
+        config = SlackConfigDefault()
         create_task(init(), final=True)
