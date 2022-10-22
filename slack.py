@@ -382,20 +382,45 @@ class SlackConfigWorkspace:
         team: SlackTeam | None,
         parent_config: SlackConfigWorkspace | None,
     ):
-        self.team = team
+        self._section = section
+        self._team = team
+        self._parent_config = parent_config
 
-        self.slack_timeout = WeeChatOption(
-            section,
-            parent_config.slack_timeout if parent_config else None,
-            self._get_option_name_with_workspace("slack_timeout"),
+        self.slack_timeout = self._create_option(
+            "slack_timeout",
             "timeout (in seconds) for network requests",
             30,
         )
 
-    def _get_option_name_with_workspace(self, option_name: str):
-        if self.team:
-            return f"{self.team.name}.{option_name}"
-        return option_name
+    def _create_option(
+        self,
+        name: str,
+        description: str,
+        default_value: WeeChatOptionType,
+        min_value: int | None = None,
+        max_value: int | None = None,
+        string_values: str | None = None,
+    ) -> WeeChatOption[WeeChatOptionType]:
+        if self._team:
+            option_name = f"{self._team.name}.{name}"
+        else:
+            option_name = name
+
+        if self._parent_config:
+            parent_option = getattr(self._parent_config, name, None)
+        else:
+            parent_option = None
+
+        return WeeChatOption(
+            self._section,
+            parent_option,
+            option_name,
+            description,
+            default_value,
+            min_value,
+            max_value,
+            string_values,
+        )
 
 
 class SlackConfig:
