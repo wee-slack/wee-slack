@@ -92,6 +92,11 @@ class Task(Future[T]):
 ### Helpers
 
 
+# TODO: Figure out what to do with print_error vs log
+def print_error(message: str):
+    weechat.prnt("", f"{weechat.prefix('error')}{SCRIPT_NAME}: {message}")
+
+
 def log(level: LogLevel, message: str):
     if level >= LogLevel.INFO:
         print(level, message)
@@ -124,6 +129,7 @@ class WeeChatSection:
     name: str
     user_can_add_options: bool = False
     user_can_delete_options: bool = False
+    callback_read: str | None = None
 
     def __post_init__(self):
         self.pointer = weechat.config_new_section(
@@ -131,7 +137,7 @@ class WeeChatSection:
             self.name,
             self.user_can_add_options,
             self.user_can_delete_options,
-            "",
+            self.callback_read or "",
             "",
             "",
             "",
@@ -423,25 +429,58 @@ class SlackConfigWorkspace:
         )
 
 
+def config_section_workspace_read_cb(
+    data: str, config_file: str, section: str, option_name: str, value: str | None
+) -> int:
+    option_split = option_name.split(".", 1)
+    if len(option_split) < 2:
+        return weechat.WEECHAT_CONFIG_OPTION_SET_ERROR
+    workspace_name, name = option_split
+    if not workspace_name or not name:
+        return weechat.WEECHAT_CONFIG_OPTION_SET_ERROR
+
+    if workspace_name not in workspaces:
+        workspaces[workspace_name] = SlackTeam(SlackToken(""), workspace_name)
+
+    option = getattr(workspaces[workspace_name].config, name, None)
+    if option is None:
+        return weechat.WEECHAT_CONFIG_OPTION_SET_OPTION_NOT_FOUND
+    if not isinstance(option, WeeChatOption):
+        return weechat.WEECHAT_CONFIG_OPTION_SET_ERROR
+
+    # TODO: reloading from config
+
+    if value is None:
+        rc = weechat.config_option_set_null(option._pointer, 1)
+    else:
+        rc = weechat.config_option_set(option._pointer, value, 1)
+    if rc == weechat.WEECHAT_CONFIG_OPTION_SET_ERROR:
+        print_error(f'error creating workspace option "{option_name}"')
+    return rc
+
+
 class SlackConfig:
     def __init__(self):
         self.weechat_config = WeeChatConfig("slack")
-        self.section_workspace_default = WeeChatSection(
+        self._section_workspace_default = WeeChatSection(
             self.weechat_config, "workspace_default"
         )
-        self.section_workspace = WeeChatSection(self.weechat_config, "workspace")
-        self._workspace_default = SlackConfigWorkspace(
-            self.section_workspace_default, None, None
+        self._section_workspace = WeeChatSection(
+            self.weechat_config,
+            "workspace",
+            callback_read=config_section_workspace_read_cb.__name__,
         )
+        self._workspace_default = SlackConfigWorkspace(
+            self._section_workspace_default, None, None
+        )
+
+    def config_read(self):
+        weechat.config_read(self.weechat_config.pointer)
 
     def create_workspace_config(self, team: SlackTeam):
         return SlackConfigWorkspace(
-            self.section_workspace, team, self._workspace_default
+            self._section_workspace, team, self._workspace_default
         )
-
-    def init_after_all_options_are_created(self):
-        weechat.config_read(self.weechat_config.pointer)
-        weechat.config_write(self.weechat_config.pointer)
 
 
 class SlackToken(NamedTuple):
@@ -524,7 +563,7 @@ async def init():
         weechat.config_get_plugin("api_token"), weechat.config_get_plugin("api_cookie")
     )
     team = SlackTeam(token, "wee-slack-test")
-    config.init_after_all_options_are_created()
+    workspaces["wee-slack-test"] = team
     print(team)
     print(team.config.slack_timeout.value)
 
@@ -540,5 +579,7 @@ if __name__ == "__main__":
         "",
     ):
         weechat_version = int(weechat.info_get("version_number", "") or 0)
+        workspaces: Dict[str, SlackTeam] = {}
         config = SlackConfig()
+        config.config_read()
         create_task(init(), final=True)
