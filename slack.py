@@ -129,7 +129,7 @@ class WeeChatSection:
     name: str
     user_can_add_options: bool = False
     user_can_delete_options: bool = False
-    callback_read: str | None = None
+    callback_read: Union[str, None] = None
 
     def __post_init__(self):
         self.pointer = weechat.config_new_section(
@@ -150,19 +150,19 @@ class WeeChatSection:
         )
 
 
-WeeChatOptionType = TypeVar("WeeChatOptionType", bound=int | str)
+WeeChatOptionType = TypeVar("WeeChatOptionType", bound=Union[int, str])
 
 
 @dataclass
 class WeeChatOption(Generic[WeeChatOptionType]):
     section: WeeChatSection
-    parent_option: WeeChatOption[WeeChatOptionType] | None
+    parent_option: Union[WeeChatOption[WeeChatOptionType], None]
     name: str
     description: str
     default_value: WeeChatOptionType
-    min_value: int | None = None
-    max_value: int | None = None
-    string_values: str | None = None
+    min_value: Union[int, None] = None
+    max_value: Union[int, None] = None
+    string_values: Union[str, None] = None
 
     def __post_init__(self):
         self._pointer = self._create_weechat_option()
@@ -401,8 +401,8 @@ class SlackConfigWorkspace:
     def __init__(
         self,
         section: WeeChatSection,
-        team: SlackTeam | None,
-        parent_config: SlackConfigWorkspace | None,
+        team: Union[SlackTeam, None],
+        parent_config: Union[SlackConfigWorkspace, None],
     ):
         self._section = section
         self._team = team
@@ -419,9 +419,9 @@ class SlackConfigWorkspace:
         name: str,
         description: str,
         default_value: WeeChatOptionType,
-        min_value: int | None = None,
-        max_value: int | None = None,
-        string_values: str | None = None,
+        min_value: Union[int, None] = None,
+        max_value: Union[int, None] = None,
+        string_values: Union[str, None] = None,
     ) -> WeeChatOption[WeeChatOptionType]:
         if self._team:
             option_name = f"{self._team.name}.{name}"
@@ -446,7 +446,7 @@ class SlackConfigWorkspace:
 
 
 def config_section_workspace_read_cb(
-    data: str, config_file: str, section: str, option_name: str, value: str | None
+    data: str, config_file: str, section: str, option_name: str, value: Union[str, None]
 ) -> int:
     option_split = option_name.split(".", 1)
     if len(option_split) < 2:
