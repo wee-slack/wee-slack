@@ -153,22 +153,22 @@ class WeeChatOption(Generic[WeeChatOptionType]):
     name: str
     description: str
     default_value: WeeChatOptionType
-    string_values: str
-    min_value: int
-    max_value: int
+    min_value: int | None = None
+    max_value: int | None = None
+    string_values: str | None = None
 
     def __post_init__(self):
-        self.pointer = self._create_weechat_option()
+        self._pointer = self._create_weechat_option()
 
     @property
     def value(self) -> WeeChatOptionType:
-        if weechat.config_option_is_null(self.pointer):
+        if weechat.config_option_is_null(self._pointer):
             if self.parent_option:
-                option_pointer = self.parent_option.pointer
+                option_pointer = self.parent_option._pointer
             else:
                 return self.default_value
         else:
-            option_pointer = self.pointer
+            option_pointer = self._pointer
 
         if isinstance(self.default_value, bool):
             return weechat.config_boolean(option_pointer) == 1
@@ -181,6 +181,8 @@ class WeeChatOption(Generic[WeeChatOptionType]):
 
     @property
     def _weechat_type(self) -> str:
+        if self.string_values:
+            return "integer"
         if isinstance(self.default_value, bool):
             return "boolean"
         if isinstance(self.default_value, int):
@@ -216,9 +218,9 @@ class WeeChatOption(Generic[WeeChatOptionType]):
             name,
             self._weechat_type,
             self.description,
-            self.string_values,
-            self.min_value,
-            self.max_value,
+            self.string_values or "",
+            self.min_value or -(2**31),
+            self.max_value or 2**31 - 1,
             default_value,
             value,
             null_value_allowed,
@@ -390,9 +392,6 @@ class SlackConfigWorkspace:
             self._get_option_name_with_workspace("slack_timeout"),
             "timeout (in seconds) for network requests",
             30,
-            "",
-            0,
-            3600,
         )
 
     def _get_option_name_with_workspace(self, option_name: str):
