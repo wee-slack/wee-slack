@@ -15,6 +15,7 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    cast,
 )
 from typing import Awaitable, Coroutine
 from urllib.parse import urlencode
@@ -143,7 +144,7 @@ class WeeChatSection:
         )
 
 
-WeeChatOptionType = TypeVar("WeeChatOptionType", bool, int, WeeChatColor, str)
+WeeChatOptionType = TypeVar("WeeChatOptionType", bound=int | str)
 
 
 @dataclass
@@ -171,13 +172,13 @@ class WeeChatOption(Generic[WeeChatOptionType]):
             option_pointer = self._pointer
 
         if isinstance(self.default_value, bool):
-            return weechat.config_boolean(option_pointer) == 1
+            return cast(WeeChatOptionType, weechat.config_boolean(option_pointer) == 1)
         if isinstance(self.default_value, int):
-            return weechat.config_integer(option_pointer)
+            return cast(WeeChatOptionType, weechat.config_integer(option_pointer))
         if isinstance(self.default_value, WeeChatColor):
             color = weechat.config_color(option_pointer)
-            return WeeChatColor(color)
-        return weechat.config_string(option_pointer)
+            return cast(WeeChatOptionType, WeeChatColor(color))
+        return cast(WeeChatOptionType, weechat.config_string(option_pointer))
 
     @property
     def _weechat_type(self) -> str:
