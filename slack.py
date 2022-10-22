@@ -183,6 +183,22 @@ class WeeChatOption(Generic[WeeChatOptionType]):
             return cast(WeeChatOptionType, WeeChatColor(color))
         return cast(WeeChatOptionType, weechat.config_string(self._pointer))
 
+    @value.setter
+    def value(self, value: WeeChatOptionType):
+        rc = self.value_set_as_str(str(value))
+        if rc == weechat.WEECHAT_CONFIG_OPTION_SET_ERROR:
+            raise Exception(f"Failed to value for option: {self.name}")
+
+    def value_set_as_str(self, value: str) -> int:
+        return weechat.config_option_set(self._pointer, value, 1)
+
+    def value_set_null(self) -> int:
+        if not self.parent_option:
+            raise Exception(
+                f"Can't set null value for option without parent: {self.name}"
+            )
+        return weechat.config_option_set_null(self._pointer, 1)
+
     @property
     def _weechat_type(self) -> str:
         if self.string_values:
@@ -451,9 +467,9 @@ def config_section_workspace_read_cb(
     # TODO: reloading from config
 
     if value is None:
-        rc = weechat.config_option_set_null(option._pointer, 1)
+        rc = option.value_set_null()
     else:
-        rc = weechat.config_option_set(option._pointer, value, 1)
+        rc = option.value_set_as_str(value)
     if rc == weechat.WEECHAT_CONFIG_OPTION_SET_ERROR:
         print_error(f'error creating workspace option "{option_name}"')
     return rc
