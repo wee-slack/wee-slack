@@ -528,7 +528,7 @@ class SlackApi:
         response = await http_request(
             url,
             self.get_request_options(),
-            self.team.config.slack_timeout.value,
+            self.team.config.slack_timeout.value * 1000,
         )
         return json.loads(response)
 
