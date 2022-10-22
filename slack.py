@@ -165,20 +165,17 @@ class WeeChatOption(Generic[WeeChatOptionType]):
     def value(self) -> WeeChatOptionType:
         if weechat.config_option_is_null(self._pointer):
             if self.parent_option:
-                option_pointer = self.parent_option._pointer
-            else:
-                return self.default_value
-        else:
-            option_pointer = self._pointer
+                return self.parent_option.value
+            return self.default_value
 
         if isinstance(self.default_value, bool):
-            return cast(WeeChatOptionType, weechat.config_boolean(option_pointer) == 1)
+            return cast(WeeChatOptionType, weechat.config_boolean(self._pointer) == 1)
         if isinstance(self.default_value, int):
-            return cast(WeeChatOptionType, weechat.config_integer(option_pointer))
+            return cast(WeeChatOptionType, weechat.config_integer(self._pointer))
         if isinstance(self.default_value, WeeChatColor):
-            color = weechat.config_color(option_pointer)
+            color = weechat.config_color(self._pointer)
             return cast(WeeChatOptionType, WeeChatColor(color))
-        return cast(WeeChatOptionType, weechat.config_string(option_pointer))
+        return cast(WeeChatOptionType, weechat.config_string(self._pointer))
 
     @property
     def _weechat_type(self) -> str:
