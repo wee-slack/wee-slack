@@ -464,8 +464,6 @@ def config_section_workspace_read_cb(
     if not isinstance(option, WeeChatOption):
         return weechat.WEECHAT_CONFIG_OPTION_SET_ERROR
 
-    # TODO: reloading from config
-
     if value is None:
         rc = option.value_set_null()
     else:
@@ -494,6 +492,10 @@ class SlackConfig:
         weechat.config_read(self.weechat_config.pointer)
 
     def create_workspace_config(self, team: SlackTeam):
+        if team.name in workspaces:
+            raise Exception(
+                f"Failed to create workspace config, already exists: {team.name}"
+            )
         return SlackConfigWorkspace(
             self._section_workspace, team, self._workspace_default
         )
@@ -578,8 +580,10 @@ async def init():
     token = SlackToken(
         weechat.config_get_plugin("api_token"), weechat.config_get_plugin("api_cookie")
     )
-    team = SlackTeam(token, "wee-slack-test")
-    workspaces["wee-slack-test"] = team
+    print(workspaces)
+    if "wee-slack-test" not in workspaces:
+        workspaces["wee-slack-test"] = SlackTeam(token, "wee-slack-test")
+    team = workspaces["wee-slack-test"]
     print(team)
     print(team.config.slack_timeout.value)
 
