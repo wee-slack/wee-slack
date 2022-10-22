@@ -10,7 +10,6 @@ from typing import (
     Dict,
     Generator,
     Generic,
-    NamedTuple,
     TYPE_CHECKING,
     Tuple,
     TypeVar,
@@ -408,6 +407,18 @@ class SlackConfigWorkspace:
         self._team = team
         self._parent_config = parent_config
 
+        self.api_token = self._create_option(
+            "api_token",
+            "",
+            "",
+        )
+
+        self.api_cookies = self._create_option(
+            "api_cookies",
+            "",
+            "",
+        )
+
         self.slack_timeout = self._create_option(
             "slack_timeout",
             "timeout (in seconds) for network requests",
@@ -456,7 +467,7 @@ def config_section_workspace_read_cb(
         return weechat.WEECHAT_CONFIG_OPTION_SET_ERROR
 
     if workspace_name not in workspaces:
-        workspaces[workspace_name] = SlackTeam(SlackToken(""), workspace_name)
+        workspaces[workspace_name] = SlackTeam(workspace_name)
 
     option = getattr(workspaces[workspace_name].config, name, None)
     if option is None:
@@ -501,22 +512,15 @@ class SlackConfig:
         )
 
 
-class SlackToken(NamedTuple):
-    token: str
-    cookie: Union[str, None] = None
-
-
 class SlackApi:
-    def __init__(self, team: SlackTeam, token: SlackToken):
+    def __init__(self, team: SlackTeam):
         self.team = team
-        self.token = token
 
     def get_request_options(self):
-        cookies = f"d={self.token.cookie}" if self.token.cookie else ""
         return {
             "useragent": f"wee_slack {SCRIPT_VERSION}",
-            "httpheader": f"Authorization: Bearer {self.token.token}",
-            "cookie": cookies,
+            "httpheader": f"Authorization: Bearer {self.team.config.api_token.value}",
+            "cookie": self.team.config.api_cookies.value,
         }
 
     async def fetch(self, method: str, params: Dict[str, Union[str, int]] = {}):
@@ -546,10 +550,10 @@ class SlackApi:
 
 
 class SlackTeam:
-    def __init__(self, token: SlackToken, name: str):
+    def __init__(self, name: str):
         self.name = name
         self.config = config.create_workspace_config(self)
-        self.api = SlackApi(self, token)
+        self.api = SlackApi(self)
 
 
 class SlackChannelCommonNew:
@@ -577,12 +581,15 @@ class SlackIm(SlackChannelCommonNew):
 
 
 async def init():
-    token = SlackToken(
-        weechat.config_get_plugin("api_token"), weechat.config_get_plugin("api_cookie")
-    )
     print(workspaces)
     if "wee-slack-test" not in workspaces:
-        workspaces["wee-slack-test"] = SlackTeam(token, "wee-slack-test")
+        workspaces["wee-slack-test"] = SlackTeam("wee-slack-test")
+        workspaces["wee-slack-test"].config.api_token.value = weechat.config_get_plugin(
+            "api_token"
+        )
+        workspaces[
+            "wee-slack-test"
+        ].config.api_cookies.value = weechat.config_get_plugin("api_cookie")
     team = workspaces["wee-slack-test"]
     print(team)
     print(team.config.slack_timeout.value)
