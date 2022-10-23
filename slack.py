@@ -427,12 +427,25 @@ async def http_request(
 ### Slack Classes
 
 
-class SlackConfigWorkspace:
+class SlackConfigSectionColor:
+    def __init__(self, weechat_config: WeeChatConfig):
+        self._section = WeeChatSection(weechat_config, "color")
+
+        self.reaction_suffix = WeeChatOption(
+            self._section,
+            None,
+            "reaction_suffix",
+            "Color to use for the [:wave:(@user)] suffix on messages that have reactions attached to them.",
+            WeeChatColor("darkgray"),
+        )
+
+
+class SlackConfigSectionWorkspace:
     def __init__(
         self,
         section: WeeChatSection,
         team: Union[SlackTeam, None],
-        parent_config: Union[SlackConfigWorkspace, None],
+        parent_config: Union[SlackConfigSectionWorkspace, None],
     ):
         self._section = section
         self._team = team
@@ -520,6 +533,7 @@ def config_section_workspace_read_cb(
 class SlackConfig:
     def __init__(self):
         self.weechat_config = WeeChatConfig("slack")
+        self.color = SlackConfigSectionColor(self.weechat_config)
         self._section_workspace_default = WeeChatSection(
             self.weechat_config, "workspace_default"
         )
@@ -528,7 +542,7 @@ class SlackConfig:
             "workspace",
             callback_read=config_section_workspace_read_cb.__name__,
         )
-        self._workspace_default = SlackConfigWorkspace(
+        self._workspace_default = SlackConfigSectionWorkspace(
             self._section_workspace_default, None, None
         )
 
@@ -540,7 +554,7 @@ class SlackConfig:
             raise Exception(
                 f"Failed to create workspace config, already exists: {team.name}"
             )
-        return SlackConfigWorkspace(
+        return SlackConfigSectionWorkspace(
             self._section_workspace, team, self._workspace_default
         )
 
@@ -626,6 +640,7 @@ async def init():
     team = workspaces["wee-slack-test"]
     print(team)
     print(team.config.slack_timeout.value)
+    print(config.color.reaction_suffix.value)
 
 
 if __name__ == "__main__":
