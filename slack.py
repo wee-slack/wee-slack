@@ -122,6 +122,30 @@ class WeeChatConfig:
         self.pointer = weechat.config_new(self.name, "", "")
 
 
+def config_section_workspace_write_for_old_weechat_cb(
+    data: str, config_file: str, section_name: str
+) -> int:
+    if not weechat.config_write_line(config_file, section_name, ""):
+        return weechat.WEECHAT_CONFIG_WRITE_ERROR
+
+    for workspace in workspaces.values():
+        for option in vars(workspace.config).values():
+            if isinstance(option, WeeChatOption):
+                if (
+                    option.weechat_type != "string"
+                    or not weechat.config_option_is_null(
+                        option._pointer  # pyright: ignore [reportPrivateUsage]
+                    )
+                ):
+                    if not weechat.config_write_option(
+                        config_file,
+                        option._pointer,  # pyright: ignore [reportPrivateUsage]
+                    ):
+                        return weechat.WEECHAT_CONFIG_WRITE_ERROR
+
+    return weechat.WEECHAT_CONFIG_WRITE_OK
+
+
 @dataclass
 class WeeChatSection:
     weechat_config: WeeChatConfig
@@ -131,6 +155,13 @@ class WeeChatSection:
     callback_read: Union[str, None] = None
 
     def __post_init__(self):
+        # WeeChat < 3.8 sends null as an empty string to callback_read, so in
+        # order to distinguish them, don't write the null values to the config
+        # See https://github.com/weechat/weechat/pull/1843
+        if weechat_version < 0x3080000 and self.callback_read:
+            callback_write = config_section_workspace_write_for_old_weechat_cb.__name__
+        else:
+            callback_write = ""
         self.pointer = weechat.config_new_section(
             self.weechat_config.pointer,
             self.name,
@@ -138,7 +169,7 @@ class WeeChatSection:
             self.user_can_delete_options,
             self.callback_read or "",
             "",
-            "",
+            callback_write,
             "",
             "",
             "",
@@ -199,7 +230,7 @@ class WeeChatOption(Generic[WeeChatOptionType]):
         return weechat.config_option_set_null(self._pointer, 1)
 
     @property
-    def _weechat_type(self) -> str:
+    def weechat_type(self) -> str:
         if self.string_values:
             return "integer"
         if isinstance(self.default_value, bool):
@@ -235,7 +266,7 @@ class WeeChatOption(Generic[WeeChatOptionType]):
             self.section.weechat_config.pointer,
             self.section.pointer,
             name,
-            self._weechat_type,
+            self.weechat_type,
             self.description,
             self.string_values or "",
             self.min_value or -(2**31),
@@ -475,7 +506,9 @@ def config_section_workspace_read_cb(
     if not isinstance(option, WeeChatOption):
         return weechat.WEECHAT_CONFIG_OPTION_SET_ERROR
 
-    if value is None:
+    if value is None or (
+        weechat_version < 0x3080000 and value == "" and option.weechat_type != "string"
+    ):
         rc = option.value_set_null()
     else:
         rc = option.value_set_as_str(value)
