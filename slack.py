@@ -186,13 +186,13 @@ WeeChatOptionType = TypeVar("WeeChatOptionType", bound=Union[int, str])
 @dataclass
 class WeeChatOption(Generic[WeeChatOptionType]):
     section: WeeChatSection
-    parent_option: Union[WeeChatOption[WeeChatOptionType], None]
     name: str
     description: str
     default_value: WeeChatOptionType
     min_value: Union[int, None] = None
     max_value: Union[int, None] = None
     string_values: Union[str, None] = None
+    parent_option: Union[WeeChatOption[WeeChatOptionType], None] = None
 
     def __post_init__(self):
         self._pointer = self._create_weechat_option()
@@ -433,7 +433,6 @@ class SlackConfigSectionColor:
 
         self.reaction_suffix = WeeChatOption(
             self._section,
-            None,
             "reaction_suffix",
             "Color to use for the [:wave:(@user)] suffix on messages that have reactions attached to them.",
             WeeChatColor("darkgray"),
@@ -490,13 +489,13 @@ class SlackConfigSectionWorkspace:
 
         return WeeChatOption(
             self._section,
-            parent_option,
             option_name,
             description,
             default_value,
             min_value,
             max_value,
             string_values,
+            parent_option,
         )
 
 
