@@ -1,6 +1,9 @@
 [tool.black]
 extend-exclude = '^/typings/weechat.pyi'
 
+[tool.isort]
+profile = "black"
+
 [tool.poetry]
 name = "wee-slack"
 version = "3.0.0"
