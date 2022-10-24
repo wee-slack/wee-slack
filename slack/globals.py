@@ -12,6 +12,7 @@ SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 REPO_URL = "https://github.com/wee-slack/wee-slack"
 
 weechat_version: int
+weechat_callbacks: Dict[str, Any]
 active_tasks: Dict[str, Task[Any]] = {}
 active_responses: Dict[str, Tuple[Any, ...]] = {}
 workspaces: Dict[str, SlackWorkspace] = {}

@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import globals as G
 import weechat
+from util import get_callback_name
 
 T = TypeVar("T")
 
@@ -75,5 +76,7 @@ def create_task(
 
 async def sleep(milliseconds: int):
     future = FutureTimer()
-    weechat.hook_timer(milliseconds, 0, 1, weechat_task_cb.__name__, future.id)
+    weechat.hook_timer(
+        milliseconds, 0, 1, get_callback_name(weechat_task_cb), future.id
+    )
     return await future
