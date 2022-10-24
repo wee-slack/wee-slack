@@ -122,54 +122,24 @@ class WeeChatConfig:
         self.pointer = weechat.config_new(self.name, "", "")
 
 
-def config_section_workspace_write_for_old_weechat_cb(
-    data: str, config_file: str, section_name: str
-) -> int:
-    if not weechat.config_write_line(config_file, section_name, ""):
-        return weechat.WEECHAT_CONFIG_WRITE_ERROR
-
-    for workspace in workspaces.values():
-        for option in vars(workspace.config).values():
-            if isinstance(option, WeeChatOption):
-                if (
-                    option.weechat_type != "string"
-                    or not weechat.config_option_is_null(
-                        option._pointer  # pyright: ignore [reportPrivateUsage]
-                    )
-                ):
-                    if not weechat.config_write_option(
-                        config_file,
-                        option._pointer,  # pyright: ignore [reportPrivateUsage]
-                    ):
-                        return weechat.WEECHAT_CONFIG_WRITE_ERROR
-
-    return weechat.WEECHAT_CONFIG_WRITE_OK
-
-
 @dataclass
 class WeeChatSection:
     weechat_config: WeeChatConfig
     name: str
     user_can_add_options: bool = False
     user_can_delete_options: bool = False
-    callback_read: Union[str, None] = None
+    callback_read: str = ""
+    callback_write: str = ""
 
     def __post_init__(self):
-        # WeeChat < 3.8 sends null as an empty string to callback_read, so in
-        # order to distinguish them, don't write the null values to the config
-        # See https://github.com/weechat/weechat/pull/1843
-        if weechat_version < 0x3080000 and self.callback_read:
-            callback_write = config_section_workspace_write_for_old_weechat_cb.__name__
-        else:
-            callback_write = ""
         self.pointer = weechat.config_new_section(
             self.weechat_config.pointer,
             self.name,
             self.user_can_add_options,
             self.user_can_delete_options,
-            self.callback_read or "",
+            self.callback_read,
             "",
-            callback_write,
+            self.callback_write,
             "",
             "",
             "",
@@ -530,6 +500,30 @@ def config_section_workspace_read_cb(
     return rc
 
 
+def config_section_workspace_write_for_old_weechat_cb(
+    data: str, config_file: str, section_name: str
+) -> int:
+    if not weechat.config_write_line(config_file, section_name, ""):
+        return weechat.WEECHAT_CONFIG_WRITE_ERROR
+
+    for workspace in workspaces.values():
+        for option in vars(workspace.config).values():
+            if isinstance(option, WeeChatOption):
+                if (
+                    option.weechat_type != "string"
+                    or not weechat.config_option_is_null(
+                        option._pointer  # pyright: ignore [reportPrivateUsage]
+                    )
+                ):
+                    if not weechat.config_write_option(
+                        config_file,
+                        option._pointer,  # pyright: ignore [reportPrivateUsage]
+                    ):
+                        return weechat.WEECHAT_CONFIG_WRITE_ERROR
+
+    return weechat.WEECHAT_CONFIG_WRITE_OK
+
+
 class SlackConfig:
     def __init__(self):
         self.weechat_config = WeeChatConfig("slack")
@@ -537,10 +531,19 @@ class SlackConfig:
         self._section_workspace_default = WeeChatSection(
             self.weechat_config, "workspace_default"
         )
+        # WeeChat < 3.8 sends null as an empty string to callback_read, so in
+        # order to distinguish them, don't write the null values to the config
+        # See https://github.com/weechat/weechat/pull/1843
+        callback_write = (
+            config_section_workspace_write_for_old_weechat_cb.__name__
+            if weechat_version < 0x3080000
+            else ""
+        )
         self._section_workspace = WeeChatSection(
             self.weechat_config,
             "workspace",
             callback_read=config_section_workspace_read_cb.__name__,
+            callback_write=callback_write,
         )
         self._workspace_default = SlackConfigSectionWorkspace(
             self._section_workspace_default, None, None
