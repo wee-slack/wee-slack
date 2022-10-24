@@ -414,11 +414,11 @@ class SlackConfigSectionWorkspace:
     def __init__(
         self,
         section: WeeChatSection,
-        workspace: Union[SlackWorkspace, None],
+        workspace_name: Union[str, None],
         parent_config: Union[SlackConfigSectionWorkspace, None],
     ):
         self._section = section
-        self._workspace = workspace
+        self._workspace_name = workspace_name
         self._parent_config = parent_config
 
         self.api_token = self._create_option(
@@ -448,8 +448,8 @@ class SlackConfigSectionWorkspace:
         max_value: Union[int, None] = None,
         string_values: Union[str, None] = None,
     ) -> WeeChatOption[WeeChatOptionType]:
-        if self._workspace:
-            option_name = f"{self._workspace.name}.{name}"
+        if self._workspace_name:
+            option_name = f"{self._workspace_name}.{name}"
         else:
             option_name = name
 
@@ -552,13 +552,13 @@ class SlackConfig:
     def config_read(self):
         weechat.config_read(self.weechat_config.pointer)
 
-    def create_workspace_config(self, workspace: SlackWorkspace):
-        if workspace.name in workspaces:
+    def create_workspace_config(self, workspace_name: str):
+        if workspace_name in workspaces:
             raise Exception(
-                f"Failed to create workspace config, already exists: {workspace.name}"
+                f"Failed to create workspace config, already exists: {workspace_name}"
             )
         return SlackConfigSectionWorkspace(
-            self._section_workspace, workspace, self._workspace_default
+            self._section_workspace, workspace_name, self._workspace_default
         )
 
 
@@ -602,7 +602,7 @@ class SlackApi:
 class SlackWorkspace:
     def __init__(self, name: str):
         self.name = name
-        self.config = config.create_workspace_config(self)
+        self.config = config.create_workspace_config(self.name)
         self.api = SlackApi(self)
 
 
