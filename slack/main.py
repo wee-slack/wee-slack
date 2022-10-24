@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-import os
-import sys
-
 import weechat
 
-sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-import globals as G  # pylint: disable=wrong-import-position
-from config import SlackConfig, SlackWorkspace  # pylint: disable=wrong-import-position
-from task import create_task  # pylint: disable=wrong-import-position
-from util import get_callback_name  # pylint: disable=wrong-import-position
-
-G.weechat_callbacks = globals()
+from . import globals as G
+from .config import SlackConfig, SlackWorkspace
+from .task import create_task
+from .util import get_callback_name
 
 
 def shutdown_cb():
@@ -35,7 +29,7 @@ async def init():
     print(G.config.color.reaction_suffix.value)
 
 
-if __name__ == "__main__":
+def main():
     if weechat.register(
         G.SCRIPT_NAME,
         G.SCRIPT_AUTHOR,

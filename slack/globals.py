@@ -1,8 +1,8 @@
 from typing import Any, Dict, Tuple
 
-from api import SlackWorkspace
-from config import SlackConfig
-from task import Task
+from .api import SlackWorkspace
+from .config import SlackConfig
+from .task import Task
 
 SCRIPT_NAME = "slack"
 SCRIPT_AUTHOR = "Trygve Aaberge <trygveaa@gmail.com>"

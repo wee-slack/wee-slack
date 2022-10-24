@@ -5,11 +5,11 @@ import resource
 from io import StringIO
 from typing import Dict
 
-import globals as G
 import weechat
-from log import LogLevel, log
-from task import FutureProcess, sleep, weechat_task_cb
-from util import get_callback_name
+
+from .log import LogLevel, log
+from .task import FutureProcess, sleep, weechat_task_cb
+from .util import get_callback_name
 
 
 class HttpError(Exception):
