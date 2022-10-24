@@ -414,11 +414,11 @@ class SlackConfigSectionWorkspace:
     def __init__(
         self,
         section: WeeChatSection,
-        team: Union[SlackTeam, None],
+        workspace: Union[SlackWorkspace, None],
         parent_config: Union[SlackConfigSectionWorkspace, None],
     ):
         self._section = section
-        self._team = team
+        self._workspace = workspace
         self._parent_config = parent_config
 
         self.api_token = self._create_option(
@@ -448,8 +448,8 @@ class SlackConfigSectionWorkspace:
         max_value: Union[int, None] = None,
         string_values: Union[str, None] = None,
     ) -> WeeChatOption[WeeChatOptionType]:
-        if self._team:
-            option_name = f"{self._team.name}.{name}"
+        if self._workspace:
+            option_name = f"{self._workspace.name}.{name}"
         else:
             option_name = name
 
@@ -481,7 +481,7 @@ def config_section_workspace_read_cb(
         return weechat.WEECHAT_CONFIG_OPTION_SET_ERROR
 
     if workspace_name not in workspaces:
-        workspaces[workspace_name] = SlackTeam(workspace_name)
+        workspaces[workspace_name] = SlackWorkspace(workspace_name)
 
     option = getattr(workspaces[workspace_name].config, name, None)
     if option is None:
@@ -552,25 +552,25 @@ class SlackConfig:
     def config_read(self):
         weechat.config_read(self.weechat_config.pointer)
 
-    def create_workspace_config(self, team: SlackTeam):
-        if team.name in workspaces:
+    def create_workspace_config(self, workspace: SlackWorkspace):
+        if workspace.name in workspaces:
             raise Exception(
-                f"Failed to create workspace config, already exists: {team.name}"
+                f"Failed to create workspace config, already exists: {workspace.name}"
             )
         return SlackConfigSectionWorkspace(
-            self._section_workspace, team, self._workspace_default
+            self._section_workspace, workspace, self._workspace_default
         )
 
 
 class SlackApi:
-    def __init__(self, team: SlackTeam):
-        self.team = team
+    def __init__(self, workspace: SlackWorkspace):
+        self.workspace = workspace
 
     def get_request_options(self):
         return {
             "useragent": f"wee_slack {SCRIPT_VERSION}",
-            "httpheader": f"Authorization: Bearer {self.team.config.api_token.value}",
-            "cookie": self.team.config.api_cookies.value,
+            "httpheader": f"Authorization: Bearer {self.workspace.config.api_token.value}",
+            "cookie": self.workspace.config.api_cookies.value,
         }
 
     async def fetch(self, method: str, params: Dict[str, Union[str, int]] = {}):
@@ -578,7 +578,7 @@ class SlackApi:
         response = await http_request(
             url,
             self.get_request_options(),
-            self.team.config.slack_timeout.value * 1000,
+            self.workspace.config.slack_timeout.value * 1000,
         )
         return json.loads(response)
 
@@ -599,7 +599,7 @@ class SlackApi:
         return response
 
 
-class SlackTeam:
+class SlackWorkspace:
     def __init__(self, name: str):
         self.name = name
         self.config = config.create_workspace_config(self)
@@ -607,9 +607,9 @@ class SlackTeam:
 
 
 class SlackChannelCommonNew:
-    def __init__(self, team: SlackTeam, slack_info: SlackConversation):
-        self.team = team
-        self.api = team.api
+    def __init__(self, workspace: SlackWorkspace, slack_info: SlackConversation):
+        self.workspace = workspace
+        self.api = workspace.api
         self.id = slack_info["id"]
         # self.fetch_info()
 
@@ -619,30 +619,30 @@ class SlackChannelCommonNew:
 
 
 class SlackChannelNew(SlackChannelCommonNew):
-    def __init__(self, team: SlackTeam, slack_info: SlackConversationNotIm):
-        super().__init__(team, slack_info)
+    def __init__(self, workspace: SlackWorkspace, slack_info: SlackConversationNotIm):
+        super().__init__(workspace, slack_info)
         self.name = slack_info["name"]
 
 
 class SlackIm(SlackChannelCommonNew):
-    def __init__(self, team: SlackTeam, slack_info: SlackConversationIm):
-        super().__init__(team, slack_info)
+    def __init__(self, workspace: SlackWorkspace, slack_info: SlackConversationIm):
+        super().__init__(workspace, slack_info)
         self.user = slack_info["user"]
 
 
 async def init():
     print(workspaces)
     if "wee-slack-test" not in workspaces:
-        workspaces["wee-slack-test"] = SlackTeam("wee-slack-test")
+        workspaces["wee-slack-test"] = SlackWorkspace("wee-slack-test")
         workspaces["wee-slack-test"].config.api_token.value = weechat.config_get_plugin(
             "api_token"
         )
         workspaces[
             "wee-slack-test"
         ].config.api_cookies.value = weechat.config_get_plugin("api_cookie")
-    team = workspaces["wee-slack-test"]
-    print(team)
-    print(team.config.slack_timeout.value)
+    workspace = workspaces["wee-slack-test"]
+    print(workspace)
+    print(workspace.config.slack_timeout.value)
     print(config.color.reaction_suffix.value)
 
 
@@ -657,7 +657,7 @@ if __name__ == "__main__":
         "",
     ):
         weechat_version = int(weechat.info_get("version_number", "") or 0)
-        workspaces: Dict[str, SlackTeam] = {}
+        workspaces: Dict[str, SlackWorkspace] = {}
         config = SlackConfig()
         config.config_read()
         create_task(init(), final=True)
