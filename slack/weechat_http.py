@@ -5,9 +5,11 @@ import resource
 from io import StringIO
 from typing import Dict
 
+import globals as G
 import weechat
 from log import LogLevel, log
 from task import FutureProcess, sleep, weechat_task_cb
+from util import get_callback_name
 
 
 class HttpError(Exception):
@@ -34,7 +36,7 @@ async def hook_process_hashtable(command: str, options: Dict[str, str], timeout:
     while available_file_descriptors() < 10:
         await sleep(10)
     weechat.hook_process_hashtable(
-        command, options, timeout, weechat_task_cb.__name__, future.id
+        command, options, timeout, get_callback_name(weechat_task_cb), future.id
     )
 
     stdout = StringIO()

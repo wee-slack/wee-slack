@@ -9,6 +9,9 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import globals as G  # pylint: disable=wrong-import-position
 from config import SlackConfig, SlackWorkspace  # pylint: disable=wrong-import-position
 from task import create_task  # pylint: disable=wrong-import-position
+from util import get_callback_name  # pylint: disable=wrong-import-position
+
+G.weechat_callbacks = globals()
 
 
 def shutdown_cb():
@@ -39,7 +42,7 @@ if __name__ == "__main__":
         G.SCRIPT_VERSION,
         G.SCRIPT_LICENSE,
         G.SCRIPT_DESC,
-        shutdown_cb.__name__,
+        get_callback_name(shutdown_cb),
         "",
     ):
         G.weechat_version = int(weechat.info_get("version_number", "") or 0)

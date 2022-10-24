@@ -7,6 +7,7 @@ import globals as G
 import weechat
 from api import SlackWorkspace
 from log import print_error
+from util import get_callback_name
 
 
 class WeeChatColor(str):
@@ -293,14 +294,14 @@ class SlackConfig:
         # See https://github.com/weechat/weechat/pull/1843
         print("version", G.weechat_version)
         callback_write = (
-            config_section_workspace_write_for_old_weechat_cb.__name__
+            get_callback_name(config_section_workspace_write_for_old_weechat_cb)
             if G.weechat_version < 0x3080000
             else ""
         )
         self._section_workspace = WeeChatSection(
             self.weechat_config,
             "workspace",
-            callback_read=config_section_workspace_read_cb.__name__,
+            callback_read=get_callback_name(config_section_workspace_read_cb),
             callback_write=callback_write,
         )
         self._workspace_default = SlackConfigSectionWorkspace(
