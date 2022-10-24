@@ -3,11 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Generic, TypeVar, Union, cast
 
-import globals as G
 import weechat
-from api import SlackWorkspace
-from log import print_error
-from util import get_callback_name
+
+from . import globals as G
+from .api import SlackWorkspace
+from .log import print_error
+from .util import get_callback_name
 
 
 class WeeChatColor(str):

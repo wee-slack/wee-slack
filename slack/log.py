@@ -1,7 +1,8 @@
 from enum import IntEnum
 
-import globals as G
 import weechat
+
+from . import globals as G
 
 
 class LogLevel(IntEnum):

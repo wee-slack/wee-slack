@@ -1,6 +1,6 @@
 from typing import Any, Callable
 
-import globals as G
+from . import globals as G
 
 
 def get_callback_name(callback: Callable[..., Any]) -> str:

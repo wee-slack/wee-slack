@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import Any, Awaitable, Coroutine, Generator, Tuple, TypeVar
 from uuid import uuid4
 
-import globals as G
 import weechat
-from util import get_callback_name
+
+from . import globals as G
+from .util import get_callback_name
 
 T = TypeVar("T")
 
