@@ -1,34 +1,31 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from enum import IntEnum
-from io import StringIO
+
 import json
 import os
 import resource
+from dataclasses import dataclass
+from enum import IntEnum
+from io import StringIO
 from typing import (
+    TYPE_CHECKING,
     Any,
+    Awaitable,
+    Coroutine,
     Dict,
     Generator,
     Generic,
-    TYPE_CHECKING,
     Tuple,
     TypeVar,
     Union,
     cast,
 )
-from typing import Awaitable, Coroutine
 from urllib.parse import urlencode
 from uuid import uuid4
 
 import weechat
 
-
 if TYPE_CHECKING:
-    from slack_api import (
-        SlackConversation,
-        SlackConversationNotIm,
-        SlackConversationIm,
-    )
+    from slack_api import SlackConversation, SlackConversationIm, SlackConversationNotIm
 else:
     # To support running without slack types
     SlackConversation = Any
