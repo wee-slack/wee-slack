@@ -26,10 +26,16 @@ ignored-modules = ["weechat"]
 
 [tool.pylint."messages control"]
 disable = [
+  "dangerous-default-value",      # inconvenient with types
+  "invalid-name",
   "missing-class-docstring",
   "missing-function-docstring",
   "missing-module-docstring",
-  "no-member",
+  "no-member",                    # incorrect reports
+  "protected-access",             # covered by pyright
+  "too-few-public-methods",       # too often bad advice
+  "too-many-arguments",
+  "too-many-instance-attributes",
 ]
 
 [tool.pyright]
