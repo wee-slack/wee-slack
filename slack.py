@@ -649,7 +649,7 @@ if __name__ == "__main__":
         SCRIPT_VERSION,
         SCRIPT_LICENSE,
         SCRIPT_DESC,
-        "shutdown_cb",
+        shutdown_cb.__name__,
         "",
     ):
         weechat_version = int(weechat.info_get("version_number", "") or 0)
