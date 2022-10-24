@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Dict, Union
 from urllib.parse import urlencode
 
 from . import globals as G
-from .weechat_http import http_request
+from .http import http_request
 
 if TYPE_CHECKING:
     from slack_api import SlackConversation, SlackConversationIm, SlackConversationNotIm
