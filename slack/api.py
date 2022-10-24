@@ -4,7 +4,7 @@ import json
 from typing import TYPE_CHECKING, Any, Dict, Union
 from urllib.parse import urlencode
 
-import globals
+import globals as G
 from weechat_http import http_request
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ class SlackApi:
 
     def get_request_options(self):
         return {
-            "useragent": f"wee_slack {globals.SCRIPT_VERSION}",
+            "useragent": f"wee_slack {G.SCRIPT_VERSION}",
             "httpheader": f"Authorization: Bearer {self.workspace.config.api_token.value}",
             "cookie": self.workspace.config.api_cookies.value,
         }
@@ -56,7 +56,7 @@ class SlackApi:
 class SlackWorkspace:
     def __init__(self, name: str):
         self.name = name
-        self.config = globals.config.create_workspace_config(self.name)
+        self.config = G.config.create_workspace_config(self.name)
         self.api = SlackApi(self)
 
 
