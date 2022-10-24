@@ -322,7 +322,7 @@ def task_runner(task: Task[Any], response: Any):
                 response = e.value
             else:
                 if task.id in active_responses:
-                    raise Exception(
+                    raise Exception(  # pylint: disable=raise-missing-from
                         f"task.id in active_responses, {task.id}, {active_responses}"
                     )
                 if not task.final:
@@ -434,7 +434,8 @@ class SlackConfigSectionColor:
         self.reaction_suffix = WeeChatOption(
             self._section,
             "reaction_suffix",
-            "Color to use for the [:wave:(@user)] suffix on messages that have reactions attached to them.",
+            "Color to use for the [:wave:(@user)] suffix on messages that have "
+            "reactions attached to them.",
             WeeChatColor("darkgray"),
         )
 
