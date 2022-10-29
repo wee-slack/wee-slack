@@ -5,7 +5,7 @@ import weechat
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from slack.config import SlackConfig
-from slack.main import init  # pylint: disable=wrong-import-position
+from slack.init import init  # pylint: disable=wrong-import-position
 from slack.shared import shared  # pylint: disable=wrong-import-position
 from slack.task import create_task  # pylint: disable=wrong-import-position
 from slack.util import get_callback_name  # pylint: disable=wrong-import-position
