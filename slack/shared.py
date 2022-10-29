@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Dict, Tuple
 
 if TYPE_CHECKING:
-    from .api import SlackWorkspace
-    from .config import SlackConfig
-    from .task import Task
+    from slack.api import SlackWorkspace
+    from slack.config import SlackConfig
+    from slack.task import Task
 
 
 class Shared:

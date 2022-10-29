@@ -5,10 +5,10 @@ from typing import Generic, TypeVar, Union, cast
 
 import weechat
 
-from .api import SlackWorkspace
-from .log import print_error
-from .shared import shared
-from .util import get_callback_name
+from slack.api import SlackWorkspace
+from slack.log import print_error
+from slack.shared import shared
+from slack.util import get_callback_name
 
 
 class WeeChatColor(str):

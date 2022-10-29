@@ -5,8 +5,8 @@ from uuid import uuid4
 
 import weechat
 
-from .shared import shared
-from .util import get_callback_name
+from slack.shared import shared
+from slack.util import get_callback_name
 
 T = TypeVar("T")
 

@@ -4,9 +4,8 @@ import json
 from typing import TYPE_CHECKING, Dict, Union
 from urllib.parse import urlencode
 
+from slack.http import http_request
 from slack.shared import shared
-
-from .http import http_request
 
 if TYPE_CHECKING:
     from slack_api import SlackConversation, SlackConversationIm, SlackConversationNotIm
