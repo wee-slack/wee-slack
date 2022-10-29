@@ -4665,7 +4665,9 @@ def unwrap_attachments(message_json, text_before):
             # $author: (if rest of line is non-empty) $title ($title_link) OR $from_url
             # $author: (if no $author on previous line) $text
             # $fields
-            if "original_url" in attachment and not config.link_previews:
+            if not config.link_previews and (
+                "original_url" in attachment or attachment.get("is_app_unfurl")
+            ):
                 continue
             t = []
             prepend_title_text = ""
