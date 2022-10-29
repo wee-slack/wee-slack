@@ -5,9 +5,9 @@ from typing import Generic, TypeVar, Union, cast
 
 import weechat
 
-from . import globals as G
 from .api import SlackWorkspace
 from .log import print_error
+from .shared import shared
 from .util import get_callback_name
 
 
@@ -129,7 +129,7 @@ class WeeChatOption(Generic[WeeChatOptionType]):
 
         value = None
 
-        if G.weechat_version < 0x3050000:
+        if shared.weechat_version < 0x3050000:
             default_value = str(self.default_value)
             value = default_value
 
@@ -237,17 +237,17 @@ def config_section_workspace_read_cb(
     if not workspace_name or not name:
         return weechat.WEECHAT_CONFIG_OPTION_SET_ERROR
 
-    if workspace_name not in G.workspaces:
-        G.workspaces[workspace_name] = SlackWorkspace(workspace_name)
+    if workspace_name not in shared.workspaces:
+        shared.workspaces[workspace_name] = SlackWorkspace(workspace_name)
 
-    option = getattr(G.workspaces[workspace_name].config, name, None)
+    option = getattr(shared.workspaces[workspace_name].config, name, None)
     if option is None:
         return weechat.WEECHAT_CONFIG_OPTION_SET_OPTION_NOT_FOUND
     if not isinstance(option, WeeChatOption):
         return weechat.WEECHAT_CONFIG_OPTION_SET_ERROR
 
     if value is None or (
-        G.weechat_version < 0x3080000
+        shared.weechat_version < 0x3080000
         and value == ""
         and option.weechat_type != "string"
     ):
@@ -265,7 +265,7 @@ def config_section_workspace_write_for_old_weechat_cb(
     if not weechat.config_write_line(config_file, section_name, ""):
         return weechat.WEECHAT_CONFIG_WRITE_ERROR
 
-    for workspace in G.workspaces.values():
+    for workspace in shared.workspaces.values():
         for option in vars(workspace.config).values():
             if isinstance(option, WeeChatOption):
                 if (
@@ -293,10 +293,10 @@ class SlackConfig:
         # WeeChat < 3.8 sends null as an empty string to callback_read, so in
         # order to distinguish them, don't write the null values to the config
         # See https://github.com/weechat/weechat/pull/1843
-        print("version", G.weechat_version)
+        print("version", shared.weechat_version)
         callback_write = (
             get_callback_name(config_section_workspace_write_for_old_weechat_cb)
-            if G.weechat_version < 0x3080000
+            if shared.weechat_version < 0x3080000
             else ""
         )
         self._section_workspace = WeeChatSection(
@@ -313,7 +313,7 @@ class SlackConfig:
         weechat.config_read(self.weechat_config.pointer)
 
     def create_workspace_config(self, workspace_name: str):
-        if workspace_name in G.workspaces:
+        if workspace_name in shared.workspaces:
             raise Exception(
                 f"Failed to create workspace config, already exists: {workspace_name}"
             )
