@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import weechat
 
-from . import globals as G
+from .shared import shared
 from .util import get_callback_name
 
 T = TypeVar("T")
@@ -35,7 +35,7 @@ class Task(Future[T]):
 
 
 def weechat_task_cb(data: str, *args: Any) -> int:
-    task = G.active_tasks.pop(data)
+    task = shared.active_tasks.pop(data)
     task_runner(task, args)
     return weechat.WEECHAT_RC_OK
 
@@ -44,26 +44,26 @@ def task_runner(task: Task[Any], response: Any):
     while True:
         try:
             future = task.coroutine.send(response)
-            if future.id in G.active_responses:
-                response = G.active_responses.pop(future.id)
+            if future.id in shared.active_responses:
+                response = shared.active_responses.pop(future.id)
             else:
-                if future.id in G.active_tasks:
+                if future.id in shared.active_tasks:
                     raise Exception(
-                        f"future.id in active_tasks, {future.id}, {G.active_tasks}"
+                        f"future.id in active_tasks, {future.id}, {shared.active_tasks}"
                     )
-                G.active_tasks[future.id] = task
+                shared.active_tasks[future.id] = task
                 break
         except StopIteration as e:
-            if task.id in G.active_tasks:
-                task = G.active_tasks.pop(task.id)
+            if task.id in shared.active_tasks:
+                task = shared.active_tasks.pop(task.id)
                 response = e.value
             else:
-                if task.id in G.active_responses:
+                if task.id in shared.active_responses:
                     raise Exception(  # pylint: disable=raise-missing-from
-                        f"task.id in active_responses, {task.id}, {G.active_responses}"
+                        f"task.id in active_responses, {task.id}, {shared.active_responses}"
                     )
                 if not task.final:
-                    G.active_responses[task.id] = e.value
+                    shared.active_responses[task.id] = e.value
                 break
 
 

@@ -2,7 +2,7 @@ from enum import IntEnum
 
 import weechat
 
-from . import globals as G
+from .shared import shared
 
 
 class LogLevel(IntEnum):
@@ -16,7 +16,7 @@ class LogLevel(IntEnum):
 
 # TODO: Figure out what to do with print_error vs log
 def print_error(message: str):
-    weechat.prnt("", f"{weechat.prefix('error')}{G.SCRIPT_NAME}: {message}")
+    weechat.prnt("", f"{weechat.prefix('error')}{shared.SCRIPT_NAME}: {message}")
 
 
 def log(level: LogLevel, message: str):

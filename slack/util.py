@@ -1,8 +1,8 @@
 from typing import Any, Callable
 
-from . import globals as G
+from .shared import shared
 
 
 def get_callback_name(callback: Callable[..., Any]) -> str:
-    G.weechat_callbacks[callback.__name__] = callback
+    shared.weechat_callbacks[callback.__name__] = callback
     return callback.__name__

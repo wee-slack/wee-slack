@@ -1,19 +1,15 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 from urllib.parse import urlencode
 
-from . import globals as G
+from slack.shared import shared
+
 from .http import http_request
 
 if TYPE_CHECKING:
     from slack_api import SlackConversation, SlackConversationIm, SlackConversationNotIm
-else:
-    # To support running without slack types
-    SlackConversation = Any
-    SlackConversationNotIm = Any
-    SlackConversationIm = Any
 
 
 class SlackApi:
@@ -22,7 +18,7 @@ class SlackApi:
 
     def get_request_options(self):
         return {
-            "useragent": f"wee_slack {G.SCRIPT_VERSION}",
+            "useragent": f"wee_slack {shared.SCRIPT_VERSION}",
             "httpheader": f"Authorization: Bearer {self.workspace.config.api_token.value}",
             "cookie": self.workspace.config.api_cookies.value,
         }
@@ -56,7 +52,7 @@ class SlackApi:
 class SlackWorkspace:
     def __init__(self, name: str):
         self.name = name
-        self.config = G.config.create_workspace_config(self.name)
+        self.config = shared.config.create_workspace_config(self.name)
         self.api = SlackApi(self)
 
 
