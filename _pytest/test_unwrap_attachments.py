@@ -462,9 +462,9 @@ import pytest
         },
     ),
 )
-def test_unwrap_attachments(case):
+def test_unwrap_attachments(case, channel_general):
     wee_slack.config.link_previews = case.get("link_previews")
-    result = wee_slack.unwrap_attachments(
-        case["input_message"], case["input_text_before"]
-    )
+    message_json = {"ts": str(wee_slack.SlackTS()), **case["input_message"]}
+    message = wee_slack.SlackMessage("normal", message_json, channel_general)
+    result = wee_slack.unwrap_attachments(message, case["input_text_before"])
     assert result == case["output"]

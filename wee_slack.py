@@ -3407,8 +3407,8 @@ class SlackMessage(object):
         if "edited" in self.message_json:
             text += " " + colorize_string(config.color_edited_suffix, "(edited)")
 
-        text += unfurl_refs(unwrap_attachments(self.message_json, text))
-        text += unfurl_refs(unwrap_files(self.message_json, text))
+        text += unfurl_refs(unwrap_attachments(self, text))
+        text += unfurl_refs(unwrap_files(self, self.message_json, text))
         text = unhtmlescape(text.lstrip().replace("\t", "    "))
 
         text += create_reactions_string(
@@ -4651,10 +4651,10 @@ def unhtmlescape(text):
     return text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
 
 
-def unwrap_attachments(message_json, text_before):
+def unwrap_attachments(message, text_before):
     text_before_unescaped = unhtmlescape(text_before)
     attachment_texts = []
-    a = message_json.get("attachments")
+    a = message.message_json.get("attachments")
     if a:
         if text_before:
             attachment_texts.append("")
@@ -4738,7 +4738,7 @@ def unwrap_attachments(message_json, text_before):
                 else:
                     t.append(field["value"])
 
-            files = unwrap_files(attachment, None)
+            files = unwrap_files(message, attachment, None)
             if files:
                 t.append(files)
 
@@ -4781,7 +4781,7 @@ def unwrap_attachments(message_json, text_before):
     return "\n".join(attachment_texts)
 
 
-def unwrap_files(message_json, text_before):
+def unwrap_files(message, message_json, text_before):
     files_texts = []
     for f in message_json.get("files", []):
         if f.get("mode", "") == "tombstone":
@@ -4791,6 +4791,11 @@ def unwrap_files(message_json, text_before):
                 config.color_deleted,
                 "(This file is hidden because the workspace has passed its storage limit.)",
             )
+        elif f.get("mimetype") == "application/vnd.slack-docs":
+            url = "{}?origin_team={}&origin_channel={}".format(
+                f["permalink"], message.team.identifier, message.channel.identifier
+            )
+            text = "{} ({})".format(url, f["title"])
         elif (
             f.get("url_private", None) is not None and f.get("title", None) is not None
         ):
