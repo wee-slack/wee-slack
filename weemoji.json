@@ -641,6 +641,10 @@
     "name": "beach_with_umbrella",
     "unicode": "\ud83c\udfd6\ufe0f"
   },
+  "beans": {
+    "name": "beans",
+    "unicode": "\ud83e\uded8"
+  },
   "bear": {
     "name": "bear",
     "unicode": "\ud83d\udc3b"
@@ -772,6 +776,10 @@
   "bison": {
     "name": "bison",
     "unicode": "\ud83e\uddac"
+  },
+  "biting_lip": {
+    "name": "biting_lip",
+    "unicode": "\ud83e\udee6"
   },
   "black_cat": {
     "name": "black_cat",
@@ -1124,6 +1132,10 @@
   "bubble_tea": {
     "name": "bubble_tea",
     "unicode": "\ud83e\uddcb"
+  },
+  "bubbles": {
+    "name": "bubbles",
+    "unicode": "\ud83e\udee7"
   },
   "bucket": {
     "name": "bucket",
@@ -1775,6 +1787,10 @@
     "name": "copyright",
     "unicode": "\u00a9\ufe0f"
   },
+  "coral": {
+    "name": "coral",
+    "unicode": "\ud83e\udeb8"
+  },
   "corn": {
     "name": "corn",
     "unicode": "\ud83c\udf3d"
@@ -1785,37 +1801,324 @@
   },
   "couple": {
     "aliasOf": "man_and_woman_holding_hands",
+    "multiSkinTone": true,
     "name": "couple",
     "skinVariations": {
       "2": {
         "name": "couple::skin-tone-2",
         "unicode": "\ud83d\udc6b\ud83c\udffb"
       },
+      "2-3": {
+        "name": "couple::skin-tone-2-3",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "couple::skin-tone-2-4",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "couple::skin-tone-2-5",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "couple::skin-tone-2-6",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "3": {
         "name": "couple::skin-tone-3",
         "unicode": "\ud83d\udc6b\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "couple::skin-tone-3-2",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "couple::skin-tone-3-4",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "couple::skin-tone-3-5",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "couple::skin-tone-3-6",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
       },
       "4": {
         "name": "couple::skin-tone-4",
         "unicode": "\ud83d\udc6b\ud83c\udffd"
       },
+      "4-2": {
+        "name": "couple::skin-tone-4-2",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "couple::skin-tone-4-3",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "couple::skin-tone-4-5",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "couple::skin-tone-4-6",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "5": {
         "name": "couple::skin-tone-5",
         "unicode": "\ud83d\udc6b\ud83c\udffe"
       },
+      "5-2": {
+        "name": "couple::skin-tone-5-2",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "couple::skin-tone-5-3",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "couple::skin-tone-5-4",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "couple::skin-tone-5-6",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "6": {
         "name": "couple::skin-tone-6",
         "unicode": "\ud83d\udc6b\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "couple::skin-tone-6-2",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "couple::skin-tone-6-3",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "couple::skin-tone-6-4",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "couple::skin-tone-6-5",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
       }
     },
     "unicode": "\ud83d\udc6b"
   },
   "couple_with_heart": {
+    "multiSkinTone": true,
     "name": "couple_with_heart",
+    "skinVariations": {
+      "2": {
+        "name": "couple_with_heart::skin-tone-2",
+        "unicode": "\ud83d\udc91\ud83c\udffb"
+      },
+      "2-3": {
+        "name": "couple_with_heart::skin-tone-2-3",
+        "unicode": "\ud83e\uddd1\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "couple_with_heart::skin-tone-2-4",
+        "unicode": "\ud83e\uddd1\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "couple_with_heart::skin-tone-2-5",
+        "unicode": "\ud83e\uddd1\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "couple_with_heart::skin-tone-2-6",
+        "unicode": "\ud83e\uddd1\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udfff"
+      },
+      "3": {
+        "name": "couple_with_heart::skin-tone-3",
+        "unicode": "\ud83d\udc91\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "couple_with_heart::skin-tone-3-2",
+        "unicode": "\ud83e\uddd1\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "couple_with_heart::skin-tone-3-4",
+        "unicode": "\ud83e\uddd1\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "couple_with_heart::skin-tone-3-5",
+        "unicode": "\ud83e\uddd1\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "couple_with_heart::skin-tone-3-6",
+        "unicode": "\ud83e\uddd1\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udfff"
+      },
+      "4": {
+        "name": "couple_with_heart::skin-tone-4",
+        "unicode": "\ud83d\udc91\ud83c\udffd"
+      },
+      "4-2": {
+        "name": "couple_with_heart::skin-tone-4-2",
+        "unicode": "\ud83e\uddd1\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "couple_with_heart::skin-tone-4-3",
+        "unicode": "\ud83e\uddd1\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "couple_with_heart::skin-tone-4-5",
+        "unicode": "\ud83e\uddd1\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "couple_with_heart::skin-tone-4-6",
+        "unicode": "\ud83e\uddd1\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udfff"
+      },
+      "5": {
+        "name": "couple_with_heart::skin-tone-5",
+        "unicode": "\ud83d\udc91\ud83c\udffe"
+      },
+      "5-2": {
+        "name": "couple_with_heart::skin-tone-5-2",
+        "unicode": "\ud83e\uddd1\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "couple_with_heart::skin-tone-5-3",
+        "unicode": "\ud83e\uddd1\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "couple_with_heart::skin-tone-5-4",
+        "unicode": "\ud83e\uddd1\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "couple_with_heart::skin-tone-5-6",
+        "unicode": "\ud83e\uddd1\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udfff"
+      },
+      "6": {
+        "name": "couple_with_heart::skin-tone-6",
+        "unicode": "\ud83d\udc91\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "couple_with_heart::skin-tone-6-2",
+        "unicode": "\ud83e\uddd1\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "couple_with_heart::skin-tone-6-3",
+        "unicode": "\ud83e\uddd1\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "couple_with_heart::skin-tone-6-4",
+        "unicode": "\ud83e\uddd1\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "couple_with_heart::skin-tone-6-5",
+        "unicode": "\ud83e\uddd1\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83e\uddd1\ud83c\udffe"
+      }
+    },
     "unicode": "\ud83d\udc91"
   },
   "couplekiss": {
+    "multiSkinTone": true,
     "name": "couplekiss",
+    "skinVariations": {
+      "2": {
+        "name": "couplekiss::skin-tone-2",
+        "unicode": "\ud83d\udc8f\ud83c\udffb"
+      },
+      "2-3": {
+        "name": "couplekiss::skin-tone-2-3",
+        "unicode": "\ud83e\uddd1\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "couplekiss::skin-tone-2-4",
+        "unicode": "\ud83e\uddd1\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "couplekiss::skin-tone-2-5",
+        "unicode": "\ud83e\uddd1\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "couplekiss::skin-tone-2-6",
+        "unicode": "\ud83e\uddd1\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udfff"
+      },
+      "3": {
+        "name": "couplekiss::skin-tone-3",
+        "unicode": "\ud83d\udc8f\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "couplekiss::skin-tone-3-2",
+        "unicode": "\ud83e\uddd1\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "couplekiss::skin-tone-3-4",
+        "unicode": "\ud83e\uddd1\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "couplekiss::skin-tone-3-5",
+        "unicode": "\ud83e\uddd1\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "couplekiss::skin-tone-3-6",
+        "unicode": "\ud83e\uddd1\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udfff"
+      },
+      "4": {
+        "name": "couplekiss::skin-tone-4",
+        "unicode": "\ud83d\udc8f\ud83c\udffd"
+      },
+      "4-2": {
+        "name": "couplekiss::skin-tone-4-2",
+        "unicode": "\ud83e\uddd1\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "couplekiss::skin-tone-4-3",
+        "unicode": "\ud83e\uddd1\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "couplekiss::skin-tone-4-5",
+        "unicode": "\ud83e\uddd1\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "couplekiss::skin-tone-4-6",
+        "unicode": "\ud83e\uddd1\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udfff"
+      },
+      "5": {
+        "name": "couplekiss::skin-tone-5",
+        "unicode": "\ud83d\udc8f\ud83c\udffe"
+      },
+      "5-2": {
+        "name": "couplekiss::skin-tone-5-2",
+        "unicode": "\ud83e\uddd1\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "couplekiss::skin-tone-5-3",
+        "unicode": "\ud83e\uddd1\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "couplekiss::skin-tone-5-4",
+        "unicode": "\ud83e\uddd1\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "couplekiss::skin-tone-5-6",
+        "unicode": "\ud83e\uddd1\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udfff"
+      },
+      "6": {
+        "name": "couplekiss::skin-tone-6",
+        "unicode": "\ud83d\udc8f\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "couplekiss::skin-tone-6-2",
+        "unicode": "\ud83e\uddd1\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "couplekiss::skin-tone-6-3",
+        "unicode": "\ud83e\uddd1\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "couplekiss::skin-tone-6-4",
+        "unicode": "\ud83e\uddd1\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "couplekiss::skin-tone-6-5",
+        "unicode": "\ud83e\uddd1\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83e\uddd1\ud83c\udffe"
+      }
+    },
     "unicode": "\ud83d\udc8f"
   },
   "cow": {
@@ -1891,6 +2194,10 @@
   "crown": {
     "name": "crown",
     "unicode": "\ud83d\udc51"
+  },
+  "crutch": {
+    "name": "crutch",
+    "unicode": "\ud83e\ude7c"
   },
   "cry": {
     "name": "cry",
@@ -2266,6 +2573,10 @@
     "name": "door",
     "unicode": "\ud83d\udeaa"
   },
+  "dotted_line_face": {
+    "name": "dotted_line_face",
+    "unicode": "\ud83e\udee5"
+  },
   "double_vertical_bar": {
     "name": "double_vertical_bar",
     "unicode": "\u23f8\ufe0f"
@@ -2464,6 +2775,10 @@
     "name": "email",
     "unicode": "\u2709\ufe0f"
   },
+  "empty_nest": {
+    "name": "empty_nest",
+    "unicode": "\ud83e\udeb9"
+  },
   "end": {
     "name": "end",
     "unicode": "\ud83d\udd1a"
@@ -2525,6 +2840,18 @@
     "name": "eyes",
     "unicode": "\ud83d\udc40"
   },
+  "face_exhaling": {
+    "name": "face_exhaling",
+    "unicode": "\ud83d\ude2e\u200d\ud83d\udca8"
+  },
+  "face_holding_back_tears": {
+    "name": "face_holding_back_tears",
+    "unicode": "\ud83e\udd79"
+  },
+  "face_in_clouds": {
+    "name": "face_in_clouds",
+    "unicode": "\ud83d\ude36\u200d\ud83c\udf2b\ufe0f"
+  },
   "face_palm": {
     "name": "face_palm",
     "skinVariations": {
@@ -2559,6 +2886,10 @@
     "name": "face_with_cowboy_hat",
     "unicode": "\ud83e\udd20"
   },
+  "face_with_diagonal_mouth": {
+    "name": "face_with_diagonal_mouth",
+    "unicode": "\ud83e\udee4"
+  },
   "face_with_finger_covering_closed_lips": {
     "aliasOf": "shushing_face",
     "name": "face_with_finger_covering_closed_lips",
@@ -2581,10 +2912,18 @@
     "name": "face_with_one_eyebrow_raised",
     "unicode": "\ud83e\udd28"
   },
+  "face_with_open_eyes_and_hand_over_mouth": {
+    "name": "face_with_open_eyes_and_hand_over_mouth",
+    "unicode": "\ud83e\udee2"
+  },
   "face_with_open_mouth_vomiting": {
     "aliasOf": "face_vomiting",
     "name": "face_with_open_mouth_vomiting",
     "unicode": "\ud83e\udd2e"
+  },
+  "face_with_peeking_eye": {
+    "name": "face_with_peeking_eye",
+    "unicode": "\ud83e\udee3"
   },
   "face_with_raised_eyebrow": {
     "name": "face_with_raised_eyebrow",
@@ -2593,6 +2932,10 @@
   "face_with_rolling_eyes": {
     "name": "face_with_rolling_eyes",
     "unicode": "\ud83d\ude44"
+  },
+  "face_with_spiral_eyes": {
+    "name": "face_with_spiral_eyes",
+    "unicode": "\ud83d\ude35\u200d\ud83d\udcab"
   },
   "face_with_symbols_on_mouth": {
     "name": "face_with_symbols_on_mouth",
@@ -5041,6 +5384,10 @@
     "name": "hammer_and_wrench",
     "unicode": "\ud83d\udee0\ufe0f"
   },
+  "hamsa": {
+    "name": "hamsa",
+    "unicode": "\ud83e\udeac"
+  },
   "hamster": {
     "name": "hamster",
     "unicode": "\ud83d\udc39"
@@ -5098,6 +5445,32 @@
     },
     "unicode": "\ud83e\udd1e"
   },
+  "hand_with_index_finger_and_thumb_crossed": {
+    "name": "hand_with_index_finger_and_thumb_crossed",
+    "skinVariations": {
+      "2": {
+        "name": "hand_with_index_finger_and_thumb_crossed::skin-tone-2",
+        "unicode": "\ud83e\udef0\ud83c\udffb"
+      },
+      "3": {
+        "name": "hand_with_index_finger_and_thumb_crossed::skin-tone-3",
+        "unicode": "\ud83e\udef0\ud83c\udffc"
+      },
+      "4": {
+        "name": "hand_with_index_finger_and_thumb_crossed::skin-tone-4",
+        "unicode": "\ud83e\udef0\ud83c\udffd"
+      },
+      "5": {
+        "name": "hand_with_index_finger_and_thumb_crossed::skin-tone-5",
+        "unicode": "\ud83e\udef0\ud83c\udffe"
+      },
+      "6": {
+        "name": "hand_with_index_finger_and_thumb_crossed::skin-tone-6",
+        "unicode": "\ud83e\udef0\ud83c\udfff"
+      }
+    },
+    "unicode": "\ud83e\udef0"
+  },
   "handbag": {
     "name": "handbag",
     "unicode": "\ud83d\udc5c"
@@ -5129,7 +5502,110 @@
     "unicode": "\ud83e\udd3e"
   },
   "handshake": {
+    "multiSkinTone": true,
     "name": "handshake",
+    "skinVariations": {
+      "2": {
+        "name": "handshake::skin-tone-2",
+        "unicode": "\ud83e\udd1d\ud83c\udffb"
+      },
+      "2-3": {
+        "name": "handshake::skin-tone-2-3",
+        "unicode": "\ud83e\udef1\ud83c\udffb\u200d\ud83e\udef2\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "handshake::skin-tone-2-4",
+        "unicode": "\ud83e\udef1\ud83c\udffb\u200d\ud83e\udef2\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "handshake::skin-tone-2-5",
+        "unicode": "\ud83e\udef1\ud83c\udffb\u200d\ud83e\udef2\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "handshake::skin-tone-2-6",
+        "unicode": "\ud83e\udef1\ud83c\udffb\u200d\ud83e\udef2\ud83c\udfff"
+      },
+      "3": {
+        "name": "handshake::skin-tone-3",
+        "unicode": "\ud83e\udd1d\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "handshake::skin-tone-3-2",
+        "unicode": "\ud83e\udef1\ud83c\udffc\u200d\ud83e\udef2\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "handshake::skin-tone-3-4",
+        "unicode": "\ud83e\udef1\ud83c\udffc\u200d\ud83e\udef2\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "handshake::skin-tone-3-5",
+        "unicode": "\ud83e\udef1\ud83c\udffc\u200d\ud83e\udef2\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "handshake::skin-tone-3-6",
+        "unicode": "\ud83e\udef1\ud83c\udffc\u200d\ud83e\udef2\ud83c\udfff"
+      },
+      "4": {
+        "name": "handshake::skin-tone-4",
+        "unicode": "\ud83e\udd1d\ud83c\udffd"
+      },
+      "4-2": {
+        "name": "handshake::skin-tone-4-2",
+        "unicode": "\ud83e\udef1\ud83c\udffd\u200d\ud83e\udef2\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "handshake::skin-tone-4-3",
+        "unicode": "\ud83e\udef1\ud83c\udffd\u200d\ud83e\udef2\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "handshake::skin-tone-4-5",
+        "unicode": "\ud83e\udef1\ud83c\udffd\u200d\ud83e\udef2\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "handshake::skin-tone-4-6",
+        "unicode": "\ud83e\udef1\ud83c\udffd\u200d\ud83e\udef2\ud83c\udfff"
+      },
+      "5": {
+        "name": "handshake::skin-tone-5",
+        "unicode": "\ud83e\udd1d\ud83c\udffe"
+      },
+      "5-2": {
+        "name": "handshake::skin-tone-5-2",
+        "unicode": "\ud83e\udef1\ud83c\udffe\u200d\ud83e\udef2\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "handshake::skin-tone-5-3",
+        "unicode": "\ud83e\udef1\ud83c\udffe\u200d\ud83e\udef2\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "handshake::skin-tone-5-4",
+        "unicode": "\ud83e\udef1\ud83c\udffe\u200d\ud83e\udef2\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "handshake::skin-tone-5-6",
+        "unicode": "\ud83e\udef1\ud83c\udffe\u200d\ud83e\udef2\ud83c\udfff"
+      },
+      "6": {
+        "name": "handshake::skin-tone-6",
+        "unicode": "\ud83e\udd1d\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "handshake::skin-tone-6-2",
+        "unicode": "\ud83e\udef1\ud83c\udfff\u200d\ud83e\udef2\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "handshake::skin-tone-6-3",
+        "unicode": "\ud83e\udef1\ud83c\udfff\u200d\ud83e\udef2\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "handshake::skin-tone-6-4",
+        "unicode": "\ud83e\udef1\ud83c\udfff\u200d\ud83e\udef2\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "handshake::skin-tone-6-5",
+        "unicode": "\ud83e\udef1\ud83c\udfff\u200d\ud83e\udef2\ud83c\udffe"
+      }
+    },
     "unicode": "\ud83e\udd1d"
   },
   "hankey": {
@@ -5202,6 +5678,36 @@
     "name": "heart_eyes_cat",
     "unicode": "\ud83d\ude3b"
   },
+  "heart_hands": {
+    "name": "heart_hands",
+    "skinVariations": {
+      "2": {
+        "name": "heart_hands::skin-tone-2",
+        "unicode": "\ud83e\udef6\ud83c\udffb"
+      },
+      "3": {
+        "name": "heart_hands::skin-tone-3",
+        "unicode": "\ud83e\udef6\ud83c\udffc"
+      },
+      "4": {
+        "name": "heart_hands::skin-tone-4",
+        "unicode": "\ud83e\udef6\ud83c\udffd"
+      },
+      "5": {
+        "name": "heart_hands::skin-tone-5",
+        "unicode": "\ud83e\udef6\ud83c\udffe"
+      },
+      "6": {
+        "name": "heart_hands::skin-tone-6",
+        "unicode": "\ud83e\udef6\ud83c\udfff"
+      }
+    },
+    "unicode": "\ud83e\udef6"
+  },
+  "heart_on_fire": {
+    "name": "heart_on_fire",
+    "unicode": "\u2764\ufe0f\u200d\ud83d\udd25"
+  },
   "heartbeat": {
     "name": "heartbeat",
     "unicode": "\ud83d\udc93"
@@ -5225,6 +5731,10 @@
   "heavy_dollar_sign": {
     "name": "heavy_dollar_sign",
     "unicode": "\ud83d\udcb2"
+  },
+  "heavy_equals_sign": {
+    "name": "heavy_equals_sign",
+    "unicode": "\ud83d\udff0"
   },
   "heavy_exclamation_mark": {
     "aliasOf": "exclamation",
@@ -5444,6 +5954,10 @@
     "name": "id",
     "unicode": "\ud83c\udd94"
   },
+  "identification_card": {
+    "name": "identification_card",
+    "unicode": "\ud83e\udeaa"
+  },
   "ideograph_advantage": {
     "name": "ideograph_advantage",
     "unicode": "\ud83c\ude50"
@@ -5459,6 +5973,32 @@
   "incoming_envelope": {
     "name": "incoming_envelope",
     "unicode": "\ud83d\udce8"
+  },
+  "index_pointing_at_the_viewer": {
+    "name": "index_pointing_at_the_viewer",
+    "skinVariations": {
+      "2": {
+        "name": "index_pointing_at_the_viewer::skin-tone-2",
+        "unicode": "\ud83e\udef5\ud83c\udffb"
+      },
+      "3": {
+        "name": "index_pointing_at_the_viewer::skin-tone-3",
+        "unicode": "\ud83e\udef5\ud83c\udffc"
+      },
+      "4": {
+        "name": "index_pointing_at_the_viewer::skin-tone-4",
+        "unicode": "\ud83e\udef5\ud83c\udffd"
+      },
+      "5": {
+        "name": "index_pointing_at_the_viewer::skin-tone-5",
+        "unicode": "\ud83e\udef5\ud83c\udffe"
+      },
+      "6": {
+        "name": "index_pointing_at_the_viewer::skin-tone-6",
+        "unicode": "\ud83e\udef5\ud83c\udfff"
+      }
+    },
+    "unicode": "\ud83e\udef5"
   },
   "infinity": {
     "name": "infinity",
@@ -5533,6 +6073,10 @@
   "japanese_ogre": {
     "name": "japanese_ogre",
     "unicode": "\ud83d\udc79"
+  },
+  "jar": {
+    "name": "jar",
+    "unicode": "\ud83e\uded9"
   },
   "jeans": {
     "name": "jeans",
@@ -5881,6 +6425,32 @@
     "name": "leftwards_arrow_with_hook",
     "unicode": "\u21a9\ufe0f"
   },
+  "leftwards_hand": {
+    "name": "leftwards_hand",
+    "skinVariations": {
+      "2": {
+        "name": "leftwards_hand::skin-tone-2",
+        "unicode": "\ud83e\udef2\ud83c\udffb"
+      },
+      "3": {
+        "name": "leftwards_hand::skin-tone-3",
+        "unicode": "\ud83e\udef2\ud83c\udffc"
+      },
+      "4": {
+        "name": "leftwards_hand::skin-tone-4",
+        "unicode": "\ud83e\udef2\ud83c\udffd"
+      },
+      "5": {
+        "name": "leftwards_hand::skin-tone-5",
+        "unicode": "\ud83e\udef2\ud83c\udffe"
+      },
+      "6": {
+        "name": "leftwards_hand::skin-tone-6",
+        "unicode": "\ud83e\udef2\ud83c\udfff"
+      }
+    },
+    "unicode": "\ud83e\udef2"
+  },
   "leg": {
     "name": "leg",
     "skinVariations": {
@@ -5996,6 +6566,10 @@
     "name": "lotion_bottle",
     "unicode": "\ud83e\uddf4"
   },
+  "lotus": {
+    "name": "lotus",
+    "unicode": "\ud83e\udeb7"
+  },
   "loud_sound": {
     "name": "loud_sound",
     "unicode": "\ud83d\udd0a"
@@ -6011,6 +6585,10 @@
   "love_letter": {
     "name": "love_letter",
     "unicode": "\ud83d\udc8c"
+  },
+  "low_battery": {
+    "name": "low_battery",
+    "unicode": "\ud83e\udeab"
   },
   "low_brightness": {
     "name": "low_brightness",
@@ -7135,7 +7713,110 @@
     "unicode": "\ud83c\udfcc\ufe0f\u200d\u2642\ufe0f"
   },
   "man-heart-man": {
+    "multiSkinTone": true,
     "name": "man-heart-man",
+    "skinVariations": {
+      "2": {
+        "name": "man-heart-man::skin-tone-2",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "2-3": {
+        "name": "man-heart-man::skin-tone-2-3",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "man-heart-man::skin-tone-2-4",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "man-heart-man::skin-tone-2-5",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "man-heart-man::skin-tone-2-6",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "3": {
+        "name": "man-heart-man::skin-tone-3",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "man-heart-man::skin-tone-3-2",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "man-heart-man::skin-tone-3-4",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "man-heart-man::skin-tone-3-5",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "man-heart-man::skin-tone-3-6",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "4": {
+        "name": "man-heart-man::skin-tone-4",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "4-2": {
+        "name": "man-heart-man::skin-tone-4-2",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "man-heart-man::skin-tone-4-3",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "man-heart-man::skin-tone-4-5",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "man-heart-man::skin-tone-4-6",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "5": {
+        "name": "man-heart-man::skin-tone-5",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "5-2": {
+        "name": "man-heart-man::skin-tone-5-2",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "man-heart-man::skin-tone-5-3",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "man-heart-man::skin-tone-5-4",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "man-heart-man::skin-tone-5-6",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "6": {
+        "name": "man-heart-man::skin-tone-6",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "man-heart-man::skin-tone-6-2",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "man-heart-man::skin-tone-6-3",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "man-heart-man::skin-tone-6-4",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "man-heart-man::skin-tone-6-5",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffe"
+      }
+    },
     "unicode": "\ud83d\udc68\u200d\u2764\ufe0f\u200d\ud83d\udc68"
   },
   "man-juggling": {
@@ -7165,7 +7846,110 @@
     "unicode": "\ud83e\udd39\u200d\u2642\ufe0f"
   },
   "man-kiss-man": {
+    "multiSkinTone": true,
     "name": "man-kiss-man",
+    "skinVariations": {
+      "2": {
+        "name": "man-kiss-man::skin-tone-2",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "2-3": {
+        "name": "man-kiss-man::skin-tone-2-3",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "man-kiss-man::skin-tone-2-4",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "man-kiss-man::skin-tone-2-5",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "man-kiss-man::skin-tone-2-6",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "3": {
+        "name": "man-kiss-man::skin-tone-3",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "man-kiss-man::skin-tone-3-2",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "man-kiss-man::skin-tone-3-4",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "man-kiss-man::skin-tone-3-5",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "man-kiss-man::skin-tone-3-6",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "4": {
+        "name": "man-kiss-man::skin-tone-4",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "4-2": {
+        "name": "man-kiss-man::skin-tone-4-2",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "man-kiss-man::skin-tone-4-3",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "man-kiss-man::skin-tone-4-5",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "man-kiss-man::skin-tone-4-6",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "5": {
+        "name": "man-kiss-man::skin-tone-5",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "5-2": {
+        "name": "man-kiss-man::skin-tone-5-2",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "man-kiss-man::skin-tone-5-3",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "man-kiss-man::skin-tone-5-4",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "man-kiss-man::skin-tone-5-6",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "6": {
+        "name": "man-kiss-man::skin-tone-6",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "man-kiss-man::skin-tone-6-2",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "man-kiss-man::skin-tone-6-3",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "man-kiss-man::skin-tone-6-4",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "man-kiss-man::skin-tone-6-5",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffe"
+      }
+    },
     "unicode": "\ud83d\udc68\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68"
   },
   "man-lifting-weights": {
@@ -7553,6 +8337,7 @@
     "unicode": "\ud83d\udc73\u200d\u2642\ufe0f"
   },
   "man-with-bunny-ears-partying": {
+    "aliasOf": "men-with-bunny-ears-partying",
     "name": "man-with-bunny-ears-partying",
     "unicode": "\ud83d\udc6f\u200d\u2642\ufe0f"
   },
@@ -7581,27 +8366,108 @@
     "unicode": "\ud83e\udd3c\u200d\u2642\ufe0f"
   },
   "man_and_woman_holding_hands": {
+    "multiSkinTone": true,
     "name": "man_and_woman_holding_hands",
     "skinVariations": {
       "2": {
         "name": "man_and_woman_holding_hands::skin-tone-2",
         "unicode": "\ud83d\udc6b\ud83c\udffb"
       },
+      "2-3": {
+        "name": "man_and_woman_holding_hands::skin-tone-2-3",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "man_and_woman_holding_hands::skin-tone-2-4",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "man_and_woman_holding_hands::skin-tone-2-5",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "man_and_woman_holding_hands::skin-tone-2-6",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "3": {
         "name": "man_and_woman_holding_hands::skin-tone-3",
         "unicode": "\ud83d\udc6b\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "man_and_woman_holding_hands::skin-tone-3-2",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "man_and_woman_holding_hands::skin-tone-3-4",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "man_and_woman_holding_hands::skin-tone-3-5",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "man_and_woman_holding_hands::skin-tone-3-6",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
       },
       "4": {
         "name": "man_and_woman_holding_hands::skin-tone-4",
         "unicode": "\ud83d\udc6b\ud83c\udffd"
       },
+      "4-2": {
+        "name": "man_and_woman_holding_hands::skin-tone-4-2",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "man_and_woman_holding_hands::skin-tone-4-3",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "man_and_woman_holding_hands::skin-tone-4-5",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "man_and_woman_holding_hands::skin-tone-4-6",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "5": {
         "name": "man_and_woman_holding_hands::skin-tone-5",
         "unicode": "\ud83d\udc6b\ud83c\udffe"
       },
+      "5-2": {
+        "name": "man_and_woman_holding_hands::skin-tone-5-2",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "man_and_woman_holding_hands::skin-tone-5-3",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "man_and_woman_holding_hands::skin-tone-5-4",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "man_and_woman_holding_hands::skin-tone-5-6",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "6": {
         "name": "man_and_woman_holding_hands::skin-tone-6",
         "unicode": "\ud83d\udc6b\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "man_and_woman_holding_hands::skin-tone-6-2",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "man_and_woman_holding_hands::skin-tone-6-3",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "man_and_woman_holding_hands::skin-tone-6-4",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "man_and_woman_holding_hands::skin-tone-6-5",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
       }
     },
     "unicode": "\ud83d\udc6b"
@@ -7892,6 +8758,32 @@
     },
     "unicode": "\ud83e\uddcd\u200d\u2642\ufe0f"
   },
+  "man_with_beard": {
+    "name": "man_with_beard",
+    "skinVariations": {
+      "2": {
+        "name": "man_with_beard::skin-tone-2",
+        "unicode": "\ud83e\uddd4\ud83c\udffb\u200d\u2642\ufe0f"
+      },
+      "3": {
+        "name": "man_with_beard::skin-tone-3",
+        "unicode": "\ud83e\uddd4\ud83c\udffc\u200d\u2642\ufe0f"
+      },
+      "4": {
+        "name": "man_with_beard::skin-tone-4",
+        "unicode": "\ud83e\uddd4\ud83c\udffd\u200d\u2642\ufe0f"
+      },
+      "5": {
+        "name": "man_with_beard::skin-tone-5",
+        "unicode": "\ud83e\uddd4\ud83c\udffe\u200d\u2642\ufe0f"
+      },
+      "6": {
+        "name": "man_with_beard::skin-tone-6",
+        "unicode": "\ud83e\uddd4\ud83c\udfff\u200d\u2642\ufe0f"
+      }
+    },
+    "unicode": "\ud83e\uddd4\u200d\u2642\ufe0f"
+  },
   "man_with_gua_pi_mao": {
     "name": "man_with_gua_pi_mao",
     "skinVariations": {
@@ -8108,36 +9000,129 @@
     "name": "melon",
     "unicode": "\ud83c\udf48"
   },
+  "melting_face": {
+    "name": "melting_face",
+    "unicode": "\ud83e\udee0"
+  },
   "memo": {
     "name": "memo",
     "unicode": "\ud83d\udcdd"
   },
+  "men-with-bunny-ears-partying": {
+    "name": "men-with-bunny-ears-partying",
+    "unicode": "\ud83d\udc6f\u200d\u2642\ufe0f"
+  },
   "men_holding_hands": {
     "aliasOf": "two_men_holding_hands",
+    "multiSkinTone": true,
     "name": "men_holding_hands",
     "skinVariations": {
       "2": {
         "name": "men_holding_hands::skin-tone-2",
         "unicode": "\ud83d\udc6c\ud83c\udffb"
       },
+      "2-3": {
+        "name": "men_holding_hands::skin-tone-2-3",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "men_holding_hands::skin-tone-2-4",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "men_holding_hands::skin-tone-2-5",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "men_holding_hands::skin-tone-2-6",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "3": {
         "name": "men_holding_hands::skin-tone-3",
         "unicode": "\ud83d\udc6c\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "men_holding_hands::skin-tone-3-2",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "men_holding_hands::skin-tone-3-4",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "men_holding_hands::skin-tone-3-5",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "men_holding_hands::skin-tone-3-6",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
       },
       "4": {
         "name": "men_holding_hands::skin-tone-4",
         "unicode": "\ud83d\udc6c\ud83c\udffd"
       },
+      "4-2": {
+        "name": "men_holding_hands::skin-tone-4-2",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "men_holding_hands::skin-tone-4-3",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "men_holding_hands::skin-tone-4-5",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "men_holding_hands::skin-tone-4-6",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "5": {
         "name": "men_holding_hands::skin-tone-5",
         "unicode": "\ud83d\udc6c\ud83c\udffe"
       },
+      "5-2": {
+        "name": "men_holding_hands::skin-tone-5-2",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "men_holding_hands::skin-tone-5-3",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "men_holding_hands::skin-tone-5-4",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "men_holding_hands::skin-tone-5-6",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "6": {
         "name": "men_holding_hands::skin-tone-6",
         "unicode": "\ud83d\udc6c\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "men_holding_hands::skin-tone-6-2",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "men_holding_hands::skin-tone-6-3",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "men_holding_hands::skin-tone-6-4",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "men_holding_hands::skin-tone-6-5",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
       }
     },
     "unicode": "\ud83d\udc6c"
+  },
+  "mending_heart": {
+    "name": "mending_heart",
+    "unicode": "\u2764\ufe0f\u200d\ud83e\ude79"
   },
   "menorah_with_nine_branches": {
     "name": "menorah_with_nine_branches",
@@ -8286,6 +9271,10 @@
   "mirror": {
     "name": "mirror",
     "unicode": "\ud83e\ude9e"
+  },
+  "mirror_ball": {
+    "name": "mirror_ball",
+    "unicode": "\ud83e\udea9"
   },
   "mobile_phone_off": {
     "name": "mobile_phone_off",
@@ -8595,6 +9584,10 @@
   "nerd_face": {
     "name": "nerd_face",
     "unicode": "\ud83e\udd13"
+  },
+  "nest_with_eggs": {
+    "name": "nest_with_eggs",
+    "unicode": "\ud83e\udeba"
   },
   "nesting_dolls": {
     "name": "nesting_dolls",
@@ -9093,9 +10086,61 @@
     "name": "pager",
     "unicode": "\ud83d\udcdf"
   },
+  "palm_down_hand": {
+    "name": "palm_down_hand",
+    "skinVariations": {
+      "2": {
+        "name": "palm_down_hand::skin-tone-2",
+        "unicode": "\ud83e\udef3\ud83c\udffb"
+      },
+      "3": {
+        "name": "palm_down_hand::skin-tone-3",
+        "unicode": "\ud83e\udef3\ud83c\udffc"
+      },
+      "4": {
+        "name": "palm_down_hand::skin-tone-4",
+        "unicode": "\ud83e\udef3\ud83c\udffd"
+      },
+      "5": {
+        "name": "palm_down_hand::skin-tone-5",
+        "unicode": "\ud83e\udef3\ud83c\udffe"
+      },
+      "6": {
+        "name": "palm_down_hand::skin-tone-6",
+        "unicode": "\ud83e\udef3\ud83c\udfff"
+      }
+    },
+    "unicode": "\ud83e\udef3"
+  },
   "palm_tree": {
     "name": "palm_tree",
     "unicode": "\ud83c\udf34"
+  },
+  "palm_up_hand": {
+    "name": "palm_up_hand",
+    "skinVariations": {
+      "2": {
+        "name": "palm_up_hand::skin-tone-2",
+        "unicode": "\ud83e\udef4\ud83c\udffb"
+      },
+      "3": {
+        "name": "palm_up_hand::skin-tone-3",
+        "unicode": "\ud83e\udef4\ud83c\udffc"
+      },
+      "4": {
+        "name": "palm_up_hand::skin-tone-4",
+        "unicode": "\ud83e\udef4\ud83c\udffd"
+      },
+      "5": {
+        "name": "palm_up_hand::skin-tone-5",
+        "unicode": "\ud83e\udef4\ud83c\udffe"
+      },
+      "6": {
+        "name": "palm_up_hand::skin-tone-6",
+        "unicode": "\ud83e\udef4\ud83c\udfff"
+      }
+    },
+    "unicode": "\ud83e\udef4"
   },
   "palms_up_together": {
     "name": "palms_up_together",
@@ -9214,7 +10259,110 @@
     "unicode": "\ud83d\ude14"
   },
   "people_holding_hands": {
+    "multiSkinTone": true,
     "name": "people_holding_hands",
+    "skinVariations": {
+      "2": {
+        "name": "people_holding_hands::skin-tone-2",
+        "unicode": "\ud83e\uddd1\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffb"
+      },
+      "2-3": {
+        "name": "people_holding_hands::skin-tone-2-3",
+        "unicode": "\ud83e\uddd1\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "people_holding_hands::skin-tone-2-4",
+        "unicode": "\ud83e\uddd1\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "people_holding_hands::skin-tone-2-5",
+        "unicode": "\ud83e\uddd1\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "people_holding_hands::skin-tone-2-6",
+        "unicode": "\ud83e\uddd1\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udfff"
+      },
+      "3": {
+        "name": "people_holding_hands::skin-tone-3",
+        "unicode": "\ud83e\uddd1\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "people_holding_hands::skin-tone-3-2",
+        "unicode": "\ud83e\uddd1\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "people_holding_hands::skin-tone-3-4",
+        "unicode": "\ud83e\uddd1\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "people_holding_hands::skin-tone-3-5",
+        "unicode": "\ud83e\uddd1\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "people_holding_hands::skin-tone-3-6",
+        "unicode": "\ud83e\uddd1\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udfff"
+      },
+      "4": {
+        "name": "people_holding_hands::skin-tone-4",
+        "unicode": "\ud83e\uddd1\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffd"
+      },
+      "4-2": {
+        "name": "people_holding_hands::skin-tone-4-2",
+        "unicode": "\ud83e\uddd1\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "people_holding_hands::skin-tone-4-3",
+        "unicode": "\ud83e\uddd1\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "people_holding_hands::skin-tone-4-5",
+        "unicode": "\ud83e\uddd1\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "people_holding_hands::skin-tone-4-6",
+        "unicode": "\ud83e\uddd1\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udfff"
+      },
+      "5": {
+        "name": "people_holding_hands::skin-tone-5",
+        "unicode": "\ud83e\uddd1\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffe"
+      },
+      "5-2": {
+        "name": "people_holding_hands::skin-tone-5-2",
+        "unicode": "\ud83e\uddd1\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "people_holding_hands::skin-tone-5-3",
+        "unicode": "\ud83e\uddd1\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "people_holding_hands::skin-tone-5-4",
+        "unicode": "\ud83e\uddd1\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "people_holding_hands::skin-tone-5-6",
+        "unicode": "\ud83e\uddd1\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udfff"
+      },
+      "6": {
+        "name": "people_holding_hands::skin-tone-6",
+        "unicode": "\ud83e\uddd1\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "people_holding_hands::skin-tone-6-2",
+        "unicode": "\ud83e\uddd1\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "people_holding_hands::skin-tone-6-3",
+        "unicode": "\ud83e\uddd1\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "people_holding_hands::skin-tone-6-4",
+        "unicode": "\ud83e\uddd1\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "people_holding_hands::skin-tone-6-5",
+        "unicode": "\ud83e\uddd1\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83e\uddd1\ud83c\udffe"
+      }
+    },
     "unicode": "\ud83e\uddd1\u200d\ud83e\udd1d\u200d\ud83e\uddd1"
   },
   "people_hugging": {
@@ -9515,6 +10663,32 @@
     },
     "unicode": "\ud83d\udc71"
   },
+  "person_with_crown": {
+    "name": "person_with_crown",
+    "skinVariations": {
+      "2": {
+        "name": "person_with_crown::skin-tone-2",
+        "unicode": "\ud83e\udec5\ud83c\udffb"
+      },
+      "3": {
+        "name": "person_with_crown::skin-tone-3",
+        "unicode": "\ud83e\udec5\ud83c\udffc"
+      },
+      "4": {
+        "name": "person_with_crown::skin-tone-4",
+        "unicode": "\ud83e\udec5\ud83c\udffd"
+      },
+      "5": {
+        "name": "person_with_crown::skin-tone-5",
+        "unicode": "\ud83e\udec5\ud83c\udffe"
+      },
+      "6": {
+        "name": "person_with_crown::skin-tone-6",
+        "unicode": "\ud83e\udec5\ud83c\udfff"
+      }
+    },
+    "unicode": "\ud83e\udec5"
+  },
   "person_with_headscarf": {
     "name": "person_with_headscarf",
     "skinVariations": {
@@ -9735,6 +10909,10 @@
     "name": "place_of_worship",
     "unicode": "\ud83d\uded0"
   },
+  "playground_slide": {
+    "name": "playground_slide",
+    "unicode": "\ud83d\udedd"
+  },
   "pleading_face": {
     "name": "pleading_face",
     "unicode": "\ud83e\udd7a"
@@ -9930,6 +11108,10 @@
     "name": "pound",
     "unicode": "\ud83d\udcb7"
   },
+  "pouring_liquid": {
+    "name": "pouring_liquid",
+    "unicode": "\ud83e\uded7"
+  },
   "pouting_cat": {
     "name": "pouting_cat",
     "unicode": "\ud83d\ude3e"
@@ -9963,6 +11145,58 @@
   "prayer_beads": {
     "name": "prayer_beads",
     "unicode": "\ud83d\udcff"
+  },
+  "pregnant_man": {
+    "name": "pregnant_man",
+    "skinVariations": {
+      "2": {
+        "name": "pregnant_man::skin-tone-2",
+        "unicode": "\ud83e\udec3\ud83c\udffb"
+      },
+      "3": {
+        "name": "pregnant_man::skin-tone-3",
+        "unicode": "\ud83e\udec3\ud83c\udffc"
+      },
+      "4": {
+        "name": "pregnant_man::skin-tone-4",
+        "unicode": "\ud83e\udec3\ud83c\udffd"
+      },
+      "5": {
+        "name": "pregnant_man::skin-tone-5",
+        "unicode": "\ud83e\udec3\ud83c\udffe"
+      },
+      "6": {
+        "name": "pregnant_man::skin-tone-6",
+        "unicode": "\ud83e\udec3\ud83c\udfff"
+      }
+    },
+    "unicode": "\ud83e\udec3"
+  },
+  "pregnant_person": {
+    "name": "pregnant_person",
+    "skinVariations": {
+      "2": {
+        "name": "pregnant_person::skin-tone-2",
+        "unicode": "\ud83e\udec4\ud83c\udffb"
+      },
+      "3": {
+        "name": "pregnant_person::skin-tone-3",
+        "unicode": "\ud83e\udec4\ud83c\udffc"
+      },
+      "4": {
+        "name": "pregnant_person::skin-tone-4",
+        "unicode": "\ud83e\udec4\ud83c\udffd"
+      },
+      "5": {
+        "name": "pregnant_person::skin-tone-5",
+        "unicode": "\ud83e\udec4\ud83c\udffe"
+      },
+      "6": {
+        "name": "pregnant_person::skin-tone-6",
+        "unicode": "\ud83e\udec4\ud83c\udfff"
+      }
+    },
+    "unicode": "\ud83e\udec4"
   },
   "pregnant_woman": {
     "name": "pregnant_woman",
@@ -10524,9 +11758,39 @@
     "name": "right_anger_bubble",
     "unicode": "\ud83d\uddef\ufe0f"
   },
+  "rightwards_hand": {
+    "name": "rightwards_hand",
+    "skinVariations": {
+      "2": {
+        "name": "rightwards_hand::skin-tone-2",
+        "unicode": "\ud83e\udef1\ud83c\udffb"
+      },
+      "3": {
+        "name": "rightwards_hand::skin-tone-3",
+        "unicode": "\ud83e\udef1\ud83c\udffc"
+      },
+      "4": {
+        "name": "rightwards_hand::skin-tone-4",
+        "unicode": "\ud83e\udef1\ud83c\udffd"
+      },
+      "5": {
+        "name": "rightwards_hand::skin-tone-5",
+        "unicode": "\ud83e\udef1\ud83c\udffe"
+      },
+      "6": {
+        "name": "rightwards_hand::skin-tone-6",
+        "unicode": "\ud83e\udef1\ud83c\udfff"
+      }
+    },
+    "unicode": "\ud83e\udef1"
+  },
   "ring": {
     "name": "ring",
     "unicode": "\ud83d\udc8d"
+  },
+  "ring_buoy": {
+    "name": "ring_buoy",
+    "unicode": "\ud83d\udedf"
   },
   "ringed_planet": {
     "name": "ringed_planet",
@@ -10703,6 +11967,10 @@
   "salt": {
     "name": "salt",
     "unicode": "\ud83e\uddc2"
+  },
+  "saluting_face": {
+    "name": "saluting_face",
+    "unicode": "\ud83e\udee1"
   },
   "sandal": {
     "name": "sandal",
@@ -12141,6 +13409,10 @@
     "name": "triumph",
     "unicode": "\ud83d\ude24"
   },
+  "troll": {
+    "name": "troll",
+    "unicode": "\ud83e\uddcc"
+  },
   "trolleybus": {
     "name": "trolleybus",
     "unicode": "\ud83d\ude8e"
@@ -12203,53 +13475,215 @@
     "unicode": "\ud83d\udc95"
   },
   "two_men_holding_hands": {
+    "multiSkinTone": true,
     "name": "two_men_holding_hands",
     "skinVariations": {
       "2": {
         "name": "two_men_holding_hands::skin-tone-2",
         "unicode": "\ud83d\udc6c\ud83c\udffb"
       },
+      "2-3": {
+        "name": "two_men_holding_hands::skin-tone-2-3",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "two_men_holding_hands::skin-tone-2-4",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "two_men_holding_hands::skin-tone-2-5",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "two_men_holding_hands::skin-tone-2-6",
+        "unicode": "\ud83d\udc68\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "3": {
         "name": "two_men_holding_hands::skin-tone-3",
         "unicode": "\ud83d\udc6c\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "two_men_holding_hands::skin-tone-3-2",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "two_men_holding_hands::skin-tone-3-4",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "two_men_holding_hands::skin-tone-3-5",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "two_men_holding_hands::skin-tone-3-6",
+        "unicode": "\ud83d\udc68\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
       },
       "4": {
         "name": "two_men_holding_hands::skin-tone-4",
         "unicode": "\ud83d\udc6c\ud83c\udffd"
       },
+      "4-2": {
+        "name": "two_men_holding_hands::skin-tone-4-2",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "two_men_holding_hands::skin-tone-4-3",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "two_men_holding_hands::skin-tone-4-5",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "two_men_holding_hands::skin-tone-4-6",
+        "unicode": "\ud83d\udc68\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "5": {
         "name": "two_men_holding_hands::skin-tone-5",
         "unicode": "\ud83d\udc6c\ud83c\udffe"
       },
+      "5-2": {
+        "name": "two_men_holding_hands::skin-tone-5-2",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "two_men_holding_hands::skin-tone-5-3",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "two_men_holding_hands::skin-tone-5-4",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "two_men_holding_hands::skin-tone-5-6",
+        "unicode": "\ud83d\udc68\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "6": {
         "name": "two_men_holding_hands::skin-tone-6",
         "unicode": "\ud83d\udc6c\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "two_men_holding_hands::skin-tone-6-2",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "two_men_holding_hands::skin-tone-6-3",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "two_men_holding_hands::skin-tone-6-4",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "two_men_holding_hands::skin-tone-6-5",
+        "unicode": "\ud83d\udc68\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
       }
     },
     "unicode": "\ud83d\udc6c"
   },
   "two_women_holding_hands": {
+    "multiSkinTone": true,
     "name": "two_women_holding_hands",
     "skinVariations": {
       "2": {
         "name": "two_women_holding_hands::skin-tone-2",
         "unicode": "\ud83d\udc6d\ud83c\udffb"
       },
+      "2-3": {
+        "name": "two_women_holding_hands::skin-tone-2-3",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "two_women_holding_hands::skin-tone-2-4",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "two_women_holding_hands::skin-tone-2-5",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "two_women_holding_hands::skin-tone-2-6",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udfff"
+      },
       "3": {
         "name": "two_women_holding_hands::skin-tone-3",
         "unicode": "\ud83d\udc6d\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "two_women_holding_hands::skin-tone-3-2",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "two_women_holding_hands::skin-tone-3-4",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "two_women_holding_hands::skin-tone-3-5",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "two_women_holding_hands::skin-tone-3-6",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udfff"
       },
       "4": {
         "name": "two_women_holding_hands::skin-tone-4",
         "unicode": "\ud83d\udc6d\ud83c\udffd"
       },
+      "4-2": {
+        "name": "two_women_holding_hands::skin-tone-4-2",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "two_women_holding_hands::skin-tone-4-3",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "two_women_holding_hands::skin-tone-4-5",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "two_women_holding_hands::skin-tone-4-6",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udfff"
+      },
       "5": {
         "name": "two_women_holding_hands::skin-tone-5",
         "unicode": "\ud83d\udc6d\ud83c\udffe"
       },
+      "5-2": {
+        "name": "two_women_holding_hands::skin-tone-5-2",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "two_women_holding_hands::skin-tone-5-3",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "two_women_holding_hands::skin-tone-5-4",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "two_women_holding_hands::skin-tone-5-6",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udfff"
+      },
       "6": {
         "name": "two_women_holding_hands::skin-tone-6",
         "unicode": "\ud83d\udc6d\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "two_women_holding_hands::skin-tone-6-2",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "two_women_holding_hands::skin-tone-6-3",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "two_women_holding_hands::skin-tone-6-4",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "two_women_holding_hands::skin-tone-6-5",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffe"
       }
     },
     "unicode": "\ud83d\udc6d"
@@ -12611,6 +14045,10 @@
   "whale2": {
     "name": "whale2",
     "unicode": "\ud83d\udc0b"
+  },
+  "wheel": {
+    "name": "wheel",
+    "unicode": "\ud83d\udede"
   },
   "wheel_of_dharma": {
     "name": "wheel_of_dharma",
@@ -13099,11 +14537,217 @@
     "unicode": "\ud83c\udfcc\ufe0f\u200d\u2640\ufe0f"
   },
   "woman-heart-man": {
+    "multiSkinTone": true,
     "name": "woman-heart-man",
+    "skinVariations": {
+      "2": {
+        "name": "woman-heart-man::skin-tone-2",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "2-3": {
+        "name": "woman-heart-man::skin-tone-2-3",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "woman-heart-man::skin-tone-2-4",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "woman-heart-man::skin-tone-2-5",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "woman-heart-man::skin-tone-2-6",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "3": {
+        "name": "woman-heart-man::skin-tone-3",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "woman-heart-man::skin-tone-3-2",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "woman-heart-man::skin-tone-3-4",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "woman-heart-man::skin-tone-3-5",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "woman-heart-man::skin-tone-3-6",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "4": {
+        "name": "woman-heart-man::skin-tone-4",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "4-2": {
+        "name": "woman-heart-man::skin-tone-4-2",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "woman-heart-man::skin-tone-4-3",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "woman-heart-man::skin-tone-4-5",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "woman-heart-man::skin-tone-4-6",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "5": {
+        "name": "woman-heart-man::skin-tone-5",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "5-2": {
+        "name": "woman-heart-man::skin-tone-5-2",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "woman-heart-man::skin-tone-5-3",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "woman-heart-man::skin-tone-5-4",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "woman-heart-man::skin-tone-5-6",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "6": {
+        "name": "woman-heart-man::skin-tone-6",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "woman-heart-man::skin-tone-6-2",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "woman-heart-man::skin-tone-6-3",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "woman-heart-man::skin-tone-6-4",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "woman-heart-man::skin-tone-6-5",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc68\ud83c\udffe"
+      }
+    },
     "unicode": "\ud83d\udc69\u200d\u2764\ufe0f\u200d\ud83d\udc68"
   },
   "woman-heart-woman": {
+    "multiSkinTone": true,
     "name": "woman-heart-woman",
+    "skinVariations": {
+      "2": {
+        "name": "woman-heart-woman::skin-tone-2",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "2-3": {
+        "name": "woman-heart-woman::skin-tone-2-3",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "woman-heart-woman::skin-tone-2-4",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "woman-heart-woman::skin-tone-2-5",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "woman-heart-woman::skin-tone-2-6",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udfff"
+      },
+      "3": {
+        "name": "woman-heart-woman::skin-tone-3",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "woman-heart-woman::skin-tone-3-2",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "woman-heart-woman::skin-tone-3-4",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "woman-heart-woman::skin-tone-3-5",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "woman-heart-woman::skin-tone-3-6",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udfff"
+      },
+      "4": {
+        "name": "woman-heart-woman::skin-tone-4",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "4-2": {
+        "name": "woman-heart-woman::skin-tone-4-2",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "woman-heart-woman::skin-tone-4-3",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "woman-heart-woman::skin-tone-4-5",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "woman-heart-woman::skin-tone-4-6",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udfff"
+      },
+      "5": {
+        "name": "woman-heart-woman::skin-tone-5",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "5-2": {
+        "name": "woman-heart-woman::skin-tone-5-2",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "woman-heart-woman::skin-tone-5-3",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "woman-heart-woman::skin-tone-5-4",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "woman-heart-woman::skin-tone-5-6",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udfff"
+      },
+      "6": {
+        "name": "woman-heart-woman::skin-tone-6",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "woman-heart-woman::skin-tone-6-2",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "woman-heart-woman::skin-tone-6-3",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "woman-heart-woman::skin-tone-6-4",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "woman-heart-woman::skin-tone-6-5",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc69\ud83c\udffe"
+      }
+    },
     "unicode": "\ud83d\udc69\u200d\u2764\ufe0f\u200d\ud83d\udc69"
   },
   "woman-juggling": {
@@ -13133,11 +14777,217 @@
     "unicode": "\ud83e\udd39\u200d\u2640\ufe0f"
   },
   "woman-kiss-man": {
+    "multiSkinTone": true,
     "name": "woman-kiss-man",
+    "skinVariations": {
+      "2": {
+        "name": "woman-kiss-man::skin-tone-2",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "2-3": {
+        "name": "woman-kiss-man::skin-tone-2-3",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "woman-kiss-man::skin-tone-2-4",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "woman-kiss-man::skin-tone-2-5",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "woman-kiss-man::skin-tone-2-6",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "3": {
+        "name": "woman-kiss-man::skin-tone-3",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "woman-kiss-man::skin-tone-3-2",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "woman-kiss-man::skin-tone-3-4",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "woman-kiss-man::skin-tone-3-5",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "woman-kiss-man::skin-tone-3-6",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "4": {
+        "name": "woman-kiss-man::skin-tone-4",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "4-2": {
+        "name": "woman-kiss-man::skin-tone-4-2",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "woman-kiss-man::skin-tone-4-3",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "woman-kiss-man::skin-tone-4-5",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "woman-kiss-man::skin-tone-4-6",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "5": {
+        "name": "woman-kiss-man::skin-tone-5",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "5-2": {
+        "name": "woman-kiss-man::skin-tone-5-2",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "woman-kiss-man::skin-tone-5-3",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "woman-kiss-man::skin-tone-5-4",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "woman-kiss-man::skin-tone-5-6",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "6": {
+        "name": "woman-kiss-man::skin-tone-6",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "woman-kiss-man::skin-tone-6-2",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "woman-kiss-man::skin-tone-6-3",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "woman-kiss-man::skin-tone-6-4",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "woman-kiss-man::skin-tone-6-5",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68\ud83c\udffe"
+      }
+    },
     "unicode": "\ud83d\udc69\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc68"
   },
   "woman-kiss-woman": {
+    "multiSkinTone": true,
     "name": "woman-kiss-woman",
+    "skinVariations": {
+      "2": {
+        "name": "woman-kiss-woman::skin-tone-2",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "2-3": {
+        "name": "woman-kiss-woman::skin-tone-2-3",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "woman-kiss-woman::skin-tone-2-4",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "woman-kiss-woman::skin-tone-2-5",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "woman-kiss-woman::skin-tone-2-6",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udfff"
+      },
+      "3": {
+        "name": "woman-kiss-woman::skin-tone-3",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "woman-kiss-woman::skin-tone-3-2",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "woman-kiss-woman::skin-tone-3-4",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "woman-kiss-woman::skin-tone-3-5",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "woman-kiss-woman::skin-tone-3-6",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udfff"
+      },
+      "4": {
+        "name": "woman-kiss-woman::skin-tone-4",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "4-2": {
+        "name": "woman-kiss-woman::skin-tone-4-2",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "woman-kiss-woman::skin-tone-4-3",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "woman-kiss-woman::skin-tone-4-5",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "woman-kiss-woman::skin-tone-4-6",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udfff"
+      },
+      "5": {
+        "name": "woman-kiss-woman::skin-tone-5",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "5-2": {
+        "name": "woman-kiss-woman::skin-tone-5-2",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "woman-kiss-woman::skin-tone-5-3",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "woman-kiss-woman::skin-tone-5-4",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "woman-kiss-woman::skin-tone-5-6",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udfff"
+      },
+      "6": {
+        "name": "woman-kiss-woman::skin-tone-6",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "woman-kiss-woman::skin-tone-6-2",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "woman-kiss-woman::skin-tone-6-3",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "woman-kiss-woman::skin-tone-6-4",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "woman-kiss-woman::skin-tone-6-5",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69\ud83c\udffe"
+      }
+    },
     "unicode": "\ud83d\udc69\u200d\u2764\ufe0f\u200d\ud83d\udc8b\u200d\ud83d\udc69"
   },
   "woman-lifting-weights": {
@@ -13505,6 +15355,7 @@
     "unicode": "\ud83d\udc73\u200d\u2640\ufe0f"
   },
   "woman-with-bunny-ears-partying": {
+    "aliasOf": "women-with-bunny-ears-partying",
     "name": "woman-with-bunny-ears-partying",
     "unicode": "\ud83d\udc6f\u200d\u2640\ufe0f"
   },
@@ -13534,27 +15385,108 @@
   },
   "woman_and_man_holding_hands": {
     "aliasOf": "man_and_woman_holding_hands",
+    "multiSkinTone": true,
     "name": "woman_and_man_holding_hands",
     "skinVariations": {
       "2": {
         "name": "woman_and_man_holding_hands::skin-tone-2",
         "unicode": "\ud83d\udc6b\ud83c\udffb"
       },
+      "2-3": {
+        "name": "woman_and_man_holding_hands::skin-tone-2-3",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "woman_and_man_holding_hands::skin-tone-2-4",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "woman_and_man_holding_hands::skin-tone-2-5",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "woman_and_man_holding_hands::skin-tone-2-6",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "3": {
         "name": "woman_and_man_holding_hands::skin-tone-3",
         "unicode": "\ud83d\udc6b\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "woman_and_man_holding_hands::skin-tone-3-2",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "woman_and_man_holding_hands::skin-tone-3-4",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "woman_and_man_holding_hands::skin-tone-3-5",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "woman_and_man_holding_hands::skin-tone-3-6",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
       },
       "4": {
         "name": "woman_and_man_holding_hands::skin-tone-4",
         "unicode": "\ud83d\udc6b\ud83c\udffd"
       },
+      "4-2": {
+        "name": "woman_and_man_holding_hands::skin-tone-4-2",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "woman_and_man_holding_hands::skin-tone-4-3",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "woman_and_man_holding_hands::skin-tone-4-5",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "woman_and_man_holding_hands::skin-tone-4-6",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "5": {
         "name": "woman_and_man_holding_hands::skin-tone-5",
         "unicode": "\ud83d\udc6b\ud83c\udffe"
       },
+      "5-2": {
+        "name": "woman_and_man_holding_hands::skin-tone-5-2",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "woman_and_man_holding_hands::skin-tone-5-3",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "woman_and_man_holding_hands::skin-tone-5-4",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "woman_and_man_holding_hands::skin-tone-5-6",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udfff"
+      },
       "6": {
         "name": "woman_and_man_holding_hands::skin-tone-6",
         "unicode": "\ud83d\udc6b\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "woman_and_man_holding_hands::skin-tone-6-2",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "woman_and_man_holding_hands::skin-tone-6-3",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "woman_and_man_holding_hands::skin-tone-6-4",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "woman_and_man_holding_hands::skin-tone-6-5",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc68\ud83c\udffe"
       }
     },
     "unicode": "\ud83d\udc6b"
@@ -13793,6 +15725,32 @@
     },
     "unicode": "\ud83e\uddcd\u200d\u2640\ufe0f"
   },
+  "woman_with_beard": {
+    "name": "woman_with_beard",
+    "skinVariations": {
+      "2": {
+        "name": "woman_with_beard::skin-tone-2",
+        "unicode": "\ud83e\uddd4\ud83c\udffb\u200d\u2640\ufe0f"
+      },
+      "3": {
+        "name": "woman_with_beard::skin-tone-3",
+        "unicode": "\ud83e\uddd4\ud83c\udffc\u200d\u2640\ufe0f"
+      },
+      "4": {
+        "name": "woman_with_beard::skin-tone-4",
+        "unicode": "\ud83e\uddd4\ud83c\udffd\u200d\u2640\ufe0f"
+      },
+      "5": {
+        "name": "woman_with_beard::skin-tone-5",
+        "unicode": "\ud83e\uddd4\ud83c\udffe\u200d\u2640\ufe0f"
+      },
+      "6": {
+        "name": "woman_with_beard::skin-tone-6",
+        "unicode": "\ud83e\uddd4\ud83c\udfff\u200d\u2640\ufe0f"
+      }
+    },
+    "unicode": "\ud83e\uddd4\u200d\u2640\ufe0f"
+  },
   "woman_with_probing_cane": {
     "name": "woman_with_probing_cane",
     "skinVariations": {
@@ -13857,29 +15815,114 @@
     "name": "womans_hat",
     "unicode": "\ud83d\udc52"
   },
+  "women-with-bunny-ears-partying": {
+    "name": "women-with-bunny-ears-partying",
+    "unicode": "\ud83d\udc6f\u200d\u2640\ufe0f"
+  },
   "women_holding_hands": {
     "aliasOf": "two_women_holding_hands",
+    "multiSkinTone": true,
     "name": "women_holding_hands",
     "skinVariations": {
       "2": {
         "name": "women_holding_hands::skin-tone-2",
         "unicode": "\ud83d\udc6d\ud83c\udffb"
       },
+      "2-3": {
+        "name": "women_holding_hands::skin-tone-2-3",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "2-4": {
+        "name": "women_holding_hands::skin-tone-2-4",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "2-5": {
+        "name": "women_holding_hands::skin-tone-2-5",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "2-6": {
+        "name": "women_holding_hands::skin-tone-2-6",
+        "unicode": "\ud83d\udc69\ud83c\udffb\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udfff"
+      },
       "3": {
         "name": "women_holding_hands::skin-tone-3",
         "unicode": "\ud83d\udc6d\ud83c\udffc"
+      },
+      "3-2": {
+        "name": "women_holding_hands::skin-tone-3-2",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "3-4": {
+        "name": "women_holding_hands::skin-tone-3-4",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "3-5": {
+        "name": "women_holding_hands::skin-tone-3-5",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "3-6": {
+        "name": "women_holding_hands::skin-tone-3-6",
+        "unicode": "\ud83d\udc69\ud83c\udffc\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udfff"
       },
       "4": {
         "name": "women_holding_hands::skin-tone-4",
         "unicode": "\ud83d\udc6d\ud83c\udffd"
       },
+      "4-2": {
+        "name": "women_holding_hands::skin-tone-4-2",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "4-3": {
+        "name": "women_holding_hands::skin-tone-4-3",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "4-5": {
+        "name": "women_holding_hands::skin-tone-4-5",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffe"
+      },
+      "4-6": {
+        "name": "women_holding_hands::skin-tone-4-6",
+        "unicode": "\ud83d\udc69\ud83c\udffd\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udfff"
+      },
       "5": {
         "name": "women_holding_hands::skin-tone-5",
         "unicode": "\ud83d\udc6d\ud83c\udffe"
       },
+      "5-2": {
+        "name": "women_holding_hands::skin-tone-5-2",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "5-3": {
+        "name": "women_holding_hands::skin-tone-5-3",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "5-4": {
+        "name": "women_holding_hands::skin-tone-5-4",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "5-6": {
+        "name": "women_holding_hands::skin-tone-5-6",
+        "unicode": "\ud83d\udc69\ud83c\udffe\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udfff"
+      },
       "6": {
         "name": "women_holding_hands::skin-tone-6",
         "unicode": "\ud83d\udc6d\ud83c\udfff"
+      },
+      "6-2": {
+        "name": "women_holding_hands::skin-tone-6-2",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffb"
+      },
+      "6-3": {
+        "name": "women_holding_hands::skin-tone-6-3",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffc"
+      },
+      "6-4": {
+        "name": "women_holding_hands::skin-tone-6-4",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffd"
+      },
+      "6-5": {
+        "name": "women_holding_hands::skin-tone-6-5",
+        "unicode": "\ud83d\udc69\ud83c\udfff\u200d\ud83e\udd1d\u200d\ud83d\udc69\ud83c\udffe"
       }
     },
     "unicode": "\ud83d\udc6d"
@@ -13945,6 +15988,10 @@
   "x": {
     "name": "x",
     "unicode": "\u274c"
+  },
+  "x-ray": {
+    "name": "x-ray",
+    "unicode": "\ud83e\ude7b"
   },
   "yarn": {
     "name": "yarn",
