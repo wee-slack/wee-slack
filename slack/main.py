@@ -1,8 +1,7 @@
 import weechat
 
 from slack.config import SlackWorkspace
-
-from .shared import shared
+from slack.shared import shared
 
 
 async def init():

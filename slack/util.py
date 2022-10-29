@@ -1,6 +1,6 @@
 from typing import Any, Callable
 
-from .shared import shared
+from slack.shared import shared
 
 
 def get_callback_name(callback: Callable[..., Any]) -> str:

@@ -5,9 +5,9 @@ from typing import Dict
 
 import weechat
 
-from .log import LogLevel, log
-from .task import FutureProcess, sleep, weechat_task_cb
-from .util import get_callback_name
+from slack.log import LogLevel, log
+from slack.task import FutureProcess, sleep, weechat_task_cb
+from slack.util import get_callback_name
 
 
 class HttpError(Exception):

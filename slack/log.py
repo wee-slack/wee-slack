@@ -2,7 +2,7 @@ from enum import IntEnum
 
 import weechat
 
-from .shared import shared
+from slack.shared import shared
 
 
 class LogLevel(IntEnum):
