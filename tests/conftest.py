@@ -21,3 +21,9 @@ def import_stub(stubs_path: str, module_name: str):
 
 
 import_stub("typings", "weechat")
+
+
+from slack.shared import shared
+
+shared.weechat_version = 0x3080000
+shared.weechat_callbacks = {}
