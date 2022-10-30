@@ -3,13 +3,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 import weechat
 
-from slack import (
-    FutureProcess,
-    FutureTimer,
-    hook_process_hashtable,
-    weechat_task_cb,
-)
-import slack
+import slack.http
+from slack.http import hook_process_hashtable
+from slack.task import FutureProcess, FutureTimer, weechat_task_cb
 
 
 @patch.object(weechat, "hook_process_hashtable")
@@ -51,7 +47,7 @@ def test_hook_process_hashtable_chunked(mock_method: MagicMock):
     assert excinfo.value.value == (command, 0, "o1o2o3", "e1e2e3")
 
 
-@patch.object(slack, "available_file_descriptors")
+@patch.object(slack.http, "available_file_descriptors")
 def test_hook_process_hashtable_wait_on_max_file_descriptors(
     mock_available_file_descriptors: MagicMock,
 ):

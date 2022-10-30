@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import weechat
 
-from slack import FutureTimer, sleep, weechat_task_cb
+from slack.task import FutureTimer, sleep, weechat_task_cb
 
 
 @patch.object(weechat, "hook_timer")
