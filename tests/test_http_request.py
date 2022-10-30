@@ -3,13 +3,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import weechat
 
-from slack import (
-    FutureProcess,
-    FutureTimer,
-    HttpError,
-    http_request,
-    weechat_task_cb,
-)
+from slack.http import HttpError, http_request
+from slack.task import FutureProcess, FutureTimer, weechat_task_cb
 
 
 @patch.object(weechat, "hook_process_hashtable")
