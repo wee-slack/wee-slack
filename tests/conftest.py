@@ -2,6 +2,8 @@ import importlib
 import importlib.machinery
 import sys
 
+from slack.shared import shared
+
 
 # Copied from https://stackoverflow.com/a/72721573
 def import_stub(stubs_path: str, module_name: str):
@@ -21,9 +23,6 @@ def import_stub(stubs_path: str, module_name: str):
 
 
 import_stub("typings", "weechat")
-
-
-from slack.shared import shared
 
 shared.weechat_version = 0x3080000
 shared.weechat_callbacks = {}
