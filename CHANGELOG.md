@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.9.1 (2022-10-30)
+
+### WeeChat compatibility
+
+- Update WeeChat version check to require >= 2.2. The reason for requiring this is that a feature of WeeChat 2.2 (specifying HTTP cookies) is necessary for adding support for the new type of session tokens added in version 2.9.0, so this should have been updated in that version.
+- Update usage of some deprecated WeeChat API methods.
+
+### Bug fixes
+
+- Open open IMs and MPIMs on start, not just unread (fixes #875).
+- Fix old type MPIMs not being marked as unread on start.
+- Evaluate value of the `weechat.look.buffer_time_format` option (fixes #871).
+- Fix link previews from apps not being recognized (fixes #834).
+- Show useful link for Slack posts.
+- Support receiving multiple header blocks in http responses. This was a regression introduced by implementing support for rate limiting in version 2.9.0.
+- Fall back to bot id as nick instead of a blank nick if no other info is available (it should be possible to fetch the nick, but that's a remaining bug).
+
 ## 2.9.0 (2022-09-19)
 
 Note that Slack will make a breaking change in their API on September 20, 2022 (the day after this release), which means that all earlier versions of wee-slack will stop working. This release adds support for the change and will not be affected by it.
