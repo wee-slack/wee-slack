@@ -53,6 +53,8 @@ class SlackWorkspace:
         self.name = name
         self.config = shared.config.create_workspace_config(self.name)
         self.api = SlackApi(self)
+        self.connected = False
+        self.nick = "TODO"
 
 
 class SlackChannelCommonNew:
