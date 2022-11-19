@@ -190,6 +190,12 @@ class SlackConfigSectionWorkspace:
             "",
         )
 
+        self.autoconnect = self._create_option(
+            "autoconnect",
+            "automatically connect to workspace when WeeChat is starting",
+            False,
+        )
+
         self.slack_timeout = self._create_option(
             "slack_timeout",
             "timeout (in seconds) for network requests",
