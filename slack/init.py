@@ -5,6 +5,11 @@ from slack.shared import shared
 from slack.task import create_task
 from slack.util import get_callback_name
 
+SCRIPT_AUTHOR = "Trygve Aaberge <trygveaa@gmail.com>"
+SCRIPT_LICENSE = "MIT"
+SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
+REPO_URL = "https://github.com/wee-slack/wee-slack"
+
 
 def shutdown_cb():
     weechat.config_write(shared.config.weechat_config.pointer)
@@ -30,10 +35,10 @@ async def init():
 def main():
     if weechat.register(
         shared.SCRIPT_NAME,
-        shared.SCRIPT_AUTHOR,
+        SCRIPT_AUTHOR,
         shared.SCRIPT_VERSION,
-        shared.SCRIPT_LICENSE,
-        shared.SCRIPT_DESC,
+        SCRIPT_LICENSE,
+        SCRIPT_DESC,
         get_callback_name(shutdown_cb),
         "",
     ):

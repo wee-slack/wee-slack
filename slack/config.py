@@ -293,7 +293,6 @@ class SlackConfig:
         # WeeChat < 3.8 sends null as an empty string to callback_read, so in
         # order to distinguish them, don't write the null values to the config
         # See https://github.com/weechat/weechat/pull/1843
-        print("version", shared.weechat_version)
         callback_write = (
             get_callback_name(config_section_workspace_write_for_old_weechat_cb)
             if shared.weechat_version < 0x3080000
