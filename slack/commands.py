@@ -143,6 +143,48 @@ def command_slack_workspace_add(
     )
 
 
+@weechat_command(min_args=2)
+def command_slack_workspace_rename(
+    buffer: str, args: List[str], options: Dict[str, Optional[str]]
+):
+    old_name = args[0]
+    new_name = args[1]
+    workspace = shared.workspaces.get(old_name)
+    if not workspace:
+        print_error(f'workspace "{old_name}" not found for "workspace rename" command')
+        return
+    workspace.name = new_name
+    shared.workspaces[new_name] = workspace
+    del shared.workspaces[old_name]
+    weechat.prnt(
+        "",
+        f"server {with_color('chat_server', old_name)} has been renamed to {with_color('chat_server', new_name)}",
+    )
+    # TODO: Rename buffers and config
+
+
+@weechat_command(min_args=1)
+def command_slack_workspace_del(
+    buffer: str, args: List[str], options: Dict[str, Optional[str]]
+):
+    name = args[0]
+    workspace = shared.workspaces.get(name)
+    if not workspace:
+        print_error(f'workspace "{name}" not found for "workspace del" command')
+        return
+    if workspace.connected:
+        print_error(
+            f'you can not delete server "{name}" because you are connected to it. Try "/slack disconnect {name}" first.'
+        )
+        return
+    # TODO: Delete config
+    del shared.workspaces[name]
+    weechat.prnt(
+        "",
+        f"server {with_color('chat_server', name)} has been deleted",
+    )
+
+
 def command_cb(data: str, buffer: str, args: str) -> int:
     args_parts = re.finditer("[^ ]+", args)
     cmd = data
