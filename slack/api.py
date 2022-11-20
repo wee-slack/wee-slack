@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Dict, Optional, Union
+import time
+from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 from urllib.parse import urlencode
 
 import weechat
 
 from slack.http import http_request
 from slack.shared import shared
-from slack.task import await_all_concurrent_dict, create_task
+from slack.task import create_task, gather
 
 if TYPE_CHECKING:
     from slack_api import (
@@ -108,9 +109,12 @@ class SlackWorkspace:
 class SlackUser:
     def __init__(self, workspace: SlackWorkspace, id: str):
         self.workspace = workspace
-        self.api = workspace.api
         self.id = id
         self.name: str
+
+    @property
+    def api(self) -> SlackApi:
+        return self.workspace.api
 
     async def init(self):
         info = await self.api.fetch("users.info", {"user": self.id})
@@ -120,12 +124,16 @@ class SlackUser:
 class SlackConversation:
     def __init__(self, workspace: SlackWorkspace, id: str):
         self.workspace = workspace
-        self.api = workspace.api
         self.id = id
+        # TODO: buffer_pointer may be accessed by buffer_switch before it's initialized
         self.buffer_pointer: str
         self.name: str
         self.history_filled = False
         self.history_pending = False
+
+    @property
+    def api(self) -> SlackApi:
+        return self.workspace.api
 
     async def init(self):
         info = await self.fetch_info()
@@ -141,20 +149,39 @@ class SlackConversation:
         self.history_pending = True
 
         history = await self.api.fetch("conversations.history", {"channel": self.id})
+        start = time.time()
 
-        messages = history["messages"]
-        user_ids = {message["user"] for message in messages if "user" in message}
-        users = await await_all_concurrent_dict(
-            {user_id: self.workspace.get_user(user_id) for user_id in user_ids}
+        messages = [SlackMessage(self, message) for message in history["messages"]]
+        messages_rendered = await gather(
+            *(message.render_message() for message in messages)
         )
 
-        for message in reversed(messages):
-            if "user" in message:
-                user = users[message["user"]]
-                username = user.name
-            else:
-                username = "bot"
-            weechat.prnt(self.buffer_pointer, f'{username}\t{message["text"]}')
+        for rendered in reversed(messages_rendered):
+            weechat.prnt(self.buffer_pointer, rendered)
 
+        print(f"history w/o fetch took: {time.time() - start}")
         self.history_filled = True
         self.history_pending = False
+
+
+class SlackMessage:
+    def __init__(self, conversation: SlackConversation, message_json: Any):
+        self.conversation = conversation
+        self.ts = message_json["ts"]
+        self.message_json = message_json
+
+    @property
+    def workspace(self) -> SlackWorkspace:
+        return self.conversation.workspace
+
+    @property
+    def api(self) -> SlackApi:
+        return self.workspace.api
+
+    async def render_message(self):
+        if "user" in self.message_json:
+            user = await self.workspace.get_user(self.message_json["user"])
+            username = user.name
+        else:
+            username = "bot"
+        return f'{username}\t{self.message_json["text"]}'
