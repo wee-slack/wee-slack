@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Awaitable, Coroutine, Generator, Tuple, TypeVar
+from typing import Any, Awaitable, Coroutine, Generator, List, Tuple, TypeVar
 from uuid import uuid4
 
 import weechat
@@ -73,6 +73,11 @@ def create_task(
     task = Task(coroutine, final)
     task_runner(task, None)
     return task
+
+
+async def await_all_concurrent(requests: List[Coroutine[Any, Any, T]]) -> List[T]:
+    tasks = [create_task(request) for request in requests]
+    return [await task for task in tasks]
 
 
 async def sleep(milliseconds: int):

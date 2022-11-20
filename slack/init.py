@@ -1,9 +1,9 @@
 import weechat
 
 from slack.commands import register_commands
-from slack.config import SlackConfig, SlackWorkspace
+from slack.config import SlackConfig
 from slack.shared import shared
-from slack.task import create_task
+from slack.task import create_task, sleep
 from slack.util import get_callback_name
 
 SCRIPT_AUTHOR = "Trygve Aaberge <trygveaa@gmail.com>"
@@ -17,21 +17,25 @@ def shutdown_cb():
     return weechat.WEECHAT_RC_OK
 
 
+def signal_buffer_switch_cb(data: str, signal: str, signal_data: str) -> int:
+    current_conversation = None
+    for workspace in shared.workspaces.values():
+        conversation = workspace.get_conversation_from_buffer_pointer(signal_data)
+        if conversation:
+            current_conversation = conversation
+
+    if current_conversation:
+        create_task(current_conversation.fill_history())
+    return weechat.WEECHAT_RC_OK
+
+
 async def init():
-    pass
-    # print(shared.workspaces)
-    # if "wee-slack-test" not in shared.workspaces:
-    #     shared.workspaces["wee-slack-test"] = SlackWorkspace("wee-slack-test")
-    #     shared.workspaces[
-    #         "wee-slack-test"
-    #     ].config.api_token.value = weechat.config_get_plugin("api_token")
-    #     shared.workspaces[
-    #         "wee-slack-test"
-    #     ].config.api_cookies.value = weechat.config_get_plugin("api_cookie")
-    # workspace = shared.workspaces["wee-slack-test"]
-    # print(workspace)
-    # print(workspace.config.slack_timeout.value)
-    # print(shared.config.color.reaction_suffix.value)
+    auto_connect = weechat.info_get("auto_connect", "") == "1"
+    if auto_connect:
+        await sleep(1)  # Defer auto connect to ensure the logger plugin is loaded
+        for workspace in shared.workspaces.values():
+            if workspace.config.autoconnect.value:
+                await workspace.connect()
 
 
 def main():
@@ -49,4 +53,12 @@ def main():
         shared.config = SlackConfig()
         shared.config.config_read()
         register_commands()
+
+        weechat.hook_signal(
+            "buffer_switch", get_callback_name(signal_buffer_switch_cb), ""
+        )
+        weechat.hook_signal(
+            "window_switch", get_callback_name(signal_buffer_switch_cb), ""
+        )
+
         create_task(init(), final=True)

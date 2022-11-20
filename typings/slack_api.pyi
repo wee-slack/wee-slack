@@ -70,4 +70,4 @@ SlackConversationNotIm = (
     | SlackConversationMpim
     | SlackConversationGroup
 )
-SlackConversation = SlackConversationNotIm | SlackConversationIm
+SlackConversationInfo = SlackConversationNotIm | SlackConversationIm
