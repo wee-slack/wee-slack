@@ -8,7 +8,7 @@ import weechat
 
 from slack.http import http_request
 from slack.shared import shared
-from slack.task import await_all_concurrent, create_task
+from slack.task import await_all_concurrent_dict, create_task
 
 if TYPE_CHECKING:
     from slack_api import (
@@ -143,14 +143,14 @@ class SlackConversation:
         history = await self.api.fetch("conversations.history", {"channel": self.id})
 
         messages = history["messages"]
-        user_ids = [message["user"] for message in messages if "user" in message]
-        await await_all_concurrent(
-            [self.workspace.get_user(user_id) for user_id in user_ids]
+        user_ids = {message["user"] for message in messages if "user" in message}
+        users = await await_all_concurrent_dict(
+            {user_id: self.workspace.get_user(user_id) for user_id in user_ids}
         )
 
         for message in reversed(messages):
             if "user" in message:
-                user = await self.workspace.get_user(message["user"])
+                user = users[message["user"]]
                 username = user.name
             else:
                 username = "bot"
