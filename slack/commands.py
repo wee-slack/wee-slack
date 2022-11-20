@@ -11,6 +11,7 @@ from slack.api import SlackWorkspace
 from slack.config import WeeChatOption
 from slack.log import print_error
 from slack.shared import shared
+from slack.task import create_task
 from slack.util import get_callback_name, with_color
 
 commands: Dict[str, Command] = {}
@@ -97,6 +98,24 @@ def command_slack(buffer: str, args: List[str], options: Dict[str, Optional[str]
     slack command
     """
     print("ran slack")
+
+
+@weechat_command("%(slack_workspaces)")
+def command_slack_connect(
+    buffer: str, args: List[str], options: Dict[str, Optional[str]]
+):
+    async def connect():
+        if args and args[0]:
+            workspace = shared.workspaces.get(args[0])
+            if workspace:
+                await workspace.connect()
+            else:
+                print_error(f'workspace "{args[0]}" not found')
+        else:
+            for workspace in shared.workspaces.values():
+                await workspace.connect()
+
+    create_task(connect(), final=True)
 
 
 @weechat_command()
