@@ -1,10 +1,11 @@
 import weechat
 
+from slack.api import get_conversation_from_buffer_pointer
 from slack.commands import register_commands
 from slack.config import SlackConfig
 from slack.shared import shared
 from slack.task import create_task, sleep
-from slack.util import get_callback_name
+from slack.util import get_callback_name, with_color
 
 SCRIPT_AUTHOR = "Trygve Aaberge <trygveaa@gmail.com>"
 SCRIPT_LICENSE = "MIT"
@@ -17,16 +18,28 @@ def shutdown_cb():
     return weechat.WEECHAT_RC_OK
 
 
-def signal_buffer_switch_cb(data: str, signal: str, signal_data: str) -> int:
-    current_conversation = None
-    for workspace in shared.workspaces.values():
-        conversation = workspace.get_conversation_from_buffer_pointer(signal_data)
-        if conversation:
-            current_conversation = conversation
-
-    if current_conversation:
-        create_task(current_conversation.fill_history())
+def signal_buffer_switch_cb(data: str, signal: str, buffer_pointer: str) -> int:
+    conversation = get_conversation_from_buffer_pointer(buffer_pointer)
+    if conversation:
+        create_task(conversation.fill_history())
     return weechat.WEECHAT_RC_OK
+
+
+def modifier_input_text_display_with_cursor_cb(
+    data: str, modifier: str, buffer_pointer: str, string: str
+) -> str:
+    conversation = get_conversation_from_buffer_pointer(buffer_pointer)
+    if conversation and conversation.loading:
+        input_delim_color = weechat.config_string(
+            weechat.config_get("weechat.bar.input.color_delim")
+        )
+        return (
+            f"{with_color(input_delim_color, '[')}"
+            f"{with_color(shared.config.color.loading.value, 'loading')}"
+            f"{with_color(input_delim_color, ']')}"
+            f" {string}"
+        )
+    return string
 
 
 async def init():
@@ -59,6 +72,11 @@ def main():
         )
         weechat.hook_signal(
             "window_switch", get_callback_name(signal_buffer_switch_cb), ""
+        )
+        weechat.hook_modifier(
+            "input_text_display_with_cursor",
+            get_callback_name(modifier_input_text_display_with_cursor_cb),
+            "",
         )
 
         create_task(init(), final=True)

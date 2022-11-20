@@ -20,6 +20,15 @@ if TYPE_CHECKING:
     )
 
 
+def get_conversation_from_buffer_pointer(
+    buffer_pointer: str,
+) -> Optional[SlackConversation]:
+    for workspace in shared.workspaces.values():
+        for conversation in workspace.conversations.values():
+            if conversation.buffer_pointer == buffer_pointer:
+                return conversation
+
+
 class SlackApi:
     def __init__(self, workspace: SlackWorkspace):
         self.workspace = workspace
@@ -99,13 +108,6 @@ class SlackWorkspace:
         self.users[id] = user
         return user
 
-    def get_conversation_from_buffer_pointer(
-        self, buffer_pointer: str
-    ) -> Optional[SlackConversation]:
-        for conversation in self.conversations.values():
-            if conversation.buffer_pointer == buffer_pointer:
-                return conversation
-
 
 class SlackUser:
     def __init__(self, workspace: SlackWorkspace, id: str):
@@ -127,8 +129,9 @@ class SlackConversation:
         self.workspace = workspace
         self.id = id
         # TODO: buffer_pointer may be accessed by buffer_switch before it's initialized
-        self.buffer_pointer: str
+        self.buffer_pointer: str = ""
         self.name: str
+        self.loading = False
         self.history_filled = False
         self.history_pending = False
 
@@ -136,17 +139,25 @@ class SlackConversation:
     def api(self) -> SlackApi:
         return self.workspace.api
 
+    def set_loading(self, loading: bool):
+        self.loading = loading
+        weechat.bar_item_update("input_text")
+
     async def init(self):
         info = await self.fetch_info()
         self.name = info["channel"]["name"]
         self.buffer_pointer = weechat.buffer_new(self.name, "", "", "", "")
 
     async def fetch_info(self):
-        return await self.api.fetch("conversations.info", {"channel": self.id})
+        self.set_loading(True)
+        info = await self.api.fetch("conversations.info", {"channel": self.id})
+        self.set_loading(False)
+        return info
 
     async def fill_history(self):
         if self.history_filled or self.history_pending:
             return
+        self.set_loading(True)
         self.history_pending = True
 
         history = await self.api.fetch("conversations.history", {"channel": self.id})
@@ -163,6 +174,7 @@ class SlackConversation:
         print(f"history w/o fetch took: {time.time() - start}")
         self.history_filled = True
         self.history_pending = False
+        self.set_loading(False)
 
 
 class SlackMessage:
