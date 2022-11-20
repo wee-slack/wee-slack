@@ -11,6 +11,7 @@ import weechat
 from slack.http import http_request
 from slack.shared import shared
 from slack.task import create_task, gather
+from slack.util import get_callback_name
 
 if TYPE_CHECKING:
     from slack_api import (
@@ -124,6 +125,11 @@ class SlackUser:
         self.name = info["user"]["name"]
 
 
+def buffer_input_cb(data: str, buffer: str, input_data: str) -> int:
+    weechat.prnt(buffer, "Text: %s" % input_data)
+    return weechat.WEECHAT_RC_OK
+
+
 class SlackConversation:
     def __init__(self, workspace: SlackWorkspace, id: str):
         self.workspace = workspace
@@ -146,7 +152,10 @@ class SlackConversation:
     async def init(self):
         info = await self.fetch_info()
         self.name = info["channel"]["name"]
-        self.buffer_pointer = weechat.buffer_new(self.name, "", "", "", "")
+        self.buffer_pointer = weechat.buffer_new(
+            self.name, get_callback_name(buffer_input_cb), "", "", ""
+        )
+        weechat.buffer_set(self.buffer_pointer, "localvar_set_nick", "nick")
 
     async def fetch_info(self):
         self.set_loading(True)
