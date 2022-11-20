@@ -29,7 +29,7 @@ def modifier_input_text_display_with_cursor_cb(
     data: str, modifier: str, buffer_pointer: str, string: str
 ) -> str:
     conversation = get_conversation_from_buffer_pointer(buffer_pointer)
-    if conversation and conversation.loading:
+    if conversation and conversation.is_loading:
         input_delim_color = weechat.config_string(
             weechat.config_get("weechat.bar.input.color_delim")
         )
