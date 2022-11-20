@@ -158,10 +158,17 @@ class SlackConfigSectionColor:
     def __init__(self, weechat_config: WeeChatConfig):
         self._section = WeeChatSection(weechat_config, "color")
 
+        self.loading = WeeChatOption(
+            self._section,
+            "loading",
+            "text color for the loading text",
+            WeeChatColor("yellow"),
+        )
+
         self.reaction_suffix = WeeChatOption(
             self._section,
             "reaction_suffix",
-            "Color to use for the [:wave:(@user)] suffix on messages that have "
+            "text color for the [:wave:(@user)] suffix on messages that have "
             "reactions attached to them.",
             WeeChatColor("darkgray"),
         )
