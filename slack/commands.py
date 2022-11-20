@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import weechat
 
@@ -43,7 +43,9 @@ class Command:
     cb: Callable[[str, str], None]
 
 
-def weechat_command(min_args: int = 0, slack_buffer_required: bool = False):
+def weechat_command(
+    completion: str = "", min_args: int = 0, slack_buffer_required: bool = False
+):
     def decorator(f: Callable[[str, List[str], Dict[str, Optional[str]]], None]):
         cmd = f.__name__.removeprefix("command_").replace("_", " ")
         top_level = " " not in cmd
@@ -59,7 +61,7 @@ def weechat_command(min_args: int = 0, slack_buffer_required: bool = False):
                 return
             return f(buffer, split_args, options)
 
-        commands[cmd] = Command(cmd, top_level, "", "", "", "", wrapper)
+        commands[cmd] = Command(cmd, top_level, "", "", "", completion, wrapper)
 
         return wrapper
 
@@ -104,14 +106,14 @@ def command_slack_workspace(
     list_workspaces()
 
 
-@weechat_command()
+@weechat_command("%(slack_workspaces)")
 def command_slack_workspace_list(
     buffer: str, args: List[str], options: Dict[str, Optional[str]]
 ):
     list_workspaces()
 
 
-@weechat_command()
+@weechat_command("%(slack_workspaces)")
 def command_slack_workspace_listfull(
     buffer: str, args: List[str], options: Dict[str, Optional[str]]
 ):
@@ -143,7 +145,7 @@ def command_slack_workspace_add(
     )
 
 
-@weechat_command(min_args=2)
+@weechat_command("%(slack_workspaces)", min_args=2)
 def command_slack_workspace_rename(
     buffer: str, args: List[str], options: Dict[str, Optional[str]]
 ):
@@ -163,7 +165,7 @@ def command_slack_workspace_rename(
     # TODO: Rename buffers and config
 
 
-@weechat_command(min_args=1)
+@weechat_command("%(slack_workspaces)", min_args=1)
 def command_slack_workspace_del(
     buffer: str, args: List[str], options: Dict[str, Optional[str]]
 ):
@@ -185,9 +187,19 @@ def command_slack_workspace_del(
     )
 
 
-def command_cb(data: str, buffer: str, args: str) -> int:
+def completion_slack_workspaces_cb(
+    data: str, completion_item: str, buffer: str, completion: str
+) -> int:
+    for workspace_name in shared.workspaces:
+        weechat.completion_list_add(
+            completion, workspace_name, 0, weechat.WEECHAT_LIST_POS_SORT
+        )
+    return weechat.WEECHAT_RC_OK
+
+
+def find_command(start_cmd: str, args: str) -> Optional[Tuple[Command, str]]:
     args_parts = re.finditer("[^ ]+", args)
-    cmd = data
+    cmd = start_cmd
     cmd_args_startpos = 0
 
     for part in args_parts:
@@ -200,9 +212,16 @@ def command_cb(data: str, buffer: str, args: str) -> int:
         cmd_args_startpos = len(args)
 
     cmd_args = args[cmd_args_startpos:]
-
     if cmd in commands:
-        commands[cmd].cb(buffer, cmd_args)
+        return commands[cmd], cmd_args
+
+
+def command_cb(data: str, buffer: str, args: str) -> int:
+    cmd = find_command(data, args)
+    if cmd:
+        command = cmd[0]
+        cmd_args = cmd[1]
+        command.cb(buffer, cmd_args)
     else:
         print_error(
             f'Error with command "/{data} {args}" (help on command: /help {data})'
@@ -211,7 +230,72 @@ def command_cb(data: str, buffer: str, args: str) -> int:
     return weechat.WEECHAT_RC_OK
 
 
+def completion_list_add(completion: str, word: str, nick_completion: int, where: str):
+    if word == "%(slack_workspaces)":
+        completion_slack_workspaces_cb("", "slack_workspaces", "", completion)
+    else:
+        weechat.completion_list_add(completion, word, nick_completion, where)
+
+
+def completion_slack_workspace_commands_cb(
+    data: str, completion_item: str, buffer: str, completion: str
+) -> int:
+    base_command = weechat.completion_get_string(completion, "base_command")
+    base_word = weechat.completion_get_string(completion, "base_word")
+    args = weechat.completion_get_string(completion, "args")
+    args_without_base_word = args.removesuffix(base_word)
+
+    cmd = find_command(base_command, args_without_base_word)
+    if cmd:
+        command = cmd[0]
+        matching_cmds = [
+            cmd.removeprefix(command.cmd).lstrip()
+            for cmd in commands
+            if cmd.startswith(command.cmd) and cmd != command.cmd
+        ]
+        if len(matching_cmds) > 1:
+            for match in matching_cmds:
+                arg = match.split(" ")
+                completion_list_add(
+                    completion, arg[0], 0, weechat.WEECHAT_LIST_POS_SORT
+                )
+        else:
+            for arg in command.completion.split("|"):
+                completion_list_add(completion, arg, 0, weechat.WEECHAT_LIST_POS_SORT)
+
+    return weechat.WEECHAT_RC_OK
+
+
+def completion_irc_channels_cb(
+    data: str, completion_item: str, buffer: str, completion: str
+) -> int:
+    if weechat.buffer_get_string(buffer, "full_name").startswith("core."):
+        weechat.completion_list_add(
+            completion, "#asd", 0, weechat.WEECHAT_LIST_POS_SORT
+        )
+    return weechat.WEECHAT_RC_OK
+
+
 def register_commands():
+    weechat.hook_completion(
+        "slack_workspaces",
+        "Slack workspaces (internal names)",
+        get_callback_name(completion_slack_workspaces_cb),
+        "",
+    )
+    weechat.hook_completion(
+        "slack_commands",
+        "completions for Slack commands",
+        get_callback_name(completion_slack_workspace_commands_cb),
+        "",
+    )
+    weechat.hook_completion(
+        "irc_channels",
+        "channels on all Slack workspaces",
+        get_callback_name(completion_irc_channels_cb),
+        "",
+    )
+
     for cmd, command in commands.items():
         if command.top_level:
             weechat.hook_command(
@@ -219,7 +303,7 @@ def register_commands():
                 command.description,
                 command.args,
                 command.args_description,
-                command.completion,
+                "%(slack_commands)|%*",
                 get_callback_name(command_cb),
                 cmd,
             )
