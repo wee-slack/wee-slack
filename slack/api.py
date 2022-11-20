@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 from urllib.parse import urlencode
@@ -179,9 +180,21 @@ class SlackMessage:
         return self.workspace.api
 
     async def render_message(self):
+        message = await self.unfurl_refs(self.message_json["text"])
         if "user" in self.message_json:
             user = await self.workspace.get_user(self.message_json["user"])
-            username = user.name
+            prefix = user.name
         else:
-            username = "bot"
-        return f'{username}\t{self.message_json["text"]}'
+            prefix = "bot"
+
+        return f"{prefix}\t{message}"
+
+    async def unfurl_refs(self, message: str):
+        re_user = re.compile("<@([^>]+)>")
+        user_ids = re_user.findall(message)
+        await gather(*(self.workspace.get_user(user_id) for user_id in user_ids))
+
+        def unfurl_user(user_id: str):
+            return "@" + self.workspace.users[user_id].name
+
+        return re_user.sub(lambda match: unfurl_user(match.group(1)), message)

@@ -76,6 +76,7 @@ def create_task(
 
 
 async def gather(*requests: Coroutine[Any, Any, T]) -> List[T]:
+    # TODO: Should probably propagate first exception
     tasks = [create_task(request) for request in requests]
     return [await task for task in tasks]
 
