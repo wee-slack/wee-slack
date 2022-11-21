@@ -6891,7 +6891,7 @@ def initiate_connection(token):
 
     s = SlackRequest(
         None,
-        "conversations.list",
+        "users.conversations",
         {
             "exclude_archived": True,
             "types": "public_channel,private_channel,im",
@@ -6903,7 +6903,7 @@ def initiate_connection(token):
     EVENTROUTER.receive(s)
     s = SlackRequest(
         None,
-        "conversations.list",
+        "users.conversations",
         {
             "exclude_archived": True,
             "types": "mpim",
@@ -7000,8 +7000,9 @@ def create_team(token, initial_data):
 
             channels = {}
             for channel_info in initial_data["channels"]:
+                info_with_is_member = {**channel_info, "is_member": True}
                 channels[channel_info["id"]] = create_channel_from_info(
-                    eventrouter, channel_info, None, myidentifier, users
+                    eventrouter, info_with_is_member, None, myidentifier, users
                 )
 
             subteams = {}
