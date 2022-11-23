@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "channel": {
+    "id": "D9N2KD0V6",
+    "created": 1520893592,
+    "is_archived": false,
+    "is_im": true,
+    "is_org_shared": false,
+    "context_team_id": "T0FC8BFQR",
+    "user": "U9NJX9J83",
+    "last_read": "1665038145.797419",
+    "latest": {
+      "client_msg_id": "0f1253bc-9159-47ec-b184-e106eae4bd3c",
+      "type": "message",
+      "text": "7",
+      "user": "U9NJX9J83",
+      "ts": "1665038145.797419",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "w6H",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "text",
+                  "text": "7"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "T0FC8BFQR"
+    },
+    "unread_count": 0,
+    "unread_count_display": 0,
+    "is_open": true,
+    "priority": 0
+  }
+}

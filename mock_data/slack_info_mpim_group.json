@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "channel": {
+    "id": "GKHEJUM1N",
+    "name": "mpdm-trygveaa029--trygveaa--trygveaa243-1",
+    "is_channel": false,
+    "is_group": true,
+    "is_im": false,
+    "is_mpim": true,
+    "is_private": true,
+    "created": 1560376096,
+    "is_archived": false,
+    "is_general": false,
+    "unlinked": 0,
+    "name_normalized": "mpdm-trygveaa029--trygveaa--trygveaa243-1",
+    "is_shared": false,
+    "is_org_shared": false,
+    "is_pending_ext_shared": false,
+    "pending_shared": [],
+    "context_team_id": "T0FC8BFQR",
+    "parent_conversation": null,
+    "creator": "U9NJX9J83",
+    "is_ext_shared": false,
+    "shared_team_ids": [
+      "T0FC8BFQR"
+    ],
+    "pending_connected_team_ids": [],
+    "is_member": true,
+    "last_read": "1664834869.209949",
+    "is_open": true,
+    "topic": {
+      "value": "",
+      "creator": "",
+      "last_set": 0
+    },
+    "purpose": {
+      "value": "Group messaging with: @trygveaa029 @trygveaa @trygveaa243",
+      "creator": "U9NJX9J83",
+      "last_set": 1560376096
+    }
+  }
+}
