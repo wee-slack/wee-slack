@@ -94,18 +94,20 @@ If `--with-python@2` was used, you should use: `sudo /usr/local/opt/python@2/bin
 
 ### 2. Download wee\_slack.py
 
-In order to [load this Python script in WeeChat](https://weechat.org/files/doc/stable/weechat_scripting.en.html#load_script), it should be located under the `python/` directory in the WeeChat data files directory. By default, [WeeChat uses `~/.local/share/weechat/python/`](https://weechat.org/files/doc/stable/weechat_user.en.html#weechat_directories). (These directories will be created the first time you run WeeChat, or you can create them yourself with the first command below.) Download the script to that location:
+In order to [load this Python script in WeeChat](https://weechat.org/files/doc/stable/weechat_scripting.en.html#load_script), it should be located under the `python/` directory in [the WeeChat data files directory](https://weechat.org/files/doc/stable/weechat_user.en.html#files_and_directories), `$XDG_DATA_HOME/weechat/python`, or `$HOME/.local/share/weechat/python/` if `$XDG_DATA_HOME` is not defined or is empty. (These directories will be created the first time you run WeeChat, or you can create them yourself with the first command below.) Download the script to that location:
 
 ```
-mkdir -p ~/.local/share/weechat/python/autoload/
-cd ~/.local/share/weechat/python/
+mkdir -p $XDG_DATA_HOME/weechat/python/autoload/
+cd $XDG_DATA_HOME/weechat/python/
 curl -O https://raw.githubusercontent.com/wee-slack/wee-slack/master/wee_slack.py
 ```
+
+(You can test whether `$XDG_DATA_HOME` is defined with the command `echo $XDG_DATA_HOME`. If there is no output, use `~/.local/share` in place of `$XDG_DATA_HOME`.)
 
 If you want wee\_slack to start automatically when WeeChat starts, you can also symbolically link the script under the `autoload/` directory for Python scripts:
 
 ```
-cd ~/.local/share/weechat/python/autoload/
+cd $XDG_DATA_HOME/weechat/python/autoload/
 ln -s ../wee_slack.py
 ```
 
