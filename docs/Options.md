@@ -20,7 +20,7 @@ slack` after changing it to take effect.
 
 **Default:** `false`
 
-**Description:** Automatically open threads when mentioned or inresponse to own messages.
+**Description:** Automatically open threads when mentioned or in response to own messages.
 
 ### background_load_all_history
 

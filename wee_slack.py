@@ -1,6 +1,6 @@
 # Copyright (c) 2014-2016 Ryan Huber <rhuber@gmail.com>
 # Copyright (c) 2015-2018 Tollef Fog Heen <tfheen@err.no>
-# Copyright (c) 2015-2022 Trygve Aaberge <trygveaa@gmail.com>
+# Copyright (c) 2015-2023 Trygve Aaberge <trygveaa@gmail.com>
 # Released under the MIT license.
 
 from __future__ import print_function, unicode_literals
@@ -6419,7 +6419,7 @@ class PluginConfig(object):
         "auto_open_threads": Setting(
             default="false",
             desc="Automatically open threads when mentioned or in"
-            "response to own messages.",
+            " response to own messages.",
         ),
         "background_load_all_history": Setting(
             default="true",
