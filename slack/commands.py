@@ -115,7 +115,7 @@ def command_slack_connect(
             for workspace in shared.workspaces.values():
                 await workspace.connect()
 
-    create_task(connect(), final=True)
+    create_task(connect())
 
 
 @weechat_command()
