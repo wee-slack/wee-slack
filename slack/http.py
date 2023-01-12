@@ -42,10 +42,11 @@ async def hook_process_hashtable(command: str, options: Dict[str, str], timeout:
     return_code = -1
 
     while return_code == -1:
-        _, return_code, out, err = await future
+        next_future = FutureProcess(future.id)
+        _, return_code, out, err = await next_future
         log(
             LogLevel.TRACE,
-            f"hook_process_hashtable intermediary response ({future.id}): command: {command}",
+            f"hook_process_hashtable intermediary response ({next_future.id}): command: {command}",
         )
         stdout.write(out)
         stderr.write(err)
