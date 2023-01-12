@@ -12,9 +12,10 @@ Table of Contents
   * [Dependencies](#dependencies)
   * [Setup](#setup)
      * [1. Install dependencies](#1-install-dependencies)
-     * [2. Download wee\_slack.py](#2-download-wee_slackpy)
-     * [3. Start WeeChat](#3-start-weechat)
-     * [4. Add your Slack API token(s)](#4-add-your-slack-api-tokens)
+     * [2. Install and load wee-slack](#2-install-and-load-wee-slack)
+        * [From the WeeChat script repo](#from-the-weechat-script-repo)
+        * [From the GitHub repo](#from-the-github-repo)
+     * [3. Add your Slack API token(s)](#3-add-your-slack-api-tokens)
         * [Get a token with OAuth](#get-a-token-with-oauth)
         * [Get a session token](#get-a-session-token)
         * [Optional: Connecting to multiple teams](#optional-connecting-to-multiple-teams)
@@ -92,33 +93,47 @@ Setup
 Note for **macOS**: If you installed WeeChat with Homebrew, you will have to locate the python runtime environment used.
 If `--with-python@2` was used, you should use: `sudo /usr/local/opt/python@2/bin/pip2 install websocket_client`
 
-### 2. Download wee\_slack.py
+### 2. Install and load wee-slack
 
-In order to [load this Python script in WeeChat](https://weechat.org/files/doc/stable/weechat_scripting.en.html#load_script), it should be located under the `python/` directory in [the WeeChat data files directory](https://weechat.org/files/doc/stable/weechat_user.en.html#files_and_directories), `$XDG_DATA_HOME/weechat/python`, or `$HOME/.local/share/weechat/python/` if `$XDG_DATA_HOME` is not defined or is empty. (These directories will be created the first time you run WeeChat, or you can create them yourself with the first command below.) Download the script to that location:
+#### From the WeeChat script repo
+
+The easiest way to install wee-slack is from inside WeeChat by running:
+`/script install slack.py`
+
+This will install and load it and enable automatically loading it when WeeChat
+starts.
+
+#### From the GitHub repo
+
+Alternatively, you can download the `wee_slack.py` script from the GitHub repo,
+either from the latest release or from the master branch and place it under the
+`python/` directory in [the WeeChat data files
+directory](https://weechat.org/files/doc/stable/weechat_user.en.html#files_and_directories).
+
+If you use the default XDG directories, this will be
+`$XDG_DATA_HOME/weechat/python`, or `~/.local/share/weechat/python` if
+`$XDG_DATA_HOME` is not set. If you use the old single directory, it will be
+`~/.weechat/python`.
+
+If you use this method and want it to load automatically when WeeChat starts,
+you have to create a symlink from the `autoload` directory to the script.
+
+E.g. to install and automatically load the latest version from the master
+branch when using `~/.local/share/weechat`:
 
 ```
-mkdir -p $XDG_DATA_HOME/weechat/python/autoload/
-cd $XDG_DATA_HOME/weechat/python/
+mkdir -p ~/.local/share/weechat/python/autoload
+cd ~/.local/share/weechat/python
 curl -O https://raw.githubusercontent.com/wee-slack/wee-slack/master/wee_slack.py
+ln -s ../wee_slack.py autoload
 ```
 
-(You can test whether `$XDG_DATA_HOME` is defined with the command `echo $XDG_DATA_HOME`. If there is no output, use `~/.local/share` in place of `$XDG_DATA_HOME`.)
+If you already had WeeChat running when installing the script, or if you didn't
+enable autoload, you have to [load the
+script](https://weechat.org/files/doc/stable/weechat_scripting.en.html#load_script)
+by running this inside WeeChat: `/script load wee_slack.py`
 
-If you want wee\_slack to start automatically when WeeChat starts, you can also symbolically link the script under the `autoload/` directory for Python scripts:
-
-```
-cd $XDG_DATA_HOME/weechat/python/autoload/
-ln -s ../wee_slack.py
-```
-
-### 3. Start WeeChat
-```
-weechat
-```
-
-**NOTE:** If WeeChat is already running, the script can be loaded using `/python load wee_slack.py`.
-
-### 4. Add your Slack API token(s)
+### 3. Add your Slack API token(s)
 
 There are two types of tokens that can be used, OAuth tokens and session
 tokens. The official way to get a token is to use OAuth. However, this has
@@ -307,10 +322,10 @@ _Note: labels do not persist once a thread buffer is closed_
 To enable rendering of emoji characters and tab completion of emoji names, copy
 or symlink the
 [`weemoji.json`](https://github.com/wee-slack/wee-slack/blob/master/weemoji.json)
-file to your WeeChat config directory (e.g. `~/.weechat`). If doing this after
-starting wee-slack, you will have to reload it by running `/python reload
-slack`. Then append `|%(emoji)` to the `weechat.completion.default_template`
-config option, e.g. like this:
+file to your WeeChat config directory (e.g. `~/.local/share/weechat` or
+`~/.weechat`). If doing this after starting wee-slack, you will have to reload
+it by running `/python reload slack`. Then append `|%(emoji)` to the
+`weechat.completion.default_template` config option, e.g. like this:
 
 ```
 /set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(emoji)"
