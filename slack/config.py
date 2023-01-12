@@ -158,6 +158,13 @@ class SlackConfigSectionColor:
     def __init__(self, weechat_config: WeeChatConfig):
         self._section = WeeChatSection(weechat_config, "color")
 
+        self.disconnected = WeeChatOption(
+            self._section,
+            "disconnected",
+            "text color for the disconnected text",
+            WeeChatColor("red"),
+        )
+
         self.loading = WeeChatOption(
             self._section,
             "loading",

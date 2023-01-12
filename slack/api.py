@@ -73,7 +73,7 @@ class SlackWorkspace:
         self.name = name
         self.config = shared.config.create_workspace_config(self.name)
         self.api = SlackApi(self)
-        self.connected = False
+        self.is_connected = False
         self.nick = "TODO"
         # Maybe make private, so you have to use get_user? Maybe make get_user a getter, though don't know if that's a problem since it's async
         self.users: Dict[str, SlackUser] = {}
@@ -101,6 +101,8 @@ class SlackWorkspace:
 
         # print(rtm_connect)
         # print([c["name"] for c in user_channels])
+        self.is_connected = True
+        weechat.bar_item_update("input_text")
 
     async def get_user(self, id: str) -> SlackUser:
         if id in self.users:

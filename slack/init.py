@@ -28,18 +28,27 @@ def signal_buffer_switch_cb(data: str, signal: str, buffer_pointer: str) -> int:
 def modifier_input_text_display_with_cursor_cb(
     data: str, modifier: str, buffer_pointer: str, string: str
 ) -> str:
+    prefix = ""
     conversation = get_conversation_from_buffer_pointer(buffer_pointer)
-    if conversation and conversation.is_loading:
+    if conversation:
         input_delim_color = weechat.config_string(
             weechat.config_get("weechat.bar.input.color_delim")
         )
-        return (
-            f"{with_color(input_delim_color, '[')}"
-            f"{with_color(shared.config.color.loading.value, 'loading')}"
-            f"{with_color(input_delim_color, ']')}"
-            f" {string}"
-        )
-    return string
+        input_delim_start = with_color(input_delim_color, "[")
+        input_delim_end = with_color(input_delim_color, "]")
+        if not conversation.workspace.is_connected:
+            prefix += (
+                f"{input_delim_start}"
+                f"{with_color(shared.config.color.disconnected.value, 'disconnected')}"
+                f"{input_delim_end} "
+            )
+        if conversation.is_loading:
+            prefix += (
+                f"{input_delim_start}"
+                f"{with_color(shared.config.color.loading.value, 'loading')}"
+                f"{input_delim_end} "
+            )
+    return prefix + string
 
 
 async def init():
