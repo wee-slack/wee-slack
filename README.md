@@ -12,7 +12,7 @@ Table of Contents
   * [Dependencies](#dependencies)
   * [Setup](#setup)
      * [1. Install dependencies](#1-install-dependencies)
-     * [2. Download wee_slack.py to ~/.weechat/python](#2-download-wee_slackpy-to-weechatpython)
+     * [2. Download wee\_slack.py](#2-download-wee_slackpy)
      * [3. Start WeeChat](#3-start-weechat)
      * [4. Add your Slack API token(s)](#4-add-your-slack-api-tokens)
         * [Get a token with OAuth](#get-a-token-with-oauth)
@@ -92,15 +92,23 @@ Setup
 Note for **macOS**: If you installed weechat with Homebrew, you will have to locate the python runtime environment used.
 If `--with-python@2` was used, you should use: `sudo /usr/local/opt/python@2/bin/pip2 install websocket_client`
 
-### 2. Download wee\_slack.py to ~/.weechat/python
+### 2. Download wee\_slack.py
 
-If you don't want wee\_slack to start automatically when weechat starts, you can skip the last command.
+In order to [load this Python script in WeeChat](https://weechat.org/files/doc/stable/weechat_scripting.en.html#load_script), it should be located under the `python/` directory in [the WeeChat data files directory](https://weechat.org/files/doc/stable/weechat_user.en.html#files_and_directories), `$XDG_DATA_HOME/weechat/python`, or `$HOME/.local/share/weechat/python/` if `$XDG_DATA_HOME` is not defined or is empty. (These directories will be created the first time you run WeeChat, or you can create them yourself with the first command below.) Download the script to that location:
 
 ```
-mkdir -p ~/.weechat/python/autoload
-cd ~/.weechat/python
+mkdir -p $XDG_DATA_HOME/weechat/python/autoload/
+cd $XDG_DATA_HOME/weechat/python/
 curl -O https://raw.githubusercontent.com/wee-slack/wee-slack/master/wee_slack.py
-ln -s ../wee_slack.py autoload
+```
+
+(You can test whether `$XDG_DATA_HOME` is defined with the command `echo $XDG_DATA_HOME`. If there is no output, use `~/.local/share` in place of `$XDG_DATA_HOME`.)
+
+If you want wee\_slack to start automatically when WeeChat starts, you can also symbolically link the script under the `autoload/` directory for Python scripts:
+
+```
+cd $XDG_DATA_HOME/weechat/python/autoload/
+ln -s ../wee_slack.py
 ```
 
 ### 3. Start WeeChat
