@@ -77,7 +77,7 @@ def list_workspaces(workspace_name: Optional[str] = None, detailed_list: bool = 
 
 
 def display_workspace(workspace: SlackWorkspace, detailed_list: bool):
-    if workspace.connected:
+    if workspace.is_connected:
         weechat.prnt(
             "",
             f" * "
@@ -193,7 +193,7 @@ def command_slack_workspace_del(
     if not workspace:
         print_error(f'workspace "{name}" not found for "workspace del" command')
         return
-    if workspace.connected:
+    if workspace.is_connected:
         print_error(
             f'you can not delete server "{name}" because you are connected to it. Try "/slack disconnect {name}" first.'
         )
