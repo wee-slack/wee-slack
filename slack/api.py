@@ -4,14 +4,14 @@ import json
 import re
 import time
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from urllib.parse import urlencode
 
 import weechat
 
 from slack.http import http_request
 from slack.shared import shared
-from slack.task import create_task, gather
+from slack.task import Future, create_task, gather
 from slack.util import get_callback_name
 
 if TYPE_CHECKING:
@@ -76,7 +76,7 @@ class SlackWorkspace:
         self.is_connected = False
         self.nick = "TODO"
         # Maybe make private, so you have to use get_user? Maybe make get_user a getter, though don't know if that's a problem since it's async
-        self.users: Dict[str, SlackUser] = {}
+        self.users: Dict[str, Future[SlackUser]] = {}
         self.conversations: Dict[str, SlackConversation] = {}
 
     async def connect(self):
@@ -104,13 +104,16 @@ class SlackWorkspace:
         self.is_connected = True
         weechat.bar_item_update("input_text")
 
-    async def get_user(self, id: str) -> SlackUser:
-        if id in self.users:
-            return self.users[id]
+    async def create_user(self, id: str) -> SlackUser:
         user = SlackUser(self, id)
         await user.init()
-        self.users[id] = user
         return user
+
+    async def get_user(self, id: str) -> SlackUser:
+        if id in self.users:
+            return await self.users[id]
+        self.users[id] = create_task(self.create_user(id))
+        return await self.users[id]
 
 
 class SlackUser:
@@ -223,10 +226,13 @@ class SlackMessage:
 
     async def unfurl_refs(self, message: str):
         re_user = re.compile("<@([^>]+)>")
-        user_ids = re_user.findall(message)
-        await gather(*(self.workspace.get_user(user_id) for user_id in user_ids))
+        user_ids: List[str] = re_user.findall(message)
+        users_list = await gather(
+            *(self.workspace.get_user(user_id) for user_id in user_ids)
+        )
+        users = dict(zip(user_ids, users_list))
 
         def unfurl_user(user_id: str):
-            return "@" + self.workspace.users[user_id].name
+            return "@" + users[user_id].name
 
         return re_user.sub(lambda match: unfurl_user(match.group(1)), message)

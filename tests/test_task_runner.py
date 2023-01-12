@@ -1,9 +1,11 @@
+from collections import defaultdict
+
 from slack.shared import shared
 from slack.task import Future, create_task, weechat_task_cb
 
 
 def test_run_single_task():
-    shared.active_tasks = {}
+    shared.active_tasks = defaultdict(list)
     shared.active_responses = {}
     future = Future[str]()
 
@@ -19,7 +21,7 @@ def test_run_single_task():
 
 
 def test_run_nested_task():
-    shared.active_tasks = {}
+    shared.active_tasks = defaultdict(list)
     shared.active_responses = {}
     future = Future[str]()
 
@@ -41,7 +43,7 @@ def test_run_nested_task():
 
 
 def test_run_two_tasks_concurrently():
-    shared.active_tasks = {}
+    shared.active_tasks = defaultdict(list)
     shared.active_responses = {}
     future1 = Future[str]()
     future2 = Future[str]()

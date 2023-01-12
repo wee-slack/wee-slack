@@ -1,6 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, Awaitable, Coroutine, Generator, List, Tuple, TypeVar
+from typing import (
+    Any,
+    Awaitable,
+    Coroutine,
+    Generator,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 from uuid import uuid4
 
 import weechat
@@ -12,11 +22,16 @@ T = TypeVar("T")
 
 
 class Future(Awaitable[T]):
-    def __init__(self):
-        self.id = str(uuid4())
+    def __init__(self, future_id: Optional[str] = None):
+        if future_id is None:
+            self.id = str(uuid4())
+        else:
+            self.id = future_id
+        self.result: Optional[T] = None
 
     def __await__(self) -> Generator[Future[T], T, T]:
-        return (yield self)
+        self.result = yield self
+        return self.result
 
 
 class FutureProcess(Future[Tuple[str, int, str, str]]):
@@ -35,8 +50,11 @@ class Task(Future[T]):
 
 
 def weechat_task_cb(data: str, *args: Any) -> int:
-    task = shared.active_tasks.pop(data)
-    task_runner(task, args)
+    future = shared.active_futures.pop(data)
+    future.result = args
+    tasks = shared.active_tasks.pop(data)
+    for task in tasks:
+        task_runner(task, args)
     return weechat.WEECHAT_RC_OK
 
 
@@ -46,25 +64,27 @@ def task_runner(task: Task[Any], response: Any):
             future = task.coroutine.send(response)
             if future.id in shared.active_responses:
                 response = shared.active_responses.pop(future.id)
+            elif future.result is not None:
+                response = future.result
             else:
-                if future.id in shared.active_tasks:
-                    raise Exception(
-                        f"future.id in active_tasks, {future.id}, {shared.active_tasks}"
-                    )
-                shared.active_tasks[future.id] = task
+                shared.active_tasks[future.id].append(task)
+                shared.active_futures[future.id] = future
                 break
         except StopIteration as e:
+            task.result = e.value
             if task.id in shared.active_tasks:
-                task = shared.active_tasks.pop(task.id)
-                response = e.value
-            else:
-                if task.id in shared.active_responses:
-                    raise Exception(  # pylint: disable=raise-missing-from
-                        f"task.id in active_responses, {task.id}, {shared.active_responses}"
-                    )
-                if not task.final:
-                    shared.active_responses[task.id] = e.value
+                tasks = shared.active_tasks.pop(task.id)
+                for active_task in tasks:
+                    task_runner(active_task, e.value)
                 break
+
+            if task.id in shared.active_responses:
+                raise Exception(  # pylint: disable=raise-missing-from
+                    f"task.id in active_responses, {task.id}, {shared.active_responses}"
+                )
+            if not task.final:
+                shared.active_responses[task.id] = e.value
+            break
 
 
 def create_task(
@@ -75,9 +95,12 @@ def create_task(
     return task
 
 
-async def gather(*requests: Coroutine[Any, Any, T]) -> List[T]:
+async def gather(*requests: Union[Future[T], Coroutine[Any, Any, T]]) -> List[T]:
     # TODO: Should probably propagate first exception
-    tasks = [create_task(request) for request in requests]
+    tasks = [
+        create_task(request) if isinstance(request, Coroutine) else request
+        for request in requests
+    ]
     return [await task for task in tasks]
 
 
