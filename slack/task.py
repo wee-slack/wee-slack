@@ -43,10 +43,9 @@ class FutureTimer(Future[Tuple[int]]):
 
 
 class Task(Future[T]):
-    def __init__(self, coroutine: Coroutine[Future[Any], Any, T], final: bool):
+    def __init__(self, coroutine: Coroutine[Future[Any], Any, T]):
         super().__init__()
         self.coroutine = coroutine
-        self.final = final
 
 
 def weechat_task_cb(data: str, *args: Any) -> int:
@@ -62,9 +61,7 @@ def task_runner(task: Task[Any], response: Any):
     while True:
         try:
             future = task.coroutine.send(response)
-            if future.id in shared.active_responses:
-                response = shared.active_responses.pop(future.id)
-            elif future.result is not None:
+            if future.result is not None:
                 response = future.result
             else:
                 shared.active_tasks[future.id].append(task)
@@ -76,21 +73,13 @@ def task_runner(task: Task[Any], response: Any):
                 tasks = shared.active_tasks.pop(task.id)
                 for active_task in tasks:
                     task_runner(active_task, e.value)
-                break
-
-            if task.id in shared.active_responses:
-                raise Exception(  # pylint: disable=raise-missing-from
-                    f"task.id in active_responses, {task.id}, {shared.active_responses}"
-                )
-            if not task.final:
-                shared.active_responses[task.id] = e.value
+            if task.id in shared.active_futures:
+                del shared.active_futures[task.id]
             break
 
 
-def create_task(
-    coroutine: Coroutine[Future[Any], Any, T], final: bool = False
-) -> Task[T]:
-    task = Task(coroutine, final)
+def create_task(coroutine: Coroutine[Future[Any], Any, T]) -> Task[T]:
+    task = Task(coroutine)
     task_runner(task, None)
     return task
 

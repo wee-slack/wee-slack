@@ -88,4 +88,4 @@ def main():
             "",
         )
 
-        create_task(init(), final=True)
+        create_task(init())

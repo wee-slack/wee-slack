@@ -6,7 +6,7 @@ from slack.task import Future, create_task, weechat_task_cb
 
 def test_run_single_task():
     shared.active_tasks = defaultdict(list)
-    shared.active_responses = {}
+    shared.active_futures = {}
     future = Future[str]()
 
     async def awaitable():
@@ -17,12 +17,13 @@ def test_run_single_task():
     weechat_task_cb(future.id, "data")
 
     assert not shared.active_tasks
-    assert shared.active_responses == {task.id: ("awaitable", ("data",))}
+    assert not shared.active_futures
+    assert task.result == ("awaitable", ("data",))
 
 
 def test_run_nested_task():
     shared.active_tasks = defaultdict(list)
-    shared.active_responses = {}
+    shared.active_futures = {}
     future = Future[str]()
 
     async def awaitable1():
@@ -37,14 +38,13 @@ def test_run_nested_task():
     weechat_task_cb(future.id, "data")
 
     assert not shared.active_tasks
-    assert shared.active_responses == {
-        task.id: ("awaitable2", ("awaitable1", ("data",)))
-    }
+    assert not shared.active_futures
+    assert task.result == ("awaitable2", ("awaitable1", ("data",)))
 
 
 def test_run_two_tasks_concurrently():
     shared.active_tasks = defaultdict(list)
-    shared.active_responses = {}
+    shared.active_futures = {}
     future1 = Future[str]()
     future2 = Future[str]()
 
@@ -58,7 +58,6 @@ def test_run_two_tasks_concurrently():
     weechat_task_cb(future2.id, "data2")
 
     assert not shared.active_tasks
-    assert shared.active_responses == {
-        task1.id: ("awaitable", ("data1",)),
-        task2.id: ("awaitable", ("data2",)),
-    }
+    assert not shared.active_futures
+    assert task1.result == ("awaitable", ("data1",))
+    assert task2.result == ("awaitable", ("data2",))

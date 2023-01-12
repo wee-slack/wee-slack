@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
     from slack.api import SlackWorkspace
@@ -18,7 +18,6 @@ class Shared:
         self.weechat_callbacks: Dict[str, Any]
         self.active_tasks: Dict[str, List[Task[Any]]] = defaultdict(list)
         self.active_futures: Dict[str, Future[Any]] = {}
-        self.active_responses: Dict[str, Tuple[Any, ...]] = {}
         self.workspaces: Dict[str, SlackWorkspace] = {}
         self.config: SlackConfig
 
