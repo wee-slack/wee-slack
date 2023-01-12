@@ -78,7 +78,7 @@ SCRIPT_NAME = "slack"
 SCRIPT_AUTHOR = "Trygve Aaberge <trygveaa@gmail.com>"
 SCRIPT_VERSION = "2.9.1"
 SCRIPT_LICENSE = "MIT"
-SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
+SCRIPT_DESC = "Extends WeeChat for typing notification/search/etc on slack.com"
 REPO_URL = "https://github.com/wee-slack/wee-slack"
 
 TYPING_DURATION = 6
@@ -179,7 +179,7 @@ def slack_buffer_required(f):
 def utf8_decode(f):
     """
     Decode all arguments from byte strings to unicode strings. Use this for
-    functions called from outside of this script, e.g. callbacks from weechat.
+    functions called from outside of this script, e.g. callbacks from WeeChat.
     """
 
     @wraps(f)
@@ -569,7 +569,7 @@ class EventRouter(object):
     def store_context(self, data):
         """
         A place to store data and vars needed by callback returns. We need this because
-        weechat's "callback_data" has a limited size and weechat will crash if you exceed
+        WeeChat's "callback_data" has a limited size and WeeChat will crash if you exceed
         this size.
         """
         identifier = "".join(
@@ -582,7 +582,7 @@ class EventRouter(object):
     def retrieve_context(self, identifier):
         """
         A place to retrieve data and vars needed by callback returns. We need this because
-        weechat's "callback_data" has a limited size and weechat will crash if you exceed
+        WeeChat's "callback_data" has a limited size and WeeChat will crash if you exceed
         this size.
         """
         return self.context.get(identifier)
@@ -725,7 +725,7 @@ class EventRouter(object):
         """
         complete
         Receives the result of an http request we previously handed
-        off to weechat (weechat bundles libcurl). Weechat can fragment
+        off to WeeChat (WeeChat bundles libcurl). WeeChat can fragment
         replies, so it buffers them until the reply is complete.
         It is then populated with metadata here so we can identify
         where the request originated and route properly.
@@ -901,7 +901,7 @@ def handle_next(data, remaining_calls):
 
 class WeechatController(object):
     """
-    Encapsulates our interaction with weechat
+    Encapsulates our interaction with WeeChat
     """
 
     def __init__(self, eventrouter):
@@ -916,7 +916,7 @@ class WeechatController(object):
     def register_buffer(self, buffer_ptr, channel):
         """
         complete
-        Adds a weechat buffer to the list of handled buffers for this EventRouter
+        Adds a WeeChat buffer to the list of handled buffers for this EventRouter
         """
         if isinstance(buffer_ptr, basestring):
             self.buffers[buffer_ptr] = channel
@@ -926,7 +926,7 @@ class WeechatController(object):
     def unregister_buffer(self, buffer_ptr, update_remote=False, close_buffer=False):
         """
         complete
-        Adds a weechat buffer to the list of handled buffers for this EventRouter
+        Adds a WeeChat buffer to the list of handled buffers for this EventRouter
         """
         channel = self.buffers.get(buffer_ptr)
         if channel:
@@ -955,7 +955,7 @@ def local_process_async_slack_api_request(request, event_router):
     """
     complete
     Sends an API request to Slack. You'll need to give this a well formed SlackRequest object.
-    DEBUGGING!!! The context here cannot be very large. Weechat will crash.
+    DEBUGGING!!! The context here cannot be very large. WeeChat will crash.
     """
     if not event_router.shutting_down:
         weechat_request = "url:{}".format(request.request_string())
@@ -1022,7 +1022,7 @@ def buffer_renamed_cb(data, signal, current_buffer):
 @utf8_decode
 def buffer_closing_callback(data, signal, current_buffer):
     """
-    Receives a callback from weechat when a buffer is being closed.
+    Receives a callback from WeeChat when a buffer is being closed.
     """
     EVENTROUTER.weechat_controller.unregister_buffer(current_buffer, True, False)
     return w.WEECHAT_RC_OK
@@ -1094,7 +1094,7 @@ def input_text_for_buffer_cb(data, modifier, current_buffer, string):
 @utf8_decode
 def buffer_switch_callback(data, signal, current_buffer):
     """
-    Every time we change channels in weechat, we call this to:
+    Every time we change channels in WeeChat, we call this to:
     1) set read marker 2) determine if we have already populated
     channel history data 3) set presence to active
     """
@@ -1375,7 +1375,7 @@ def usergroups_completion_cb(data, completion_item, current_buffer, completion):
 def complete_next_cb(data, current_buffer, command):
     """Extract current word, if it is equal to a nick, prefix it with @ and
     rely on nick_completion_cb adding the @-prefixed versions to the
-    completion lists, then let Weechat's internal completion do its
+    completion lists, then let WeeChat's internal completion do its
     thing
     """
     current_channel = EVENTROUTER.weechat_controller.buffers.get(current_buffer)
@@ -2398,7 +2398,7 @@ class SlackChannel(SlackChannelCommon):
 
     def create_buffer(self):
         """
-        Creates the weechat buffer where the channel magic happens.
+        Creates the WeeChat buffer where the channel magic happens.
         """
         if not self.channel_buffer:
             self.active = True
@@ -2944,7 +2944,7 @@ class SlackPrivateChannel(SlackGroupChannel):
 class SlackMPDMChannel(SlackChannel):
     """
     An MPDM channel is a special instance of a 'group' channel.
-    We change the name to look less terrible in weechat.
+    We change the name to look less terrible in WeeChat.
     """
 
     def __init__(self, eventrouter, team_users, myidentifier, **kwargs):
@@ -3183,7 +3183,7 @@ class SlackThreadChannel(SlackChannelCommon):
 
     def create_buffer(self):
         """
-        Creates the weechat buffer where the thread magic happens.
+        Creates the WeeChat buffer where the thread magic happens.
         """
         if not self.channel_buffer:
             self.channel_buffer = w.buffer_new(
@@ -5259,10 +5259,10 @@ def command_register(data, current_buffer, args):
     if not code:
         if nothirdparty:
             nothirdparty_note = ""
-            last_step = "You will see a message that the site can't be reached, this is expected. The URL for the page will have a code in it of the form `?code=<code>`. Copy the code after the equals sign, return to weechat and run `/slack register -nothirdparty <code>`."
+            last_step = "You will see a message that the site can't be reached, this is expected. The URL for the page will have a code in it of the form `?code=<code>`. Copy the code after the equals sign, return to WeeChat and run `/slack register -nothirdparty <code>`."
         else:
             nothirdparty_note = "\nNote that by default GitHub Pages will see a temporary code used to create your token (but not the token itself). If you're worried about this, you can use the -nothirdparty option, though the process will be a bit less user friendly."
-            last_step = "The web page will show a command in the form `/slack register <code>`. Run this command in weechat."
+            last_step = "The web page will show a command in the form `/slack register <code>`. Run this command in WeeChat."
         message = (
             textwrap.dedent(
                 """
@@ -6537,7 +6537,7 @@ class PluginConfig(object):
         ),
         "render_bold_as": Setting(
             default="bold",
-            desc="When receiving bold text from Slack, render it as this in weechat.",
+            desc="When receiving bold text from Slack, render it as this in WeeChat.",
         ),
         "render_emoji_as_string": Setting(
             default="false",
@@ -6545,13 +6545,13 @@ class PluginConfig(object):
             " if your terminal doesn't support emojis, or set to 'both' if you want to"
             " see both renderings. Note that even though this is"
             " disabled by default, you need to place {}/blob/master/weemoji.json in your"
-            " weechat directory to enable rendering emojis as emoji characters.".format(
+            " WeeChat directory to enable rendering emojis as emoji characters.".format(
                 REPO_URL
             ),
         ),
         "render_italic_as": Setting(
             default="italic",
-            desc="When receiving bold text from Slack, render it as this in weechat."
+            desc="When receiving bold text from Slack, render it as this in WeeChat."
             ' If your terminal lacks italic support, consider using "underline" instead.',
         ),
         "send_typing_notice": Setting(
@@ -7105,7 +7105,7 @@ if __name__ == "__main__":
         if weechat_version < 0x2020000:
             w.prnt(
                 "",
-                "\nERROR: Weechat version 2.2+ is required to use {}.\n\n".format(
+                "\nERROR: WeeChat version 2.2+ is required to use {}.\n\n".format(
                     SCRIPT_NAME
                 ),
             )

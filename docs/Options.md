@@ -8,7 +8,7 @@ You can set these options by using:
 
 You can also see all the options and set them them interactively by running `/fset slack`.
 
-Note that the default value will be shown as an empty string in weechat.
+Note that the default value will be shown as an empty string in WeeChat.
 The actual default values are listed below.
 
 Most options require that you reload the script with `/python reload
@@ -176,19 +176,19 @@ slack` after changing it to take effect.
 
 **Default:** `bold`
 
-**Description:** When receiving bold text from Slack, render it as this in weechat.
+**Description:** When receiving bold text from Slack, render it as this in WeeChat.
 
 ### render_emoji_as_string
 
 **Default:** `false`
 
-**Description:** Render emojis as :emoji_name: instead of emoji characters. Enable this if your terminal doesn't support emojis, or set to 'both' if you want to see both renderings. Note that even though this is disabled by default, you need to place https://github.com/wee-slack/wee-slack/blob/master/weemoji.json in your weechat directory to enable rendering emojis as emoji characters.
+**Description:** Render emojis as :emoji_name: instead of emoji characters. Enable this if your terminal doesn't support emojis, or set to 'both' if you want to see both renderings. Note that even though this is disabled by default, you need to place https://github.com/wee-slack/wee-slack/blob/master/weemoji.json in your WeeChat directory to enable rendering emojis as emoji characters.
 
 ### render_italic_as
 
 **Default:** `italic`
 
-**Description:** When receiving bold text from Slack, render it as this in weechat. If your terminal lacks italic support, consider using "underline" instead.
+**Description:** When receiving bold text from Slack, render it as this in WeeChat. If your terminal lacks italic support, consider using "underline" instead.
 
 ### send_typing_notice
 

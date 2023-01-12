@@ -172,7 +172,7 @@ Note that you need to update the `weemoji.json` file when upgrading to this vers
 ## 2.4.0 (2020-01-16)
 
 - Support regex flags i, m and s for message edits.
-- Allow %h (weechat home) replacement in download_location (PR #690).
+- Allow %h (WeeChat home) replacement in download_location (PR #690).
 - Render "by invitation from" before reactions.
 - The command `/slack status` now prints the status if no arguments are given. Pass `-delete` to unset the status (fixes #574).
 - Add completion for channel names (fixes #235).
@@ -217,7 +217,7 @@ Note that you need to update the `weemoji.json` file when upgrading to this vers
 - Add option `files_download_location` to download uploaded files automatically (fixes #562, PR #666).
 - Add option `show_buflist_presence` to show/hide presence from buflist (PR #558).
 - Add command `/help` and add descriptions for all commands (fixes #363).
-- Remove command `/leave` (weechat aliases it to `/part` by default so we don't need to implement it specifically).
+- Remove command `/leave` (WeeChat aliases it to `/part` by default so we don't need to implement it specifically).
 - Remove command `/slack p` (only used for debugging).
 - Remove command `/slack openweb`, use `/slack linkarchive` instead.
 - Make command `/thread` open last thread in channel when called without arguments (PR #677).

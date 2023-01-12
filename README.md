@@ -69,8 +69,8 @@ Dependencies
   * WeeChat 1.3+ http://weechat.org/
   * websocket-client https://pypi.python.org/pypi/websocket-client/
     * Since WeeChat 2.6, Python 3 modules are required, see https://weechat.org/blog/post/2019/07/02/Python-3-by-default
-  * Some distributions package weechat's plugin functionalities in separate packages.
-    Be sure that your weechat supports python plugins. Under Debian, install `weechat-python`
+  * Some distributions package WeeChat's plugin functionalities in separate packages.
+    Be sure that your WeeChat supports python plugins. Under Debian, install `weechat-python`
 
 Setup
 -----
@@ -79,7 +79,7 @@ Setup
 
 **Arch Linux**: `pacman -S python-websocket-client`
 
-**Debian/Ubuntu**: `apt install weechat-python python-websocket`. If using weechat 2.6 or newer, run `apt install weechat-python python3-websocket` instead.
+**Debian/Ubuntu**: `apt install weechat-python python-websocket`. If using WeeChat 2.6 or newer, run `apt install weechat-python python3-websocket` instead.
 
 **Fedora**: `dnf install python3-websocket-client`
 
@@ -89,7 +89,7 @@ Setup
 
 **Other**: `pip3 install websocket-client`
 
-Note for **macOS**: If you installed weechat with Homebrew, you will have to locate the python runtime environment used.
+Note for **macOS**: If you installed WeeChat with Homebrew, you will have to locate the python runtime environment used.
 If `--with-python@2` was used, you should use: `sudo /usr/local/opt/python@2/bin/pip2 install websocket_client`
 
 ### 2. Download wee\_slack.py
@@ -116,7 +116,7 @@ ln -s ../wee_slack.py
 weechat
 ```
 
-**NOTE:** If weechat is already running, the script can be loaded using `/python load wee_slack.py`.
+**NOTE:** If WeeChat is already running, the script can be loaded using `/python load wee_slack.py`.
 
 ### 4. Add your Slack API token(s)
 
@@ -307,7 +307,7 @@ _Note: labels do not persist once a thread buffer is closed_
 To enable rendering of emoji characters and tab completion of emoji names, copy
 or symlink the
 [`weemoji.json`](https://github.com/wee-slack/wee-slack/blob/master/weemoji.json)
-file to your weechat config directory (e.g. `~/.weechat`). If doing this after
+file to your WeeChat config directory (e.g. `~/.weechat`). If doing this after
 starting wee-slack, you will have to reload it by running `/python reload
 slack`. Then append `|%(emoji)` to the `weechat.completion.default_template`
 config option, e.g. like this:
@@ -340,12 +340,12 @@ The cursor mode and mouse mode can be used to interact with older messages, for 
 If mouse mode is enabled, the default behavior when right-clicking on a message is to paste its id in the input. It can be used in `/reply`, `s/` substitution/deletion and in `+:emoji:` commands instead of a message number.
 It can also be used as an argument to the `/slack linkarchive` command.
 
-In cursor mode, the `M` key achieves the same result (memo: the default for weechat is to paste the message with `m`, `M` simply copies the id).
+In cursor mode, the `M` key achieves the same result (memo: the default for WeeChat is to paste the message with `m`, `M` simply copies the id).
 In addition, `R` will prepare a `/reply id` and `D` will delete the message (provided it's yours).
 `T` will open the thread associated to a message, equivalent to `/thread id`
 `L` will call the `/slack linkarchive` command behind the hood and paste it to the current input.
 
-Please see weechat's documentation about [how to use the cursor mode](https://weechat.org/files/doc/stable/weechat_user.en.html#key_bindings_cursor_context) or [adapt the bindings](https://weechat.org/files/doc/stable/weechat_user.en.html#command_weechat_key) to your preference.
+Please see WeeChat's documentation about [how to use the cursor mode](https://weechat.org/files/doc/stable/weechat_user.en.html#key_bindings_cursor_context) or [adapt the bindings](https://weechat.org/files/doc/stable/weechat_user.en.html#command_weechat_key) to your preference.
 
 Default key bindings:
 ```
@@ -451,7 +451,7 @@ default, but should work after running these commands:
 /key bind ctrl-J /input magic_enter
 ```
 
-You may also want to disable weechats paste prompt, since that is not necessary
+You may also want to disable WeeChat's paste prompt, since that is not necessary
 when using `multiline.pl`:
 
 ```

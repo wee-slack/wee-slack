@@ -62,7 +62,7 @@ with open("docs/Options.md", "w") as file_options:
 
         You can also see all the options and set them them interactively by running `/fset slack`.
 
-        Note that the default value will be shown as an empty string in weechat.
+        Note that the default value will be shown as an empty string in WeeChat.
         The actual default values are listed below.
 
         Most options require that you reload the script with `/python reload
