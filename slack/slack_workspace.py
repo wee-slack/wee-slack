@@ -44,7 +44,7 @@ class SlackWorkspace:
         )
         if user_channels_response["ok"] is False:
             # TODO: Handle error
-            return
+            raise Exception("Failed fetching conversations")
 
         user_channels = user_channels_response["channels"]
 
