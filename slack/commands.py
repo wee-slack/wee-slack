@@ -233,13 +233,14 @@ def find_command(start_cmd: str, args: str) -> Optional[Tuple[Command, str]]:
     cmd_args = args[cmd_args_startpos:]
     if cmd in commands:
         return commands[cmd], cmd_args
+    return None
 
 
 def command_cb(data: str, buffer: str, args: str) -> int:
-    cmd = find_command(data, args)
-    if cmd:
-        command = cmd[0]
-        cmd_args = cmd[1]
+    found_cmd_with_args = find_command(data, args)
+    if found_cmd_with_args:
+        command = found_cmd_with_args[0]
+        cmd_args = found_cmd_with_args[1]
         command.cb(buffer, cmd_args)
     else:
         print_error(
@@ -264,9 +265,9 @@ def completion_slack_workspace_commands_cb(
     args = weechat.completion_get_string(completion, "args")
     args_without_base_word = args.removesuffix(base_word)
 
-    cmd = find_command(base_command, args_without_base_word)
-    if cmd:
-        command = cmd[0]
+    found_cmd_with_args = find_command(base_command, args_without_base_word)
+    if found_cmd_with_args:
+        command = found_cmd_with_args[0]
         matching_cmds = [
             cmd.removeprefix(command.cmd).lstrip()
             for cmd in commands
@@ -274,9 +275,9 @@ def completion_slack_workspace_commands_cb(
         ]
         if len(matching_cmds) > 1:
             for match in matching_cmds:
-                arg = match.split(" ")
+                cmd_arg = match.split(" ")
                 completion_list_add(
-                    completion, arg[0], 0, weechat.WEECHAT_LIST_POS_SORT
+                    completion, cmd_arg[0], 0, weechat.WEECHAT_LIST_POS_SORT
                 )
         else:
             for arg in command.completion.split("|"):

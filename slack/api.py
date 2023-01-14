@@ -25,6 +25,7 @@ def get_conversation_from_buffer_pointer(
         for conversation in workspace.conversations.values():
             if conversation.buffer_pointer == buffer_pointer:
                 return conversation
+    return None
 
 
 class SlackApi:
