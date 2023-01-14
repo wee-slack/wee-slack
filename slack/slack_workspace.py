@@ -50,6 +50,21 @@ class SlackApi:
         return response
 
 
+class SlackUsers(Dict[str, Future[SlackUser]]):
+    def __init__(self, workspace: SlackWorkspace):
+        super().__init__()
+        self.workspace = workspace
+
+    def __missing__(self, key: str):
+        self[key] = create_task(self._create_user(key))
+        return self[key]
+
+    async def _create_user(self, user_id: str) -> SlackUser:
+        user = SlackUser(self.workspace, user_id)
+        await user.init()
+        return user
+
+
 class SlackWorkspace:
     def __init__(self, name: str):
         self.name = name
@@ -57,8 +72,7 @@ class SlackWorkspace:
         self.api = SlackApi(self)
         self.is_connected = False
         self.nick = "TODO"
-        # Maybe make private, so you have to use get_user? Maybe make get_user a getter, though don't know if that's a problem since it's async
-        self.users: Dict[str, Future[SlackUser]] = {}
+        self.users = SlackUsers(self)
         self.conversations: Dict[str, SlackConversation] = {}
 
     async def connect(self):
@@ -85,14 +99,3 @@ class SlackWorkspace:
         # print([c["name"] for c in user_channels])
         self.is_connected = True
         weechat.bar_item_update("input_text")
-
-    async def create_user(self, id: str) -> SlackUser:
-        user = SlackUser(self, id)
-        await user.init()
-        return user
-
-    async def get_user(self, id: str) -> SlackUser:
-        if id in self.users:
-            return await self.users[id]
-        self.users[id] = create_task(self.create_user(id))
-        return await self.users[id]
