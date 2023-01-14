@@ -9,31 +9,33 @@
     "context_team_id": "T0FC8BFQR",
     "updated": 1558176716111,
     "user": "U9NJX9J83",
-    "last_read": "1665038145.797419",
+    "last_read": "1673700773.303629",
     "latest": {
-      "client_msg_id": "0f1253bc-9159-47ec-b184-e106eae4bd3c",
+      "client_msg_id": "483ee8db-35a3-4c1e-abf6-be8a85cde9b3",
       "type": "message",
-      "text": "7",
-      "user": "U9NJX9J83",
-      "ts": "1665038145.797419",
+      "text": "b",
+      "user": "U7JNGMGEB",
+      "ts": "1673700773.303629",
       "blocks": [
         {
           "type": "rich_text",
-          "block_id": "w6H",
+          "block_id": "jaBbr",
           "elements": [
             {
               "type": "rich_text_section",
               "elements": [
                 {
                   "type": "text",
-                  "text": "7"
+                  "text": "b"
                 }
               ]
             }
           ]
         }
       ],
-      "team": "T0FC8BFQR"
+      "team": "T0FC8BFQR",
+      "thread_ts": "1673700766.268199",
+      "parent_user_id": "U7JNGMGEB"
     },
     "unread_count": 0,
     "unread_count_display": 0,

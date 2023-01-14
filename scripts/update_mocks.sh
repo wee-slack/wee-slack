@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -eu
 
 alias curl_slack="curl -H 'Authorization: Bearer $SLACK_TOKEN'"
 

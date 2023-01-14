@@ -81,12 +81,12 @@ class SlackMessageCommon(TypedDict):
     text: str
     user: str
     ts: str
-    reactions: List[SlackMessageReaction]
+    reactions: NotRequired[List[SlackMessageReaction]]
 
 class SlackMessageStandard(SlackMessageCommon):
     client_msg_id: NotRequired[str]
     blocks: List[SlackMessageBlock]
-    attachments: List[SlackMessageAttachment]
+    attachments: NotRequired[List[SlackMessageAttachment]]
     team: str
 
 class SlackMessageThreadParentCommon(SlackMessageStandard):
