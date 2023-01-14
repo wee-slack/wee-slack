@@ -43,7 +43,7 @@ class SlackConversation:
         self.history_pending = False
 
     @property
-    def api(self) -> SlackApi:
+    def _api(self) -> SlackApi:
         return self.workspace.api
 
     @contextmanager
@@ -58,7 +58,7 @@ class SlackConversation:
 
     async def init(self):
         with self.loading():
-            info = await self.api.fetch_conversations_info(self)
+            info = await self._api.fetch_conversations_info(self)
         if info["ok"] is False:
             # TODO: Handle error
             raise Exception("Failed fetching conversation info")
@@ -83,7 +83,7 @@ class SlackConversation:
         with self.loading():
             self.history_pending = True
 
-            history = await self.api.fetch_conversations_history(self)
+            history = await self._api.fetch_conversations_history(self)
             if history["ok"] is False:
                 # TODO: Handle error
                 raise Exception("Failed fetching conversation history")
