@@ -8,11 +8,11 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import weechat
 
 from slack.api import SlackWorkspace
-from slack.config import WeeChatOption
 from slack.log import print_error
 from slack.shared import shared
 from slack.task import create_task
 from slack.util import get_callback_name, with_color
+from slack.weechat_config import WeeChatOption
 
 commands: Dict[str, Command] = {}
 
