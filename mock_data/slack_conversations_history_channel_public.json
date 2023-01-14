@@ -1,0 +1,298 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "type": "message",
+      "text": "d",
+      "user": "U7JNGMGEB",
+      "ts": "1673707855.715349",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "AJO9",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "text",
+                  "text": "d"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "T0FC8BFQR"
+    },
+    {
+      "client_msg_id": "e77ce1a6-325c-4987-af9c-924fddd79bd4",
+      "type": "message",
+      "text": "c",
+      "user": "U9NJX9J83",
+      "ts": "1672950604.204009",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "WB=v",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "text",
+                  "text": "c"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "T0FC8BFQR",
+      "thread_ts": "1672950604.204009",
+      "reply_count": 3,
+      "reply_users_count": 2,
+      "latest_reply": "1673707723.647229",
+      "reply_users": [
+        "U9NJX9J83",
+        "U7JNGMGEB"
+      ],
+      "is_locked": false,
+      "subscribed": true,
+      "last_read": "1673707723.647229"
+    },
+    {
+      "client_msg_id": "e8ea92f9-ebaf-40ef-88b8-f1a829591bb1",
+      "type": "message",
+      "text": "b",
+      "user": "U9NJX9J83",
+      "ts": "1668031072.607969",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "6Hyuz",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "text",
+                  "text": "b"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "T0FC8BFQR",
+      "thread_ts": "1668031072.607969",
+      "reply_count": 2,
+      "reply_users_count": 1,
+      "latest_reply": "1672950600.835739",
+      "reply_users": [
+        "U9NJX9J83"
+      ],
+      "is_locked": false,
+      "subscribed": false
+    },
+    {
+      "client_msg_id": "0101c0b1-f56d-41e3-a99a-071391071441",
+      "type": "message",
+      "text": "1",
+      "user": "U9NJX9J83",
+      "ts": "1667398172.542849",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "Ce6",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "text",
+                  "text": "1"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "T0FC8BFQR",
+      "thread_ts": "1667398172.542849",
+      "reply_count": 5,
+      "reply_users_count": 1,
+      "latest_reply": "1672950594.369459",
+      "reply_users": [
+        "U9NJX9J83"
+      ],
+      "is_locked": false,
+      "subscribed": true,
+      "last_read": "1672950594.369459"
+    },
+    {
+      "type": "message",
+      "text": "a",
+      "user": "U7JNGMGEB",
+      "ts": "1667127924.150389",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "03jR",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "text",
+                  "text": "a"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "T0FC8BFQR"
+    },
+    {
+      "type": "message",
+      "text": "",
+      "files": [
+        {
+          "id": "F049CK2SPAL",
+          "created": 1667059799,
+          "timestamp": 1667059811,
+          "name": "Some_post_title",
+          "title": "Some post title",
+          "mimetype": "application/vnd.slack-docs",
+          "filetype": "docs",
+          "pretty_type": "Arugula",
+          "user": "U9NJX9J83",
+          "user_team": "T0FC8BFQR",
+          "editable": true,
+          "size": 19,
+          "mode": "docs",
+          "is_external": false,
+          "external_type": "",
+          "is_public": true,
+          "public_url_shared": false,
+          "display_as_bot": false,
+          "username": "",
+          "url_private": "https://files.slack.com/files-pri/T0FC8BFQR-F049CK2SPAL/some_post_title",
+          "url_private_download": "https://files.slack.com/files-pri/T0FC8BFQR-F049CK2SPAL/download/some_post_title",
+          "permalink": "https://wee-slack-test.slack.com/files/T0FC8BFQR/F049CK2SPAL",
+          "permalink_public": "https://slack-files.com/T0FC8BFQR-F049CK2SPAL-b2c5d3567b",
+          "preview": "<p>Some content</p>",
+          "editor": null,
+          "last_editor": "U9NJX9J83",
+          "non_owner_editable": false,
+          "updated": 1667059811,
+          "is_starred": false,
+          "has_rich_preview": false,
+          "file_access": "visible",
+          "media_progress": null
+        }
+      ],
+      "upload": false,
+      "user": "U9NJX9J83",
+      "display_as_bot": false,
+      "ts": "1667059824.317919"
+    },
+    {
+      "type": "message",
+      "text": "<https://vg.no>",
+      "user": "U7JNGMGEB",
+      "ts": "1667057550.980779",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "CbQrF",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "link",
+                  "url": "https://vg.no"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "T0FC8BFQR",
+      "attachments": [
+        {
+          "from_url": "https://vg.no/",
+          "image_url": "https://1.vgc.no/vgnett-prod/img/vgLogoSquare.png?28042014-1",
+          "image_width": 476,
+          "image_height": 250,
+          "image_bytes": 8471,
+          "service_icon": "https://www.vg.no/gfx/icons/apple-touch-icon-114-precomposed.png",
+          "id": 1,
+          "original_url": "https://vg.no",
+          "fallback": "VG: Nyheter fra Norges mest leste nettavis – VG",
+          "text": "Norges største nettsted. Oppdateres minutt for minutt på siste nytt innen sport, innenriks, utenriks, og underholdning.",
+          "title": "Nyheter fra Norges mest leste nettavis – VG",
+          "title_link": "https://vg.no/",
+          "service_name": "VG"
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "text": "<https://github.com/golang/go/issues/45624>",
+      "user": "U7JNGMGEB",
+      "ts": "1667057502.831129",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "VuZO",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "link",
+                  "url": "https://github.com/golang/go/issues/45624"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "T0FC8BFQR",
+      "attachments": [
+        {
+          "from_url": "https://github.com/golang/go/issues/45624",
+          "image_url": "https://opengraph.githubassets.com/b7dc26526af66d71ff9883293c16e50754be7a056dbc0b52ad734491ba60707a/golang/go/issues/45624",
+          "image_width": 500,
+          "image_height": 250,
+          "image_bytes": 98252,
+          "service_icon": "https://a.slack-edge.com/80588/img/unfurl_icons/github.png",
+          "id": 1,
+          "original_url": "https://github.com/golang/go/issues/45624",
+          "fallback": "GitHub: proposal: expression to create pointer to simple types · Issue #45624 · golang/go",
+          "text": "This notion was addressed in #9097, which was shut down rather summarily. Rather than reopen it, let me take another approach. When &amp;S{} was added to the language as a way to construct a pointe...",
+          "title": "proposal: expression to create pointer to simple types · Issue #45624 · golang/go",
+          "title_link": "https://github.com/golang/go/issues/45624",
+          "service_name": "GitHub"
+        }
+      ],
+      "reactions": [
+        {
+          "name": "+1",
+          "users": [
+            "U7JNGMGEB"
+          ],
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "has_more": false,
+  "is_limited": true,
+  "pin_count": 0,
+  "channel_actions_ts": null,
+  "channel_actions_count": 0
+}

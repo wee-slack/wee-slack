@@ -1,0 +1,85 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "type": "message",
+      "text": "<mailto:name@example.com|name@example.com>",
+      "user": "U7JNGMGEB",
+      "ts": "1585253989.000200",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "plZ",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "link",
+                  "url": "mailto:name@example.com",
+                  "text": "name@example.com"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "T0FC8BFQR"
+    },
+    {
+      "type": "message",
+      "text": "_italic",
+      "user": "U7JNGMGEB",
+      "ts": "1584106682.000100",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "Moc9",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "text",
+                  "text": "_italic"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "T0FC8BFQR"
+    },
+    {
+      "type": "message",
+      "subtype": "bot_remove",
+      "text": "removed an integration from this channel: <https://wee-slack-test.slack.com/services/BBG98PXA6|incoming-webhook>",
+      "user": "U7JNGMGEB",
+      "bot_id": "BBG98PXA6",
+      "bot_link": "<https://wee-slack-test.slack.com/services/BBG98PXA6|incoming-webhook>",
+      "ts": "1530267481.000186"
+    },
+    {
+      "type": "message",
+      "subtype": "bot_add",
+      "text": "added an integration to this channel: <https://wee-slack-test.slack.com/services/BBG98PXA6|incoming-webhook>",
+      "user": "U7JNGMGEB",
+      "bot_id": "BBG98PXA6",
+      "bot_link": "<https://wee-slack-test.slack.com/services/BBG98PXA6|incoming-webhook>",
+      "ts": "1530267459.000121",
+      "reactions": [
+        {
+          "name": "smile",
+          "users": [
+            "U7JNGMGEB"
+          ],
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "has_more": false,
+  "pin_count": 0,
+  "channel_actions_ts": null,
+  "channel_actions_count": 0
+}

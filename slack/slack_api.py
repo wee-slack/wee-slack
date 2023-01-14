@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 from urllib.parse import urlencode
 
 from slack.http import http_request
 from slack.shared import shared
 
 if TYPE_CHECKING:
+    from slack_api.slack_conversations_history import SlackConversationsHistoryResponse
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
     from slack_api.slack_users_info import SlackUsersInfoResponse
@@ -53,7 +54,9 @@ class SlackApi:
             return response
         return response
 
-    async def fetch_conversations_history(self, conversation: SlackConversation) -> Any:
+    async def fetch_conversations_history(
+        self, conversation: SlackConversation
+    ) -> SlackConversationsHistoryResponse:
         return await self._fetch("conversations.history", {"channel": conversation.id})
 
     async def fetch_conversations_info(
