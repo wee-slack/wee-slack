@@ -73,8 +73,8 @@ class SlackConfigSectionWorkspace:
             False,
         )
 
-        self.slack_timeout = self._create_option(
-            "slack_timeout",
+        self.network_timeout = self._create_option(
+            "network_timeout",
             "timeout (in seconds) for network requests",
             30,
         )
