@@ -26,11 +26,6 @@ def get_conversation_from_buffer_pointer(
     return None
 
 
-def buffer_input_cb(data: str, buffer: str, input_data: str) -> int:
-    weechat.prnt(buffer, "Text: %s" % input_data)
-    return weechat.WEECHAT_RC_OK
-
-
 class SlackConversation:
     def __init__(self, workspace: SlackWorkspace, id: str):
         self.workspace = workspace
@@ -72,7 +67,7 @@ class SlackConversation:
             self.name = info_channel["name"]
 
         self.buffer_pointer = weechat.buffer_new(
-            self.name, get_callback_name(buffer_input_cb), "", "", ""
+            self.name, get_callback_name(self.buffer_input_cb), "", "", ""
         )
         weechat.buffer_set(
             self.buffer_pointer, "localvar_set_nick", self.workspace.my_user.nick
@@ -102,3 +97,7 @@ class SlackConversation:
             print(f"history w/o fetch took: {time.time() - start}")
             self.history_filled = True
             self.history_pending = False
+
+    def buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
+        weechat.prnt(buffer, "Text: %s" % input_data)
+        return weechat.WEECHAT_RC_OK
