@@ -38,16 +38,9 @@ class SlackWorkspace:
 
     async def connect(self):
         # rtm_connect = await self.api.fetch("rtm.connect")
-        user_channels_response = await self.api.fetch_list(
-            "users.conversations",
-            "channels",
-            {
-                "exclude_archived": True,
-                # "types": "public_channel,private_channel,im",
-                "types": "public_channel",
-                "limit": 1000,
-            },
-            -1,
+        # "types": "public_channel,private_channel,im",
+        user_channels_response = await self.api.fetch_users_conversations(
+            "public_channel"
         )
         user_channels = user_channels_response["channels"]
 
