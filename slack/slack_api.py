@@ -10,6 +10,7 @@ from slack.shared import shared
 if TYPE_CHECKING:
     from slack_api.slack_conversations_history import SlackConversationsHistoryResponse
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
+    from slack_api.slack_rtm_connect import SlackRtmConnectResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
     from slack_api.slack_users_info import SlackUsersInfoResponse
 
@@ -53,6 +54,9 @@ class SlackApi:
             response[list_key].extend(next_pages[list_key])
             return response
         return response
+
+    async def fetch_rtm_connect(self) -> SlackRtmConnectResponse:
+        return await self._fetch("rtm.connect")
 
     async def fetch_conversations_history(
         self, conversation: SlackConversation

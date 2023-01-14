@@ -32,12 +32,18 @@ class SlackWorkspace:
         self.config = shared.config.create_workspace_config(self.name)
         self.api = SlackApi(self)
         self.is_connected = False
-        self.nick = "TODO"
         self.users = SlackUsers(self)
         self.conversations: Dict[str, SlackConversation] = {}
 
     async def connect(self):
-        # rtm_connect = await self.api.fetch("rtm.connect")
+        rtm_connect = await self.api.fetch_rtm_connect()
+        if rtm_connect["ok"] is False:
+            # TODO: Handle error
+            raise Exception("Failed fetching rtm.connect")
+
+        self.id = rtm_connect["team"]["id"]
+        self.my_user = await self.users[rtm_connect["self"]["id"]]
+
         # "types": "public_channel,private_channel,im",
         user_channels_response = await self.api.fetch_users_conversations(
             "public_channel"
