@@ -40,7 +40,7 @@ class SlackLatest(TypedDict):
     blocks: List[SlackBlock]
     team: str
 
-class SlackConversationInfoCommon(TypedDict):
+class SlackConversationsInfoCommon(TypedDict):
     id: str
     created: int
     is_archived: bool
@@ -48,7 +48,7 @@ class SlackConversationInfoCommon(TypedDict):
     context_team_id: str
     last_read: str
 
-class SlackConversationInfoCommonNotIm(SlackConversationInfoCommon):
+class SlackConversationsInfoCommonNotIm(SlackConversationsInfoCommon):
     name: str
     is_channel: bool
     is_group: bool
@@ -69,25 +69,25 @@ class SlackConversationInfoCommonNotIm(SlackConversationInfoCommon):
     purpose: SlackPurpose
 
 @final
-class SlackConversationInfoPublic(SlackConversationInfoCommonNotIm):
+class SlackConversationsInfoPublic(SlackConversationsInfoCommonNotIm):
     is_mpim: Literal[False]
     is_private: Literal[False]
     previous_names: List[str]  # TODO: Check if private and mpim has this
 
 @final
-class SlackConversationInfoPrivate(SlackConversationInfoCommonNotIm):
+class SlackConversationsInfoPrivate(SlackConversationsInfoCommonNotIm):
     is_mpim: Literal[False]
     is_private: Literal[True]
     is_open: bool
 
 @final
-class SlackConversationInfoMpim(SlackConversationInfoCommonNotIm):
+class SlackConversationsInfoMpim(SlackConversationsInfoCommonNotIm):
     is_mpim: Literal[True]
     is_private: Literal[True]
     is_open: bool
 
 @final
-class SlackConversationInfoIm(SlackConversationInfoCommon):
+class SlackConversationsInfoIm(SlackConversationsInfoCommon):
     is_im: Literal[True]
     user: str
     latest: SlackLatest
@@ -96,63 +96,63 @@ class SlackConversationInfoIm(SlackConversationInfoCommon):
     is_open: bool
     priority: int
 
-SlackConversationInfoNotIm = (
-    SlackConversationInfoPublic
-    | SlackConversationInfoPrivate
-    | SlackConversationInfoMpim
+SlackConversationsInfoNotIm = (
+    SlackConversationsInfoPublic
+    | SlackConversationsInfoPrivate
+    | SlackConversationsInfoMpim
 )
-SlackConversationInfo = SlackConversationInfoNotIm | SlackConversationInfoIm
+SlackConversationsInfo = SlackConversationsInfoNotIm | SlackConversationsInfoIm
 
 @final
-class SlackConversationInfoErrorResponse(TypedDict):
+class SlackConversationsInfoErrorResponse(TypedDict):
     ok: Literal[False]
     error: str
 
 @final
-class SlackConversationInfoPublicSuccessResponse(TypedDict):
+class SlackConversationsInfoPublicSuccessResponse(TypedDict):
     ok: Literal[True]
-    channel: SlackConversationInfoPublic
+    channel: SlackConversationsInfoPublic
 
 @final
-class SlackConversationInfoPrivateSuccessResponse(TypedDict):
+class SlackConversationsInfoPrivateSuccessResponse(TypedDict):
     ok: Literal[True]
-    channel: SlackConversationInfoPrivate
+    channel: SlackConversationsInfoPrivate
 
 @final
-class SlackConversationInfoMpimSuccessResponse(TypedDict):
+class SlackConversationsInfoMpimSuccessResponse(TypedDict):
     ok: Literal[True]
-    channel: SlackConversationInfoMpim
+    channel: SlackConversationsInfoMpim
 
 @final
-class SlackConversationInfoImSuccessResponse(TypedDict):
+class SlackConversationsInfoImSuccessResponse(TypedDict):
     ok: Literal[True]
-    channel: SlackConversationInfoIm
+    channel: SlackConversationsInfoIm
 
 @final
-class SlackConversationInfoNotImSuccessResponse(TypedDict):
+class SlackConversationsInfoNotImSuccessResponse(TypedDict):
     ok: Literal[True]
-    channel: SlackConversationInfoNotIm
+    channel: SlackConversationsInfoNotIm
 
 @final
-class SlackConversationInfoSuccessResponse(TypedDict):
+class SlackConversationsInfoSuccessResponse(TypedDict):
     ok: Literal[True]
-    channel: SlackConversationInfo
+    channel: SlackConversationsInfo
 
-SlackConversationInfoPublicResponse = (
-    SlackConversationInfoPublicSuccessResponse | SlackConversationInfoErrorResponse
+SlackConversationsInfoPublicResponse = (
+    SlackConversationsInfoPublicSuccessResponse | SlackConversationsInfoErrorResponse
 )
-SlackConversationInfoPrivateResponse = (
-    SlackConversationInfoPrivateSuccessResponse | SlackConversationInfoErrorResponse
+SlackConversationsInfoPrivateResponse = (
+    SlackConversationsInfoPrivateSuccessResponse | SlackConversationsInfoErrorResponse
 )
-SlackConversationInfoMpimResponse = (
-    SlackConversationInfoMpimSuccessResponse | SlackConversationInfoErrorResponse
+SlackConversationsInfoMpimResponse = (
+    SlackConversationsInfoMpimSuccessResponse | SlackConversationsInfoErrorResponse
 )
-SlackConversationInfoImResponse = (
-    SlackConversationInfoImSuccessResponse | SlackConversationInfoErrorResponse
+SlackConversationsInfoImResponse = (
+    SlackConversationsInfoImSuccessResponse | SlackConversationsInfoErrorResponse
 )
-SlackConversationInfoNotImResponse = (
-    SlackConversationInfoNotImSuccessResponse | SlackConversationInfoErrorResponse
+SlackConversationsInfoNotImResponse = (
+    SlackConversationsInfoNotImSuccessResponse | SlackConversationsInfoErrorResponse
 )
-SlackConversationInfoResponse = (
-    SlackConversationInfoSuccessResponse | SlackConversationInfoErrorResponse
+SlackConversationsInfoResponse = (
+    SlackConversationsInfoSuccessResponse | SlackConversationsInfoErrorResponse
 )
