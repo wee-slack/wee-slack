@@ -27,7 +27,7 @@ class SlackMessage:
     async def render_message(self):
         message = await self.unfurl_refs(self.message_json["text"])
         if "user" in self.message_json:
-            user = await self.workspace.get_user(self.message_json["user"])
+            user = await self.workspace.users[self.message_json["user"]]
             prefix = user.name
         else:
             prefix = "bot"
@@ -38,7 +38,7 @@ class SlackMessage:
         re_user = re.compile("<@([^>]+)>")
         user_ids: List[str] = re_user.findall(message)
         users_list = await gather(
-            *(self.workspace.get_user(user_id) for user_id in user_ids)
+            *(self.workspace.users[user_id] for user_id in user_ids)
         )
         users = dict(zip(user_ids, users_list))
 
