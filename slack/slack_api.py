@@ -8,7 +8,7 @@ from slack.http import http_request
 from slack.shared import shared
 
 if TYPE_CHECKING:
-    from slack_api import SlackConversationInfoResponse
+    from slack_api.slack_conversations_info import SlackConversationsInfoResponse
 
     from slack.slack_conversation import SlackConversation
     from slack.slack_user import SlackUser
@@ -56,7 +56,7 @@ class SlackApi:
 
     async def fetch_conversations_info(
         self, conversation: SlackConversation
-    ) -> SlackConversationInfoResponse:
+    ) -> SlackConversationsInfoResponse:
         return await self._fetch("conversations.info", {"channel": conversation.id})
 
     async def fetch_users_conversations(
