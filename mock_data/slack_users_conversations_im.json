@@ -1,0 +1,140 @@
+{
+  "ok": true,
+  "channels": [
+    {
+      "id": "D017V7T5PU0",
+      "created": 1594833860,
+      "is_archived": false,
+      "is_im": true,
+      "is_org_shared": false,
+      "context_team_id": "T0FC8BFQR",
+      "updated": 0,
+      "user": "U0175CGFJRY",
+      "is_user_deleted": false,
+      "priority": 0
+    },
+    {
+      "id": "D0175CGEG6N",
+      "created": 1594833858,
+      "is_archived": false,
+      "is_im": true,
+      "is_org_shared": false,
+      "context_team_id": "T0FC8BFQR",
+      "updated": 0,
+      "user": "U017V7T2D40",
+      "is_user_deleted": false,
+      "priority": 0
+    },
+    {
+      "id": "D016YLE7PCN",
+      "created": 1594833861,
+      "is_archived": false,
+      "is_im": true,
+      "is_org_shared": false,
+      "context_team_id": "T0FC8BFQR",
+      "updated": 0,
+      "user": "U0175CGHWRY",
+      "is_user_deleted": false,
+      "priority": 0
+    },
+    {
+      "id": "DU6635XQX",
+      "created": 1581979600,
+      "is_archived": false,
+      "is_im": true,
+      "is_org_shared": false,
+      "context_team_id": "T0FC8BFQR",
+      "updated": 0,
+      "user": "UU6635U31",
+      "is_user_deleted": false,
+      "priority": 0
+    },
+    {
+      "id": "DP7AN8CN7",
+      "created": 1571415458,
+      "is_archived": false,
+      "is_im": true,
+      "is_org_shared": false,
+      "context_team_id": "T0FC8BFQR",
+      "updated": 0,
+      "user": "UP7AN7YBV",
+      "is_user_deleted": false,
+      "priority": 0
+    },
+    {
+      "id": "DJD9KS929",
+      "created": 1556870691,
+      "is_archived": false,
+      "is_im": true,
+      "is_org_shared": false,
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1558178601879,
+      "user": "UJD9KS12R",
+      "is_user_deleted": false,
+      "priority": 0
+    },
+    {
+      "id": "D9N2KD0V6",
+      "created": 1520893592,
+      "is_archived": false,
+      "is_im": true,
+      "is_org_shared": false,
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1558176716111,
+      "user": "U9NJX9J83",
+      "is_user_deleted": false,
+      "priority": 0
+    },
+    {
+      "id": "D7HQ1NRS9",
+      "created": 1507853084,
+      "is_archived": false,
+      "is_im": true,
+      "is_org_shared": false,
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1558176218323,
+      "user": "USLACKBOT",
+      "is_user_deleted": false,
+      "priority": 0
+    },
+    {
+      "id": "D7HMJUDHS",
+      "created": 1507853084,
+      "is_archived": false,
+      "is_im": true,
+      "is_org_shared": false,
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1558176217584,
+      "user": "U0H4WARC1",
+      "is_user_deleted": false,
+      "priority": 0
+    },
+    {
+      "id": "D7HKY2H42",
+      "created": 1507853084,
+      "is_archived": false,
+      "is_im": true,
+      "is_org_shared": false,
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1558176217410,
+      "user": "U0FC36NA0",
+      "is_user_deleted": false,
+      "priority": 0
+    },
+    {
+      "id": "D7HHQR467",
+      "created": 1507853084,
+      "is_archived": false,
+      "is_im": true,
+      "is_org_shared": false,
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1558176216695,
+      "user": "U7JNGMGEB",
+      "is_user_deleted": false,
+      "priority": 0
+    }
+  ],
+  "response_metadata": {
+    "next_cursor": ""
+  }
+}

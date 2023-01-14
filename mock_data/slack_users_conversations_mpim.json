@@ -1,0 +1,498 @@
+{
+  "ok": true,
+  "channels": [
+    {
+      "id": "C020W8TUXJT",
+      "name": "mpdm-trygveaa029--trygveaa--trygveaa_wee-slack-te--trygveaa_wee-slack195-1",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "created": 1620500269,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "mpdm-trygveaa029--trygveaa--trygveaa_wee-slack-te--trygveaa_wee-slack195-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1620500269751,
+      "parent_conversation": null,
+      "creator": "U9NJX9J83",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "Group messaging with: @trygveaa029 @trygveaa @trygveaa_wee-slack-te @trygveaa_wee-slack195",
+        "creator": "U9NJX9J83",
+        "last_set": 1620500269
+      }
+    },
+    {
+      "id": "C021H6SG0CU",
+      "name": "mpdm-trygveaa--trygveaa_wee-slack-te--trygveaa_wee-slack195-1",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "created": 1620499967,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "mpdm-trygveaa--trygveaa_wee-slack-te--trygveaa_wee-slack195-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1620499967049,
+      "parent_conversation": null,
+      "creator": "U7JNGMGEB",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "Group messaging with: @trygveaa @trygveaa_wee-slack-te @trygveaa_wee-slack195",
+        "creator": "U7JNGMGEB",
+        "last_set": 1620499967
+      }
+    },
+    {
+      "id": "C021PJQPNHX",
+      "name": "mpdm-trygveaa029--trygveaa--trygveaa_wee-slack-te-1",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "created": 1620496096,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "mpdm-trygveaa029--trygveaa--trygveaa_wee-slack-te-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1620496096793,
+      "parent_conversation": null,
+      "creator": "U9NJX9J83",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "Group messaging with: @trygveaa029 @trygveaa @trygveaa_wee-slack-te",
+        "creator": "U9NJX9J83",
+        "last_set": 1620496096
+      }
+    },
+    {
+      "id": "C021PKAFBUZ",
+      "name": "mpdm-trygveaa029--trygveaa--trygveaa_wee-slack195-1",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "created": 1620497635,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "mpdm-trygveaa029--trygveaa--trygveaa_wee-slack195-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1620497635451,
+      "parent_conversation": null,
+      "creator": "U9NJX9J83",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "Group messaging with: @trygveaa029 @trygveaa @trygveaa_wee-slack195",
+        "creator": "U9NJX9J83",
+        "last_set": 1620497635
+      }
+    },
+    {
+      "id": "C024SND34R5",
+      "name": "mpdm-trygveaa--trygveaa_wee-slack-te--trygveaa243-1",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "created": 1623839474,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "mpdm-trygveaa--trygveaa_wee-slack-te--trygveaa243-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1623839474006,
+      "parent_conversation": null,
+      "creator": "U7JNGMGEB",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "Group messaging with: @trygveaa @trygveaa_wee-slack-te @trygveaa243",
+        "creator": "U7JNGMGEB",
+        "last_set": 1623839474
+      }
+    },
+    {
+      "id": "C042N0XCZQW",
+      "name": "mpdm-trygveaa--trygveaa_wee-slack-te--slack.test-1",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "created": 1663433884,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "mpdm-trygveaa--trygveaa_wee-slack-te--slack.test-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1663433884582,
+      "parent_conversation": null,
+      "creator": "U7JNGMGEB",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "Group messaging with: @trygveaa @trygveaa_wee-slack-te @slack.test",
+        "creator": "U7JNGMGEB",
+        "last_set": 1663433884
+      }
+    },
+    {
+      "id": "C042P6YUX7Y",
+      "name": "mpdm-trygveaa029--trygveaa--slack.test--trygveaa_wee-slack195-1",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "created": 1663517561,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "mpdm-trygveaa029--trygveaa--slack.test--trygveaa_wee-slack195-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1663517561295,
+      "parent_conversation": null,
+      "creator": "U9NJX9J83",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "Group messaging with: @trygveaa029 @trygveaa @slack.test @trygveaa_wee-slack195",
+        "creator": "U9NJX9J83",
+        "last_set": 1663517561
+      }
+    },
+    {
+      "id": "C042VL9076F",
+      "name": "mpdm-trygveaa029--trygveaa--slack.test-1",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "created": 1663514345,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "mpdm-trygveaa029--trygveaa--slack.test-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1663514345671,
+      "parent_conversation": null,
+      "creator": "U9NJX9J83",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "Group messaging with: @trygveaa029 @trygveaa @slack.test",
+        "creator": "U9NJX9J83",
+        "last_set": 1663514345
+      }
+    },
+    {
+      "id": "C0438DN5HQR",
+      "name": "mpdm-trygveaa029--trygveaa--slack.test--trygveaa_wee-slack-te-1",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "created": 1663516746,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "mpdm-trygveaa029--trygveaa--slack.test--trygveaa_wee-slack-te-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1663516746762,
+      "parent_conversation": null,
+      "creator": "U9NJX9J83",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "Group messaging with: @trygveaa029 @trygveaa @slack.test @trygveaa_wee-slack-te",
+        "creator": "U9NJX9J83",
+        "last_set": 1663516746
+      }
+    },
+    {
+      "id": "C043KG8LGKA",
+      "name": "mpdm-trygveaa--trygveaa_wee-slack195--trygveaa243--trygveaa_wee-slack-te-1",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "created": 1663517520,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "mpdm-trygveaa--trygveaa_wee-slack195--trygveaa243--trygveaa_wee-slack-te-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1663517520188,
+      "parent_conversation": null,
+      "creator": "U7JNGMGEB",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "Group messaging with: @trygveaa @trygveaa_wee-slack195 @trygveaa243 @trygveaa_wee-slack-te",
+        "creator": "U7JNGMGEB",
+        "last_set": 1663517520
+      }
+    },
+    {
+      "id": "GKHEJUM1N",
+      "name": "mpdm-trygveaa029--trygveaa--trygveaa243-1",
+      "is_channel": false,
+      "is_group": true,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "created": 1560376096,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "mpdm-trygveaa029--trygveaa--trygveaa243-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1560376096594,
+      "parent_conversation": null,
+      "creator": "U9NJX9J83",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "last_read": "1664834869.209949",
+      "is_open": true,
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "Group messaging with: @trygveaa029 @trygveaa @trygveaa243",
+        "creator": "U9NJX9J83",
+        "last_set": 1560376096
+      },
+      "priority": 0
+    },
+    {
+      "id": "G0175DNNPK4",
+      "name": "mpdm-trygveaa_wee-slack195--trygveaa243--trygveaa-1",
+      "is_channel": false,
+      "is_group": true,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "created": 1594834785,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "mpdm-trygveaa_wee-slack195--trygveaa243--trygveaa-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1594834785370,
+      "parent_conversation": null,
+      "creator": "U0175CGFJRY",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "last_read": "0000000000.000000",
+      "is_open": false,
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "Group messaging with: @trygveaa_wee-slack195 @trygveaa243 @trygveaa",
+        "creator": "U0175CGFJRY",
+        "last_set": 1594834785
+      },
+      "priority": 0
+    },
+    {
+      "id": "G01P5NDRB6V",
+      "name": "mpdm-trygveaa--trygveaa_wee-slack195--trygveaa029--trygveaa243-1",
+      "is_channel": false,
+      "is_group": true,
+      "is_im": false,
+      "is_mpim": true,
+      "is_private": true,
+      "created": 1613830698,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "mpdm-trygveaa--trygveaa_wee-slack195--trygveaa029--trygveaa243-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1613830698854,
+      "parent_conversation": null,
+      "creator": "U7JNGMGEB",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "last_read": "0000000000.000000",
+      "is_open": false,
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "Group messaging with: @trygveaa @trygveaa_wee-slack195 @trygveaa029 @trygveaa243",
+        "creator": "U7JNGMGEB",
+        "last_set": 1613830698
+      },
+      "priority": 0
+    }
+  ],
+  "response_metadata": {
+    "next_cursor": ""
+  }
+}
