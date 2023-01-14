@@ -4,8 +4,8 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
-    from slack.api import SlackWorkspace
     from slack.config import SlackConfig
+    from slack.slack_workspace import SlackWorkspace
     from slack.task import Future, Task
 
 

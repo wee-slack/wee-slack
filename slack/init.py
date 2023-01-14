@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import weechat
 
-from slack.api import get_conversation_from_buffer_pointer
 from slack.commands import register_commands
 from slack.config import SlackConfig
 from slack.shared import shared
+from slack.slack_conversation import get_conversation_from_buffer_pointer
 from slack.task import create_task, sleep
 from slack.util import get_callback_name, with_color
 
