@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.0.0 (TBD)
+
+### Changes
+- The `slack_timeout` is now in seconds instead of milliseconds.
+
+### Features
+
+- Better config options, with sections, types, default values and options per workspace like the IRC config.
+- Support for SOCKS4 and SOCKS5 proxies.
+
 ## 2.10.1 (2023-09-22)
 
 ### Slack API changes
