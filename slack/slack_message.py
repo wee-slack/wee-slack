@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, List
 
 from slack.task import gather
 
 if TYPE_CHECKING:
+    from slack_api.slack_conversations_history import SlackMessage as SlackMessageDict
+
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackApi, SlackWorkspace
 
 
 class SlackMessage:
-    def __init__(self, conversation: SlackConversation, message_json: Any):
+    def __init__(self, conversation: SlackConversation, message_json: SlackMessageDict):
         self.conversation = conversation
         self.ts = message_json["ts"]
         self.message_json = message_json

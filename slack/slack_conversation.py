@@ -84,6 +84,9 @@ class SlackConversation:
             self.history_pending = True
 
             history = await self.api.fetch_conversations_history(self)
+            if history["ok"] is False:
+                # TODO: Handle error
+                return
             start = time.time()
 
             messages = [SlackMessage(self, message) for message in history["messages"]]
