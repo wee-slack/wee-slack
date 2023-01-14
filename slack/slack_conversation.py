@@ -12,8 +12,6 @@ from slack.task import gather
 from slack.util import get_callback_name
 
 if TYPE_CHECKING:
-    from slack_api import SlackConversationInfoResponse
-
     from slack.slack_api import SlackApi
     from slack.slack_workspace import SlackWorkspace
 
@@ -60,7 +58,7 @@ class SlackConversation:
 
     async def init(self):
         with self.loading():
-            info = await self.fetch_info()
+            info = await self.api.fetch_conversations_info(self)
         if info["ok"] != True:
             # TODO: Handle error
             return
@@ -78,11 +76,6 @@ class SlackConversation:
         )
         weechat.buffer_set(self.buffer_pointer, "localvar_set_nick", "nick")
 
-    async def fetch_info(self) -> SlackConversationInfoResponse:
-        with self.loading():
-            info = await self.api.fetch("conversations.info", {"channel": self.id})
-        return info
-
     async def fill_history(self):
         if self.history_filled or self.history_pending:
             return
@@ -90,9 +83,7 @@ class SlackConversation:
         with self.loading():
             self.history_pending = True
 
-            history = await self.api.fetch(
-                "conversations.history", {"channel": self.id}
-            )
+            history = await self.api.fetch_conversations_history(self)
             start = time.time()
 
             messages = [SlackMessage(self, message) for message in history["messages"]]

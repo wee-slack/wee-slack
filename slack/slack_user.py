@@ -17,5 +17,5 @@ class SlackUser:
         return self.workspace.api
 
     async def init(self):
-        info = await self.api.fetch("users.info", {"user": self.id})
+        info = await self.api.fetch_users_info(self)
         self.name = info["user"]["name"]
