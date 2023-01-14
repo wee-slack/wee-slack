@@ -46,6 +46,7 @@ class SlackConversationsInfoCommon(TypedDict):
     is_archived: bool
     is_org_shared: bool
     context_team_id: str
+    updated: int
     last_read: str
 
 class SlackConversationsInfoCommonNotIm(SlackConversationsInfoCommon):
