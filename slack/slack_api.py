@@ -9,6 +9,7 @@ from slack.shared import shared
 
 if TYPE_CHECKING:
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
+    from slack_api.slack_users_conversations import SlackUsersConversationsResponse
 
     from slack.slack_conversation import SlackConversation
     from slack.slack_user import SlackUser
@@ -65,7 +66,7 @@ class SlackApi:
         exclude_archived: bool = True,
         limit: int = 1000,
         pages: int = -1,
-    ) -> Any:
+    ) -> SlackUsersConversationsResponse:
         return await self._fetch_list(
             "users.conversations",
             "channels",

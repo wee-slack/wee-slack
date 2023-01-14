@@ -42,6 +42,10 @@ class SlackWorkspace:
         user_channels_response = await self.api.fetch_users_conversations(
             "public_channel"
         )
+        if user_channels_response["ok"] is False:
+            # TODO: Handle error
+            return
+
         user_channels = user_channels_response["channels"]
 
         for channel in user_channels:
