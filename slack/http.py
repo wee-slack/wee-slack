@@ -84,12 +84,13 @@ async def http_request(
             return await http_request(url, options, timeout, max_retries - 1)
         raise HttpError(url, return_code, 0, err)
 
-    headers_end_index = out.index("\r\n\r\n")
-    headers = out[:headers_end_index].split("\r\n")
-    http_status = int(headers[0].split(" ")[1])
+    parts = out.split("\r\n\r\nHTTP/")
+    last_header_part, body = parts[-1].split("\r\n\r\n", 1)
+    header_lines = last_header_part.split("\r\n")
+    http_status = int(header_lines[0].split(" ")[1])
 
     if http_status == 429:
-        for header in headers[1:]:
+        for header in header_lines[1:]:
             name, value = header.split(":", 1)
             if name.lower() == "retry-after":
                 retry_after = int(value.strip())
@@ -99,8 +100,6 @@ async def http_request(
                 )
                 await sleep(retry_after * 1000)
                 return await http_request(url, options, timeout)
-
-    body = out[headers_end_index + 4 :]
 
     if http_status >= 400:
         raise HttpError(url, return_code, http_status, body)

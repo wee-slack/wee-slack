@@ -1,3 +1,4 @@
+from textwrap import dedent
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -112,6 +113,33 @@ def test_http_request_error_retry_error():
     assert excinfo.value.error == ""
 
 
+def test_http_request_multiple_headers():
+    url = "http://example.com"
+    coroutine = http_request(url, {}, 0)
+    future = coroutine.send(None)
+    assert isinstance(future, FutureProcess)
+
+    response = "response"
+    body = (
+        dedent(
+            f"""
+            HTTP/1.1 200 Connection established
+
+            HTTP/2 200
+            content-type: application/json; charset=utf-8
+
+            {response}
+            """
+        )
+        .strip()
+        .replace("\n", "\r\n")
+    )
+
+    with pytest.raises(StopIteration) as excinfo:
+        coroutine.send(("", 0, body, ""))
+    assert excinfo.value.value == response
+
+
 @patch.object(weechat, "hook_timer")
 def test_http_request_ratelimit(mock_method: MagicMock):
     url = "http://example.com"
@@ -127,5 +155,7 @@ def test_http_request_ratelimit(mock_method: MagicMock):
 
     assert isinstance(coroutine.send((0,)), FutureProcess)
 
-    with pytest.raises(StopIteration):
-        coroutine.send(("", 0, "HTTP/2 200\r\n\r\n", ""))
+    response = "response"
+    with pytest.raises(StopIteration) as excinfo:
+        coroutine.send(("", 0, f"HTTP/2 200\r\n\r\n{response}", ""))
+    assert excinfo.value.value == response
