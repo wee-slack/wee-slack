@@ -4,9 +4,9 @@ from typing import Union
 
 import weechat
 
-from slack.api import SlackWorkspace
 from slack.log import print_error
 from slack.shared import shared
+from slack.slack_workspace import SlackWorkspace
 from slack.util import get_callback_name
 from slack.weechat_config import (
     WeeChatColor,
