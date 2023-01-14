@@ -20,5 +20,5 @@ class SlackUser:
         info = await self.api.fetch_users_info(self)
         if info["ok"] is False:
             # TODO: Handle error
-            return
+            raise Exception("Failed fetching user info")
         self.name = info["user"]["name"]
