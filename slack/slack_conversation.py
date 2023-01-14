@@ -74,7 +74,9 @@ class SlackConversation:
         self.buffer_pointer = weechat.buffer_new(
             self.name, get_callback_name(buffer_input_cb), "", "", ""
         )
-        weechat.buffer_set(self.buffer_pointer, "localvar_set_nick", "nick")
+        weechat.buffer_set(
+            self.buffer_pointer, "localvar_set_nick", self.workspace.my_user.nick
+        )
 
     async def fill_history(self):
         if self.history_filled or self.history_pending:

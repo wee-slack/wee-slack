@@ -9,6 +9,8 @@ if [ ! -d mock_data ]; then
   exit 1
 fi
 
+curl_slack "$api_base/rtm.connect" | jq . > mock_data/slack_rtm_connect.json
+
 curl_slack "$api_base/users.conversations?types=public_channel&exclude_archived=True" | jq . > mock_data/slack_users_conversations_public_channel.json
 curl_slack "$api_base/users.conversations?types=private_channel&exclude_archived=True" | jq . > mock_data/slack_users_conversations_private_channel.json
 curl_slack "$api_base/users.conversations?types=mpim&exclude_archived=True" | jq . > mock_data/slack_users_conversations_mpim.json
