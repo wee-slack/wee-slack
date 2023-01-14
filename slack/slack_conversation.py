@@ -59,14 +59,14 @@ class SlackConversation:
     async def init(self):
         with self.loading():
             info = await self.api.fetch_conversations_info(self)
-        if info["ok"] != True:
+        if info["ok"] is False:
             # TODO: Handle error
             return
 
         info_channel = info["channel"]
-        if info_channel["is_im"] == True:
+        if info_channel["is_im"] is True:
             self.name = "IM"  # TODO
-        elif info_channel["is_mpim"] == True:
+        elif info_channel["is_mpim"] is True:
             self.name = "MPIM"  # TODO
         else:
             self.name = info_channel["name"]
