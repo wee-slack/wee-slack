@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Generic, List, Literal, TypedDict, TypeVar, final
 
+from slack_api.slack_conversations_history import SlackMessage
+
 T = TypeVar("T")
 
 @final
@@ -15,32 +17,6 @@ class SlackPurpose(TypedDict):
     value: str
     creator: str
     last_set: int
-
-@final
-class SlackBlockElement(TypedDict):
-    type: str
-    text: str
-
-@final
-class SlackBlockElementParent(TypedDict):
-    type: str
-    elements: List[SlackBlockElement]
-
-@final
-class SlackBlock(TypedDict):
-    type: str
-    block_id: str
-    elements: List[SlackBlockElementParent]
-
-@final
-class SlackLatest(TypedDict):
-    client_msg_id: str
-    type: str
-    text: str
-    user: str
-    ts: str
-    blocks: List[SlackBlock]
-    team: str
 
 class SlackConversationsInfoCommon(TypedDict):
     id: str
@@ -93,7 +69,7 @@ class SlackConversationsInfoMpim(SlackConversationsInfoCommonNotIm):
 class SlackConversationsInfoIm(SlackConversationsInfoCommon):
     is_im: Literal[True]
     user: str
-    latest: SlackLatest
+    latest: SlackMessage
     unread_count: int
     unread_count_display: int
     is_open: bool
