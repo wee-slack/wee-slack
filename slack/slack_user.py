@@ -18,4 +18,7 @@ class SlackUser:
 
     async def init(self):
         info = await self.api.fetch_users_info(self)
+        if info["ok"] is False:
+            # TODO: Handle error
+            return
         self.name = info["user"]["name"]
