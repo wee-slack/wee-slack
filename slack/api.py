@@ -15,11 +15,7 @@ from slack.task import Future, create_task, gather
 from slack.util import get_callback_name
 
 if TYPE_CHECKING:
-    from slack_api import (
-        SlackConversationIm,
-        SlackConversationInfo,
-        SlackConversationNotIm,
-    )
+    from slack_api import SlackConversationInfoResponse
 
 
 def get_conversation_from_buffer_pointer(
@@ -164,13 +160,24 @@ class SlackConversation:
     async def init(self):
         with self.loading():
             info = await self.fetch_info()
-        self.name = info["channel"]["name"]
+        if info["ok"] != True:
+            # TODO: Handle error
+            return
+
+        info_channel = info["channel"]
+        if info_channel["is_im"] == True:
+            self.name = "IM"  # TODO
+        elif info_channel["is_mpim"] == True:
+            self.name = "MPIM"  # TODO
+        else:
+            self.name = info_channel["name"]
+
         self.buffer_pointer = weechat.buffer_new(
             self.name, get_callback_name(buffer_input_cb), "", "", ""
         )
         weechat.buffer_set(self.buffer_pointer, "localvar_set_nick", "nick")
 
-    async def fetch_info(self):
+    async def fetch_info(self) -> SlackConversationInfoResponse:
         with self.loading():
             info = await self.api.fetch("conversations.info", {"channel": self.id})
         return info
