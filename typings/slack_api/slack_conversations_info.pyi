@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Literal, TypedDict, final
+from typing import Generic, List, Literal, TypedDict, TypeVar, final
+
+T = TypeVar("T")
 
 @final
 class SlackTopic(TypedDict):
@@ -110,50 +112,31 @@ class SlackConversationsInfoErrorResponse(TypedDict):
     error: str
 
 @final
-class SlackConversationsInfoPublicSuccessResponse(TypedDict):
+class SlackConversationsInfoSuccessResponse(TypedDict, Generic[T]):
     ok: Literal[True]
-    channel: SlackConversationsInfoPublic
-
-@final
-class SlackConversationsInfoPrivateSuccessResponse(TypedDict):
-    ok: Literal[True]
-    channel: SlackConversationsInfoPrivate
-
-@final
-class SlackConversationsInfoMpimSuccessResponse(TypedDict):
-    ok: Literal[True]
-    channel: SlackConversationsInfoMpim
-
-@final
-class SlackConversationsInfoImSuccessResponse(TypedDict):
-    ok: Literal[True]
-    channel: SlackConversationsInfoIm
-
-@final
-class SlackConversationsInfoNotImSuccessResponse(TypedDict):
-    ok: Literal[True]
-    channel: SlackConversationsInfoNotIm
-
-@final
-class SlackConversationsInfoSuccessResponse(TypedDict):
-    ok: Literal[True]
-    channel: SlackConversationsInfo
+    channel: T
 
 SlackConversationsInfoPublicResponse = (
-    SlackConversationsInfoPublicSuccessResponse | SlackConversationsInfoErrorResponse
+    SlackConversationsInfoSuccessResponse[SlackConversationsInfoPublic]
+    | SlackConversationsInfoErrorResponse
 )
 SlackConversationsInfoPrivateResponse = (
-    SlackConversationsInfoPrivateSuccessResponse | SlackConversationsInfoErrorResponse
+    SlackConversationsInfoSuccessResponse[SlackConversationsInfoPrivate]
+    | SlackConversationsInfoErrorResponse
 )
 SlackConversationsInfoMpimResponse = (
-    SlackConversationsInfoMpimSuccessResponse | SlackConversationsInfoErrorResponse
+    SlackConversationsInfoSuccessResponse[SlackConversationsInfoMpim]
+    | SlackConversationsInfoErrorResponse
 )
 SlackConversationsInfoImResponse = (
-    SlackConversationsInfoImSuccessResponse | SlackConversationsInfoErrorResponse
+    SlackConversationsInfoSuccessResponse[SlackConversationsInfoIm]
+    | SlackConversationsInfoErrorResponse
 )
 SlackConversationsInfoNotImResponse = (
-    SlackConversationsInfoNotImSuccessResponse | SlackConversationsInfoErrorResponse
+    SlackConversationsInfoSuccessResponse[SlackConversationsInfoNotIm]
+    | SlackConversationsInfoErrorResponse
 )
 SlackConversationsInfoResponse = (
-    SlackConversationsInfoSuccessResponse | SlackConversationsInfoErrorResponse
+    SlackConversationsInfoSuccessResponse[SlackConversationsInfo]
+    | SlackConversationsInfoErrorResponse
 )
