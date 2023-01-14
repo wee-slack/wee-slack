@@ -35,7 +35,7 @@ class SlackApi:
         response = await http_request(
             url,
             self._get_request_options(),
-            self.workspace.config.slack_timeout.value * 1000,
+            self.workspace.config.network_timeout.value * 1000,
         )
         return json.loads(response)
 

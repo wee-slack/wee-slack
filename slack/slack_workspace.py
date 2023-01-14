@@ -88,12 +88,12 @@ class SlackWorkspace:
             "http_proxy_host": proxy.address,
             "http_proxy_port": proxy.port,
             "http_proxy_auth": (proxy.username, proxy.password),
-            "http_proxy_timeout": self.config.slack_timeout.value,
+            "http_proxy_timeout": self.config.network_timeout.value,
         }
         # TODO: Handle errors
         self.ws = create_connection(
             url,
-            self.config.slack_timeout.value,
+            self.config.network_timeout.value,
             sslopt=sslopt_ca_certs,
             **proxy_options,
         )
