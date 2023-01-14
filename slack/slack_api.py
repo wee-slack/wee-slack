@@ -26,7 +26,7 @@ class SlackApi:
         return {
             "useragent": f"wee_slack {shared.SCRIPT_VERSION}",
             "httpheader": f"Authorization: Bearer {self.workspace.config.api_token.value}",
-            "cookie": self.workspace.config.api_cookies.value,
+            "cookie": self.workspace.config.api_cookies.value,  # TODO: url_encode_if_not_encoded
         }
 
     async def _fetch(self, method: str, params: Dict[str, Union[str, int]] = {}):

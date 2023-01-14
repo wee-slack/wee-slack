@@ -254,12 +254,14 @@ def completion_list_add(completion: str, word: str, nick_completion: int, where:
     if word == "%(slack_workspaces)":
         completion_slack_workspaces_cb("", "slack_workspaces", "", completion)
     else:
+        # TODO: Consider WeeChat verison support, in < 2.9 one must use hook_completion_list_add
         weechat.completion_list_add(completion, word, nick_completion, where)
 
 
 def completion_slack_workspace_commands_cb(
     data: str, completion_item: str, buffer: str, completion: str
 ) -> int:
+    # TODO: Consider WeeChat verison support, in < 2.9 one must use hook_completion_get_string
     base_command = weechat.completion_get_string(completion, "base_command")
     base_word = weechat.completion_get_string(completion, "base_word")
     args = weechat.completion_get_string(completion, "args")
