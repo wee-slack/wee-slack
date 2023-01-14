@@ -1,0 +1,384 @@
+{
+  "ok": true,
+  "channels": [
+    {
+      "id": "CF8FMS5DW",
+      "name": "test-public-2-private",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": false,
+      "is_private": true,
+      "created": 1546972689,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "test-public-2-private",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1569955990722,
+      "parent_conversation": null,
+      "creator": "U7JNGMGEB",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "topic",
+        "creator": "U7JNGMGEB",
+        "last_set": 1569955990
+      },
+      "purpose": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      }
+    },
+    {
+      "id": "GF92JJVD2",
+      "name": "test-private",
+      "is_channel": false,
+      "is_group": true,
+      "is_im": false,
+      "is_mpim": false,
+      "is_private": true,
+      "created": 1546971648,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "test-private",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1560346299797,
+      "parent_conversation": null,
+      "creator": "U7JNGMGEB",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "last_read": "1597743301.000100",
+      "is_open": true,
+      "topic": {
+        "value": "zxc",
+        "creator": "U7JNGMGEB",
+        "last_set": 1560346299
+      },
+      "purpose": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      }
+    },
+    {
+      "id": "GNLENA84B",
+      "name": "channel-created-as-private-initially",
+      "is_channel": false,
+      "is_group": true,
+      "is_im": false,
+      "is_mpim": false,
+      "is_private": true,
+      "created": 1569952911,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "channel-created-as-private-initially",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1569952911815,
+      "parent_conversation": null,
+      "creator": "U7JNGMGEB",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "last_read": "1664834738.133719",
+      "is_open": true,
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      }
+    },
+    {
+      "id": "CNZQKUU9M",
+      "name": "channel-created-as-public-then-converted-to-private",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": false,
+      "is_private": true,
+      "created": 1569952842,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "channel-created-as-public-then-converted-to-private",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1569952876930,
+      "parent_conversation": null,
+      "creator": "U7JNGMGEB",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      }
+    },
+    {
+      "id": "C0135RRQA5B",
+      "name": "converted-to-private-2",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": false,
+      "is_private": true,
+      "created": 1588840764,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "converted-to-private-2",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1588840785531,
+      "parent_conversation": null,
+      "creator": "U9NJX9J83",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      }
+    },
+    {
+      "id": "C01377FAVV0",
+      "name": "converted-to-private",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": false,
+      "is_private": true,
+      "created": 1588840699,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "converted-to-private",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1588840856421,
+      "parent_conversation": null,
+      "creator": "U7JNGMGEB",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      }
+    },
+    {
+      "id": "C0137DRNH3M",
+      "name": "converted-to-private-4",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": false,
+      "is_private": true,
+      "created": 1588840866,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "converted-to-private-4",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1588840875545,
+      "parent_conversation": null,
+      "creator": "U9NJX9J83",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      }
+    },
+    {
+      "id": "G016T8RQNJH",
+      "name": "channel-created-from-wee-private-1",
+      "is_channel": false,
+      "is_group": true,
+      "is_im": false,
+      "is_mpim": false,
+      "is_private": true,
+      "created": 1594320187,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "channel-created-from-wee-private-1",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1594320187521,
+      "parent_conversation": null,
+      "creator": "U7JNGMGEB",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "last_read": "1594320187.000200",
+      "is_open": true,
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      }
+    },
+    {
+      "id": "C0495PWT06P",
+      "name": "private-2022-11-02",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": false,
+      "is_private": true,
+      "created": 1667398290,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "private-2022-11-02",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1667404575101,
+      "parent_conversation": null,
+      "creator": "U9NJX9J83",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      }
+    },
+    {
+      "id": "C0495SU9KUJ",
+      "name": "public-then-private-2022-11-02",
+      "is_channel": true,
+      "is_group": false,
+      "is_im": false,
+      "is_mpim": false,
+      "is_private": true,
+      "created": 1667398303,
+      "is_archived": false,
+      "is_general": false,
+      "unlinked": 0,
+      "name_normalized": "public-then-private-2022-11-02",
+      "is_shared": false,
+      "is_org_shared": false,
+      "is_pending_ext_shared": false,
+      "pending_shared": [],
+      "context_team_id": "T0FC8BFQR",
+      "updated": 1667398315619,
+      "parent_conversation": null,
+      "creator": "U9NJX9J83",
+      "is_ext_shared": false,
+      "shared_team_ids": [
+        "T0FC8BFQR"
+      ],
+      "pending_connected_team_ids": [],
+      "topic": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      },
+      "purpose": {
+        "value": "",
+        "creator": "",
+        "last_set": 0
+      }
+    }
+  ],
+  "response_metadata": {
+    "next_cursor": ""
+  }
+}
