@@ -14,7 +14,8 @@ from slack.util import get_callback_name
 if TYPE_CHECKING:
     from slack_api import SlackConversationInfoResponse
 
-    from slack.slack_workspace import SlackApi, SlackWorkspace
+    from slack.slack_api import SlackApi
+    from slack.slack_workspace import SlackWorkspace
 
 
 def get_conversation_from_buffer_pointer(
