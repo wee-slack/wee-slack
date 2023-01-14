@@ -10,6 +10,7 @@ from slack.shared import shared
 if TYPE_CHECKING:
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
+    from slack_api.slack_users_info import SlackUsersInfoResponse
 
     from slack.slack_conversation import SlackConversation
     from slack.slack_user import SlackUser
@@ -78,5 +79,5 @@ class SlackApi:
             pages,
         )
 
-    async def fetch_users_info(self, user: SlackUser) -> Any:
+    async def fetch_users_info(self, user: SlackUser) -> SlackUsersInfoResponse:
         return await self._fetch("users.info", {"user": user.id})

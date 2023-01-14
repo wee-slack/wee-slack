@@ -20,3 +20,6 @@ curl_slack "$api_base/conversations.info?channel=GNLENA84B" | jq . > mock_data/s
 curl_slack "$api_base/conversations.info?channel=C042VL9076F" | jq . > mock_data/slack_info_mpim_channel.json
 curl_slack "$api_base/conversations.info?channel=GKHEJUM1N" | jq . > mock_data/slack_info_mpim_group.json
 curl_slack "$api_base/conversations.info?channel=D9N2KD0V6" | jq . > mock_data/slack_info_im.json
+
+curl_slack "$api_base/users.info?user=U017V7T2D40" | jq . > mock_data/slack_users_info_person.json
+curl_slack "$api_base/users.info?user=UU6635U31" | jq . > mock_data/slack_users_info_bot.json
