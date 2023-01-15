@@ -6,6 +6,7 @@ import weechat
 import slack.http
 from slack.http import hook_process_hashtable
 from slack.task import FutureProcess, FutureTimer, weechat_task_cb
+from slack.util import get_callback_name
 
 
 @patch.object(weechat, "hook_process_hashtable")
@@ -18,7 +19,7 @@ def test_hook_process_hashtable(mock_method: MagicMock):
     assert isinstance(future, FutureProcess)
 
     mock_method.assert_called_once_with(
-        command, options, timeout, weechat_task_cb.__name__, future.id
+        command, options, timeout, get_callback_name(weechat_task_cb), future.id
     )
 
     with pytest.raises(StopIteration) as excinfo:
@@ -36,7 +37,7 @@ def test_hook_process_hashtable_chunked(mock_method: MagicMock):
     assert isinstance(future, FutureProcess)
 
     mock_method.assert_called_once_with(
-        command, options, timeout, weechat_task_cb.__name__, future.id
+        command, options, timeout, get_callback_name(weechat_task_cb), future.id
     )
 
     assert isinstance(coroutine.send((command, -1, "o1", "e1")), FutureProcess)

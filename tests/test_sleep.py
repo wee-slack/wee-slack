@@ -4,6 +4,7 @@ import pytest
 import weechat
 
 from slack.task import FutureTimer, sleep, weechat_task_cb
+from slack.util import get_callback_name
 
 
 @patch.object(weechat, "hook_timer")
@@ -14,7 +15,7 @@ def test_sleep(mock_method: MagicMock):
     assert isinstance(future, FutureTimer)
 
     mock_method.assert_called_once_with(
-        milliseconds, 0, 1, weechat_task_cb.__name__, future.id
+        milliseconds, 0, 1, get_callback_name(weechat_task_cb), future.id
     )
 
     with pytest.raises(StopIteration) as excinfo:
