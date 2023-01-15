@@ -75,7 +75,7 @@ async def init_async():
         await sleep(1)  # Defer auto connect to ensure the logger plugin is loaded
         for workspace in shared.workspaces.values():
             if workspace.config.autoconnect.value:
-                await workspace.connect()
+                create_task(workspace.connect())
 
 
 def register():
