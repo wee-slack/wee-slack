@@ -1,5 +1,6 @@
-from typing import Dict, Literal, TypedDict, final
+from typing import Dict, List, Literal, TypedDict, final
 
+from slack_api.slack_error import SlackErrorResponse
 from typing_extensions import NotRequired
 
 class SlackBotInfo(TypedDict):
@@ -12,13 +13,8 @@ class SlackBotInfo(TypedDict):
     icons: Dict[str, str]
 
 @final
-class SlackBotInfoErrorResponse(TypedDict):
-    ok: Literal[False]
-    error: str
-
-@final
 class SlackBotInfoSuccessResponse(TypedDict):
     ok: Literal[True]
     bot: SlackBotInfo
 
-SlackBotInfoResponse = SlackBotInfoSuccessResponse | SlackBotInfoErrorResponse
+SlackBotInfoResponse = SlackBotInfoSuccessResponse | SlackErrorResponse

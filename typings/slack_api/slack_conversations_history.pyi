@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Literal, TypedDict, final
 
+from slack_api.slack_error import SlackErrorResponse
 from typing_extensions import NotRequired
 
 @final
@@ -141,11 +142,6 @@ class SlackMessageSubtypeBotAdd(SlackMessageCommon):
     bot_id: str
     bot_link: str
 
-@final
-class SlackConversationsHistoryErrorResponse(TypedDict):
-    ok: Literal[False]
-    error: str
-
 SlackMessage = (
     SlackMessageStandard
     | SlackMessageThreadParentNotSubscribed
@@ -167,5 +163,5 @@ class SlackConversationsHistorySuccessResponse(TypedDict):
     channel_actions_count: int
 
 SlackConversationsHistoryResponse = (
-    SlackConversationsHistorySuccessResponse | SlackConversationsHistoryErrorResponse
+    SlackConversationsHistorySuccessResponse | SlackErrorResponse
 )

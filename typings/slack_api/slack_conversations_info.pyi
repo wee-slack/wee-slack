@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Generic, List, Literal, TypedDict, TypeVar, final
 
 from slack_api.slack_conversations_history import SlackMessage
+from slack_api.slack_error import SlackErrorResponse
 
 T = TypeVar("T")
 
@@ -83,36 +84,29 @@ SlackConversationsInfoNotIm = (
 SlackConversationsInfo = SlackConversationsInfoNotIm | SlackConversationsInfoIm
 
 @final
-class SlackConversationsInfoErrorResponse(TypedDict):
-    ok: Literal[False]
-    error: str
-
-@final
 class SlackConversationsInfoSuccessResponse(TypedDict, Generic[T]):
     ok: Literal[True]
     channel: T
 
 SlackConversationsInfoPublicResponse = (
     SlackConversationsInfoSuccessResponse[SlackConversationsInfoPublic]
-    | SlackConversationsInfoErrorResponse
+    | SlackErrorResponse
 )
 SlackConversationsInfoPrivateResponse = (
     SlackConversationsInfoSuccessResponse[SlackConversationsInfoPrivate]
-    | SlackConversationsInfoErrorResponse
+    | SlackErrorResponse
 )
 SlackConversationsInfoMpimResponse = (
     SlackConversationsInfoSuccessResponse[SlackConversationsInfoMpim]
-    | SlackConversationsInfoErrorResponse
+    | SlackErrorResponse
 )
 SlackConversationsInfoImResponse = (
-    SlackConversationsInfoSuccessResponse[SlackConversationsInfoIm]
-    | SlackConversationsInfoErrorResponse
+    SlackConversationsInfoSuccessResponse[SlackConversationsInfoIm] | SlackErrorResponse
 )
 SlackConversationsInfoNotImResponse = (
     SlackConversationsInfoSuccessResponse[SlackConversationsInfoNotIm]
-    | SlackConversationsInfoErrorResponse
+    | SlackErrorResponse
 )
 SlackConversationsInfoResponse = (
-    SlackConversationsInfoSuccessResponse[SlackConversationsInfo]
-    | SlackConversationsInfoErrorResponse
+    SlackConversationsInfoSuccessResponse[SlackConversationsInfo] | SlackErrorResponse
 )
