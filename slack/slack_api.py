@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
     from slack_api.slack_rtm_connect import SlackRtmConnectResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
-    from slack_api.slack_users_info import SlackUsersInfoResponse
+    from slack_api.slack_users_info import SlackUserInfoResponse
 
     from slack.slack_conversation import SlackConversation
     from slack.slack_user import SlackBot, SlackUser
@@ -87,8 +87,8 @@ class SlackApi:
             pages,
         )
 
-    async def fetch_users_info(self, user: SlackUser) -> SlackUsersInfoResponse:
+    async def fetch_user_info(self, user: SlackUser) -> SlackUserInfoResponse:
         return await self._fetch("users.info", {"user": user.id})
 
-    async def fetch_bots_info(self, bot: SlackBot) -> SlackBotInfoResponse:
+    async def fetch_bot_info(self, bot: SlackBot) -> SlackBotInfoResponse:
         return await self._fetch("bots.info", {"bot": bot.id})

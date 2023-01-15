@@ -34,7 +34,7 @@ class SlackUser:
         return self.workspace.api
 
     async def init(self):
-        info = await self._api.fetch_users_info(self)
+        info = await self._api.fetch_user_info(self)
         if info["ok"] is False:
             # TODO: Handle error
             raise Exception("Failed fetching user info")
@@ -84,7 +84,7 @@ class SlackBot:
         return self.workspace.api
 
     async def init(self):
-        info = await self._api.fetch_bots_info(self)
+        info = await self._api.fetch_bot_info(self)
         if info["ok"] is False:
             # TODO: Handle error
             raise Exception("Failed fetching user info")
