@@ -38,8 +38,8 @@ class SlackConfigSectionColor:
         self.reaction_suffix = WeeChatOption(
             self._section,
             "reaction_suffix",
-            "text color for the [:wave:(@user)] suffix on messages that have "
-            "reactions attached to them.",
+            "text color for the [:wave:(@user)] suffix on messages that have"
+            " reactions attached to them.",
             WeeChatColor("darkgray"),
         )
 
@@ -77,6 +77,14 @@ class SlackConfigSectionWorkspace:
             "network_timeout",
             "timeout (in seconds) for network requests",
             30,
+        )
+
+        self.use_real_names = self._create_option(
+            "use_real_names",
+            "use real names as the nicks for all users. When this is"
+            " false, display names will be used if set, with a fallback"
+            " to the real name if display name is not set",
+            False,
         )
 
     def _create_option(
