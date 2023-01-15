@@ -44,6 +44,18 @@ class SlackConfigSectionColor:
         )
 
 
+class SlackConfigSectionLook:
+    def __init__(self, weechat_config: WeeChatConfig):
+        self._section = WeeChatSection(weechat_config, "look")
+
+        self.external_user_suffix = WeeChatOption(
+            self._section,
+            "external_user_suffix",
+            "the suffix appended to nicks to indicate external users",
+            "*",
+        )
+
+
 class SlackConfigSectionWorkspace:
     def __init__(
         self,
@@ -178,6 +190,7 @@ class SlackConfig:
     def __init__(self):
         self.weechat_config = WeeChatConfig("slack")
         self.color = SlackConfigSectionColor(self.weechat_config)
+        self.look = SlackConfigSectionLook(self.weechat_config)
         self._section_workspace_default = WeeChatSection(
             self.weechat_config, "workspace_default"
         )

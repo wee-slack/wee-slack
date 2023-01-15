@@ -85,7 +85,7 @@ def display_workspace(workspace: SlackWorkspace, detailed_list: bool):
             f"{with_color('chat_delimiters', '[')}"
             f"connected"
             f"{with_color('chat_delimiters', ']')}"
-            f", nick: {workspace.my_user.nick}"
+            f", nick: {workspace.my_user.nick()}"
             f", 0 channel(s), 0 pv",
         )
     else:
