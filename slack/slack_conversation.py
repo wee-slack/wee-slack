@@ -66,9 +66,12 @@ class SlackConversation:
         else:
             self.name = info_channel["name"]
 
+        full_name = f"{shared.SCRIPT_NAME}.{self.workspace.name}.{self.name}"
+
         self.buffer_pointer = weechat.buffer_new(
-            self.name, get_callback_name(self.buffer_input_cb), "", "", ""
+            full_name, get_callback_name(self.buffer_input_cb), "", "", ""
         )
+        weechat.buffer_set(self.buffer_pointer, "short_name", self.name)
         weechat.buffer_set(
             self.buffer_pointer, "localvar_set_nick", self.workspace.my_user.nick()
         )
