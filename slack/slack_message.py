@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 from slack.slack_user import format_bot_nick
 from slack.task import gather
@@ -23,26 +23,32 @@ class SlackMessage:
     def workspace(self) -> SlackWorkspace:
         return self.conversation.workspace
 
-    async def render_message(self):
+    @property
+    def sender_user_id(self) -> Optional[str]:
+        return self._message_json.get("user")
+
+    async def render_message(self) -> str:
+        prefix_coro = self._prefix()
+        message_coro = self._unfurl_refs(self._message_json["text"])
+        prefix, message = await gather(prefix_coro, message_coro)
+        return f"{prefix}\t{message}"
+
+    async def _prefix(self) -> str:
         if (
             "subtype" in self._message_json
             and self._message_json["subtype"] == "bot_message"
         ):
             username = self._message_json.get("username")
             if username:
-                prefix = format_bot_nick(username, colorize=True)
+                return format_bot_nick(username, colorize=True)
             else:
                 bot = await self.workspace.bots[self._message_json["bot_id"]]
-                prefix = bot.nick(colorize=True)
+                return bot.nick(colorize=True)
         else:
             user = await self.workspace.users[self._message_json["user"]]
-            prefix = user.nick(colorize=True)
+            return user.nick(colorize=True)
 
-        message = await self._unfurl_refs(self._message_json["text"])
-
-        return f"{prefix}\t{message}"
-
-    async def _unfurl_refs(self, message: str):
+    async def _unfurl_refs(self, message: str) -> str:
         re_user = re.compile("<@([^>]+)>")
         user_ids: List[str] = re_user.findall(message)
         users_list = await gather(

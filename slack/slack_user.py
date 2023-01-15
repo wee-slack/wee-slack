@@ -1,13 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import weechat
 
 from slack.shared import shared
+from slack.task import create_task
 from slack.util import with_color
 
 if TYPE_CHECKING:
+    from slack_api.slack_bots_info import SlackBotInfo
+    from slack_api.slack_users_info import SlackUserInfo
+
     from slack.slack_workspace import SlackApi, SlackWorkspace
 
 
@@ -25,20 +29,34 @@ def format_bot_nick(nick: str, colorize: bool = False) -> str:
 
 
 class SlackUser:
-    def __init__(self, workspace: SlackWorkspace, id: str):
+    def __init__(
+        self,
+        workspace: SlackWorkspace,
+        id: str,
+        info: Optional[SlackUserInfo] = None,
+    ):
         self.workspace = workspace
         self.id = id
+        if info:
+            self._info = info
+            self._set_info_task = None
+        else:
+            self._set_info_task = create_task(self._set_info())
 
     @property
     def _api(self) -> SlackApi:
         return self.workspace.api
 
-    async def init(self):
-        info = await self._api.fetch_user_info(self)
-        if info["ok"] is False:
+    async def _set_info(self):
+        info_response = await self._api.fetch_user_info(self.id)
+        if info_response["ok"] is False:
             # TODO: Handle error
             raise Exception("Failed fetching user info")
-        self._info = info["user"]
+        self._info = info_response["user"]
+
+    async def ensure_initialized(self):
+        if self._set_info_task:
+            await self._set_info_task
 
     def nick(self, colorize: bool = False) -> str:
         nick = self._name_without_spaces()
@@ -75,20 +93,34 @@ class SlackUser:
 
 
 class SlackBot:
-    def __init__(self, workspace: SlackWorkspace, id: str):
+    def __init__(
+        self,
+        workspace: SlackWorkspace,
+        id: str,
+        info: Optional[SlackBotInfo] = None,
+    ):
         self.workspace = workspace
         self.id = id
+        if info:
+            self._info = info
+            self._set_info_task = None
+        else:
+            self._set_info_task = create_task(self._set_info())
 
     @property
     def _api(self) -> SlackApi:
         return self.workspace.api
 
-    async def init(self):
-        info = await self._api.fetch_bot_info(self)
-        if info["ok"] is False:
+    async def _set_info(self):
+        info_response = await self._api.fetch_bot_info(self.id)
+        if info_response["ok"] is False:
             # TODO: Handle error
-            raise Exception("Failed fetching user info")
-        self._info = info["bot"]
+            raise Exception("Failed fetching bot info")
+        self._info = info_response["bot"]
+
+    async def ensure_initialized(self):
+        if self._set_info_task:
+            await self._set_info_task
 
     def nick(self, colorize: bool = False) -> str:
         return format_bot_nick(self._info["name"], colorize)
