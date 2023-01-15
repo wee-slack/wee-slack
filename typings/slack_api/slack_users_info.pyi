@@ -6,28 +6,44 @@ from typing_extensions import NotRequired
 
 T = TypeVar("T")
 
+class SlackProfileField(TypedDict):
+    value: str
+    alt: str
+
+class SlackProfileStatusEmojiDisplayInfo(TypedDict):
+    emoji_name: str
+    display_url: str
+    unicode: str
+
 class SlackProfileCommon(TypedDict):
     title: NotRequired[Optional[str]]
     phone: NotRequired[Optional[str]]
     skype: NotRequired[Optional[str]]
+    first_name: NotRequired[Optional[str]]
+    last_name: NotRequired[Optional[str]]
     real_name: NotRequired[Optional[str]]
     real_name_normalized: NotRequired[Optional[str]]
     display_name: NotRequired[Optional[str]]
     display_name_normalized: NotRequired[Optional[str]]
-    # fields: NotRequired[Optional[Dict]]  # pyright: ignore [reportMissingTypeArgument]
+    fields: NotRequired[Optional[Dict[str, SlackProfileField]]]
     status_text: NotRequired[Optional[str]]
     status_emoji: NotRequired[Optional[str]]
-    # status_emoji_display_info: NotRequired[
-    #     Optional[List]  # pyright: ignore [reportMissingTypeArgument]
-    # ]
+    status_emoji_display_info: NotRequired[
+        Optional[List[SlackProfileStatusEmojiDisplayInfo]]
+    ]
     status_expiration: NotRequired[Optional[int]]
     avatar_hash: NotRequired[Optional[str]]
+    image_original: NotRequired[str]
+    is_custom_image: NotRequired[Optional[bool]]
+    huddle_state: NotRequired[Optional[str]]
+    huddle_state_expiration_ts: NotRequired[Optional[int]]
     image_24: str
     image_32: str
     image_48: str
     image_72: str
     image_192: str
     image_512: str
+    image_1024: NotRequired[str]
     status_text_canonical: NotRequired[Optional[str]]
     team: str
 
@@ -39,36 +55,48 @@ class SlackProfilePerson(SlackProfileCommon):
 class SlackProfileBot(SlackProfileCommon):
     api_app_id: NotRequired[Optional[str]]
     always_active: NotRequired[Optional[bool]]
-    image_original: str
-    is_custom_image: NotRequired[Optional[bool]]
     bot_id: NotRequired[Optional[str]]
     image_1024: str
 
-class SlackUsersInfoCommon(TypedDict):
+SlackProfile = SlackProfilePerson | SlackProfileBot
+
+class SlackEnterpriseUser(TypedDict):
     id: str
-    team_id: str
-    name: str
-    deleted: bool
-    color: str
-    real_name: str
-    tz: str
-    tz_label: str
-    tz_offset: int
+    enterprise_id: str
+    enterprise_name: str
     is_admin: bool
     is_owner: bool
     is_primary_owner: bool
-    is_restricted: bool
-    is_ultra_restricted: bool
+    teams: List[str]
+
+class SlackUsersInfoCommon(TypedDict):
+    id: str
+    team_id: NotRequired[str]
+    name: str
+    deleted: NotRequired[bool]
+    color: str
+    real_name: NotRequired[str]
+    tz: NotRequired[str]
+    tz_label: NotRequired[str]
+    tz_offset: NotRequired[int]
+    is_admin: NotRequired[bool]
+    is_owner: NotRequired[bool]
+    is_primary_owner: NotRequired[bool]
+    is_restricted: NotRequired[bool]
+    is_ultra_restricted: NotRequired[bool]
     is_app_user: bool
     updated: int
-    is_email_confirmed: bool
+    is_email_confirmed: NotRequired[bool]
     who_can_share_contact_card: str
 
 @final
 class SlackUsersInfoPerson(SlackUsersInfoCommon):
     profile: SlackProfilePerson
     is_bot: Literal[False]
+    is_stranger: NotRequired[bool]
     has_2fa: bool
+    enterprise_user: NotRequired[SlackEnterpriseUser]
+    enterprise_id: NotRequired[str]
 
 @final
 class SlackUsersInfoBot(SlackUsersInfoCommon):
