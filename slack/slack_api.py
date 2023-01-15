@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Dict, List, Union
+from typing import TYPE_CHECKING, Dict, Iterable, Union
 from urllib.parse import urlencode
 
 from slack.http import http_request
@@ -89,11 +89,11 @@ class SlackApi:
     async def fetch_user_info(self, user_id: str) -> SlackUserInfoResponse:
         return await self._fetch("users.info", {"user": user_id})
 
-    async def fetch_users_info(self, user_ids: List[str]) -> SlackUsersInfoResponse:
+    async def fetch_users_info(self, user_ids: Iterable[str]) -> SlackUsersInfoResponse:
         return await self._fetch("users.info", {"users": ",".join(user_ids)})
 
     async def fetch_bot_info(self, bot_id: str) -> SlackBotInfoResponse:
         return await self._fetch("bots.info", {"bot": bot_id})
 
-    async def fetch_bots_info(self, bot_ids: List[str]) -> SlackBotsInfoResponse:
+    async def fetch_bots_info(self, bot_ids: Iterable[str]) -> SlackBotsInfoResponse:
         return await self._fetch("bots.info", {"bots": ",".join(bot_ids)})

@@ -4,7 +4,7 @@ import json
 import socket
 import ssl
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional
 
 import weechat
 from websocket import ABNF, WebSocketConnectionClosedException, create_connection
@@ -31,7 +31,7 @@ class SlackUsers(Dict[str, Future[SlackUser]]):
         self[key] = create_task(self._create_item(key))
         return self[key]
 
-    async def initialize_items(self, item_ids: List[str]):
+    async def initialize_items(self, item_ids: Iterable[str]):
         items_info_task = create_task(self._fetch_items_info(item_ids))
         for item_id in set(item_ids):
             self[item_id] = create_task(self._create_item(item_id, items_info_task))
@@ -50,7 +50,7 @@ class SlackUsers(Dict[str, Future[SlackUser]]):
         await item.ensure_initialized()
         return item
 
-    async def _fetch_items_info(self, item_ids: List[str]):
+    async def _fetch_items_info(self, item_ids: Iterable[str]):
         response = await self.workspace.api.fetch_users_info(item_ids)
         if response["ok"] is False:
             # TODO: Handle error
@@ -67,7 +67,7 @@ class SlackBots(Dict[str, Future[SlackBot]]):
         self[key] = create_task(self._create_item(key))
         return self[key]
 
-    async def initialize_items(self, item_ids: List[str]):
+    async def initialize_items(self, item_ids: Iterable[str]):
         items_info_task = create_task(self._fetch_items_info(item_ids))
         for item_id in set(item_ids):
             self[item_id] = create_task(self._create_item(item_id, items_info_task))
@@ -86,7 +86,7 @@ class SlackBots(Dict[str, Future[SlackBot]]):
         await item.ensure_initialized()
         return item
 
-    async def _fetch_items_info(self, item_ids: List[str]):
+    async def _fetch_items_info(self, item_ids: Iterable[str]):
         response = await self.workspace.api.fetch_bots_info(item_ids)
         if response["ok"] is False:
             # TODO: Handle error
