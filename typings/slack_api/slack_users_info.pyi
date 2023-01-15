@@ -69,7 +69,7 @@ class SlackEnterpriseUser(TypedDict):
     is_primary_owner: bool
     teams: List[str]
 
-class SlackUsersInfoCommon(TypedDict):
+class SlackUserInfoCommon(TypedDict):
     id: str
     team_id: NotRequired[str]
     name: str
@@ -90,7 +90,7 @@ class SlackUsersInfoCommon(TypedDict):
     who_can_share_contact_card: str
 
 @final
-class SlackUsersInfoPerson(SlackUsersInfoCommon):
+class SlackUserInfoPerson(SlackUserInfoCommon):
     profile: SlackProfilePerson
     is_bot: Literal[False]
     is_stranger: NotRequired[bool]
@@ -99,28 +99,28 @@ class SlackUsersInfoPerson(SlackUsersInfoCommon):
     enterprise_id: NotRequired[str]
 
 @final
-class SlackUsersInfoBot(SlackUsersInfoCommon):
+class SlackUserInfoBot(SlackUserInfoCommon):
     profile: SlackProfileBot
     is_bot: Literal[True]
 
-SlackUsersInfo = SlackUsersInfoPerson | SlackUsersInfoBot
+SlackUserInfo = SlackUserInfoPerson | SlackUserInfoBot
 
 @final
-class SlackUsersInfoErrorResponse(TypedDict):
+class SlackUserInfoErrorResponse(TypedDict):
     ok: Literal[False]
     error: str
 
 @final
-class SlackUsersInfoSuccessResponse(TypedDict, Generic[T]):
+class SlackUserInfoSuccessResponse(TypedDict, Generic[T]):
     ok: Literal[True]
     user: T
 
-SlackUsersInfoPersonResponse = (
-    SlackUsersInfoSuccessResponse[SlackUsersInfoPerson] | SlackUsersInfoErrorResponse
+SlackUserInfoPersonResponse = (
+    SlackUserInfoSuccessResponse[SlackUserInfoPerson] | SlackUserInfoErrorResponse
 )
-SlackUsersInfoBotResponse = (
-    SlackUsersInfoSuccessResponse[SlackUsersInfoBot] | SlackUsersInfoErrorResponse
+SlackUserInfoBotResponse = (
+    SlackUserInfoSuccessResponse[SlackUserInfoBot] | SlackUserInfoErrorResponse
 )
-SlackUsersInfoResponse = (
-    SlackUsersInfoSuccessResponse[SlackUsersInfo] | SlackUsersInfoErrorResponse
+SlackUserInfoResponse = (
+    SlackUserInfoSuccessResponse[SlackUserInfo] | SlackUserInfoErrorResponse
 )
