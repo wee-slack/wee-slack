@@ -42,6 +42,12 @@ class SlackWorkspace:
         self.users = SlackUsers(self)
         self.conversations: Dict[str, SlackConversation] = {}
 
+    def __setattr__(self, __name: str, __value: Any) -> None:
+        super().__setattr__(__name, __value)
+
+        if __name == "is_connected":
+            weechat.bar_item_update("input_text")
+
     async def connect(self):
         rtm_connect = await self.api.fetch_rtm_connect()
         if rtm_connect["ok"] is False:
@@ -68,10 +74,7 @@ class SlackWorkspace:
             self.conversations[channel["id"]] = conversation
             create_task(conversation.init())
 
-        # print(rtm_connect)
-        # print([c["name"] for c in user_channels])
         self.is_connected = True
-        weechat.bar_item_update("input_text")
 
     async def connect_ws(self, url: str):
         sslopt_ca_certs = {}
