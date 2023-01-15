@@ -4,7 +4,7 @@ import json
 import socket
 import ssl
 import time
-from typing import Any, Dict, Generic, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import weechat
 from websocket import ABNF, WebSocketConnectionClosedException, create_connection
@@ -17,23 +17,81 @@ from slack.slack_user import SlackBot, SlackUser
 from slack.task import Future, create_task
 from slack.util import get_callback_name
 
-SlackUserOrBot = TypeVar("SlackUserOrBot", SlackUser, SlackBot)
+if TYPE_CHECKING:
+    from slack_api.slack_bots_info import SlackBotInfo
+    from slack_api.slack_users_info import SlackUserInfo
 
 
-class SlackUsersOrBots(Generic[SlackUserOrBot], Dict[str, Future[SlackUserOrBot]]):
-    def __init__(self, workspace: SlackWorkspace, item_class: Type[SlackUserOrBot]):
+class SlackUsers(Dict[str, Future[SlackUser]]):
+    def __init__(self, workspace: SlackWorkspace):
         super().__init__()
         self.workspace = workspace
-        self.item_class = item_class
 
     def __missing__(self, key: str):
         self[key] = create_task(self._create_item(key))
         return self[key]
 
-    async def _create_item(self, item_id: str) -> SlackUserOrBot:
-        item = self.item_class(self.workspace, item_id)
-        await item.init()
+    async def initialize_items(self, item_ids: List[str]):
+        items_info_task = create_task(self._fetch_items_info(item_ids))
+        for item_id in set(item_ids):
+            self[item_id] = create_task(self._create_item(item_id, items_info_task))
+
+    async def _create_item(
+        self,
+        item_id: str,
+        items_info_task: Optional[Future[Dict[str, SlackUserInfo]]] = None,
+    ) -> SlackUser:
+        if items_info_task:
+            items_info = await items_info_task
+            item = SlackUser(self.workspace, item_id, items_info[item_id])
+        else:
+            item = SlackUser(self.workspace, item_id)
+
+        await item.ensure_initialized()
         return item
+
+    async def _fetch_items_info(self, item_ids: List[str]):
+        response = await self.workspace.api.fetch_users_info(item_ids)
+        if response["ok"] is False:
+            # TODO: Handle error
+            raise Exception("Failed fetching users")
+        return {info["id"]: info for info in response["users"]}
+
+
+class SlackBots(Dict[str, Future[SlackBot]]):
+    def __init__(self, workspace: SlackWorkspace):
+        super().__init__()
+        self.workspace = workspace
+
+    def __missing__(self, key: str):
+        self[key] = create_task(self._create_item(key))
+        return self[key]
+
+    async def initialize_items(self, item_ids: List[str]):
+        items_info_task = create_task(self._fetch_items_info(item_ids))
+        for item_id in set(item_ids):
+            self[item_id] = create_task(self._create_item(item_id, items_info_task))
+
+    async def _create_item(
+        self,
+        item_id: str,
+        items_info_task: Optional[Future[Dict[str, SlackBotInfo]]] = None,
+    ) -> SlackBot:
+        if items_info_task:
+            items_info = await items_info_task
+            item = SlackBot(self.workspace, item_id, items_info[item_id])
+        else:
+            item = SlackBot(self.workspace, item_id)
+
+        await item.ensure_initialized()
+        return item
+
+    async def _fetch_items_info(self, item_ids: List[str]):
+        response = await self.workspace.api.fetch_bots_info(item_ids)
+        if response["ok"] is False:
+            # TODO: Handle error
+            raise Exception("Failed fetching bots")
+        return {info["id"]: info for info in response["bots"]}
 
 
 class SlackWorkspace:
@@ -42,8 +100,8 @@ class SlackWorkspace:
         self.config = shared.config.create_workspace_config(self.name)
         self.api = SlackApi(self)
         self._is_connected = False
-        self.users = SlackUsersOrBots(self, SlackUser)
-        self.bots = SlackUsersOrBots(self, SlackBot)
+        self.users = SlackUsers(self)
+        self.bots = SlackBots(self)
         self.conversations: Dict[str, SlackConversation] = {}
 
     @property

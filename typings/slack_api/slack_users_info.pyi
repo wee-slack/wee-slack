@@ -121,3 +121,18 @@ SlackUserInfoBotResponse = (
     SlackUserInfoSuccessResponse[SlackUserInfoBot] | SlackErrorResponse
 )
 SlackUserInfoResponse = SlackUserInfoSuccessResponse[SlackUserInfo] | SlackErrorResponse
+
+@final
+class SlackUsersInfoSuccessResponse(TypedDict, Generic[T]):
+    ok: Literal[True]
+    users: List[T]
+
+SlackUsersInfoPersonResponse = (
+    SlackUsersInfoSuccessResponse[SlackUserInfoPerson] | SlackErrorResponse
+)
+SlackUsersInfoBotResponse = (
+    SlackUsersInfoSuccessResponse[SlackUserInfoBot] | SlackErrorResponse
+)
+SlackUsersInfoResponse = (
+    SlackUsersInfoSuccessResponse[SlackUserInfo] | SlackErrorResponse
+)

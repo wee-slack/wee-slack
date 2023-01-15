@@ -90,6 +90,10 @@ class SlackConversation:
             start = time.time()
 
             messages = [SlackMessage(self, message) for message in history["messages"]]
+
+            sender_user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
+            await self.workspace.users.initialize_items(sender_user_ids)
+
             messages_rendered = await gather(
                 *(message.render_message() for message in messages)
             )

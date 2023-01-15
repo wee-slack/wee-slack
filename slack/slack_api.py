@@ -1,22 +1,21 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Dict, Union
+from typing import TYPE_CHECKING, Dict, List, Union
 from urllib.parse import urlencode
 
 from slack.http import http_request
 from slack.shared import shared
 
 if TYPE_CHECKING:
-    from slack_api.slack_bots_info import SlackBotInfoResponse
+    from slack_api.slack_bots_info import SlackBotInfoResponse, SlackBotsInfoResponse
     from slack_api.slack_conversations_history import SlackConversationsHistoryResponse
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
     from slack_api.slack_rtm_connect import SlackRtmConnectResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
-    from slack_api.slack_users_info import SlackUserInfoResponse
+    from slack_api.slack_users_info import SlackUserInfoResponse, SlackUsersInfoResponse
 
     from slack.slack_conversation import SlackConversation
-    from slack.slack_user import SlackBot, SlackUser
     from slack.slack_workspace import SlackWorkspace
 
 
@@ -87,8 +86,14 @@ class SlackApi:
             pages,
         )
 
-    async def fetch_user_info(self, user: SlackUser) -> SlackUserInfoResponse:
-        return await self._fetch("users.info", {"user": user.id})
+    async def fetch_user_info(self, user_id: str) -> SlackUserInfoResponse:
+        return await self._fetch("users.info", {"user": user_id})
 
-    async def fetch_bot_info(self, bot: SlackBot) -> SlackBotInfoResponse:
-        return await self._fetch("bots.info", {"bot": bot.id})
+    async def fetch_users_info(self, user_ids: List[str]) -> SlackUsersInfoResponse:
+        return await self._fetch("users.info", {"users": ",".join(user_ids)})
+
+    async def fetch_bot_info(self, bot_id: str) -> SlackBotInfoResponse:
+        return await self._fetch("bots.info", {"bot": bot_id})
+
+    async def fetch_bots_info(self, bot_ids: List[str]) -> SlackBotsInfoResponse:
+        return await self._fetch("bots.info", {"bots": ",".join(bot_ids)})

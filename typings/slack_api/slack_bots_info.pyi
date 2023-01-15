@@ -18,3 +18,10 @@ class SlackBotInfoSuccessResponse(TypedDict):
     bot: SlackBotInfo
 
 SlackBotInfoResponse = SlackBotInfoSuccessResponse | SlackErrorResponse
+
+@final
+class SlackBotsInfoSuccessResponse(TypedDict):
+    ok: Literal[True]
+    bots: List[SlackBotInfo]
+
+SlackBotsInfoResponse = SlackBotsInfoSuccessResponse | SlackErrorResponse
