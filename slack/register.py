@@ -69,7 +69,7 @@ def ws_ping_cb(data: str, remaining_calls: int) -> int:
     return weechat.WEECHAT_RC_OK
 
 
-async def init():
+async def init_async():
     auto_connect = weechat.info_get("auto_connect", "") == "1"
     if auto_connect:
         await sleep(1)  # Defer auto connect to ensure the logger plugin is loaded
@@ -78,7 +78,7 @@ async def init():
                 await workspace.connect()
 
 
-def main():
+def register():
     if weechat.register(
         shared.SCRIPT_NAME,
         SCRIPT_AUTHOR,
@@ -107,4 +107,4 @@ def main():
         )
         weechat.hook_timer(5000, 0, 0, get_callback_name(ws_ping_cb), "")
 
-        create_task(init())
+        create_task(init_async())
