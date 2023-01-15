@@ -10,8 +10,9 @@ weechat_callback_return_type = Union[int, str, Dict[str, str], None]
 
 
 def get_callback_name(callback: Callable[..., weechat_callback_return_type]) -> str:
-    shared.weechat_callbacks[callback.__name__] = callback
-    return callback.__name__
+    callback_id = f"{callback.__name__}-{id(callback)}"
+    shared.weechat_callbacks[callback_id] = callback
+    return callback_id
 
 
 def with_color(color: str, string: str):

@@ -6,6 +6,7 @@ import weechat
 
 from slack.http import HttpError, http_request
 from slack.task import FutureProcess, FutureTimer, weechat_task_cb
+from slack.util import get_callback_name
 
 
 @patch.object(weechat, "hook_process_hashtable")
@@ -21,7 +22,7 @@ def test_http_request_success(mock_method: MagicMock):
         f"url:{url}",
         {**options, "header": "1"},
         timeout,
-        weechat_task_cb.__name__,
+        get_callback_name(weechat_task_cb),
         future.id,
     )
 
@@ -151,7 +152,9 @@ def test_http_request_ratelimit(mock_method: MagicMock):
     timer = coroutine.send(("", 0, body, ""))
     assert isinstance(timer, FutureTimer)
 
-    mock_method.assert_called_once_with(12000, 0, 1, weechat_task_cb.__name__, timer.id)
+    mock_method.assert_called_once_with(
+        12000, 0, 1, get_callback_name(weechat_task_cb), timer.id
+    )
 
     assert isinstance(coroutine.send((0,)), FutureProcess)
 
