@@ -7,10 +7,12 @@ from typing_extensions import NotRequired
 
 T = TypeVar("T")
 
+@final
 class SlackProfileField(TypedDict):
     value: str
     alt: str
 
+@final
 class SlackProfileStatusEmojiDisplayInfo(TypedDict):
     emoji_name: str
     display_url: str
@@ -61,6 +63,7 @@ class SlackProfileBot(SlackProfileCommon):
 
 SlackProfile = SlackProfilePerson | SlackProfileBot
 
+@final
 class SlackEnterpriseUser(TypedDict):
     id: str
     enterprise_id: str
