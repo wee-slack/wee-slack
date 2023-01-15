@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import socket
+
 import weechat
+from websocket import WebSocketConnectionClosedException
 
 from slack.commands import register_commands
 from slack.config import SlackConfig
@@ -53,6 +56,19 @@ def modifier_input_text_display_with_cursor_cb(
     return prefix + string
 
 
+def ws_ping_cb(data: str, remaining_calls: int) -> int:
+    for workspace in shared.workspaces.values():
+        if workspace.is_connected:
+            try:
+                workspace.ws.ping()
+                # workspace.last_ping_time = time.time()
+            except (WebSocketConnectionClosedException, socket.error) as e:
+                # TODO: Handle error
+                # handle_socket_error(e, team, "ping")
+                print(e)
+    return weechat.WEECHAT_RC_OK
+
+
 async def init():
     auto_connect = weechat.info_get("auto_connect", "") == "1"
     if auto_connect:
@@ -89,5 +105,6 @@ def main():
             get_callback_name(modifier_input_text_display_with_cursor_cb),
             "",
         )
+        weechat.hook_timer(5000, 0, 0, get_callback_name(ws_ping_cb), "")
 
         create_task(init())
