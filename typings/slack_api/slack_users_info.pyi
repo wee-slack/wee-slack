@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Generic, List, Literal, Optional, TypedDict, TypeVar, final
 
+from slack_api.slack_error import SlackErrorResponse
 from typing_extensions import NotRequired
 
 T = TypeVar("T")
@@ -106,21 +107,14 @@ class SlackUserInfoBot(SlackUserInfoCommon):
 SlackUserInfo = SlackUserInfoPerson | SlackUserInfoBot
 
 @final
-class SlackUserInfoErrorResponse(TypedDict):
-    ok: Literal[False]
-    error: str
-
-@final
 class SlackUserInfoSuccessResponse(TypedDict, Generic[T]):
     ok: Literal[True]
     user: T
 
 SlackUserInfoPersonResponse = (
-    SlackUserInfoSuccessResponse[SlackUserInfoPerson] | SlackUserInfoErrorResponse
+    SlackUserInfoSuccessResponse[SlackUserInfoPerson] | SlackErrorResponse
 )
 SlackUserInfoBotResponse = (
-    SlackUserInfoSuccessResponse[SlackUserInfoBot] | SlackUserInfoErrorResponse
+    SlackUserInfoSuccessResponse[SlackUserInfoBot] | SlackErrorResponse
 )
-SlackUserInfoResponse = (
-    SlackUserInfoSuccessResponse[SlackUserInfo] | SlackUserInfoErrorResponse
-)
+SlackUserInfoResponse = SlackUserInfoSuccessResponse[SlackUserInfo] | SlackErrorResponse

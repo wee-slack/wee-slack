@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Generic, List, Literal, TypedDict, TypeVar, final
 
+from slack_api.slack_error import SlackErrorResponse
+
 T = TypeVar("T")
 
 @final
@@ -74,11 +76,6 @@ SlackUsersConversationsNotIm = (
 SlackUsersConversations = SlackUsersConversationsNotIm | SlackUsersConversationsIm
 
 @final
-class SlackUsersConversationsErrorResponse(TypedDict):
-    ok: Literal[False]
-    error: str
-
-@final
 class SlackResponseMetadata(TypedDict):
     next_cursor: str
 
@@ -90,25 +87,24 @@ class SlackUsersConversationsSuccessResponse(TypedDict, Generic[T]):
 
 SlackUsersConversationsPublicResponse = (
     SlackUsersConversationsSuccessResponse[SlackUsersConversationsPublic]
-    | SlackUsersConversationsErrorResponse
+    | SlackErrorResponse
 )
 SlackUsersConversationsPrivateResponse = (
     SlackUsersConversationsSuccessResponse[SlackUsersConversationsPrivate]
-    | SlackUsersConversationsErrorResponse
+    | SlackErrorResponse
 )
 SlackUsersConversationsMpimResponse = (
     SlackUsersConversationsSuccessResponse[SlackUsersConversationsMpim]
-    | SlackUsersConversationsErrorResponse
+    | SlackErrorResponse
 )
 SlackUsersConversationsImResponse = (
     SlackUsersConversationsSuccessResponse[SlackUsersConversationsIm]
-    | SlackUsersConversationsErrorResponse
+    | SlackErrorResponse
 )
 SlackUsersConversationsNotImResponse = (
     SlackUsersConversationsSuccessResponse[SlackUsersConversationsNotIm]
-    | SlackUsersConversationsErrorResponse
+    | SlackErrorResponse
 )
 SlackUsersConversationsResponse = (
-    SlackUsersConversationsSuccessResponse[SlackUsersConversations]
-    | SlackUsersConversationsErrorResponse
+    SlackUsersConversationsSuccessResponse[SlackUsersConversations] | SlackErrorResponse
 )
