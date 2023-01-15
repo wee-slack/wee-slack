@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, List
 
+from slack.slack_user import format_bot_nick
 from slack.task import gather
 
 if TYPE_CHECKING:
@@ -23,12 +24,21 @@ class SlackMessage:
         return self.conversation.workspace
 
     async def render_message(self):
-        message = await self._unfurl_refs(self._message_json["text"])
-        if "user" in self._message_json:
+        if (
+            "subtype" in self._message_json
+            and self._message_json["subtype"] == "bot_message"
+        ):
+            username = self._message_json.get("username")
+            if username:
+                prefix = format_bot_nick(username, colorize=True)
+            else:
+                bot = await self.workspace.bots[self._message_json["bot_id"]]
+                prefix = bot.nick(colorize=True)
+        else:
             user = await self.workspace.users[self._message_json["user"]]
             prefix = user.nick(colorize=True)
-        else:
-            prefix = "bot"
+
+        message = await self._unfurl_refs(self._message_json["text"])
 
         return f"{prefix}\t{message}"
 

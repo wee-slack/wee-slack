@@ -8,6 +8,7 @@ from slack.http import http_request
 from slack.shared import shared
 
 if TYPE_CHECKING:
+    from slack_api.slack_bots_info import SlackBotInfoResponse
     from slack_api.slack_conversations_history import SlackConversationsHistoryResponse
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
     from slack_api.slack_rtm_connect import SlackRtmConnectResponse
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
     from slack_api.slack_users_info import SlackUsersInfoResponse
 
     from slack.slack_conversation import SlackConversation
-    from slack.slack_user import SlackUser
+    from slack.slack_user import SlackBot, SlackUser
     from slack.slack_workspace import SlackWorkspace
 
 
@@ -88,3 +89,6 @@ class SlackApi:
 
     async def fetch_users_info(self, user: SlackUser) -> SlackUsersInfoResponse:
         return await self._fetch("users.info", {"user": user.id})
+
+    async def fetch_bots_info(self, bot: SlackBot) -> SlackBotInfoResponse:
+        return await self._fetch("bots.info", {"bot": bot.id})

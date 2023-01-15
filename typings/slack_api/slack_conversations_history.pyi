@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Literal, TypedDict, final
+from typing import Dict, List, Literal, TypedDict, final
 
 from typing_extensions import NotRequired
 
@@ -81,17 +81,21 @@ class SlackMessageFile(TypedDict):
 class SlackMessageCommon(TypedDict):
     type: Literal["message"]
     text: str
-    user: str
     ts: str
     reactions: NotRequired[List[SlackMessageReaction]]
 
-class SlackMessageStandard(SlackMessageCommon):
+class SlackMessageStandardCommon(SlackMessageCommon):
     client_msg_id: NotRequired[str]
+    user: str
     blocks: List[SlackMessageBlock]
     attachments: NotRequired[List[SlackMessageAttachment]]
     team: str
 
-class SlackMessageThreadParentCommon(SlackMessageStandard):
+@final
+class SlackMessageStandard(SlackMessageStandardCommon):
+    pass
+
+class SlackMessageThreadParentCommon(SlackMessageStandardCommon):
     thread_ts: str
     reply_count: int
     reply_users_count: int
@@ -108,21 +112,32 @@ class SlackMessageThreadParentSubscribed(SlackMessageThreadParentCommon):
     subscribed: Literal[True]
     last_read: str
 
+@final
 class SlackMessageWithFiles(SlackMessageCommon):
+    user: str
     files: List[SlackMessageFile]
     upload: bool
     display_as_bot: bool
 
 # TODO: Add other subtypes
 @final
+class SlackMessageSubtypeBotMessage(SlackMessageCommon):
+    subtype: Literal["bot_message"]
+    bot_id: str
+    username: NotRequired[str]
+    icons: NotRequired[Dict[str, str]]
+
+@final
 class SlackMessageSubtypeBotRemove(SlackMessageCommon):
     subtype: Literal["bot_remove"]
+    user: str
     bot_id: str
     bot_link: str
 
 @final
 class SlackMessageSubtypeBotAdd(SlackMessageCommon):
     subtype: Literal["bot_add"]
+    user: str
     bot_id: str
     bot_link: str
 
@@ -136,6 +151,7 @@ SlackMessage = (
     | SlackMessageThreadParentNotSubscribed
     | SlackMessageThreadParentSubscribed
     | SlackMessageWithFiles
+    | SlackMessageSubtypeBotMessage
     | SlackMessageSubtypeBotRemove
     | SlackMessageSubtypeBotAdd
 )

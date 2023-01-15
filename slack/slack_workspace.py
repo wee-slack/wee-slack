@@ -13,7 +13,7 @@ from slack.proxy import Proxy
 from slack.shared import shared
 from slack.slack_api import SlackApi
 from slack.slack_conversation import SlackConversation
-from slack.slack_user import SlackUser
+from slack.slack_user import SlackBot, SlackUser
 from slack.task import Future, create_task
 from slack.util import get_callback_name
 
@@ -33,6 +33,21 @@ class SlackUsers(Dict[str, Future[SlackUser]]):
         return user
 
 
+class SlackBots(Dict[str, Future[SlackBot]]):
+    def __init__(self, workspace: SlackWorkspace):
+        super().__init__()
+        self.workspace = workspace
+
+    def __missing__(self, key: str):
+        self[key] = create_task(self._create_bot(key))
+        return self[key]
+
+    async def _create_bot(self, bot_id: str) -> SlackBot:
+        bot = SlackBot(self.workspace, bot_id)
+        await bot.init()
+        return bot
+
+
 class SlackWorkspace:
     def __init__(self, name: str):
         self.name = name
@@ -40,6 +55,7 @@ class SlackWorkspace:
         self.api = SlackApi(self)
         self.is_connected = False
         self.users = SlackUsers(self)
+        self.bots = SlackBots(self)
         self.conversations: Dict[str, SlackConversation] = {}
 
     def __setattr__(self, __name: str, __value: Any) -> None:
