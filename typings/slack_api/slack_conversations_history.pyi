@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Literal, NotRequired, TypedDict, final
+from typing import List, Literal, TypedDict, final
+
+from typing_extensions import NotRequired
 
 @final
 class SlackMessageBlockElement(TypedDict):
