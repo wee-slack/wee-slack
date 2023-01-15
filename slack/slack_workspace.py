@@ -122,6 +122,7 @@ class SlackWorkspace:
                 return weechat.WEECHAT_RC_OK
 
             if opcode == ABNF.OPCODE_PONG:
+                # TODO: Maybe record last time anything was received instead
                 self.last_pong_time = time.time()
                 return weechat.WEECHAT_RC_OK
             elif opcode != ABNF.OPCODE_TEXT:
