@@ -70,7 +70,7 @@ class SlackConversation:
             self.name, get_callback_name(self.buffer_input_cb), "", "", ""
         )
         weechat.buffer_set(
-            self.buffer_pointer, "localvar_set_nick", self.workspace.my_user.nick
+            self.buffer_pointer, "localvar_set_nick", self.workspace.my_user.nick()
         )
 
     async def fill_history(self):
