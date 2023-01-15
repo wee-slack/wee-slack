@@ -41,16 +41,19 @@ class SlackWorkspace:
         self.name = name
         self.config = shared.config.create_workspace_config(self.name)
         self.api = SlackApi(self)
-        self.is_connected = False
+        self._is_connected = False
         self.users = SlackUsersOrBots(self, SlackUser)
         self.bots = SlackUsersOrBots(self, SlackBot)
         self.conversations: Dict[str, SlackConversation] = {}
 
-    def __setattr__(self, __name: str, __value: Any) -> None:
-        super().__setattr__(__name, __value)
+    @property
+    def is_connected(self):
+        return self._is_connected
 
-        if __name == "is_connected":
-            weechat.bar_item_update("input_text")
+    @is_connected.setter
+    def is_connected(self, value: bool):
+        self._is_connected = value
+        weechat.bar_item_update("input_text")
 
     async def connect(self):
         rtm_connect = await self.api.fetch_rtm_connect()
