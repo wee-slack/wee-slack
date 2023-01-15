@@ -26,7 +26,7 @@ class SlackMessage:
         message = await self._unfurl_refs(self._message_json["text"])
         if "user" in self._message_json:
             user = await self.workspace.users[self._message_json["user"]]
-            prefix = user.nick
+            prefix = user.formatted_name()
         else:
             prefix = "bot"
 
