@@ -1,43 +1,47 @@
 from __future__ import annotations
 
-from typing import Dict, Generic, List, Literal, TypedDict, TypeVar, final
+from typing import Dict, Generic, List, Literal, Optional, TypedDict, TypeVar, final
+
+from typing_extensions import NotRequired
 
 T = TypeVar("T")
 
 class SlackProfileCommon(TypedDict):
-    title: str
-    phone: str
-    skype: str
-    real_name: str
-    real_name_normalized: str
-    display_name: str
-    display_name_normalized: str
-    fields: Dict  # pyright: ignore [reportMissingTypeArgument]
-    status_text: str
-    status_emoji: str
-    status_emoji_display_info: List  # pyright: ignore [reportMissingTypeArgument]
-    status_expiration: int
-    avatar_hash: str
+    title: NotRequired[Optional[str]]
+    phone: NotRequired[Optional[str]]
+    skype: NotRequired[Optional[str]]
+    real_name: NotRequired[Optional[str]]
+    real_name_normalized: NotRequired[Optional[str]]
+    display_name: NotRequired[Optional[str]]
+    display_name_normalized: NotRequired[Optional[str]]
+    # fields: NotRequired[Optional[Dict]]  # pyright: ignore [reportMissingTypeArgument]
+    status_text: NotRequired[Optional[str]]
+    status_emoji: NotRequired[Optional[str]]
+    # status_emoji_display_info: NotRequired[
+    #     Optional[List]  # pyright: ignore [reportMissingTypeArgument]
+    # ]
+    status_expiration: NotRequired[Optional[int]]
+    avatar_hash: NotRequired[Optional[str]]
     image_24: str
     image_32: str
     image_48: str
     image_72: str
     image_192: str
     image_512: str
-    status_text_canonical: str
+    status_text_canonical: NotRequired[Optional[str]]
     team: str
 
 @final
 class SlackProfilePerson(SlackProfileCommon):
-    email: str
+    email: NotRequired[Optional[str]]
 
 @final
 class SlackProfileBot(SlackProfileCommon):
-    api_app_id: str
-    always_active: bool
+    api_app_id: NotRequired[Optional[str]]
+    always_active: NotRequired[Optional[bool]]
     image_original: str
-    is_custom_image: bool
-    bot_id: str
+    is_custom_image: NotRequired[Optional[bool]]
+    bot_id: NotRequired[Optional[str]]
     image_1024: str
 
 class SlackUsersInfoCommon(TypedDict):
