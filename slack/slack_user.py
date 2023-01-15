@@ -11,6 +11,19 @@ if TYPE_CHECKING:
     from slack.slack_workspace import SlackApi, SlackWorkspace
 
 
+def nick_color(nick: str) -> str:
+    return weechat.info_get("nick_color_name", nick)
+
+
+def format_bot_nick(nick: str, colorize: bool = False) -> str:
+    nick = nick.replace(" ", "")
+
+    if colorize:
+        nick = with_color(nick_color(nick), nick)
+
+    return nick + shared.config.look.bot_user_suffix.value
+
+
 class SlackUser:
     def __init__(self, workspace: SlackWorkspace, id: str):
         self.workspace = workspace
@@ -58,4 +71,24 @@ class SlackUser:
                 weechat.config_get("weechat.color.chat_nick_self")
             )
 
-        return weechat.info_get("nick_color_name", self._name_without_spaces())
+        return nick_color(self._name_without_spaces())
+
+
+class SlackBot:
+    def __init__(self, workspace: SlackWorkspace, id: str):
+        self.workspace = workspace
+        self.id = id
+
+    @property
+    def _api(self) -> SlackApi:
+        return self.workspace.api
+
+    async def init(self):
+        info = await self._api.fetch_bots_info(self)
+        if info["ok"] is False:
+            # TODO: Handle error
+            raise Exception("Failed fetching user info")
+        self._info = info["bot"]
+
+    def nick(self, colorize: bool = False) -> str:
+        return format_bot_nick(self._info["name"], colorize)

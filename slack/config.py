@@ -48,6 +48,13 @@ class SlackConfigSectionLook:
     def __init__(self, weechat_config: WeeChatConfig):
         self._section = WeeChatSection(weechat_config, "look")
 
+        self.bot_user_suffix = WeeChatOption(
+            self._section,
+            "bot_user_suffix",
+            "the suffix appended to nicks to indicate a bot",
+            " :]",
+        )
+
         self.external_user_suffix = WeeChatOption(
             self._section,
             "external_user_suffix",
