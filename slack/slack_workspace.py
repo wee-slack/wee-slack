@@ -32,9 +32,11 @@ class SlackUsers(Dict[str, Future[SlackUser]]):
         return self[key]
 
     async def initialize_items(self, item_ids: Iterable[str]):
-        items_info_task = create_task(self._fetch_items_info(item_ids))
-        for item_id in set(item_ids):
-            self[item_id] = create_task(self._create_item(item_id, items_info_task))
+        item_ids_to_init = set(item_id for item_id in item_ids if item_id not in self)
+        if item_ids_to_init:
+            items_info_task = create_task(self._fetch_items_info(item_ids_to_init))
+            for item_id in item_ids_to_init:
+                self[item_id] = create_task(self._create_item(item_id, items_info_task))
 
     async def _create_item(
         self,
@@ -68,9 +70,11 @@ class SlackBots(Dict[str, Future[SlackBot]]):
         return self[key]
 
     async def initialize_items(self, item_ids: Iterable[str]):
-        items_info_task = create_task(self._fetch_items_info(item_ids))
-        for item_id in set(item_ids):
-            self[item_id] = create_task(self._create_item(item_id, items_info_task))
+        item_ids_to_init = set(item_id for item_id in item_ids if item_id not in self)
+        if item_ids_to_init:
+            items_info_task = create_task(self._fetch_items_info(item_ids_to_init))
+            for item_id in item_ids_to_init:
+                self[item_id] = create_task(self._create_item(item_id, items_info_task))
 
     async def _create_item(
         self,
