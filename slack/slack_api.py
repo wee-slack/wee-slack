@@ -31,10 +31,12 @@ class SlackApi:
         }
 
     async def _fetch(self, method: str, params: Dict[str, Union[str, int]] = {}):
-        url = f"https://api.slack.com/api/{method}?{urlencode(params)}"
+        url = f"https://api.slack.com/api/{method}"
+        options = self._get_request_options()
+        options["postfields"] = urlencode(params)
         response = await http_request(
             url,
-            self._get_request_options(),
+            options,
             self.workspace.config.network_timeout.value * 1000,
         )
         return json.loads(response)
