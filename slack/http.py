@@ -7,18 +7,10 @@ from typing import Dict
 
 import weechat
 
+from slack.error import HttpError
 from slack.log import LogLevel, log
 from slack.task import FutureProcess, sleep, weechat_task_cb
 from slack.util import get_callback_name
-
-
-class HttpError(Exception):
-    def __init__(self, url: str, return_code: int, http_status: int, error: str):
-        super().__init__()
-        self.url = url
-        self.return_code = return_code
-        self.http_status = http_status
-        self.error = error
 
 
 def available_file_descriptors():

@@ -44,7 +44,7 @@ def test_http_request_error_process_return_code():
 
     assert excinfo.value.url == url
     assert excinfo.value.return_code == -2
-    assert excinfo.value.http_status == 0
+    assert excinfo.value.http_status_code == 0
     assert excinfo.value.error == ""
 
 
@@ -58,7 +58,7 @@ def test_http_request_error_process_stderr():
 
     assert excinfo.value.url == url
     assert excinfo.value.return_code == 0
-    assert excinfo.value.http_status == 0
+    assert excinfo.value.http_status_code == 0
     assert excinfo.value.error == "err"
 
 
@@ -75,7 +75,7 @@ def test_http_request_error_process_http():
 
     assert excinfo.value.url == url
     assert excinfo.value.return_code == 0
-    assert excinfo.value.http_status == 400
+    assert excinfo.value.http_status_code == 400
     assert excinfo.value.error == response
 
 
@@ -110,7 +110,7 @@ def test_http_request_error_retry_error():
 
     assert excinfo.value.url == url
     assert excinfo.value.return_code == -2
-    assert excinfo.value.http_status == 0
+    assert excinfo.value.http_status_code == 0
     assert excinfo.value.error == ""
 
 

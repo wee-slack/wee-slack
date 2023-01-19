@@ -54,9 +54,6 @@ class SlackConversation:
     async def init(self):
         with self.loading():
             info = await self._api.fetch_conversations_info(self)
-        if info["ok"] is False:
-            # TODO: Handle error
-            raise Exception("Failed fetching conversation info")
 
         info_channel = info["channel"]
         if info_channel["is_im"] is True:
@@ -84,9 +81,6 @@ class SlackConversation:
             self.history_pending = True
 
             history = await self._api.fetch_conversations_history(self)
-            if history["ok"] is False:
-                # TODO: Handle error
-                raise Exception("Failed fetching conversation history")
             start = time.time()
 
             messages = [SlackMessage(self, message) for message in history["messages"]]

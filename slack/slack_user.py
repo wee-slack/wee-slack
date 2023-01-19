@@ -49,9 +49,6 @@ class SlackUser:
 
     async def _set_info(self):
         info_response = await self._api.fetch_user_info(self.id)
-        if info_response["ok"] is False:
-            # TODO: Handle error
-            raise Exception("Failed fetching user info")
         self._info = info_response["user"]
 
     async def ensure_initialized(self):
@@ -113,9 +110,6 @@ class SlackBot:
 
     async def _set_info(self):
         info_response = await self._api.fetch_bot_info(self.id)
-        if info_response["ok"] is False:
-            # TODO: Handle error
-            raise Exception("Failed fetching bot info")
         self._info = info_response["bot"]
 
     async def ensure_initialized(self):

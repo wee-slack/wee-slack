@@ -15,6 +15,8 @@ from uuid import uuid4
 
 import weechat
 
+from slack.error import HttpError, SlackApiError
+from slack.log import print_error
 from slack.shared import shared
 from slack.util import get_callback_name
 
@@ -74,7 +76,21 @@ def weechat_task_cb(data: str, *args: Any) -> int:
 def task_runner(task: Task[Any], response: Any):
     while True:
         try:
-            future = task.coroutine.send(response)
+            try:
+                future = task.coroutine.send(response)
+            except HttpError as e:
+                print_error(
+                    f"Error calling URL {e.url}: return code: {e.return_code}, "
+                    f"http status code: {e.http_status_code}, error: {e.error}"
+                )
+                return
+            except SlackApiError as e:
+                print_error(
+                    f"Error from Slack API method {e.method} for workspace "
+                    f"{e.workspace.name}: {e.response}"
+                )
+                return
+
             if future.finished:
                 response = future.result
             else:
