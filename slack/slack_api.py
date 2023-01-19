@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from slack_api.slack_rtm_connect import SlackRtmConnectResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
     from slack_api.slack_users_info import SlackUserInfoResponse, SlackUsersInfoResponse
+    from slack_edgeapi.slack_users_search import SlackUsersSearchResponse
 
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
@@ -59,6 +60,21 @@ class SlackApi:
             response[list_key].extend(next_pages[list_key])
             return response
         return response
+
+    async def _fetch_edgeapi(self, method: str, params: Params = {}):
+        enterprise_id_part = (
+            f"{self.workspace.enterprise_id}/" if self.workspace.enterprise_id else ""
+        )
+        url = f"https://edgeapi.slack.com/cache/{enterprise_id_part}{self.workspace.id}/{method}"
+        options = self._get_request_options()
+        options["postfields"] = json.dumps(params)
+        options["httpheader"] += "\nContent-Type: application/json"
+        response = await http_request(
+            url,
+            options,
+            self.workspace.config.network_timeout.value * 1000,
+        )
+        return json.loads(response)
 
     async def fetch_rtm_connect(self):
         method = "rtm.connect"
@@ -134,6 +150,21 @@ class SlackApi:
         method = "bots.info"
         params = {"bots": ",".join(bot_ids)}
         response: SlackBotsInfoResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def fetch_users_search(self, query: str):
+        method = "users/search"
+        params = {
+            "include_profile_only_users": True,
+            "query": query,
+            "count": 25,
+            "fuzz": 1,
+            "uax29_tokenizer": False,
+            "filter": "NOT deactivated",
+        }
+        response: SlackUsersSearchResponse = await self._fetch_edgeapi(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
         return response

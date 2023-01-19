@@ -9,6 +9,11 @@ import weechat
 
 from slack.log import print_error
 from slack.shared import shared
+from slack.slack_conversation import (
+    SlackConversation,
+    get_conversation_from_buffer_pointer,
+)
+from slack.slack_user import name_from_user_info_without_spaces
 from slack.slack_workspace import SlackWorkspace
 from slack.task import create_task
 from slack.util import get_callback_name, with_color
@@ -298,7 +303,76 @@ def completion_irc_channels_cb(
     return weechat.WEECHAT_RC_OK
 
 
+def complete_input(conversation: SlackConversation):
+    if conversation.completion_context and conversation.completion_query:
+        input_value = weechat.buffer_get_string(conversation.buffer_pointer, "input")
+        input_pos = weechat.buffer_get_integer(conversation.buffer_pointer, "input_pos")
+        result = conversation.completion_values[conversation.completion_index]
+        input_before = input_value[:input_pos].removesuffix(
+            conversation.completion_query
+        )
+        input_after = input_value[input_pos:]
+        new_input = input_before + result + input_after
+        new_pos = input_pos - len(conversation.completion_query) + len(result)
+
+        with conversation.completing():
+            weechat.buffer_set(conversation.buffer_pointer, "input", new_input)
+            weechat.buffer_set(conversation.buffer_pointer, "input_pos", str(new_pos))
+
+        conversation.completion_query = result
+
+
+async def complete_user(conversation: SlackConversation):
+    if not conversation.completion_context and conversation.completion_query:
+        conversation.completion_context = 1
+        search = await conversation.workspace.api.fetch_users_search(
+            conversation.completion_query
+        )
+        conversation.completion_values = [
+            name_from_user_info_without_spaces(conversation.workspace, user)
+            for user in search["results"]
+        ]
+        conversation.completion_index = 0
+    else:
+        conversation.completion_index += 1
+        if conversation.completion_index >= len(conversation.completion_values):
+            conversation.completion_index = 0
+
+    complete_input(conversation)
+
+
+def input_complete_next_cb(data: str, buffer: str, command: str) -> int:
+    conversation = get_conversation_from_buffer_pointer(buffer)
+    if conversation:
+        input_value = weechat.buffer_get_string(buffer, "input")
+        input_pos = weechat.buffer_get_integer(buffer, "input_pos")
+        word_until_cursor = input_value[:input_pos].split()[-1]
+
+        if word_until_cursor.startswith("@") and len(word_until_cursor) > 1:
+            conversation.completion_query = word_until_cursor[1:]
+            create_task(complete_user(conversation))
+            return weechat.WEECHAT_RC_OK_EAT
+    return weechat.WEECHAT_RC_OK
+
+
+def input_complete_previous_cb(data: str, buffer: str, command: str) -> int:
+    conversation = get_conversation_from_buffer_pointer(buffer)
+    if conversation and conversation.completion_context:
+        conversation.completion_index -= 1
+        if conversation.completion_index < 0:
+            conversation.completion_index = len(conversation.completion_values) - 1
+        complete_input(conversation)
+        return weechat.WEECHAT_RC_OK_EAT
+    return weechat.WEECHAT_RC_OK
+
+
 def register_commands():
+    weechat.hook_command_run(
+        "/input complete_next", get_callback_name(input_complete_next_cb), ""
+    )
+    weechat.hook_command_run(
+        "/input complete_previous", get_callback_name(input_complete_previous_cb), ""
+    )
     weechat.hook_completion(
         "slack_workspaces",
         "Slack workspaces (internal names)",

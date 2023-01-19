@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 import weechat
 
@@ -37,6 +37,12 @@ class SlackConversation:
         self.history_filled = False
         self.history_pending = False
 
+        self.is_completing = False
+        self.completion_context = 0
+        self.completion_query: Optional[str] = None
+        self.completion_values: List[str] = []
+        self.completion_index = 0
+
     @property
     def _api(self) -> SlackApi:
         return self.workspace.api
@@ -50,6 +56,14 @@ class SlackConversation:
         finally:
             self.is_loading = False
             weechat.bar_item_update("input_text")
+
+    @contextmanager
+    def completing(self):
+        self.is_completing = True
+        try:
+            yield
+        finally:
+            self.is_completing = False
 
     async def init(self):
         with self.loading():
