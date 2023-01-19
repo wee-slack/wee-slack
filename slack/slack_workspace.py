@@ -54,9 +54,6 @@ class SlackUsers(Dict[str, Future[SlackUser]]):
 
     async def _fetch_items_info(self, item_ids: Iterable[str]):
         response = await self.workspace.api.fetch_users_info(item_ids)
-        if response["ok"] is False:
-            # TODO: Handle error
-            raise Exception("Failed fetching users")
         return {info["id"]: info for info in response["users"]}
 
 
@@ -92,9 +89,6 @@ class SlackBots(Dict[str, Future[SlackBot]]):
 
     async def _fetch_items_info(self, item_ids: Iterable[str]):
         response = await self.workspace.api.fetch_bots_info(item_ids)
-        if response["ok"] is False:
-            # TODO: Handle error
-            raise Exception("Failed fetching bots")
         return {info["id"]: info for info in response["bots"]}
 
 
@@ -119,10 +113,6 @@ class SlackWorkspace:
 
     async def connect(self):
         rtm_connect = await self.api.fetch_rtm_connect()
-        if rtm_connect["ok"] is False:
-            # TODO: Handle error
-            raise Exception("Failed fetching rtm.connect")
-
         self.id = rtm_connect["team"]["id"]
         self.my_user = await self.users[rtm_connect["self"]["id"]]
 
@@ -132,10 +122,6 @@ class SlackWorkspace:
         user_channels_response = await self.api.fetch_users_conversations(
             "public_channel"
         )
-        if user_channels_response["ok"] is False:
-            # TODO: Handle error
-            raise Exception("Failed fetching conversations")
-
         user_channels = user_channels_response["channels"]
 
         for channel in user_channels:
