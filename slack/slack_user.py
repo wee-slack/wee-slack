@@ -19,6 +19,21 @@ def nick_color(nick: str) -> str:
     return weechat.info_get("nick_color_name", nick)
 
 
+# TODO: Probably need to do some mapping here based on the existing users, in case some has been changed to avoid duplicate names
+def _name_from_user_info(workspace: SlackWorkspace, info: SlackUserInfo) -> str:
+    display_name = info["profile"].get("display_name")
+    if display_name and not workspace.config.use_real_names.value:
+        return display_name
+
+    return info["profile"].get("display_name") or info.get("real_name") or info["name"]
+
+
+def name_from_user_info_without_spaces(
+    workspace: SlackWorkspace, info: SlackUserInfo
+) -> str:
+    return _name_from_user_info(workspace, info).replace(" ", "")
+
+
 def format_bot_nick(nick: str, colorize: bool = False) -> str:
     nick = nick.replace(" ", "")
 
@@ -66,19 +81,8 @@ class SlackUser:
 
         return nick
 
-    def _name_from_profile(self) -> str:
-        display_name = self._info["profile"].get("display_name")
-        if display_name and not self.workspace.config.use_real_names.value:
-            return display_name
-
-        return (
-            self._info["profile"].get("display_name")
-            or self._info.get("real_name")
-            or self._info["name"]
-        )
-
     def _name_without_spaces(self) -> str:
-        return self._name_from_profile().replace(" ", "")
+        return name_from_user_info_without_spaces(self.workspace, self._info)
 
     def _nick_color(self) -> str:
         if self.id == self.workspace.my_user.id:

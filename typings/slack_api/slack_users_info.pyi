@@ -92,6 +92,9 @@ class SlackUserInfoCommon(TypedDict):
     updated: int
     is_email_confirmed: NotRequired[bool]
     who_can_share_contact_card: str
+    enterprise_user: NotRequired[SlackEnterpriseUser]
+    enterprise_id: NotRequired[str]
+    presence: NotRequired[Literal["active"]]
 
 @final
 class SlackUserInfoPerson(SlackUserInfoCommon):
@@ -99,13 +102,12 @@ class SlackUserInfoPerson(SlackUserInfoCommon):
     is_bot: Literal[False]
     is_stranger: NotRequired[bool]
     has_2fa: bool
-    enterprise_user: NotRequired[SlackEnterpriseUser]
-    enterprise_id: NotRequired[str]
 
 @final
 class SlackUserInfoBot(SlackUserInfoCommon):
     profile: SlackProfileBot
     is_bot: Literal[True]
+    is_workflow_bot: NotRequired[bool]
 
 SlackUserInfo = SlackUserInfoPerson | SlackUserInfoBot
 
