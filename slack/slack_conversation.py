@@ -39,7 +39,6 @@ class SlackConversation:
 
         self.is_completing = False
         self.completion_context = 0
-        self.completion_query: Optional[str] = None
         self.completion_values: List[str] = []
         self.completion_index = 0
 
