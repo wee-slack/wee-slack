@@ -304,7 +304,10 @@ def completion_irc_channels_cb(
 
 
 def complete_input(conversation: SlackConversation, query: str):
-    if conversation.completion_context == "ACTIVE_COMPLETION":
+    if (
+        conversation.completion_context == "ACTIVE_COMPLETION"
+        and conversation.completion_values
+    ):
         input_value = weechat.buffer_get_string(conversation.buffer_pointer, "input")
         input_pos = weechat.buffer_get_integer(conversation.buffer_pointer, "input_pos")
         result = conversation.completion_values[conversation.completion_index]
@@ -318,15 +321,24 @@ def complete_input(conversation: SlackConversation, query: str):
             weechat.buffer_set(conversation.buffer_pointer, "input_pos", str(new_pos))
 
 
-async def complete_user_next(conversation: SlackConversation, query: str):
+def nick_suffix():
+    return weechat.config_string(
+        weechat.config_get("weechat.completion.nick_completer")
+    )
+
+
+async def complete_user_next(
+    conversation: SlackConversation, query: str, is_first_word: bool
+):
     if conversation.completion_context == "NO_COMPLETION":
         conversation.completion_context = "PENDING_COMPLETION"
         search = await conversation.workspace.api.fetch_users_search(query)
         if conversation.completion_context != "PENDING_COMPLETION":
             return
         conversation.completion_context = "ACTIVE_COMPLETION"
+        suffix = nick_suffix() if is_first_word else " "
         conversation.completion_values = [
-            name_from_user_info_without_spaces(conversation.workspace, user)
+            name_from_user_info_without_spaces(conversation.workspace, user) + suffix
             for user in search["results"]
         ]
         conversation.completion_index = 0
@@ -353,13 +365,19 @@ def input_complete_cb(data: str, buffer: str, command: str) -> int:
     if conversation:
         input_value = weechat.buffer_get_string(buffer, "input")
         input_pos = weechat.buffer_get_integer(buffer, "input_pos")
-        word_until_cursor = input_value[:input_pos].split()[-1]
+        input_before_cursor = input_value[:input_pos]
 
-        if word_until_cursor.startswith("@") and len(word_until_cursor) > 1:
+        word_index = (
+            -2 if conversation.completion_context == "ACTIVE_COMPLETION" else -1
+        )
+        word_until_cursor = " ".join(input_before_cursor.split(" ")[word_index:])
+
+        if word_until_cursor.startswith("@"):
             query = word_until_cursor[1:]
+            is_first_word = word_until_cursor == input_before_cursor
 
             if command == "/input complete_next":
-                create_task(complete_user_next(conversation, query))
+                create_task(complete_user_next(conversation, query, is_first_word))
                 return weechat.WEECHAT_RC_OK_EAT
             else:
                 return complete_previous(conversation, query)
