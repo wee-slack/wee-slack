@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Literal, Optional, Union
 
 import weechat
 
@@ -37,8 +37,12 @@ class SlackConversation:
         self.history_filled = False
         self.history_pending = False
 
-        self.is_completing = False
-        self.completion_context = 0
+        self.completion_context: Union[
+            Literal["NO_COMPLETION"],
+            Literal["PENDING_COMPLETION"],
+            Literal["ACTIVE_COMPLETION"],
+            Literal["IN_PROGRESS_COMPLETION"],
+        ] = "NO_COMPLETION"
         self.completion_values: List[str] = []
         self.completion_index = 0
 
@@ -58,11 +62,11 @@ class SlackConversation:
 
     @contextmanager
     def completing(self):
-        self.is_completing = True
+        self.completion_context = "IN_PROGRESS_COMPLETION"
         try:
             yield
         finally:
-            self.is_completing = False
+            self.completion_context = "ACTIVE_COMPLETION"
 
     async def init(self):
         with self.loading():
