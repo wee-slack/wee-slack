@@ -45,12 +45,9 @@ class SlackUsers(Dict[str, Future[SlackUser]]):
     ) -> SlackUser:
         if items_info_task:
             items_info = await items_info_task
-            item = SlackUser(self.workspace, item_id, items_info[item_id])
+            return SlackUser(self.workspace, item_id, items_info[item_id])
         else:
-            item = SlackUser(self.workspace, item_id)
-
-        await item.ensure_initialized()
-        return item
+            return await SlackUser.create(self.workspace, item_id)
 
     async def _fetch_items_info(self, item_ids: Iterable[str]):
         response = await self.workspace.api.fetch_users_info(item_ids)
@@ -80,12 +77,9 @@ class SlackBots(Dict[str, Future[SlackBot]]):
     ) -> SlackBot:
         if items_info_task:
             items_info = await items_info_task
-            item = SlackBot(self.workspace, item_id, items_info[item_id])
+            return SlackBot(self.workspace, item_id, items_info[item_id])
         else:
-            item = SlackBot(self.workspace, item_id)
-
-        await item.ensure_initialized()
-        return item
+            return await SlackBot.create(self.workspace, item_id)
 
     async def _fetch_items_info(self, item_ids: Iterable[str]):
         response = await self.workspace.api.fetch_bots_info(item_ids)

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import weechat
 
 from slack.shared import shared
-from slack.task import create_task
 from slack.util import with_color
 
 if TYPE_CHECKING:
@@ -44,31 +43,19 @@ def format_bot_nick(nick: str, colorize: bool = False) -> str:
 
 
 class SlackUser:
-    def __init__(
-        self,
-        workspace: SlackWorkspace,
-        id: str,
-        info: Optional[SlackUserInfo] = None,
-    ):
+    def __init__(self, workspace: SlackWorkspace, id: str, info: SlackUserInfo):
         self.workspace = workspace
         self.id = id
-        if info:
-            self._info = info
-            self._set_info_task = None
-        else:
-            self._set_info_task = create_task(self._set_info())
+        self._info = info
+
+    @classmethod
+    async def create(cls, workspace: SlackWorkspace, id: str):
+        info_response = await workspace.api.fetch_user_info(id)
+        return cls(workspace, id, info_response["user"])
 
     @property
     def _api(self) -> SlackApi:
         return self.workspace.api
-
-    async def _set_info(self):
-        info_response = await self._api.fetch_user_info(self.id)
-        self._info = info_response["user"]
-
-    async def ensure_initialized(self):
-        if self._set_info_task:
-            await self._set_info_task
 
     def nick(self, colorize: bool = False) -> str:
         nick = self._name_without_spaces()
@@ -94,31 +81,19 @@ class SlackUser:
 
 
 class SlackBot:
-    def __init__(
-        self,
-        workspace: SlackWorkspace,
-        id: str,
-        info: Optional[SlackBotInfo] = None,
-    ):
+    def __init__(self, workspace: SlackWorkspace, id: str, info: SlackBotInfo):
         self.workspace = workspace
         self.id = id
-        if info:
-            self._info = info
-            self._set_info_task = None
-        else:
-            self._set_info_task = create_task(self._set_info())
+        self._info = info
+
+    @classmethod
+    async def create(cls, workspace: SlackWorkspace, id: str):
+        info_response = await workspace.api.fetch_bot_info(id)
+        return cls(workspace, id, info_response["bot"])
 
     @property
     def _api(self) -> SlackApi:
         return self.workspace.api
-
-    async def _set_info(self):
-        info_response = await self._api.fetch_bot_info(self.id)
-        self._info = info_response["bot"]
-
-    async def ensure_initialized(self):
-        if self._set_info_task:
-            await self._set_info_task
 
     def nick(self, colorize: bool = False) -> str:
         return format_bot_nick(self._info["name"], colorize)
