@@ -304,7 +304,7 @@ def completion_irc_channels_cb(
 
 
 def complete_input(conversation: SlackConversation, query: str):
-    if conversation.completion_context:
+    if conversation.completion_context == "ACTIVE_COMPLETION":
         input_value = weechat.buffer_get_string(conversation.buffer_pointer, "input")
         input_pos = weechat.buffer_get_integer(conversation.buffer_pointer, "input_pos")
         result = conversation.completion_values[conversation.completion_index]
@@ -319,15 +319,18 @@ def complete_input(conversation: SlackConversation, query: str):
 
 
 async def complete_user_next(conversation: SlackConversation, query: str):
-    if not conversation.completion_context:
-        conversation.completion_context = 1
+    if conversation.completion_context == "NO_COMPLETION":
+        conversation.completion_context = "PENDING_COMPLETION"
         search = await conversation.workspace.api.fetch_users_search(query)
+        if conversation.completion_context != "PENDING_COMPLETION":
+            return
+        conversation.completion_context = "ACTIVE_COMPLETION"
         conversation.completion_values = [
             name_from_user_info_without_spaces(conversation.workspace, user)
             for user in search["results"]
         ]
         conversation.completion_index = 0
-    else:
+    elif conversation.completion_context == "ACTIVE_COMPLETION":
         conversation.completion_index += 1
         if conversation.completion_index >= len(conversation.completion_values):
             conversation.completion_index = 0
@@ -336,7 +339,7 @@ async def complete_user_next(conversation: SlackConversation, query: str):
 
 
 def complete_previous(conversation: SlackConversation, query: str):
-    if conversation.completion_context:
+    if conversation.completion_context == "ACTIVE_COMPLETION":
         conversation.completion_index -= 1
         if conversation.completion_index < 0:
             conversation.completion_index = len(conversation.completion_values) - 1

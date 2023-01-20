@@ -31,11 +31,19 @@ def signal_buffer_switch_cb(data: str, signal: str, buffer_pointer: str) -> int:
 
 
 def input_text_changed_cb(data: str, signal: str, buffer_pointer: str) -> int:
-    conversation = get_conversation_from_buffer_pointer(buffer_pointer)
-    if conversation:
-        if not conversation.is_completing and conversation.completion_context:
-            conversation.completion_context = 0
+    reset_completion_context_on_input(buffer_pointer)
     return weechat.WEECHAT_RC_OK
+
+
+def input_text_cursor_moved_cb(data: str, signal: str, buffer_pointer: str) -> int:
+    reset_completion_context_on_input(buffer_pointer)
+    return weechat.WEECHAT_RC_OK
+
+
+def reset_completion_context_on_input(buffer_pointer: str):
+    conversation = get_conversation_from_buffer_pointer(buffer_pointer)
+    if conversation and conversation.completion_context != "IN_PROGRESS_COMPLETION":
+        conversation.completion_context = "NO_COMPLETION"
 
 
 def modifier_input_text_display_with_cursor_cb(
@@ -110,6 +118,9 @@ def register():
         )
         weechat.hook_signal(
             "input_text_changed", get_callback_name(input_text_changed_cb), ""
+        )
+        weechat.hook_signal(
+            "input_text_cursor_moved", get_callback_name(input_text_cursor_moved_cb), ""
         )
         weechat.hook_modifier(
             "input_text_display_with_cursor",
