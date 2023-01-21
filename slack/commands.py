@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pprint
 import re
 from dataclasses import dataclass
 from functools import wraps
@@ -209,6 +210,21 @@ def command_slack_workspace_del(
         "",
         f"server {with_color('chat_server', name)} has been deleted",
     )
+
+
+@weechat_command("tasks|buffer")
+def command_slack_debug(
+    buffer: str, args: List[str], options: Dict[str, Optional[str]]
+):
+    if args[0] == "tasks":
+        weechat.prnt("", "Active tasks:")
+        weechat.prnt("", pprint.pformat(shared.active_tasks))
+        weechat.prnt("", "Active futures:")
+        weechat.prnt("", pprint.pformat(shared.active_futures))
+    elif args[0] == "buffer":
+        conversation = get_conversation_from_buffer_pointer(buffer)
+        if conversation:
+            weechat.prnt("", f"Conversation id: {conversation.id}")
 
 
 def completion_slack_workspaces_cb(
