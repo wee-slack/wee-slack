@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, List, Match, Optional
 
+from slack.log import print_exception_once
 from slack.shared import shared
 from slack.slack_user import SlackUser, SlackUsergroup, format_bot_nick
 from slack.task import gather
@@ -91,6 +92,7 @@ class SlackMessage:
                     shared.config.color.user_mention_color.value, "@" + user.nick()
                 )
             else:
+                print_exception_once(user)
                 return f"@{user_id}"
 
         def unfurl_usergroup(usergroup_id: str):
@@ -101,6 +103,7 @@ class SlackMessage:
                     "@" + usergroup.handle(),
                 )
             else:
+                print_exception_once(usergroup)
                 return f"@{usergroup_id}"
 
         return re_mention.sub(unfurl_ref, message)
