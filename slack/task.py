@@ -100,10 +100,17 @@ def task_runner(task: Task[Any], response: Any):
             process_ended_task(task, result)
 
             if isinstance(result, BaseException):
-                create_task_in_stack = "create_task" in [
+                weechat_task_cb_in_stack = "weechat_task_cb" in [
                     stack.name for stack in traceback.extract_stack()
                 ]
-                if not in_active_tasks and not create_task_in_stack:
+                create_task_in_stack = [
+                    stack.name for stack in traceback.extract_stack()
+                ].count("create_task")
+                if not in_active_tasks and (
+                    create_task_in_stack == 0
+                    or not weechat_task_cb_in_stack
+                    and create_task_in_stack == 1
+                ):
                     if isinstance(e, HttpError):
                         print_error(
                             f"Error calling URL {e.url}: return code: {e.return_code}, "
