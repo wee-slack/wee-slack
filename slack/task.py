@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import traceback
 from typing import (
+    TYPE_CHECKING,
     Any,
     Awaitable,
     Coroutine,
     Dict,
     Generator,
     List,
-    Literal,
     Optional,
     Sequence,
     Tuple,
@@ -24,6 +24,9 @@ from slack.error import HttpError, SlackApiError
 from slack.log import print_error
 from slack.shared import shared
 from slack.util import get_callback_name
+
+if TYPE_CHECKING:
+    from typing_extensions import Literal
 
 T = TypeVar("T")
 

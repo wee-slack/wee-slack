@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, List, Literal, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import weechat
 
@@ -12,6 +12,8 @@ from slack.task import gather
 from slack.util import get_callback_name
 
 if TYPE_CHECKING:
+    from typing_extensions import Literal
+
     from slack.slack_api import SlackApi
     from slack.slack_workspace import SlackWorkspace
 
