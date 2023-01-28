@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from typing import Literal, TypedDict, final
-
 from slack_api.slack_error import SlackErrorResponse
-from typing_extensions import NotRequired
+from typing_extensions import Literal, NotRequired, TypedDict, final
 
 @final
 class SlackRtmConnectTeam(TypedDict):

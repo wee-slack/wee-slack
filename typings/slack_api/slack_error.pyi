@@ -1,4 +1,4 @@
-from typing import Literal, TypedDict, final
+from typing_extensions import Literal, TypedDict, final
 
 @final
 class SlackErrorResponse(TypedDict):
