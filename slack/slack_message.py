@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, List, Optional
 
-from slack.slack_user import format_bot_nick
+from slack.slack_user import SlackUser, format_bot_nick
 from slack.task import gather
 
 if TYPE_CHECKING:
@@ -52,11 +52,13 @@ class SlackMessage:
         re_user = re.compile("<@([^>]+)>")
         user_ids: List[str] = re_user.findall(message)
         users_list = await gather(
-            *(self.workspace.users[user_id] for user_id in user_ids)
+            *(self.workspace.users[user_id] for user_id in user_ids),
+            return_exceptions=True,
         )
         users = dict(zip(user_ids, users_list))
 
         def unfurl_user(user_id: str):
-            return "@" + users[user_id].nick()
+            user = users[user_id]
+            return "@" + user.nick() if isinstance(user, SlackUser) else f"@{user_id}"
 
         return re_user.sub(lambda match: unfurl_user(match.group(1)), message)
