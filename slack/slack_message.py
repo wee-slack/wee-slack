@@ -86,23 +86,21 @@ class SlackMessage:
 
         def unfurl_user(user_id: str):
             user = users[user_id]
-            return (
-                with_color(
+            if isinstance(user, SlackUser):
+                return with_color(
                     shared.config.color.user_mention_color.value, "@" + user.nick()
                 )
-                if isinstance(user, SlackUser)
-                else f"@{user_id}"
-            )
+            else:
+                return f"@{user_id}"
 
         def unfurl_usergroup(usergroup_id: str):
             usergroup = usergroups[usergroup_id]
-            return (
-                with_color(
+            if isinstance(usergroup, SlackUsergroup):
+                return with_color(
                     shared.config.color.usergroup_mention_color.value,
                     "@" + usergroup.handle(),
                 )
-                if isinstance(usergroup, SlackUsergroup)
-                else f"@{usergroup_id}"
-            )
+            else:
+                return f"@{usergroup_id}"
 
         return re_mention.sub(unfurl_ref, message)
