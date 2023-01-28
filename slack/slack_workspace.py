@@ -4,7 +4,8 @@ import json
 import socket
 import ssl
 import time
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any, Dict, Generic, Iterable, Optional, Type, TypeVar
 
 import weechat
 from websocket import ABNF, WebSocketConnectionClosedException, create_connection
@@ -20,12 +21,21 @@ from slack.util import get_callback_name
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfo
     from slack_api.slack_users_info import SlackUserInfo
+else:
+    SlackBotInfo = Any
+    SlackUserInfo = Any
+
+SlackItemClass = TypeVar("SlackItemClass", SlackUser, SlackBot)
+SlackItemInfo = TypeVar("SlackItemInfo", SlackUserInfo, SlackBotInfo)
 
 
-class SlackUsers(Dict[str, Future[SlackUser]]):
-    def __init__(self, workspace: SlackWorkspace):
+class SlackItem(
+    ABC, Generic[SlackItemClass, SlackItemInfo], Dict[str, Future[SlackItemClass]]
+):
+    def __init__(self, workspace: SlackWorkspace, item_class: Type[SlackItemClass]):
         super().__init__()
         self.workspace = workspace
+        self._item_class = item_class
 
     def __missing__(self, key: str):
         self[key] = create_task(self._create_item(key))
@@ -41,49 +51,55 @@ class SlackUsers(Dict[str, Future[SlackUser]]):
     async def _create_item(
         self,
         item_id: str,
-        items_info_task: Optional[Future[Dict[str, SlackUserInfo]]] = None,
-    ) -> SlackUser:
+        items_info_task: Optional[Future[Dict[str, SlackItemInfo]]] = None,
+    ) -> SlackItemClass:
         if items_info_task:
             items_info = await items_info_task
-            return SlackUser(self.workspace, item_id, items_info[item_id])
+            return self._create_item_from_info(item_id, items_info[item_id])
         else:
-            return await SlackUser.create(self.workspace, item_id)
+            return await self._item_class.create(self.workspace, item_id)
 
-    async def _fetch_items_info(self, item_ids: Iterable[str]):
+    @abstractmethod
+    async def _fetch_items_info(
+        self, item_ids: Iterable[str]
+    ) -> Dict[str, SlackItemInfo]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def _create_item_from_info(
+        self, item_id: str, item_info: SlackItemInfo
+    ) -> SlackItemClass:
+        raise NotImplementedError()
+
+
+class SlackUsers(SlackItem[SlackUser, SlackUserInfo]):
+    def __init__(self, workspace: SlackWorkspace):
+        super().__init__(workspace, SlackUser)
+
+    async def _fetch_items_info(
+        self, item_ids: Iterable[str]
+    ) -> Dict[str, SlackUserInfo]:
         response = await self.workspace.api.fetch_users_info(item_ids)
         return {info["id"]: info for info in response["users"]}
 
+    def _create_item_from_info(
+        self, item_id: str, item_info: SlackUserInfo
+    ) -> SlackUser:
+        return self._item_class(self.workspace, item_id, item_info)
 
-class SlackBots(Dict[str, Future[SlackBot]]):
+
+class SlackBots(SlackItem[SlackBot, SlackBotInfo]):
     def __init__(self, workspace: SlackWorkspace):
-        super().__init__()
-        self.workspace = workspace
+        super().__init__(workspace, SlackBot)
 
-    def __missing__(self, key: str):
-        self[key] = create_task(self._create_item(key))
-        return self[key]
-
-    async def initialize_items(self, item_ids: Iterable[str]):
-        item_ids_to_init = set(item_id for item_id in item_ids if item_id not in self)
-        if item_ids_to_init:
-            items_info_task = create_task(self._fetch_items_info(item_ids_to_init))
-            for item_id in item_ids_to_init:
-                self[item_id] = create_task(self._create_item(item_id, items_info_task))
-
-    async def _create_item(
-        self,
-        item_id: str,
-        items_info_task: Optional[Future[Dict[str, SlackBotInfo]]] = None,
-    ) -> SlackBot:
-        if items_info_task:
-            items_info = await items_info_task
-            return SlackBot(self.workspace, item_id, items_info[item_id])
-        else:
-            return await SlackBot.create(self.workspace, item_id)
-
-    async def _fetch_items_info(self, item_ids: Iterable[str]):
+    async def _fetch_items_info(
+        self, item_ids: Iterable[str]
+    ) -> Dict[str, SlackBotInfo]:
         response = await self.workspace.api.fetch_bots_info(item_ids)
         return {info["id"]: info for info in response["bots"]}
+
+    def _create_item_from_info(self, item_id: str, item_info: SlackBotInfo) -> SlackBot:
+        return self._item_class(self.workspace, item_id, item_info)
 
 
 class SlackWorkspace:
