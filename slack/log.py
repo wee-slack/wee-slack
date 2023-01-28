@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from enum import IntEnum
+from typing import Set
 
 import weechat
 
+from slack.error import format_exception
 from slack.shared import shared
+
+printed_exceptions: Set[BaseException] = set()
 
 
 class LogLevel(IntEnum):
@@ -19,6 +23,12 @@ class LogLevel(IntEnum):
 # TODO: Figure out what to do with print_error vs log
 def print_error(message: str):
     weechat.prnt("", f"{weechat.prefix('error')}{shared.SCRIPT_NAME}: {message}")
+
+
+def print_exception_once(e: BaseException):
+    if e not in printed_exceptions:
+        print_error(format_exception(e))
+        printed_exceptions.add(e)
 
 
 def log(level: LogLevel, message: str):
