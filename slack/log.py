@@ -23,4 +23,5 @@ def print_error(message: str):
 
 def log(level: LogLevel, message: str):
     if level >= LogLevel.INFO:
-        print(level, message)
+        prefix = weechat.prefix("error") if level >= LogLevel.ERROR else "\t"
+        weechat.prnt("", f"{prefix}{shared.SCRIPT_NAME} {level.name}: {message}")

@@ -20,7 +20,7 @@ from uuid import uuid4
 
 import weechat
 
-from slack.error import HttpError, SlackApiError
+from slack.error import HttpError, SlackApiError, format_exception
 from slack.log import print_error
 from slack.shared import shared
 from slack.util import get_callback_name
@@ -39,6 +39,9 @@ class Future(Awaitable[T]):
             self.id = future_id
         self._finished = False
         self._result: Optional[T] = None
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}('{self.id}')"
 
     def __await__(self) -> Generator[Future[T], T, T]:
         result = yield self
@@ -72,6 +75,9 @@ class Task(Future[T]):
     def __init__(self, coroutine: Coroutine[Future[Any], Any, T]):
         super().__init__()
         self.coroutine = coroutine
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}('{self.id}', coroutine={self.coroutine.__qualname__})"
 
 
 def weechat_task_cb(data: str, *args: Any) -> int:
@@ -114,16 +120,9 @@ def task_runner(task: Task[Any], response: Any):
                     or not weechat_task_cb_in_stack
                     and create_task_in_stack == 1
                 ):
-                    if isinstance(e, HttpError):
-                        print_error(
-                            f"Error calling URL {e.url}: return code: {e.return_code}, "
-                            f"http status code: {e.http_status_code}, error: {e.error}, task: {task}"
-                        )
-                    elif isinstance(e, SlackApiError):
-                        print_error(
-                            f"Error from Slack API method {e.method} with params {e.params} for workspace "
-                            f"{e.workspace.name}: {e.response}, task: {task}"
-                        )
+                    if isinstance(e, HttpError) or isinstance(e, SlackApiError):
+                        exception_str = format_exception(e)
+                        print_error(f"{exception_str}, task: {task}")
                     else:
                         raise e
 
