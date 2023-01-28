@@ -74,7 +74,7 @@ async def http_request(
             )
             await sleep(1000)
             return await http_request(url, options, timeout, max_retries - 1)
-        raise HttpError(url, return_code, 0, err)
+        raise HttpError(url, options, return_code, 0, err)
 
     parts = out.split("\r\n\r\nHTTP/")
     last_header_part, body = parts[-1].split("\r\n\r\n", 1)
@@ -94,6 +94,6 @@ async def http_request(
                 return await http_request(url, options, timeout)
 
     if http_status >= 400:
-        raise HttpError(url, return_code, http_status, body)
+        raise HttpError(url, options, return_code, http_status, body)
 
     return body
