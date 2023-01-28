@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfo
     from slack_api.slack_users_info import SlackUserInfo
 
-    from slack.slack_workspace import SlackApi, SlackWorkspace
+    from slack.slack_workspace import SlackWorkspace
 
 
 def nick_color(nick: str) -> str:
@@ -52,10 +52,6 @@ class SlackUser:
         info_response = await workspace.api.fetch_user_info(id)
         return cls(workspace, info_response["user"])
 
-    @property
-    def _api(self) -> SlackApi:
-        return self.workspace.api
-
     def nick(self, colorize: bool = False) -> str:
         nick = self._name_without_spaces()
 
@@ -88,10 +84,6 @@ class SlackBot:
     async def create(cls, workspace: SlackWorkspace, id: str):
         info_response = await workspace.api.fetch_bot_info(id)
         return cls(workspace, info_response["bot"])
-
-    @property
-    def _api(self) -> SlackApi:
-        return self.workspace.api
 
     def nick(self, colorize: bool = False) -> str:
         return format_bot_nick(self._info["name"], colorize)
