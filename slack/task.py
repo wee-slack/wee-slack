@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import traceback
 from typing import (
     Any,
     Awaitable,
@@ -95,19 +96,27 @@ def task_runner(task: Task[Any], response: Any):
             future = task.coroutine.send(response)
         except BaseException as e:
             result = e.value if isinstance(e, StopIteration) else e
+            in_active_tasks = task.id in shared.active_tasks
             process_ended_task(task, result)
-            if isinstance(e, HttpError):
-                print_error(
-                    f"Error calling URL {e.url}: return code: {e.return_code}, "
-                    f"http status code: {e.http_status_code}, error: {e.error}"
-                )
-            elif isinstance(e, SlackApiError):
-                print_error(
-                    f"Error from Slack API method {e.method} for workspace "
-                    f"{e.workspace.name}: {e.response}"
-                )
-            elif not isinstance(e, StopIteration):
-                raise e
+
+            if isinstance(result, BaseException):
+                create_task_in_stack = "create_task" in [
+                    stack.name for stack in traceback.extract_stack()
+                ]
+                if not in_active_tasks and not create_task_in_stack:
+                    if isinstance(e, HttpError):
+                        print_error(
+                            f"Error calling URL {e.url}: return code: {e.return_code}, "
+                            f"http status code: {e.http_status_code}, error: {e.error}, task: {task}"
+                        )
+                    elif isinstance(e, SlackApiError):
+                        print_error(
+                            f"Error from Slack API method {e.method} with params {e.params} for workspace "
+                            f"{e.workspace.name}: {e.response}, task: {task}"
+                        )
+                    else:
+                        raise e
+
             return
 
         if future.finished:
