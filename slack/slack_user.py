@@ -43,15 +43,14 @@ def format_bot_nick(nick: str, colorize: bool = False) -> str:
 
 
 class SlackUser:
-    def __init__(self, workspace: SlackWorkspace, id: str, info: SlackUserInfo):
+    def __init__(self, workspace: SlackWorkspace, info: SlackUserInfo):
         self.workspace = workspace
-        self.id = id
         self._info = info
 
     @classmethod
     async def create(cls, workspace: SlackWorkspace, id: str):
         info_response = await workspace.api.fetch_user_info(id)
-        return cls(workspace, id, info_response["user"])
+        return cls(workspace, info_response["user"])
 
     @property
     def _api(self) -> SlackApi:
@@ -72,7 +71,7 @@ class SlackUser:
         return name_from_user_info_without_spaces(self.workspace, self._info)
 
     def _nick_color(self) -> str:
-        if self.id == self.workspace.my_user.id:
+        if self._info["id"] == self.workspace.my_user._info["id"]:
             return weechat.config_string(
                 weechat.config_get("weechat.color.chat_nick_self")
             )
@@ -81,15 +80,14 @@ class SlackUser:
 
 
 class SlackBot:
-    def __init__(self, workspace: SlackWorkspace, id: str, info: SlackBotInfo):
+    def __init__(self, workspace: SlackWorkspace, info: SlackBotInfo):
         self.workspace = workspace
-        self.id = id
         self._info = info
 
     @classmethod
     async def create(cls, workspace: SlackWorkspace, id: str):
         info_response = await workspace.api.fetch_bot_info(id)
-        return cls(workspace, id, info_response["bot"])
+        return cls(workspace, info_response["bot"])
 
     @property
     def _api(self) -> SlackApi:
