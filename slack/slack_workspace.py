@@ -55,7 +55,7 @@ class SlackItem(
     ) -> SlackItemClass:
         if items_info_task:
             items_info = await items_info_task
-            return self._create_item_from_info(item_id, items_info[item_id])
+            return self._create_item_from_info(items_info[item_id])
         else:
             return await self._item_class.create(self.workspace, item_id)
 
@@ -66,9 +66,7 @@ class SlackItem(
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_item_from_info(
-        self, item_id: str, item_info: SlackItemInfo
-    ) -> SlackItemClass:
+    def _create_item_from_info(self, item_info: SlackItemInfo) -> SlackItemClass:
         raise NotImplementedError()
 
 
@@ -82,10 +80,8 @@ class SlackUsers(SlackItem[SlackUser, SlackUserInfo]):
         response = await self.workspace.api.fetch_users_info(item_ids)
         return {info["id"]: info for info in response["users"]}
 
-    def _create_item_from_info(
-        self, item_id: str, item_info: SlackUserInfo
-    ) -> SlackUser:
-        return self._item_class(self.workspace, item_id, item_info)
+    def _create_item_from_info(self, item_info: SlackUserInfo) -> SlackUser:
+        return self._item_class(self.workspace, item_info)
 
 
 class SlackBots(SlackItem[SlackBot, SlackBotInfo]):
@@ -98,8 +94,8 @@ class SlackBots(SlackItem[SlackBot, SlackBotInfo]):
         response = await self.workspace.api.fetch_bots_info(item_ids)
         return {info["id"]: info for info in response["bots"]}
 
-    def _create_item_from_info(self, item_id: str, item_info: SlackBotInfo) -> SlackBot:
-        return self._item_class(self.workspace, item_id, item_info)
+    def _create_item_from_info(self, item_info: SlackBotInfo) -> SlackBot:
+        return self._item_class(self.workspace, item_info)
 
 
 class SlackWorkspace:
