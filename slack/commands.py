@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import weechat
 
 from slack.log import print_error
+from slack.python_compatibility import removeprefix, removesuffix
 from slack.shared import shared
 from slack.slack_conversation import (
     SlackConversation,
@@ -54,7 +55,7 @@ def weechat_command(
     completion: str = "", min_args: int = 0, slack_buffer_required: bool = False
 ):
     def decorator(f: Callable[[str, List[str], Dict[str, Optional[str]]], None]):
-        cmd = f.__name__.removeprefix("command_").replace("_", " ")
+        cmd = removeprefix(f.__name__, "command_").replace("_", " ")
         top_level = " " not in cmd
 
         @wraps(f)
@@ -286,13 +287,13 @@ def completion_slack_workspace_commands_cb(
     base_command = weechat.completion_get_string(completion, "base_command")
     base_word = weechat.completion_get_string(completion, "base_word")
     args = weechat.completion_get_string(completion, "args")
-    args_without_base_word = args.removesuffix(base_word)
+    args_without_base_word = removesuffix(args, base_word)
 
     found_cmd_with_args = find_command(base_command, args_without_base_word)
     if found_cmd_with_args:
         command = found_cmd_with_args[0]
         matching_cmds = [
-            cmd.removeprefix(command.cmd).lstrip()
+            removeprefix(cmd, command.cmd).lstrip()
             for cmd in commands
             if cmd.startswith(command.cmd) and cmd != command.cmd
         ]
@@ -327,7 +328,7 @@ def complete_input(conversation: SlackConversation, query: str):
         input_value = weechat.buffer_get_string(conversation.buffer_pointer, "input")
         input_pos = weechat.buffer_get_integer(conversation.buffer_pointer, "input_pos")
         result = conversation.completion_values[conversation.completion_index]
-        input_before = input_value[:input_pos].removesuffix(query)
+        input_before = removesuffix(input_value[:input_pos], query)
         input_after = input_value[input_pos:]
         new_input = input_before + result + input_after
         new_pos = input_pos - len(query) + len(result)
