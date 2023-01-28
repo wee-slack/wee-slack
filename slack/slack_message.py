@@ -3,8 +3,10 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, List, Optional
 
+from slack.shared import shared
 from slack.slack_user import SlackUser, format_bot_nick
 from slack.task import gather
+from slack.util import with_color
 
 if TYPE_CHECKING:
     from slack_api.slack_conversations_history import SlackMessage as SlackMessageDict
@@ -59,6 +61,12 @@ class SlackMessage:
 
         def unfurl_user(user_id: str):
             user = users[user_id]
-            return "@" + user.nick() if isinstance(user, SlackUser) else f"@{user_id}"
+            return (
+                with_color(
+                    shared.config.color.user_mention_color.value, "@" + user.nick()
+                )
+                if isinstance(user, SlackUser)
+                else f"@{user_id}"
+            )
 
         return re_user.sub(lambda match: unfurl_user(match.group(1)), message)
