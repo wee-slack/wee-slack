@@ -1,0 +1,142 @@
+{
+  "ok": true,
+  "usergroups": [
+    {
+      "id": "SHRTFGTC7",
+      "team_id": "T0FC8BFQR",
+      "is_usergroup": true,
+      "is_subteam": true,
+      "name": "Test Group",
+      "description": "some purpose",
+      "handle": "testgroup",
+      "is_external": false,
+      "date_create": 1554643759,
+      "date_update": 1554713105,
+      "date_delete": 0,
+      "auto_type": null,
+      "auto_provision": false,
+      "enterprise_subteam_id": "",
+      "created_by": "U7JNGMGEB",
+      "updated_by": "U7JNGMGEB",
+      "deleted_by": null,
+      "prefs": {
+        "channels": [
+          "C0FC4L59T"
+        ],
+        "groups": []
+      },
+      "users": [
+        "U7JNGMGEB"
+      ],
+      "user_count": 1,
+      "channel_count": 0
+    },
+    {
+      "id": "SHSES6T5M",
+      "team_id": "T0FC8BFQR",
+      "is_usergroup": true,
+      "is_subteam": true,
+      "name": "subteam test",
+      "description": "",
+      "handle": "subteam",
+      "is_external": false,
+      "date_create": 1554724923,
+      "date_update": 1554724930,
+      "date_delete": 0,
+      "auto_type": null,
+      "auto_provision": false,
+      "enterprise_subteam_id": "",
+      "created_by": "U7JNGMGEB",
+      "updated_by": "U7JNGMGEB",
+      "deleted_by": null,
+      "prefs": {
+        "channels": [],
+        "groups": []
+      },
+      "users": [
+        "U7JNGMGEB",
+        "U9NJX9J83"
+      ],
+      "user_count": 2,
+      "channel_count": 0
+    },
+    {
+      "id": "SJ1SHK1K5",
+      "team_id": "T0FC8BFQR",
+      "is_usergroup": true,
+      "is_subteam": true,
+      "name": "test2",
+      "description": "",
+      "handle": "test2",
+      "is_external": false,
+      "date_create": 1556870284,
+      "date_update": 1556870284,
+      "date_delete": 0,
+      "auto_type": null,
+      "auto_provision": false,
+      "enterprise_subteam_id": "",
+      "created_by": "U7JNGMGEB",
+      "updated_by": "U7JNGMGEB",
+      "deleted_by": null,
+      "prefs": {
+        "channels": [],
+        "groups": []
+      },
+      "users": [],
+      "user_count": 0,
+      "channel_count": 0
+    },
+    {
+      "id": "SJ70QHM0R",
+      "team_id": "T0FC8BFQR",
+      "is_usergroup": true,
+      "is_subteam": true,
+      "name": "test3",
+      "description": "",
+      "handle": "test3",
+      "is_external": false,
+      "date_create": 1556870292,
+      "date_update": 1556870292,
+      "date_delete": 0,
+      "auto_type": null,
+      "auto_provision": false,
+      "enterprise_subteam_id": "",
+      "created_by": "U7JNGMGEB",
+      "updated_by": "U7JNGMGEB",
+      "deleted_by": null,
+      "prefs": {
+        "channels": [],
+        "groups": []
+      },
+      "users": [],
+      "user_count": 0,
+      "channel_count": 0
+    },
+    {
+      "id": "SJF5KJJQ7",
+      "team_id": "T0FC8BFQR",
+      "is_usergroup": true,
+      "is_subteam": true,
+      "name": "test1",
+      "description": "",
+      "handle": "test1",
+      "is_external": false,
+      "date_create": 1556870275,
+      "date_update": 1556870275,
+      "date_delete": 0,
+      "auto_type": null,
+      "auto_provision": false,
+      "enterprise_subteam_id": "",
+      "created_by": "U7JNGMGEB",
+      "updated_by": "U7JNGMGEB",
+      "deleted_by": null,
+      "prefs": {
+        "channels": [],
+        "groups": []
+      },
+      "users": [],
+      "user_count": 0,
+      "channel_count": 0
+    }
+  ]
+}

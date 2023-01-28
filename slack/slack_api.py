@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Iterable, Mapping, Union
+from typing import TYPE_CHECKING, Iterable, Mapping, Sequence, Union
 from urllib.parse import urlencode
 
 from slack.error import SlackApiError
@@ -13,14 +13,19 @@ if TYPE_CHECKING:
     from slack_api.slack_conversations_history import SlackConversationsHistoryResponse
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
     from slack_api.slack_rtm_connect import SlackRtmConnectResponse
+    from slack_api.slack_usergroups_info import SlackUsergroupsInfoResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
     from slack_api.slack_users_info import SlackUserInfoResponse, SlackUsersInfoResponse
+    from slack_edgeapi.slack_usergroups_info import SlackEdgeUsergroupsInfoResponse
     from slack_edgeapi.slack_users_search import SlackUsersSearchResponse
 
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
 
 Params = Mapping[str, Union[str, int, bool]]
+EdgeParams = Mapping[
+    str, Union[str, int, bool, Sequence[str], Sequence[int], Sequence[bool]]
+]
 
 
 class SlackApi:
@@ -61,7 +66,7 @@ class SlackApi:
             return response
         return response
 
-    async def _fetch_edgeapi(self, method: str, params: Params = {}):
+    async def _fetch_edgeapi(self, method: str, params: EdgeParams = {}):
         enterprise_id_part = (
             f"{self.workspace.enterprise_id}/" if self.workspace.enterprise_id else ""
         )
@@ -150,6 +155,23 @@ class SlackApi:
         method = "bots.info"
         params = {"bots": ",".join(bot_ids)}
         response: SlackBotsInfoResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def fetch_usergroups_list(self):
+        method = "usergroups.list"
+        response: SlackUsergroupsInfoResponse = await self._fetch(method)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response)
+        return response
+
+    async def fetch_usergroups_info(self, usergroup_ids: Sequence[str]):
+        method = "usergroups/info"
+        params = {"ids": usergroup_ids}
+        response: SlackEdgeUsergroupsInfoResponse = await self._fetch_edgeapi(
+            method, params
+        )
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
         return response

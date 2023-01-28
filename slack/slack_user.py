@@ -9,6 +9,7 @@ from slack.util import with_color
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfo
+    from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_info import SlackUserInfo
 
     from slack.slack_workspace import SlackWorkspace
@@ -87,3 +88,19 @@ class SlackBot:
 
     def nick(self, colorize: bool = False) -> str:
         return format_bot_nick(self._info["name"], colorize)
+
+
+class SlackUsergroup:
+    def __init__(self, workspace: SlackWorkspace, info: SlackUsergroupInfo):
+        self.workspace = workspace
+        self._info = info
+
+    @classmethod
+    async def create(cls, workspace: SlackWorkspace, id: str):
+        info_response = await workspace.api.fetch_usergroups_info([id])
+        # TODO: Handle failed ids
+        usergroup_info = info_response["results"][0]
+        return cls(workspace, usergroup_info)
+
+    def handle(self) -> str:
+        return self._info["handle"]

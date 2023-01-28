@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, Mapping, Union
+from typing import TYPE_CHECKING, Dict, Mapping, Sequence, Union
 
 if TYPE_CHECKING:
     from slack_api.slack_error import SlackErrorResponse
@@ -31,7 +31,9 @@ class SlackApiError(Exception):
         workspace: SlackWorkspace,
         method: str,
         response: SlackErrorResponse,
-        params: Mapping[str, Union[str, int, bool]] = {},
+        params: Mapping[
+            str, Union[str, int, bool, Sequence[str], Sequence[int], Sequence[bool]]
+        ] = {},
     ):
         super().__init__()
         self.workspace = workspace
