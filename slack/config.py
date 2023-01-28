@@ -50,6 +50,13 @@ class SlackConfigSectionColor:
             WeeChatColor("blue"),
         )
 
+        self.usergroup_mention_color = WeeChatOption(
+            self._section,
+            "usergroup_mention_color",
+            "text color for mentioned user group names in the chat",
+            WeeChatColor("blue"),
+        )
+
 
 class SlackConfigSectionLook:
     def __init__(self, weechat_config: WeeChatConfig):
