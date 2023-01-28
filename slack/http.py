@@ -46,7 +46,7 @@ async def hook_process_hashtable(command: str, options: Dict[str, str], timeout:
         stderr.write(err)
 
     out = stdout.getvalue()
-    err = stderr.getvalue()
+    err = stderr.getvalue().strip()
     log(
         LogLevel.DEBUG,
         f"hook_process_hashtable response ({future.id}): command: {command}, "

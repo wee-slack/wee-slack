@@ -17,7 +17,9 @@ class HttpError(Exception):
         http_status_code: int,
         error: str,
     ):
-        super().__init__()
+        super().__init__(
+            f"{self.__class__.__name__}: url='{url}', return_code={return_code}, http_status_code={http_status_code}, error='{error}'"
+        )
         self.url = url
         self.options = options
         self.return_code = return_code
@@ -35,8 +37,25 @@ class SlackApiError(Exception):
             str, Union[str, int, bool, Sequence[str], Sequence[int], Sequence[bool]]
         ] = {},
     ):
-        super().__init__()
+        super().__init__(
+            f"{self.__class__.__name__}: workspace={workspace}, method='{method}', params={params}, response={response}"
+        )
         self.workspace = workspace
         self.method = method
         self.params = params
         self.response = response
+
+
+def format_exception(e: BaseException):
+    if isinstance(e, HttpError):
+        return (
+            f"Error calling URL {e.url}: return code: {e.return_code}, "
+            f"http status code: {e.http_status_code}, error: {e.error}"
+        )
+    elif isinstance(e, SlackApiError):
+        return (
+            f"Error from Slack API method {e.method} with params {e.params} for workspace "
+            f"{e.workspace.name}: {e.response}"
+        )
+    else:
+        return f"Unknown error occurred: {e.__class__.__name__}: {e}"

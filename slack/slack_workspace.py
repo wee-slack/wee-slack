@@ -127,6 +127,9 @@ class SlackWorkspace:
         self.usergroups = SlackUsergroups(self)
         self.conversations: Dict[str, SlackConversation] = {}
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}('{self.name}')"
+
     @property
     def is_connected(self):
         return self._is_connected
