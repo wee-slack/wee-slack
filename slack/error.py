@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Mapping, Union
+from typing import TYPE_CHECKING, Dict, Mapping, Union
 
 if TYPE_CHECKING:
     from slack_api.slack_error import SlackErrorResponse
@@ -9,9 +9,17 @@ if TYPE_CHECKING:
 
 
 class HttpError(Exception):
-    def __init__(self, url: str, return_code: int, http_status_code: int, error: str):
+    def __init__(
+        self,
+        url: str,
+        options: Dict[str, str],
+        return_code: int,
+        http_status_code: int,
+        error: str,
+    ):
         super().__init__()
         self.url = url
+        self.options = options
         self.return_code = return_code
         self.http_status_code = http_status_code
         self.error = error
