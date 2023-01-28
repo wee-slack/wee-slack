@@ -38,7 +38,7 @@ class Future(Awaitable[T]):
 
     def __await__(self) -> Generator[Future[T], T, T]:
         result = yield self
-        if isinstance(result, Exception):
+        if isinstance(result, BaseException):
             raise result
         self.set_result(result)
         return result
@@ -93,7 +93,7 @@ def task_runner(task: Task[Any], response: Any):
     while True:
         try:
             future = task.coroutine.send(response)
-        except Exception as e:
+        except BaseException as e:
             result = e.value if isinstance(e, StopIteration) else e
             process_ended_task(task, result)
             if isinstance(e, HttpError):
