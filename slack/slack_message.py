@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Match, Optional
 
 from slack.shared import shared
 from slack.slack_user import SlackUser, format_bot_nick
@@ -51,13 +51,29 @@ class SlackMessage:
             return user.nick(colorize=True)
 
     async def _unfurl_refs(self, message: str) -> str:
-        re_user = re.compile("<@([^>]+)>")
-        user_ids: List[str] = re_user.findall(message)
+        re_mention = re.compile(r"<@(?P<user>[^>]+)>|<!subteam\^(?P<usergroup>[^>]+)>")
+        mention_matches = list(re_mention.finditer(message))
+
+        user_ids: List[str] = [
+            match["user"] for match in mention_matches if match["user"]
+        ]
+        # usergroup_ids: List[str] = [
+        #     match["usergroup"] for match in mention_matches if match["usergroup"]
+        # ]
+
         users_list = await gather(
             *(self.workspace.users[user_id] for user_id in user_ids),
             return_exceptions=True,
         )
         users = dict(zip(user_ids, users_list))
+
+        def unfurl_ref(match: Match[str]):
+            if match["user"]:
+                return unfurl_user(match["user"])
+            elif match["usergroup"]:
+                return unfurl_usergroup(match["usergroup"])
+            else:
+                return match[0]
 
         def unfurl_user(user_id: str):
             user = users[user_id]
@@ -69,4 +85,7 @@ class SlackMessage:
                 else f"@{user_id}"
             )
 
-        return re_user.sub(lambda match: unfurl_user(match.group(1)), message)
+        def unfurl_usergroup(usergroup_id: str):
+            return f"@{usergroup_id}"
+
+        return re_mention.sub(unfurl_ref, message)
