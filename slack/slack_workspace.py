@@ -14,19 +14,23 @@ from slack.proxy import Proxy
 from slack.shared import shared
 from slack.slack_api import SlackApi
 from slack.slack_conversation import SlackConversation
-from slack.slack_user import SlackBot, SlackUser
+from slack.slack_user import SlackBot, SlackUser, SlackUsergroup
 from slack.task import Future, create_task
 from slack.util import get_callback_name
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfo
+    from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_info import SlackUserInfo
 else:
     SlackBotInfo = Any
+    SlackUsergroupInfo = Any
     SlackUserInfo = Any
 
-SlackItemClass = TypeVar("SlackItemClass", SlackUser, SlackBot)
-SlackItemInfo = TypeVar("SlackItemInfo", SlackUserInfo, SlackBotInfo)
+SlackItemClass = TypeVar("SlackItemClass", SlackUser, SlackBot, SlackUsergroup)
+SlackItemInfo = TypeVar(
+    "SlackItemInfo", SlackUserInfo, SlackBotInfo, SlackUsergroupInfo
+)
 
 
 class SlackItem(
@@ -98,6 +102,20 @@ class SlackBots(SlackItem[SlackBot, SlackBotInfo]):
         return self._item_class(self.workspace, item_info)
 
 
+class SlackUsergroups(SlackItem[SlackUsergroup, SlackUsergroupInfo]):
+    def __init__(self, workspace: SlackWorkspace):
+        super().__init__(workspace, SlackUsergroup)
+
+    async def _fetch_items_info(
+        self, item_ids: Iterable[str]
+    ) -> Dict[str, SlackUsergroupInfo]:
+        response = await self.workspace.api.fetch_usergroups_info(list(item_ids))
+        return {info["id"]: info for info in response["results"]}
+
+    def _create_item_from_info(self, item_info: SlackUsergroupInfo) -> SlackUsergroup:
+        return self._item_class(self.workspace, item_info)
+
+
 class SlackWorkspace:
     def __init__(self, name: str):
         self.name = name
@@ -106,6 +124,7 @@ class SlackWorkspace:
         self._is_connected = False
         self.users = SlackUsers(self)
         self.bots = SlackBots(self)
+        self.usergroups = SlackUsergroups(self)
         self.conversations: Dict[str, SlackConversation] = {}
 
     @property

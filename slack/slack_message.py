@@ -4,7 +4,7 @@ import re
 from typing import TYPE_CHECKING, List, Match, Optional
 
 from slack.shared import shared
-from slack.slack_user import SlackUser, format_bot_nick
+from slack.slack_user import SlackUser, SlackUsergroup, format_bot_nick
 from slack.task import gather
 from slack.util import with_color
 
@@ -57,15 +57,24 @@ class SlackMessage:
         user_ids: List[str] = [
             match["user"] for match in mention_matches if match["user"]
         ]
-        # usergroup_ids: List[str] = [
-        #     match["usergroup"] for match in mention_matches if match["usergroup"]
-        # ]
+        usergroup_ids: List[str] = [
+            match["usergroup"] for match in mention_matches if match["usergroup"]
+        ]
 
         users_list = await gather(
             *(self.workspace.users[user_id] for user_id in user_ids),
             return_exceptions=True,
         )
         users = dict(zip(user_ids, users_list))
+
+        usergroups_list = await gather(
+            *(
+                self.workspace.usergroups[usergroup_id]
+                for usergroup_id in usergroup_ids
+            ),
+            return_exceptions=True,
+        )
+        usergroups = dict(zip(usergroup_ids, usergroups_list))
 
         def unfurl_ref(match: Match[str]):
             if match["user"]:
@@ -86,6 +95,14 @@ class SlackMessage:
             )
 
         def unfurl_usergroup(usergroup_id: str):
-            return f"@{usergroup_id}"
+            usergroup = usergroups[usergroup_id]
+            return (
+                with_color(
+                    shared.config.color.usergroup_mention_color.value,
+                    "@" + usergroup.handle(),
+                )
+                if isinstance(usergroup, SlackUsergroup)
+                else f"@{usergroup_id}"
+            )
 
         return re_mention.sub(unfurl_ref, message)
