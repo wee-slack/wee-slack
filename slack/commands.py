@@ -32,7 +32,7 @@ commands: Dict[str, Command] = {}
 
 
 def parse_options(args: str):
-    regex = re.compile(" +-([^ =]+)(?:=([^ ]+))?")
+    regex = re.compile("(?:^| )+-([^ =]+)(?:=([^ ]+))?")
     pos_args = regex.sub("", args)
     options: Dict[str, Optional[str]] = {
         match.group(1): match.group(2) for match in regex.finditer(args)
@@ -112,7 +112,7 @@ def command_slack(buffer: str, args: List[str], options: Dict[str, Optional[str]
     print("ran slack")
 
 
-@weechat_command("%(slack_workspaces)")
+@weechat_command("%(slack_workspaces)|-all")
 def command_slack_connect(
     buffer: str, args: List[str], options: Dict[str, Optional[str]]
 ):
@@ -123,7 +123,7 @@ def command_slack_connect(
                 await workspace.connect()
             else:
                 print_error(f'workspace "{args[0]}" not found')
-        else:
+        elif options.get("all", False) is None:
             for workspace in shared.workspaces.values():
                 await workspace.connect()
 
