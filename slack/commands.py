@@ -53,8 +53,13 @@ class Command:
 
 def weechat_command(
     completion: str = "", min_args: int = 0, slack_buffer_required: bool = False
-):
-    def decorator(f: Callable[[str, List[str], Dict[str, Optional[str]]], None]):
+) -> Callable[
+    [Callable[[str, List[str], Dict[str, Optional[str]]], None]],
+    Callable[[str, str], None],
+]:
+    def decorator(
+        f: Callable[[str, List[str], Dict[str, Optional[str]]], None]
+    ) -> Callable[[str, str], None]:
         cmd = removeprefix(f.__name__, "command_").replace("_", " ")
         top_level = " " not in cmd
 
@@ -367,7 +372,7 @@ async def complete_user_next(
     complete_input(conversation, query)
 
 
-def complete_previous(conversation: SlackConversation, query: str):
+def complete_previous(conversation: SlackConversation, query: str) -> int:
     if conversation.completion_context == "ACTIVE_COMPLETION":
         conversation.completion_index -= 1
         if conversation.completion_index < 0:

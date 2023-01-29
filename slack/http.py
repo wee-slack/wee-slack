@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import resource
 from io import StringIO
-from typing import Dict
+from typing import Dict, Tuple
 
 import weechat
 
@@ -19,7 +19,9 @@ def available_file_descriptors():
     return max_file_descriptors - num_current_file_descriptors
 
 
-async def hook_process_hashtable(command: str, options: Dict[str, str], timeout: int):
+async def hook_process_hashtable(
+    command: str, options: Dict[str, str], timeout: int
+) -> Tuple[str, int, str, str]:
     future = FutureProcess()
     log(
         LogLevel.DEBUG,
