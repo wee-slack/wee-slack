@@ -5,7 +5,7 @@ import socket
 import ssl
 import time
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Dict, Generic, Iterable, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Dict, Generic, Iterable, Optional, Type, TypeVar
 
 import weechat
 from websocket import ABNF, WebSocketConnectionClosedException, create_connection
@@ -24,10 +24,10 @@ if TYPE_CHECKING:
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_info import SlackUserInfo
 else:
-    SlackBotInfo = Any
-    SlackConversationsInfo = Any
-    SlackUsergroupInfo = Any
-    SlackUserInfo = Any
+    SlackBotInfo = object
+    SlackConversationsInfo = object
+    SlackUsergroupInfo = object
+    SlackUserInfo = object
 
 SlackItemClass = TypeVar(
     "SlackItemClass", SlackConversation, SlackUser, SlackBot, SlackUsergroup
@@ -247,5 +247,5 @@ class SlackWorkspace:
 
             self.ws_recv(json.loads(recv_data.decode()))
 
-    def ws_recv(self, data: Any):
+    def ws_recv(self, data: object):
         print(f"received: {data}")

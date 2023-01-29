@@ -48,7 +48,8 @@ class WeeChatSection:
         )
 
 
-WeeChatOptionType = TypeVar("WeeChatOptionType", bound=Union[int, str])
+WeeChatOptionTypes = Union[int, str]
+WeeChatOptionType = TypeVar("WeeChatOptionType", bound=WeeChatOptionTypes)
 
 
 @dataclass
