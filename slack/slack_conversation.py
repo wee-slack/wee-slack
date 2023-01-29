@@ -12,6 +12,7 @@ from slack.task import gather
 from slack.util import get_callback_name
 
 if TYPE_CHECKING:
+    from slack_api.slack_conversations_info import SlackConversationsInfo
     from typing_extensions import Literal
 
     from slack.slack_api import SlackApi
@@ -22,16 +23,21 @@ def get_conversation_from_buffer_pointer(
     buffer_pointer: str,
 ) -> Optional[SlackConversation]:
     for workspace in shared.workspaces.values():
-        for conversation in workspace.conversations.values():
+        for conversation in workspace.open_conversations.values():
             if conversation.buffer_pointer == buffer_pointer:
                 return conversation
     return None
 
 
 class SlackConversation:
-    def __init__(self, workspace: SlackWorkspace, id: str):
+    def __init__(
+        self,
+        workspace: SlackWorkspace,
+        info: SlackConversationsInfo,
+    ):
         self.workspace = workspace
-        self.id = id
+        self._info = info
+        self._members: List[str]
         # TODO: buffer_pointer may be accessed by buffer_switch before it's initialized
         self.buffer_pointer: str = ""
         self.name: str
@@ -48,9 +54,18 @@ class SlackConversation:
         self.completion_values: List[str] = []
         self.completion_index = 0
 
+    @classmethod
+    async def create(cls, workspace: SlackWorkspace, conversation_id: str):
+        info_response = await workspace.api.fetch_conversations_info(conversation_id)
+        return cls(workspace, info_response["channel"])
+
     @property
     def _api(self) -> SlackApi:
         return self.workspace.api
+
+    @property
+    def id(self) -> str:
+        return self._info["id"]
 
     @contextmanager
     def loading(self):
@@ -70,17 +85,28 @@ class SlackConversation:
         finally:
             self.completion_context = "ACTIVE_COMPLETION"
 
-    async def init(self):
-        with self.loading():
-            info = await self._api.fetch_conversations_info(self)
+    async def open_if_open(self):
+        if "is_open" in self._info:
+            if self._info["is_open"]:
+                await self.open_buffer()
+        elif "is_member" in self._info and self._info["is_member"]:
+            await self.open_buffer()
 
-        info_channel = info["channel"]
-        if info_channel["is_im"] is True:
-            self.name = "IM"  # TODO
-        elif info_channel["is_mpim"] is True:
-            self.name = "MPIM"  # TODO
-        else:
-            self.name = info_channel["name"]
+    async def open_buffer(self):
+        with self.loading():
+            if "is_im" in self._info and self._info["is_im"] is True:
+                im_user = await self.workspace.users[self._info["user"]]
+                self.name = im_user.nick()
+            elif self._info["is_mpim"] is True:
+                members_response = await self._api.fetch_conversations_members(self)
+                self._members = members_response["members"]
+                await self.workspace.users.initialize_items(self._members)
+                member_users = await gather(
+                    *(self.workspace.users[user_id] for user_id in self._members)
+                )
+                self.name = ",".join([user.nick() for user in member_users])
+            else:
+                self.name = f"#{self._info['name']}"
 
         full_name = f"{shared.SCRIPT_NAME}.{self.workspace.name}.{self.name}"
 
@@ -91,6 +117,8 @@ class SlackConversation:
         weechat.buffer_set(
             self.buffer_pointer, "localvar_set_nick", self.workspace.my_user.nick()
         )
+
+        self.workspace.open_conversations[self.id] = self
 
     async def fill_history(self):
         if self.history_filled or self.history_pending:

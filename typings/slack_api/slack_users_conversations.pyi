@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Generic, List
 
 from slack_api.slack_error import SlackErrorResponse
+from slack_api.slack_common import SlackResponseMetadata
 from typing_extensions import Literal, TypedDict, TypeVar, final
 
 T = TypeVar("T")
@@ -75,10 +76,6 @@ SlackUsersConversationsNotIm = (
     | SlackUsersConversationsMpim
 )
 SlackUsersConversations = SlackUsersConversationsNotIm | SlackUsersConversationsIm
-
-@final
-class SlackResponseMetadata(TypedDict):
-    next_cursor: str
 
 @final
 class SlackUsersConversationsSuccessResponse(TypedDict, Generic[T]):

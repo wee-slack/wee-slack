@@ -55,7 +55,7 @@ class SlackMessage:
 
     async def _lookup_item_id(self, item_id: str):
         if item_id.startswith("#"):
-            return self.workspace.conversations[removeprefix(item_id, "#")]
+            return await self.workspace.conversations[removeprefix(item_id, "#")]
         elif item_id.startswith("@"):
             return await self.workspace.users[removeprefix(item_id, "@")]
         elif item_id.startswith("!subteam^"):

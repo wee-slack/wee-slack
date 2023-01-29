@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfoResponse, SlackBotsInfoResponse
     from slack_api.slack_conversations_history import SlackConversationsHistoryResponse
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
+    from slack_api.slack_conversations_members import SlackConversationsMembersResponse
     from slack_api.slack_rtm_connect import SlackRtmConnectResponse
     from slack_api.slack_usergroups_info import SlackUsergroupsInfoResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
@@ -96,10 +97,25 @@ class SlackApi:
             raise SlackApiError(self.workspace, method, response, params)
         return response
 
-    async def fetch_conversations_info(self, conversation: SlackConversation):
+    async def fetch_conversations_info(self, conversation_id: str):
         method = "conversations.info"
-        params = {"channel": conversation.id}
+        params = {"channel": conversation_id}
         response: SlackConversationsInfoResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def fetch_conversations_members(
+        self,
+        conversation: SlackConversation,
+        limit: int = 1000,
+        pages: int = -1,
+    ):
+        method = "conversations.members"
+        params = {"channel": conversation.id, "limit": limit}
+        response: SlackConversationsMembersResponse = await self._fetch_list(
+            method, "members", params, pages
+        )
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
         return response
