@@ -21,6 +21,13 @@ class SlackConfigSectionColor:
     def __init__(self, weechat_config: WeeChatConfig):
         self._section = WeeChatSection(weechat_config, "color")
 
+        self.channel_mention_color = WeeChatOption(
+            self._section,
+            "channel_mention_color",
+            "text color for mentioned channel names in the chat",
+            WeeChatColor("blue"),
+        )
+
         self.disconnected = WeeChatOption(
             self._section,
             "disconnected",
