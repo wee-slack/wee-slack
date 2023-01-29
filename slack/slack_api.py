@@ -91,7 +91,7 @@ class SlackApi:
 
     async def fetch_conversations_history(self, conversation: SlackConversation):
         method = "conversations.history"
-        params = {"channel": conversation.id}
+        params: Params = {"channel": conversation.id}
         response: SlackConversationsHistoryResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
@@ -99,7 +99,7 @@ class SlackApi:
 
     async def fetch_conversations_info(self, conversation_id: str):
         method = "conversations.info"
-        params = {"channel": conversation_id}
+        params: Params = {"channel": conversation_id}
         response: SlackConversationsInfoResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
@@ -112,7 +112,7 @@ class SlackApi:
         pages: int = -1,
     ):
         method = "conversations.members"
-        params = {"channel": conversation.id, "limit": limit}
+        params: Params = {"channel": conversation.id, "limit": limit}
         response: SlackConversationsMembersResponse = await self._fetch_list(
             method, "members", params, pages
         )
@@ -128,7 +128,7 @@ class SlackApi:
         pages: int = -1,
     ):
         method = "users.conversations"
-        params = {
+        params: Params = {
             "types": types,
             "exclude_archived": exclude_archived,
             "limit": limit,
@@ -145,7 +145,7 @@ class SlackApi:
 
     async def fetch_user_info(self, user_id: str):
         method = "users.info"
-        params = {"user": user_id}
+        params: Params = {"user": user_id}
         response: SlackUserInfoResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
@@ -153,7 +153,7 @@ class SlackApi:
 
     async def fetch_users_info(self, user_ids: Iterable[str]):
         method = "users.info"
-        params = {"users": ",".join(user_ids)}
+        params: Params = {"users": ",".join(user_ids)}
         response: SlackUsersInfoResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
@@ -161,7 +161,7 @@ class SlackApi:
 
     async def fetch_bot_info(self, bot_id: str):
         method = "bots.info"
-        params = {"bot": bot_id}
+        params: Params = {"bot": bot_id}
         response: SlackBotInfoResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
@@ -169,7 +169,7 @@ class SlackApi:
 
     async def fetch_bots_info(self, bot_ids: Iterable[str]):
         method = "bots.info"
-        params = {"bots": ",".join(bot_ids)}
+        params: Params = {"bots": ",".join(bot_ids)}
         response: SlackBotsInfoResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
@@ -184,7 +184,7 @@ class SlackApi:
 
     async def fetch_usergroups_info(self, usergroup_ids: Sequence[str]):
         method = "usergroups/info"
-        params = {"ids": usergroup_ids}
+        params: EdgeParams = {"ids": usergroup_ids}
         response: SlackEdgeUsergroupsInfoResponse = await self._fetch_edgeapi(
             method, params
         )
@@ -194,7 +194,7 @@ class SlackApi:
 
     async def fetch_users_search(self, query: str):
         method = "users/search"
-        params = {
+        params: EdgeParams = {
             "include_profile_only_users": True,
             "query": query,
             "count": 25,

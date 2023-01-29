@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Generic, List
+from typing import Generic, List, TypeVar
 
 from slack_api.slack_common import SlackErrorResponse, SlackResponseMetadata
-from typing_extensions import Literal, TypedDict, TypeVar, final
+from typing_extensions import Literal, TypedDict, final
 
 T = TypeVar("T")
 
