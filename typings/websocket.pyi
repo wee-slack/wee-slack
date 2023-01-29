@@ -1,6 +1,8 @@
 from socket import socket
 from typing import Any, Dict, Optional, Tuple
 
+STATUS_NORMAL = 1000
+
 class ABNF:
     """
     ABNF frame class.
@@ -51,6 +53,9 @@ class WebSocket:
     def recv_data(
         self, control_frame: bool
     ) -> Tuple[int, Any,]: ...
+    def close(
+        self, status: int = STATUS_NORMAL, reason: bytes = b"", timeout: int = 3
+    ) -> None: ...
 
 def create_connection(
     url: str, timeout: Optional[int] = ..., **options: Dict[str, Any]
