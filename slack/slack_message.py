@@ -4,6 +4,7 @@ import re
 from typing import TYPE_CHECKING, List, Match, Optional
 
 from slack.log import print_exception_once
+from slack.python_compatibility import removeprefix
 from slack.shared import shared
 from slack.slack_user import SlackUser, SlackUsergroup, format_bot_nick
 from slack.task import gather
@@ -51,63 +52,37 @@ class SlackMessage:
             user = await self.workspace.users[self._message_json["user"]]
             return user.nick(colorize=True)
 
+    async def _lookup_item_id(self, item_id: str):
+        if item_id.startswith("@"):
+            return await self.workspace.users[removeprefix(item_id, "@")]
+        elif item_id.startswith("!subteam^"):
+            return await self.workspace.usergroups[removeprefix(item_id, "!subteam^")]
+
     async def _unfurl_refs(self, message: str) -> str:
-        re_mention = re.compile(
-            r"<@(?P<user>[^>]+)>|<!subteam\^(?P<usergroup>[^|>]+)(?:\|(?P<usergroup_name>[^>]*))?>"
-        )
+        re_mention = re.compile(r"<(?P<id>[^|>]+)(?:\|(?P<fallback_name>[^>]*))?>")
         mention_matches = list(re_mention.finditer(message))
-
-        user_ids: List[str] = [
-            match["user"] for match in mention_matches if match["user"]
-        ]
-        usergroup_ids: List[str] = [
-            match["usergroup"] for match in mention_matches if match["usergroup"]
-        ]
-
-        users_list = await gather(
-            *(self.workspace.users[user_id] for user_id in user_ids),
+        mention_ids: List[str] = [match["id"] for match in mention_matches]
+        items_list = await gather(
+            *(self._lookup_item_id(mention_id) for mention_id in mention_ids),
             return_exceptions=True,
         )
-        users = dict(zip(user_ids, users_list))
-
-        usergroups_list = await gather(
-            *(
-                self.workspace.usergroups[usergroup_id]
-                for usergroup_id in usergroup_ids
-            ),
-            return_exceptions=True,
-        )
-        usergroups = dict(zip(usergroup_ids, usergroups_list))
+        items = dict(zip(mention_ids, items_list))
 
         def unfurl_ref(match: Match[str]):
-            if match["user"]:
-                return unfurl_user(match["user"])
-            elif match["usergroup"]:
-                return unfurl_usergroup(match["usergroup"], match["usergroup_name"])
-            else:
-                return match[0]
-
-        def unfurl_user(user_id: str):
-            user = users[user_id]
-            if isinstance(user, SlackUser):
+            item = items[match["id"]]
+            if isinstance(item, SlackUser):
                 return with_color(
-                    shared.config.color.user_mention_color.value, "@" + user.nick()
+                    shared.config.color.user_mention_color.value, "@" + item.nick()
                 )
-            else:
-                print_exception_once(user)
-                return f"@{user_id}"
-
-        def unfurl_usergroup(usergroup_id: str, usergroup_fallback_name: Optional[str]):
-            usergroup = usergroups[usergroup_id]
-            if isinstance(usergroup, SlackUsergroup):
+            elif isinstance(item, SlackUsergroup):
                 return with_color(
                     shared.config.color.usergroup_mention_color.value,
-                    "@" + usergroup.handle(),
+                    "@" + item.handle(),
                 )
-            elif usergroup_fallback_name:
-                return usergroup_fallback_name
-            else:
-                print_exception_once(usergroup)
-                return f"@{usergroup_id}"
+            elif match["fallback_name"]:
+                return match["fallback_name"]
+            elif item:
+                print_exception_once(item)
+            return match[0]
 
         return re_mention.sub(unfurl_ref, message)
