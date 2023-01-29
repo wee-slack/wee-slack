@@ -8,8 +8,14 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Dict, Generic, Iterable, Optional, Type, TypeVar
 
 import weechat
-from websocket import ABNF, WebSocketConnectionClosedException, create_connection
+from websocket import (
+    ABNF,
+    WebSocket,
+    WebSocketConnectionClosedException,
+    create_connection,
+)
 
+from slack.error import SlackError
 from slack.proxy import Proxy
 from slack.shared import shared
 from slack.slack_api import SlackApi
@@ -153,6 +159,8 @@ class SlackWorkspace:
         self.config = shared.config.create_workspace_config(self.name)
         self.api = SlackApi(self)
         self._is_connected = False
+        self._ws: Optional[WebSocket] = None
+        self._hook_ws_fd: Optional[str] = None
         self.conversations = SlackConversations(self)
         self.open_conversations: Dict[str, SlackConversation] = {}
         self.users = SlackUsers(self)
@@ -208,27 +216,29 @@ class SlackWorkspace:
             "http_proxy_timeout": self.config.network_timeout.value,
         }
         # TODO: Handle errors
-        self.ws = create_connection(
+        self._ws = create_connection(
             url,
             self.config.network_timeout.value,
             sslopt=sslopt_ca_certs,
             **proxy_options,
         )
 
-        self.hook = weechat.hook_fd(
-            self.ws.sock.fileno(),
+        self._hook_ws_fd = weechat.hook_fd(
+            self._ws.sock.fileno(),
             1,
             0,
             0,
             get_callback_name(self.ws_read_cb),
             "",
         )
-        self.ws.sock.setblocking(False)
+        self._ws.sock.setblocking(False)
 
     def ws_read_cb(self, data: str, fd: int) -> int:
+        if self._ws is None:
+            raise SlackError(self, "ws_read_cb called while _ws is None")
         while True:
             try:
-                opcode, recv_data = self.ws.recv_data(control_frame=True)
+                opcode, recv_data = self._ws.recv_data(control_frame=True)
             except ssl.SSLWantReadError:
                 # No more data to read at this time.
                 return weechat.WEECHAT_RC_OK
@@ -250,7 +260,26 @@ class SlackWorkspace:
     def ws_recv(self, data: object):
         print(f"received: {data}")
 
+    def ping(self):
+        if not self.is_connected:
+            raise SlackError(self, "Can't ping when not connected")
+        if self._ws is None:
+            raise SlackError(self, "is_connected is True while _ws is None")
+        try:
+            self._ws.ping()
+            # workspace.last_ping_time = time.time()
+        except (WebSocketConnectionClosedException, socket.error) as e:
+            # TODO: Handle error
+            # handle_socket_error(e, team, "ping")
+            print(e)
+
     def disconnect(self):
         self.is_connected = False
-        weechat.unhook(self.hook)
-        self.ws.close()
+
+        if self._hook_ws_fd:
+            weechat.unhook(self._hook_ws_fd)
+            self._hook_ws_fd = None
+
+        if self._ws:
+            self._ws.close()
+            self._ws = None
