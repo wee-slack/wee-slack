@@ -21,7 +21,7 @@ from slack.shared import shared
 from slack.slack_api import SlackApi
 from slack.slack_conversation import SlackConversation
 from slack.slack_user import SlackBot, SlackUser, SlackUsergroup
-from slack.task import Future, create_task, gather
+from slack.task import Future, Task, create_task, gather
 from slack.util import get_callback_name
 
 if TYPE_CHECKING:
@@ -159,6 +159,7 @@ class SlackWorkspace:
         self.config = shared.config.create_workspace_config(self.name)
         self.api = SlackApi(self)
         self._is_connected = False
+        self._connect_task: Optional[Task[None]] = None
         self._ws: Optional[WebSocket] = None
         self._hook_ws_fd: Optional[str] = None
         self.conversations = SlackConversations(self)
@@ -179,7 +180,11 @@ class SlackWorkspace:
         self._is_connected = value
         weechat.bar_item_update("input_text")
 
-    async def connect(self):
+    async def connect(self) -> None:
+        self._connect_task = create_task(self._connect())
+        await self._connect_task
+
+    async def _connect(self) -> None:
         rtm_connect = await self.api.fetch_rtm_connect()
         self.id = rtm_connect["team"]["id"]
         self.enterprise_id = rtm_connect["team"].get("enterprise_id")
@@ -275,6 +280,9 @@ class SlackWorkspace:
 
     def disconnect(self):
         self.is_connected = False
+
+        if self._connect_task:
+            self._connect_task.cancel()
 
         if self._hook_ws_fd:
             weechat.unhook(self._hook_ws_fd)

@@ -75,9 +75,22 @@ class Task(Future[T]):
     def __init__(self, coroutine: Coroutine[Future[Any], Any, T]):
         super().__init__()
         self.coroutine = coroutine
+        self._cancelled = False
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}('{self.id}', coroutine={self.coroutine.__qualname__})"
+
+    def __await__(self) -> Generator[Future[T], T, T]:
+        if self.cancelled():
+            raise RuntimeError("cannot await a cancelled task")
+        return super().__await__()
+
+    def cancel(self):
+        self._cancelled = True
+        self.coroutine.close()
+
+    def cancelled(self):
+        return self._cancelled
 
 
 def weechat_task_cb(data: str, *args: object) -> int:
@@ -101,6 +114,8 @@ def process_ended_task(task: Task[Any], response: object):
 
 def task_runner(task: Task[Any], response: object):
     while True:
+        if task.cancelled():
+            return
         try:
             future = task.coroutine.send(response)
         except BaseException as e:
