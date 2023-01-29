@@ -81,6 +81,11 @@ class SlackMessage:
 
         def unfurl_ref(match: Match[str]):
             item = items[match["id"]]
+            if match["id"] in ["!here", "!channel", "!everyone"]:
+                return with_color(
+                    shared.config.color.usergroup_mention_color.value,
+                    "@" + removeprefix(match["id"], "!"),
+                )
             if isinstance(item, slack.slack_conversation.SlackConversation):
                 return with_color(
                     shared.config.color.channel_mention_color.value, "#" + item.name
