@@ -37,10 +37,9 @@ class SlackConversation:
     ):
         self.workspace = workspace
         self._info = info
-        self._members: List[str]
+        self._members: Optional[List[str]] = None
         # TODO: buffer_pointer may be accessed by buffer_switch before it's initialized
         self.buffer_pointer: str = ""
-        self.name: str
         self.is_loading = False
         self.history_filled = False
         self.history_pending = False
@@ -66,6 +65,38 @@ class SlackConversation:
     @property
     def id(self) -> str:
         return self._info["id"]
+
+    async def name(self) -> str:
+        if "is_im" in self._info and self._info["is_im"] is True:
+            im_user = await self.workspace.users[self._info["user"]]
+            return im_user.nick()
+        elif self._info["is_mpim"] is True:
+            if self._members is None:
+                members_response = await self._api.fetch_conversations_members(self)
+                self._members = members_response["members"]
+                await self.workspace.users.initialize_items(self._members)
+            member_users = await gather(
+                *(self.workspace.users[user_id] for user_id in self._members)
+            )
+            return ",".join([user.nick() for user in member_users])
+        else:
+            return self._info["name"]
+
+    def name_prefix(
+        self, name_type: Union[Literal["full_name"], Literal["short_name"]]
+    ) -> str:
+        if "is_im" in self._info and self._info["is_im"] is True:
+            if name_type == "short_name":
+                return " "
+            else:
+                return ""
+        elif self._info["is_mpim"]:
+            if name_type == "short_name":
+                return "@"
+            else:
+                return ""
+        else:
+            return "#"
 
     @contextmanager
     def loading(self):
@@ -93,27 +124,14 @@ class SlackConversation:
             await self.open_buffer()
 
     async def open_buffer(self):
-        with self.loading():
-            if "is_im" in self._info and self._info["is_im"] is True:
-                im_user = await self.workspace.users[self._info["user"]]
-                self.name = im_user.nick()
-            elif self._info["is_mpim"] is True:
-                members_response = await self._api.fetch_conversations_members(self)
-                self._members = members_response["members"]
-                await self.workspace.users.initialize_items(self._members)
-                member_users = await gather(
-                    *(self.workspace.users[user_id] for user_id in self._members)
-                )
-                self.name = ",".join([user.nick() for user in member_users])
-            else:
-                self.name = f"#{self._info['name']}"
-
-        full_name = f"{shared.SCRIPT_NAME}.{self.workspace.name}.{self.name}"
+        name = await self.name()
+        full_name = f"{shared.SCRIPT_NAME}.{self.workspace.name}.{self.name_prefix('full_name')}{name}"
+        short_name = self.name_prefix("short_name") + name
 
         self.buffer_pointer = weechat.buffer_new(
             full_name, get_callback_name(self.buffer_input_cb), "", "", ""
         )
-        weechat.buffer_set(self.buffer_pointer, "short_name", self.name)
+        weechat.buffer_set(self.buffer_pointer, "short_name", short_name)
         weechat.buffer_set(
             self.buffer_pointer, "localvar_set_nick", self.workspace.my_user.nick()
         )

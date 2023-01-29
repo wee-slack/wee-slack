@@ -3,11 +3,10 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, List, Match, Optional
 
-import slack.slack_conversation
 from slack.log import print_exception_once
 from slack.python_compatibility import removeprefix
 from slack.shared import shared
-from slack.slack_user import SlackUser, SlackUsergroup, format_bot_nick
+from slack.slack_user import format_bot_nick
 from slack.task import gather
 from slack.util import with_color
 
@@ -53,21 +52,39 @@ class SlackMessage:
             user = await self.workspace.users[self._message_json["user"]]
             return user.nick(colorize=True)
 
-    async def _lookup_item_id(self, item_id: str):
-        if item_id.startswith("#"):
-            return await self.workspace.conversations[removeprefix(item_id, "#")]
-        elif item_id.startswith("@"):
-            return await self.workspace.users[removeprefix(item_id, "@")]
-        elif item_id.startswith("!subteam^"):
-            return await self.workspace.usergroups[removeprefix(item_id, "!subteam^")]
-
     def _item_prefix(self, item_id: str):
         if item_id.startswith("#") or item_id.startswith("@"):
             return item_id[0]
-        elif item_id.startswith("!subteam^"):
+        elif item_id.startswith("!subteam^") or item_id in [
+            "!here",
+            "!channel",
+            "!everyone",
+        ]:
             return "@"
         else:
             return ""
+
+    async def _lookup_item_id(self, item_id: str):
+        if item_id.startswith("#"):
+            conversation = await self.workspace.conversations[
+                removeprefix(item_id, "#")
+            ]
+            color = shared.config.color.channel_mention_color.value
+            name = conversation.name_prefix("short_name") + await conversation.name()
+            return (color, name)
+        elif item_id.startswith("@"):
+            user = await self.workspace.users[removeprefix(item_id, "@")]
+            color = shared.config.color.user_mention_color.value
+            return (color, self._item_prefix(item_id) + user.nick())
+        elif item_id.startswith("!subteam^"):
+            usergroup = await self.workspace.usergroups[
+                removeprefix(item_id, "!subteam^")
+            ]
+            color = shared.config.color.usergroup_mention_color.value
+            return (color, self._item_prefix(item_id) + usergroup.handle())
+        elif item_id in ["!here", "!channel", "!everyone"]:
+            color = shared.config.color.usergroup_mention_color.value
+            return (color, self._item_prefix(item_id) + removeprefix(item_id, "!"))
 
     async def _unfurl_refs(self, message: str) -> str:
         re_mention = re.compile(r"<(?P<id>[^|>]+)(?:\|(?P<fallback_name>[^>]*))?>")
@@ -81,24 +98,8 @@ class SlackMessage:
 
         def unfurl_ref(match: Match[str]):
             item = items[match["id"]]
-            if match["id"] in ["!here", "!channel", "!everyone"]:
-                return with_color(
-                    shared.config.color.usergroup_mention_color.value,
-                    "@" + removeprefix(match["id"], "!"),
-                )
-            if isinstance(item, slack.slack_conversation.SlackConversation):
-                return with_color(
-                    shared.config.color.channel_mention_color.value, "#" + item.name
-                )
-            elif isinstance(item, SlackUser):
-                return with_color(
-                    shared.config.color.user_mention_color.value, "@" + item.nick()
-                )
-            elif isinstance(item, SlackUsergroup):
-                return with_color(
-                    shared.config.color.usergroup_mention_color.value,
-                    "@" + item.handle(),
-                )
+            if item and not isinstance(item, BaseException):
+                return with_color(item[0], item[1])
             elif match["fallback_name"]:
                 prefix = self._item_prefix(match["id"])
                 if match["fallback_name"].startswith(prefix):
