@@ -20,7 +20,7 @@ from uuid import uuid4
 
 import weechat
 
-from slack.error import HttpError, SlackApiError, format_exception
+from slack.error import HttpError, SlackApiError, SlackError, format_exception
 from slack.log import print_error
 from slack.shared import shared
 from slack.util import get_callback_name
@@ -120,7 +120,11 @@ def task_runner(task: Task[Any], response: Any):
                     or not weechat_task_cb_in_stack
                     and create_task_in_stack == 1
                 ):
-                    if isinstance(e, HttpError) or isinstance(e, SlackApiError):
+                    if (
+                        isinstance(e, HttpError)
+                        or isinstance(e, SlackApiError)
+                        or isinstance(e, SlackError)
+                    ):
                         exception_str = format_exception(e)
                         print_error(f"{exception_str}, task: {task}")
                     else:
