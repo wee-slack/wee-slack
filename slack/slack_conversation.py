@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional
 
 import weechat
 
@@ -44,11 +44,11 @@ class SlackConversation:
         self.history_filled = False
         self.history_pending = False
 
-        self.completion_context: Union[
-            Literal["NO_COMPLETION"],
-            Literal["PENDING_COMPLETION"],
-            Literal["ACTIVE_COMPLETION"],
-            Literal["IN_PROGRESS_COMPLETION"],
+        self.completion_context: Literal[
+            "NO_COMPLETION",
+            "PENDING_COMPLETION",
+            "ACTIVE_COMPLETION",
+            "IN_PROGRESS_COMPLETION",
         ] = "NO_COMPLETION"
         self.completion_values: List[str] = []
         self.completion_index = 0
@@ -82,9 +82,7 @@ class SlackConversation:
         else:
             return self._info["name"]
 
-    def name_prefix(
-        self, name_type: Union[Literal["full_name"], Literal["short_name"]]
-    ) -> str:
+    def name_prefix(self, name_type: Literal["full_name", "short_name"]) -> str:
         if "is_im" in self._info and self._info["is_im"] is True:
             if name_type == "short_name":
                 return " "
