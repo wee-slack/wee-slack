@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from typing import Callable, Dict, Union
+from typing import Callable
 
 import weechat
 
-from slack.shared import shared
-
-weechat_callback_return_type = Union[int, str, Dict[str, str], None]
+from slack.shared import WeechatCallbackReturnType, shared
 
 
-def get_callback_name(callback: Callable[..., weechat_callback_return_type]) -> str:
+def get_callback_name(callback: Callable[..., WeechatCallbackReturnType]) -> str:
     callback_id = f"{callback.__name__}-{id(callback)}"
     shared.weechat_callbacks[callback_id] = callback
     return callback_id

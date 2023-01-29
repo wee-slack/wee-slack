@@ -80,7 +80,7 @@ class Task(Future[T]):
         return f"{self.__class__.__name__}('{self.id}', coroutine={self.coroutine.__qualname__})"
 
 
-def weechat_task_cb(data: str, *args: Any) -> int:
+def weechat_task_cb(data: str, *args: object) -> int:
     future = shared.active_futures.pop(data)
     future.set_result(args)
     tasks = shared.active_tasks.pop(data)
@@ -89,7 +89,7 @@ def weechat_task_cb(data: str, *args: Any) -> int:
     return weechat.WEECHAT_RC_OK
 
 
-def process_ended_task(task: Task[Any], response: Any):
+def process_ended_task(task: Task[Any], response: object):
     task.set_result(response)
     if task.id in shared.active_tasks:
         tasks = shared.active_tasks.pop(task.id)
@@ -99,7 +99,7 @@ def process_ended_task(task: Task[Any], response: Any):
         del shared.active_futures[task.id]
 
 
-def task_runner(task: Task[Any], response: Any):
+def task_runner(task: Task[Any], response: object):
     while True:
         try:
             future = task.coroutine.send(response)

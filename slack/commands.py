@@ -4,7 +4,7 @@ import pprint
 import re
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import weechat
 
@@ -19,7 +19,7 @@ from slack.slack_user import name_from_user_info_without_spaces
 from slack.slack_workspace import SlackWorkspace
 from slack.task import create_task
 from slack.util import get_callback_name, with_color
-from slack.weechat_config import WeeChatOption
+from slack.weechat_config import WeeChatOption, WeeChatOptionTypes
 
 commands: Dict[str, Command] = {}
 
@@ -164,7 +164,7 @@ def command_slack_workspace_add(
 
     for option_name, option_value in options.items():
         if hasattr(shared.workspaces[name].config, option_name):
-            config_option: WeeChatOption[Any] = getattr(
+            config_option: WeeChatOption[WeeChatOptionTypes] = getattr(
                 shared.workspaces[name].config, option_name
             )
             value = "on" if option_value is None else option_value
