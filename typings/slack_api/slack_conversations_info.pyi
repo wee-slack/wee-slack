@@ -39,12 +39,12 @@ class SlackConversationsInfoCommonNotIm(SlackConversationsInfoCommon):
     name_normalized: str
     is_shared: bool
     is_pending_ext_shared: bool
-    pending_shared: List  # pyright: ignore [reportMissingTypeArgument]
+    pending_shared: List[str]
     parent_conversation: None
     creator: str
     is_ext_shared: bool
     shared_team_ids: List[str]
-    pending_connected_team_ids: List  # pyright: ignore [reportMissingTypeArgument]
+    pending_connected_team_ids: List[str]
     is_member: bool
     topic: SlackTopic
     purpose: SlackPurpose
