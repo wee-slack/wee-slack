@@ -52,7 +52,9 @@ class SlackMessage:
             return user.nick(colorize=True)
 
     async def _unfurl_refs(self, message: str) -> str:
-        re_mention = re.compile(r"<@(?P<user>[^>]+)>|<!subteam\^(?P<usergroup>[^>]+)>")
+        re_mention = re.compile(
+            r"<@(?P<user>[^>]+)>|<!subteam\^(?P<usergroup>[^|>]+)(?:\|(?P<usergroup_name>[^>]*))?>"
+        )
         mention_matches = list(re_mention.finditer(message))
 
         user_ids: List[str] = [
@@ -81,7 +83,7 @@ class SlackMessage:
             if match["user"]:
                 return unfurl_user(match["user"])
             elif match["usergroup"]:
-                return unfurl_usergroup(match["usergroup"])
+                return unfurl_usergroup(match["usergroup"], match["usergroup_name"])
             else:
                 return match[0]
 
@@ -95,13 +97,15 @@ class SlackMessage:
                 print_exception_once(user)
                 return f"@{user_id}"
 
-        def unfurl_usergroup(usergroup_id: str):
+        def unfurl_usergroup(usergroup_id: str, usergroup_fallback_name: Optional[str]):
             usergroup = usergroups[usergroup_id]
             if isinstance(usergroup, SlackUsergroup):
                 return with_color(
                     shared.config.color.usergroup_mention_color.value,
                     "@" + usergroup.handle(),
                 )
+            elif usergroup_fallback_name:
+                return usergroup_fallback_name
             else:
                 print_exception_once(usergroup)
                 return f"@{usergroup_id}"
