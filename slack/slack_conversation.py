@@ -120,7 +120,7 @@ class SlackConversation:
         if "is_open" in self._info:
             if self._info["is_open"]:
                 await self.open_buffer()
-        elif "is_member" in self._info and self._info["is_member"]:
+        elif self._info.get("is_member"):
             await self.open_buffer()
 
     async def open_buffer(self):
