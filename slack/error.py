@@ -46,6 +46,15 @@ class SlackApiError(Exception):
         self.response = response
 
 
+class SlackError(Exception):
+    def __init__(self, workspace: SlackWorkspace, error: str):
+        super().__init__(
+            f"{self.__class__.__name__}: workspace={workspace}, error={error}"
+        )
+        self.workspace = workspace
+        self.error = error
+
+
 def format_exception(e: BaseException):
     if isinstance(e, HttpError):
         return (
@@ -57,5 +66,7 @@ def format_exception(e: BaseException):
             f"Error from Slack API method {e.method} with params {e.params} for workspace "
             f"{e.workspace.name}: {e.response}"
         )
+    elif isinstance(e, SlackError):
+        return f"Error occurred in workspace {e.workspace.name}: {e.error}"
     else:
         return f"Unknown error occurred: {e.__class__.__name__}: {e}"

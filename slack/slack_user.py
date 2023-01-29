@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import weechat
 
+from slack.error import SlackError
 from slack.shared import shared
 from slack.util import with_color
 
@@ -98,9 +99,9 @@ class SlackUsergroup:
     @classmethod
     async def create(cls, workspace: SlackWorkspace, id: str):
         info_response = await workspace.api.fetch_usergroups_info([id])
-        # TODO: Handle failed ids
-        usergroup_info = info_response["results"][0]
-        return cls(workspace, usergroup_info)
+        if not info_response["results"] or info_response["results"][0]["id"] != id:
+            raise SlackError(workspace, f"Couldn't find user group {id}")
+        return cls(workspace, info_response["results"][0])
 
     def handle(self) -> str:
         return self._info["handle"]
