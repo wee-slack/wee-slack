@@ -130,6 +130,21 @@ def command_slack_connect(
     create_task(connect())
 
 
+@weechat_command("%(slack_workspaces)|-all")
+def command_slack_disconnect(
+    buffer: str, args: List[str], options: Dict[str, Optional[str]]
+):
+    if args and args[0]:
+        workspace = shared.workspaces.get(args[0])
+        if workspace:
+            workspace.disconnect()
+        else:
+            print_error(f'workspace "{args[0]}" not found')
+    elif options.get("all", False) is None:
+        for workspace in shared.workspaces.values():
+            workspace.disconnect()
+
+
 @weechat_command()
 def command_slack_workspace(
     buffer: str, args: List[str], options: Dict[str, Optional[str]]

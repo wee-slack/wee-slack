@@ -249,3 +249,8 @@ class SlackWorkspace:
 
     def ws_recv(self, data: object):
         print(f"received: {data}")
+
+    def disconnect(self):
+        self.is_connected = False
+        weechat.unhook(self.hook)
+        self.ws.close()
