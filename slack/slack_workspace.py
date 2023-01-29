@@ -15,21 +15,29 @@ from slack.shared import shared
 from slack.slack_api import SlackApi
 from slack.slack_conversation import SlackConversation
 from slack.slack_user import SlackBot, SlackUser, SlackUsergroup
-from slack.task import Future, create_task
+from slack.task import Future, create_task, gather
 from slack.util import get_callback_name
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfo
+    from slack_api.slack_conversations_info import SlackConversationsInfo
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_info import SlackUserInfo
 else:
     SlackBotInfo = Any
+    SlackConversationsInfo = Any
     SlackUsergroupInfo = Any
     SlackUserInfo = Any
 
-SlackItemClass = TypeVar("SlackItemClass", SlackUser, SlackBot, SlackUsergroup)
+SlackItemClass = TypeVar(
+    "SlackItemClass", SlackConversation, SlackUser, SlackBot, SlackUsergroup
+)
 SlackItemInfo = TypeVar(
-    "SlackItemInfo", SlackUserInfo, SlackBotInfo, SlackUsergroupInfo
+    "SlackItemInfo",
+    SlackConversationsInfo,
+    SlackUserInfo,
+    SlackBotInfo,
+    SlackUsergroupInfo,
 )
 
 
@@ -72,6 +80,29 @@ class SlackItem(
     @abstractmethod
     def _create_item_from_info(self, item_info: SlackItemInfo) -> SlackItemClass:
         raise NotImplementedError()
+
+
+class SlackConversations(SlackItem[SlackConversation, SlackConversationsInfo]):
+    def __init__(self, workspace: SlackWorkspace):
+        super().__init__(workspace, SlackConversation)
+
+    async def _fetch_items_info(
+        self, item_ids: Iterable[str]
+    ) -> Dict[str, SlackConversationsInfo]:
+        responses = await gather(
+            *(
+                self.workspace.api.fetch_conversations_info(item_id)
+                for item_id in item_ids
+            )
+        )
+        return {
+            response["channel"]["id"]: response["channel"] for response in responses
+        }
+
+    def _create_item_from_info(
+        self, item_info: SlackConversationsInfo
+    ) -> SlackConversation:
+        return self._item_class(self.workspace, item_info)
 
 
 class SlackUsers(SlackItem[SlackUser, SlackUserInfo]):
@@ -122,10 +153,11 @@ class SlackWorkspace:
         self.config = shared.config.create_workspace_config(self.name)
         self.api = SlackApi(self)
         self._is_connected = False
+        self.conversations = SlackConversations(self)
+        self.open_conversations: Dict[str, SlackConversation] = {}
         self.users = SlackUsers(self)
         self.bots = SlackBots(self)
         self.usergroups = SlackUsergroups(self)
-        self.conversations: Dict[str, SlackConversation] = {}
 
     def __repr__(self):
         return f"{self.__class__.__name__}('{self.name}')"
@@ -147,16 +179,14 @@ class SlackWorkspace:
 
         await self.connect_ws(rtm_connect["url"])
 
-        # "types": "public_channel,private_channel,im",
-        user_channels_response = await self.api.fetch_users_conversations(
-            "public_channel"
+        users_conversations_response = await self.api.fetch_users_conversations(
+            "public_channel,private_channel,mpim,im"
         )
-        user_channels = user_channels_response["channels"]
-
-        for channel in user_channels:
-            conversation = SlackConversation(self, channel["id"])
-            self.conversations[channel["id"]] = conversation
-            create_task(conversation.init())
+        channels = users_conversations_response["channels"]
+        await self.conversations.initialize_items(channel["id"] for channel in channels)
+        for channel in channels:
+            conversation = await self.conversations[channel["id"]]
+            create_task(conversation.open_if_open())
 
         self.is_connected = True
 
