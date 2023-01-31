@@ -270,7 +270,6 @@ async def gather(
 
 async def sleep(milliseconds: int):
     future = FutureTimer()
-    weechat.hook_timer(
-        milliseconds, 0, 1, get_callback_name(weechat_task_cb), future.id
-    )
+    sleep_ms = milliseconds if milliseconds > 0 else 1
+    weechat.hook_timer(sleep_ms, 0, 1, get_callback_name(weechat_task_cb), future.id)
     return await future
