@@ -42,10 +42,7 @@ class InvalidStateError(Exception):
 # Heavily inspired by https://github.com/python/cpython/blob/3.11/Lib/asyncio/futures.py
 class Future(Awaitable[T]):
     def __init__(self, future_id: Optional[str] = None):
-        if future_id is None:
-            self.id = str(uuid4())
-        else:
-            self.id = future_id
+        self.id = future_id or str(uuid4())
         self._state: Literal["PENDING", "CANCELLED", "FINISHED"] = "PENDING"
         self._result: T
         self._exception: Optional[BaseException] = None
