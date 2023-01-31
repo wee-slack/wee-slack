@@ -17,7 +17,7 @@ from slack.slack_conversation import (
 )
 from slack.slack_user import name_from_user_info_without_spaces
 from slack.slack_workspace import SlackWorkspace
-from slack.task import create_task
+from slack.task import run_async
 from slack.util import get_callback_name, with_color
 from slack.weechat_config import WeeChatOption, WeeChatOptionTypes
 
@@ -127,7 +127,7 @@ def command_slack_connect(
             for workspace in shared.workspaces.values():
                 await workspace.connect()
 
-    create_task(connect())
+    run_async(connect())
 
 
 @weechat_command("%(slack_workspaces)|-all")
@@ -414,7 +414,7 @@ def input_complete_cb(data: str, buffer: str, command: str) -> int:
             is_first_word = word_until_cursor == input_before_cursor
 
             if command == "/input complete_next":
-                create_task(complete_user_next(conversation, query, is_first_word))
+                run_async(complete_user_next(conversation, query, is_first_word))
                 return weechat.WEECHAT_RC_OK_EAT
             else:
                 return complete_previous(conversation, query)

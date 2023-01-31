@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import traceback
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -21,7 +20,7 @@ from uuid import uuid4
 
 import weechat
 
-from slack.error import HttpError, SlackApiError, SlackError, format_exception
+from slack.error import format_exception
 from slack.log import print_error
 from slack.shared import shared
 from slack.util import get_callback_name
@@ -193,31 +192,7 @@ def task_runner(task: Task[Any], response: object):
             future = task.coroutine.send(response)
         except BaseException as e:
             result = e.value if isinstance(e, StopIteration) else e
-            in_active_tasks = task.id in shared.active_tasks
             process_ended_task(task, result)
-
-            if isinstance(result, BaseException):
-                weechat_task_cb_in_stack = "weechat_task_cb" in [
-                    stack.name for stack in traceback.extract_stack()
-                ]
-                create_task_in_stack = [
-                    stack.name for stack in traceback.extract_stack()
-                ].count("create_task")
-                if not in_active_tasks and (
-                    create_task_in_stack == 0
-                    or not weechat_task_cb_in_stack
-                    and create_task_in_stack == 1
-                ):
-                    if (
-                        isinstance(e, HttpError)
-                        or isinstance(e, SlackApiError)
-                        or isinstance(e, SlackError)
-                    ):
-                        exception_str = format_exception(e)
-                        print_error(f"{exception_str}, task: {task}")
-                    else:
-                        raise e
-
             return
 
         if future.done():
@@ -232,6 +207,18 @@ def create_task(coroutine: Coroutine[Future[Any], Any, T]) -> Task[T]:
     task = Task(coroutine)
     task_runner(task, None)
     return task
+
+
+def _async_task_done(task: Task[object]):
+    exception = task.exception()
+    if exception:
+        print_error(f"{task} failed with: {format_exception(exception)}")
+
+
+def run_async(coroutine: Coroutine[Future[Any], Any, Any]) -> None:
+    task = Task(coroutine)
+    task.add_done_callback(_async_task_done)
+    task_runner(task, None)
 
 
 @overload

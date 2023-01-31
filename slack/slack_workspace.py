@@ -21,7 +21,7 @@ from slack.shared import shared
 from slack.slack_api import SlackApi
 from slack.slack_conversation import SlackConversation
 from slack.slack_user import SlackBot, SlackUser, SlackUsergroup
-from slack.task import Future, Task, create_task, gather
+from slack.task import Future, Task, create_task, gather, run_async
 from slack.util import get_callback_name
 
 if TYPE_CHECKING:
@@ -199,7 +199,7 @@ class SlackWorkspace:
         await self.conversations.initialize_items(channel["id"] for channel in channels)
         for channel in channels:
             conversation = await self.conversations[channel["id"]]
-            create_task(conversation.open_if_open())
+            run_async(conversation.open_if_open())
 
         self.is_connected = True
 
