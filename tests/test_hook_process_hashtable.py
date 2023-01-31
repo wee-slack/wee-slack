@@ -17,13 +17,14 @@ def test_hook_process_hashtable(mock_method: MagicMock):
     coroutine = hook_process_hashtable(command, options, timeout)
     future = coroutine.send(None)
     assert isinstance(future, FutureProcess)
+    future.set_result((command, 0, "out", "err"))
 
     mock_method.assert_called_once_with(
         command, options, timeout, get_callback_name(weechat_task_cb), future.id
     )
 
     with pytest.raises(StopIteration) as excinfo:
-        coroutine.send((command, 0, "out", "err"))
+        coroutine.send(None)
     assert excinfo.value.value == (command, 0, "out", "err")
 
 
@@ -33,18 +34,24 @@ def test_hook_process_hashtable_chunked(mock_method: MagicMock):
     options = {"option": "1"}
     timeout = 123
     coroutine = hook_process_hashtable(command, options, timeout)
-    future = coroutine.send(None)
-    assert isinstance(future, FutureProcess)
+    future_1 = coroutine.send(None)
+    assert isinstance(future_1, FutureProcess)
+    future_1.set_result((command, -1, "o1", "e1"))
 
     mock_method.assert_called_once_with(
-        command, options, timeout, get_callback_name(weechat_task_cb), future.id
+        command, options, timeout, get_callback_name(weechat_task_cb), future_1.id
     )
 
-    assert isinstance(coroutine.send((command, -1, "o1", "e1")), FutureProcess)
-    assert isinstance(coroutine.send((command, -1, "o2", "e2")), FutureProcess)
+    future_2 = coroutine.send(None)
+    assert isinstance(future_2, FutureProcess)
+    future_2.set_result((command, -1, "o2", "e2"))
+
+    future_3 = coroutine.send(None)
+    assert isinstance(future_3, FutureProcess)
+    future_3.set_result((command, 0, "o3", "e3"))
 
     with pytest.raises(StopIteration) as excinfo:
-        coroutine.send((command, 0, "o3", "e3"))
+        coroutine.send(None)
     assert excinfo.value.value == (command, 0, "o1o2o3", "e1e2e3")
 
 
@@ -54,11 +61,14 @@ def test_hook_process_hashtable_wait_on_max_file_descriptors(
 ):
     mock_available_file_descriptors.return_value = 0
     coroutine = hook_process_hashtable("", {}, 0)
-    future = coroutine.send(None)
-    assert isinstance(future, FutureTimer)
+    future_1 = coroutine.send(None)
+    assert isinstance(future_1, FutureTimer)
+    future_1.set_result((0,))
 
     mock_available_file_descriptors.return_value = 9
-    assert isinstance(coroutine.send((0,)), FutureTimer)
+    future_2 = coroutine.send(None)
+    assert isinstance(future_2, FutureTimer)
+    future_2.set_result((0,))
 
     mock_available_file_descriptors.return_value = 10
-    assert isinstance(coroutine.send((0,)), FutureProcess)
+    assert isinstance(coroutine.send(None), FutureProcess)

@@ -48,7 +48,7 @@ class Future(Awaitable[T]):
         else:
             self.id = future_id
         self._state: Literal["PENDING", "CANCELLED", "FINISHED"] = "PENDING"
-        self._result: Optional[T] = None
+        self._result: T
         self._exception: Optional[BaseException] = None
         self._cancel_message = None
         self._callbacks: List[Callable[[Self], object]] = []
@@ -56,15 +56,12 @@ class Future(Awaitable[T]):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}('{self.id}')"
 
-    def __await__(self) -> Generator[Future[T], T, T]:
-        if self.cancelled():
-            raise self._make_cancelled_error()
-        result = yield self
-        if isinstance(result, BaseException):
-            self.set_exception(result)
-            raise result
-        self.set_result(result)
-        return result
+    def __await__(self) -> Generator[Future[T], None, T]:
+        if not self.done():
+            yield self  # This tells Task to wait for completion.
+        if not self.done():
+            raise RuntimeError("await wasn't used with future")
+        return self.result()  # May raise too.
 
     def _make_cancelled_error(self):
         if self._cancel_message is None:
