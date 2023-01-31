@@ -18,7 +18,7 @@ def test_run_single_task():
 
     assert not shared.active_tasks
     assert not shared.active_futures
-    assert task.result == ("awaitable", ("data",))
+    assert task.result() == ("awaitable", ("data",))
 
 
 def test_run_nested_task():
@@ -39,7 +39,7 @@ def test_run_nested_task():
 
     assert not shared.active_tasks
     assert not shared.active_futures
-    assert task.result == ("awaitable2", ("awaitable1", ("data",)))
+    assert task.result() == ("awaitable2", ("awaitable1", ("data",)))
 
 
 def test_run_two_tasks_concurrently():
@@ -59,8 +59,8 @@ def test_run_two_tasks_concurrently():
 
     assert not shared.active_tasks
     assert not shared.active_futures
-    assert task1.result == ("awaitable", ("data1",))
-    assert task2.result == ("awaitable", ("data2",))
+    assert task1.result() == ("awaitable", ("data1",))
+    assert task2.result() == ("awaitable", ("data2",))
 
 
 def test_task_without_await():
