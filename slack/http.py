@@ -28,7 +28,7 @@ async def hook_process_hashtable(
         f"hook_process_hashtable calling ({future.id}): command: {command}",
     )
     while available_file_descriptors() < 10:
-        await sleep(10)
+        await sleep(100)
     weechat.hook_process_hashtable(
         command, options, timeout, get_callback_name(weechat_task_cb), future.id
     )
