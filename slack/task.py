@@ -163,37 +163,34 @@ def weechat_task_cb(data: str, *args: object) -> int:
     future.set_result(args)
     tasks = shared.active_tasks.pop(data)
     for task in tasks:
-        task_runner(task, args)
+        task_runner(task)
     return weechat.WEECHAT_RC_OK
 
 
-def process_ended_task(task: Task[Any], response: object):
-    if isinstance(response, BaseException):
-        task.set_exception(response)
-    else:
-        task.set_result(response)
+def process_ended_task(task: Task[Any]):
     if task.id in shared.active_tasks:
         tasks = shared.active_tasks.pop(task.id)
         for active_task in tasks:
-            task_runner(active_task, response)
+            task_runner(active_task)
     if task.id in shared.active_futures:
         del shared.active_futures[task.id]
 
 
-def task_runner(task: Task[Any], response: object):
+def task_runner(task: Task[Any]):
     while True:
         if task.cancelled():
             return
         try:
-            future = task.coroutine.send(response)
+            future = task.coroutine.send(None)
         except BaseException as e:
-            result = e.value if isinstance(e, StopIteration) else e
-            process_ended_task(task, result)
+            if isinstance(e, StopIteration):
+                task.set_result(e.value)
+            else:
+                task.set_exception(e)
+            process_ended_task(task)
             return
 
-        if future.done():
-            response = future.result()
-        else:
+        if not future.done():
             shared.active_tasks[future.id].append(task)
             shared.active_futures[future.id] = future
             break
@@ -201,7 +198,7 @@ def task_runner(task: Task[Any], response: object):
 
 def create_task(coroutine: Coroutine[Future[Any], Any, T]) -> Task[T]:
     task = Task(coroutine)
-    task_runner(task, None)
+    task_runner(task)
     return task
 
 
@@ -214,7 +211,7 @@ def _async_task_done(task: Task[object]):
 def run_async(coroutine: Coroutine[Future[Any], Any, Any]) -> None:
     task = Task(coroutine)
     task.add_done_callback(_async_task_done)
-    task_runner(task, None)
+    task_runner(task)
 
 
 @overload
