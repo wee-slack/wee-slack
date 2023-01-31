@@ -6,7 +6,7 @@ from slack.commands import register_commands
 from slack.config import SlackConfig
 from slack.shared import shared
 from slack.slack_conversation import get_conversation_from_buffer_pointer
-from slack.task import create_task, sleep
+from slack.task import run_async, sleep
 from slack.util import get_callback_name, with_color
 
 SCRIPT_AUTHOR = "Trygve Aaberge <trygveaa@gmail.com>"
@@ -23,7 +23,7 @@ def shutdown_cb():
 def signal_buffer_switch_cb(data: str, signal: str, buffer_pointer: str) -> int:
     conversation = get_conversation_from_buffer_pointer(buffer_pointer)
     if conversation:
-        create_task(conversation.fill_history())
+        run_async(conversation.fill_history())
     return weechat.WEECHAT_RC_OK
 
 
@@ -82,7 +82,7 @@ async def init_async():
         await sleep(1)  # Defer auto connect to ensure the logger plugin is loaded
         for workspace in shared.workspaces.values():
             if workspace.config.autoconnect.value:
-                create_task(workspace.connect())
+                run_async(workspace.connect())
 
 
 def register():
@@ -120,4 +120,4 @@ def register():
         )
         weechat.hook_timer(5000, 0, 0, get_callback_name(ws_ping_cb), "")
 
-        create_task(init_async())
+        run_async(init_async())
