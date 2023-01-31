@@ -52,7 +52,10 @@ class Command:
 
 
 def weechat_command(
-    completion: str = "", min_args: int = 0, slack_buffer_required: bool = False
+    completion: str = "",
+    min_args: int = 0,
+    split_all_args: bool = False,
+    slack_buffer_required: bool = False,
 ) -> Callable[
     [Callable[[str, List[str], Dict[str, Optional[str]]], None]],
     Callable[[str, str], None],
@@ -66,7 +69,8 @@ def weechat_command(
         @wraps(f)
         def wrapper(buffer: str, args: str):
             pos_args, options = parse_options(args)
-            split_args = pos_args.split(" ", min_args)
+            maxsplit = -1 if split_all_args else 0 if min_args == 0 else min_args - 1
+            split_args = pos_args.split(" ", maxsplit)
             if min_args and not pos_args or len(split_args) < min_args:
                 print_error(
                     f'Too few arguments for command "/{cmd}" (help on command: /help {cmd})'
@@ -112,37 +116,61 @@ def command_slack(buffer: str, args: List[str], options: Dict[str, Optional[str]
     print("ran slack")
 
 
-@weechat_command("%(slack_workspaces)|-all")
+def workspace_connect(workspace: SlackWorkspace):
+    if workspace.is_connected:
+        print_error(f'already connected to workspace "{workspace.name}"!')
+        return
+    elif workspace.is_connecting:
+        print_error(f'already connecting to workspace "{workspace.name}"!')
+        return
+    run_async(workspace.connect())
+
+
+@weechat_command("%(slack_workspaces)|-all", split_all_args=True)
 def command_slack_connect(
     buffer: str, args: List[str], options: Dict[str, Optional[str]]
 ):
-    async def connect():
-        if args and args[0]:
-            workspace = shared.workspaces.get(args[0])
-            if workspace:
-                await workspace.connect()
+    if options.get("all", False) is None:
+        for workspace in shared.workspaces.values():
+            run_async(workspace.connect())
+    elif args[0]:
+        for arg in args:
+            workspace = shared.workspaces.get(arg)
+            if workspace is None:
+                print_error(f'workspace "{arg}" not found')
             else:
-                print_error(f'workspace "{args[0]}" not found')
-        elif options.get("all", False) is None:
-            for workspace in shared.workspaces.values():
-                await workspace.connect()
+                workspace_connect(workspace)
+    else:
+        conversation = get_conversation_from_buffer_pointer(buffer)
+        if conversation:
+            workspace_connect(conversation.workspace)
 
-    run_async(connect())
+
+def workspace_disconnect(workspace: SlackWorkspace):
+    if not workspace.is_connected and not workspace.is_connecting:
+        print_error(f'not connected to workspace "{workspace.name}"!')
+        return
+    workspace.disconnect()
 
 
-@weechat_command("%(slack_workspaces)|-all")
+@weechat_command("%(slack_workspaces)|-all", split_all_args=True)
 def command_slack_disconnect(
     buffer: str, args: List[str], options: Dict[str, Optional[str]]
 ):
-    if args and args[0]:
-        workspace = shared.workspaces.get(args[0])
-        if workspace:
-            workspace.disconnect()
-        else:
-            print_error(f'workspace "{args[0]}" not found')
-    elif options.get("all", False) is None:
+    if options.get("all", False) is None:
         for workspace in shared.workspaces.values():
             workspace.disconnect()
+    elif args[0]:
+        for arg in args:
+            workspace = shared.workspaces.get(arg)
+            if workspace is None:
+                print_error(f'workspace "{arg}" not found')
+            else:
+                workspace_disconnect(workspace)
+    else:
+        conversation = get_conversation_from_buffer_pointer(buffer)
+        if conversation:
+            workspace_disconnect(conversation.workspace)
 
 
 @weechat_command()

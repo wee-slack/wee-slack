@@ -175,6 +175,10 @@ class SlackWorkspace:
     def is_connected(self):
         return self._is_connected
 
+    @property
+    def is_connecting(self):
+        return self._connect_task is not None
+
     @is_connected.setter
     def is_connected(self, value: bool):
         self._is_connected = value
@@ -183,6 +187,7 @@ class SlackWorkspace:
     async def connect(self) -> None:
         self._connect_task = create_task(self._connect())
         await self._connect_task
+        self._connect_task = None
 
     async def _connect(self) -> None:
         rtm_connect = await self.api.fetch_rtm_connect()
