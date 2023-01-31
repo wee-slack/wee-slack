@@ -6,7 +6,6 @@ from typing import (
     Awaitable,
     Callable,
     Coroutine,
-    Dict,
     Generator,
     List,
     Optional,
@@ -237,33 +236,20 @@ async def gather(
 async def gather(
     *requests: Union[Future[T], Coroutine[Any, Any, T]], return_exceptions: bool = False
 ) -> Sequence[Union[T, BaseException]]:
-    # TODO: Should probably propagate first exception
+    tasks = [
+        create_task(request) if isinstance(request, Coroutine) else request
+        for request in requests
+    ]
 
-    tasks_map: Dict[int, Future[T]] = {}
-    results_map: Dict[int, Union[T, BaseException]] = {}
-
-    for i, request in enumerate(requests):
-        if isinstance(request, Coroutine):
+    results: List[Union[T, BaseException]] = []
+    for task in tasks:
+        if return_exceptions:
             try:
-                tasks_map[i] = create_task(request)
+                results.append(await task)
             except BaseException as e:
-                results_map[i] = e
+                results.append(e)
         else:
-            tasks_map[i] = request
-
-    for i, task in tasks_map.items():
-        try:
-            # print(f"waiting for {task}")
-            results_map[i] = await task
-        except BaseException as e:
-            results_map[i] = e
-
-    results = [results_map[i] for i in sorted(results_map.keys())]
-
-    if not return_exceptions:
-        for result in results:
-            if isinstance(result, BaseException):
-                raise result
+            results.append(await task)
 
     return results
 
