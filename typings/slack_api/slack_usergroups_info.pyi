@@ -1,6 +1,6 @@
 from typing import List
 
-from slack_api.slack_error import SlackErrorResponse
+from slack_api.slack_common import SlackErrorResponse
 from typing_extensions import Literal, NotRequired, TypedDict, final
 
 class SlackUsergroupPrefs(TypedDict):
