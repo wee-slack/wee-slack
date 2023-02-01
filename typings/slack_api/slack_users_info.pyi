@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Generic, List, Optional
 
-from slack_api.slack_error import SlackErrorResponse
+from slack_api.slack_common import SlackErrorResponse
 from typing_extensions import Literal, NotRequired, TypedDict, TypeVar, final
 
 T = TypeVar("T")

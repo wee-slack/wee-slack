@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, Mapping, Sequence, Union
 
 if TYPE_CHECKING:
-    from slack_api.slack_error import SlackErrorResponse
+    from slack_api.slack_common import SlackErrorResponse
 
     from slack.slack_workspace import SlackWorkspace
 
