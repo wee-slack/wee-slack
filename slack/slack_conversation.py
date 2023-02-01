@@ -67,7 +67,7 @@ class SlackConversation:
         return self._info["id"]
 
     async def name(self) -> str:
-        if "is_im" in self._info and self._info["is_im"] is True:
+        if self._info["is_im"] is True:
             im_user = await self.workspace.users[self._info["user"]]
             return im_user.nick()
         elif self._info["is_mpim"] is True:
@@ -83,7 +83,7 @@ class SlackConversation:
             return self._info["name"]
 
     def name_prefix(self, name_type: Literal["full_name", "short_name"]) -> str:
-        if "is_im" in self._info and self._info["is_im"] is True:
+        if self._info["is_im"] is True:
             if name_type == "short_name":
                 return " "
             else:
