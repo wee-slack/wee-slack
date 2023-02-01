@@ -10,6 +10,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
     Tuple,
     TypeVar,
     Union,
@@ -29,6 +30,9 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
+running_tasks: Set[Task[object]] = set()
+failed_tasks: List[Tuple[Task[object], BaseException]] = []
+
 
 class CancelledError(Exception):
     pass
@@ -47,6 +51,7 @@ class Future(Awaitable[T]):
         self._exception: Optional[BaseException] = None
         self._cancel_message = None
         self._callbacks: List[Callable[[Self], object]] = []
+        self._exception_read = False
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}('{self.id}')"
@@ -132,7 +137,11 @@ class Future(Awaitable[T]):
             raise self._make_cancelled_error()
         elif not self.done():
             raise InvalidStateError("Exception is not set.")
+        self._exception_read = True
         return self._exception
+
+    def exception_read(self):
+        return self._exception_read
 
 
 class FutureProcess(Future[Tuple[str, int, str, str]]):
@@ -177,9 +186,10 @@ def process_ended_task(task: Task[Any]):
 
 
 def task_runner(task: Task[Any]):
+    running_tasks.add(task)
     while True:
         if task.cancelled():
-            return
+            break
         try:
             future = task.coroutine.send(None)
         except BaseException as e:
@@ -187,13 +197,24 @@ def task_runner(task: Task[Any]):
                 task.set_result(e.value)
             else:
                 task.set_exception(e)
+                failed_tasks.append((task, e))
             process_ended_task(task)
-            return
+            break
 
         if not future.done():
             shared.active_tasks[future.id].append(task)
             shared.active_futures[future.id] = future
             break
+
+    running_tasks.remove(task)
+    if not running_tasks and not shared.active_tasks:
+        for task, exception in failed_tasks:
+            if not task.exception_read():
+                print_error(
+                    f"{task} was never awaited and failed with: "
+                    f"{format_exception(exception)}"
+                )
+        failed_tasks.clear()
 
 
 def create_task(coroutine: Coroutine[Future[Any], Any, T]) -> Task[T]:
