@@ -209,14 +209,6 @@ class SlackWorkspace:
         self.is_connected = True
 
     async def connect_ws(self, url: str):
-        sslopt_ca_certs = {}
-        if hasattr(ssl, "get_default_verify_paths") and callable(
-            ssl.get_default_verify_paths
-        ):
-            ssl_defaults = ssl.get_default_verify_paths()
-            if ssl_defaults.cafile is not None:
-                sslopt_ca_certs = {"ca_certs": ssl_defaults.cafile}
-
         proxy = Proxy()
         proxy_options = {
             "proxy_type": proxy.type,
@@ -229,7 +221,6 @@ class SlackWorkspace:
         self._ws = create_connection(
             url,
             self.config.network_timeout.value,
-            sslopt=sslopt_ca_certs,
             **proxy_options,
         )
 
