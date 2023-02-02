@@ -197,7 +197,7 @@ class SlackWorkspace:
         self.enterprise_id = rtm_connect["team"].get("enterprise_id")
         self.my_user = await self.users[rtm_connect["self"]["id"]]
 
-        await self.connect_ws(rtm_connect["url"])
+        await self._connect_ws(rtm_connect["url"])
 
         users_conversations_response = await self.api.fetch_users_conversations(
             "public_channel,private_channel,mpim,im"
@@ -210,7 +210,7 @@ class SlackWorkspace:
 
         self.is_connected = True
 
-    async def connect_ws(self, url: str):
+    async def _connect_ws(self, url: str):
         proxy = Proxy()
         proxy_options = {
             "proxy_type": proxy.type,
@@ -231,12 +231,12 @@ class SlackWorkspace:
             1,
             0,
             0,
-            get_callback_name(self.ws_read_cb),
+            get_callback_name(self._ws_read_cb),
             "",
         )
         self._ws.sock.setblocking(False)
 
-    def ws_read_cb(self, data: str, fd: int) -> int:
+    def _ws_read_cb(self, data: str, fd: int) -> int:
         if self._ws is None:
             raise SlackError(self, "ws_read_cb called while _ws is None")
         while True:
@@ -257,9 +257,9 @@ class SlackWorkspace:
             elif opcode != ABNF.OPCODE_TEXT:
                 return weechat.WEECHAT_RC_OK
 
-            self.ws_recv(json.loads(recv_data.decode()))
+            self._ws_recv(json.loads(recv_data.decode()))
 
-    def ws_recv(self, data: object):
+    def _ws_recv(self, data: object):
         print(f"received: {data}")
 
     def ping(self):
