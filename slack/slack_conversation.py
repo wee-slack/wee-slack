@@ -122,6 +122,9 @@ class SlackConversation:
             await self.open_buffer()
 
     async def open_buffer(self):
+        if self.buffer_pointer:
+            return
+
         name = await self.name()
         full_name = f"{shared.SCRIPT_NAME}.{self.workspace.name}.{self.name_prefix('full_name')}{name}"
         short_name = self.name_prefix("short_name") + name
