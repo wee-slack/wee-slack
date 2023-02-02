@@ -12,7 +12,6 @@ from slack.util import get_callback_name, with_color
 SCRIPT_AUTHOR = "Trygve Aaberge <trygveaa@gmail.com>"
 SCRIPT_LICENSE = "MIT"
 SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
-REPO_URL = "https://github.com/wee-slack/wee-slack"
 
 
 def shutdown_cb():

@@ -6,6 +6,11 @@ contents="$(cat slack/util.py slack/task.py slack/!(util|task).py main.py | \
   perl -0777 -pe 's/^( *from [^(\n]+\([^)]+\))/$1=~s|\s+| |gr/mge' | \
   grep -Ev '^from slack[. ]')"
 
-echo "$contents" | grep '^from __future__' | sort -u > build/slack.py
-echo "$contents" | grep -v '^from __future__' | grep -E '^(import|from)' | sort -u >> build/slack.py
-echo "$contents" | grep -Ev '^(import|from)' | sed 's/^\( \+\)\(import\|from\).*/\1pass/' >> build/slack.py
+(
+  echo "# This is a compiled file."
+  echo "# For the original source, see https://github.com/wee-slack/wee-slack"
+  echo
+  echo "$contents" | grep '^from __future__' | sort -u
+  echo "$contents" | grep -v '^from __future__' | grep -E '^(import|from)' | sort -u
+  echo "$contents" | grep -Ev '^(import|from)' | sed 's/^\( \+\)\(import\|from\).*/\1pass/'
+) > build/slack.py
