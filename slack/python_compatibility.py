@@ -1,3 +1,7 @@
+import traceback
+from typing import List
+
+
 # Copied from https://peps.python.org/pep-0616/ for support for Python < 3.9
 def removeprefix(self: str, prefix: str) -> str:
     if self.startswith(prefix):
@@ -12,3 +16,7 @@ def removesuffix(self: str, suffix: str) -> str:
         return self[: -len(suffix)]
     else:
         return self[:]
+
+
+def format_exception(exc: BaseException) -> List[str]:
+    return traceback.format_exception(type(exc), exc, exc.__traceback__)

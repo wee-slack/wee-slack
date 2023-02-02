@@ -5,7 +5,7 @@ from typing import Set
 
 import weechat
 
-from slack.error import format_exception
+from slack.error import store_and_format_exception
 from slack.shared import shared
 
 printed_exceptions: Set[BaseException] = set()
@@ -27,7 +27,7 @@ def print_error(message: str):
 
 def print_exception_once(e: BaseException):
     if e not in printed_exceptions:
-        print_error(format_exception(e))
+        print_error(store_and_format_exception(e))
         printed_exceptions.add(e)
 
 

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Union
 
 if TYPE_CHECKING:
     from slack.config import SlackConfig
+    from slack.error import UncaughtError
     from slack.slack_workspace import SlackWorkspace
     from slack.task import Future, Task
 
@@ -22,6 +23,7 @@ class Shared:
         self.active_futures: Dict[str, Future[object]] = {}
         self.workspaces: Dict[str, SlackWorkspace] = {}
         self.config: SlackConfig
+        self.uncaught_errors: List[UncaughtError] = []
 
 
 shared = Shared()
