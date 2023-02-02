@@ -3,7 +3,7 @@
 shopt -s extglob
 
 contents="$(cat slack/util.py slack/task.py slack/!(util|task).py main.py | \
-  awk -v RS='\\([^)]+\\)' '/from.*import/ {gsub(/[[:space:]]+/, "", RT)} {ORS=RT} 1' | \
+  perl -0777 -pe 's/^( *from [^(\n]+\([^)]+\))/$1=~s|\s+| |gr/mge' | \
   grep -Ev '^from slack[. ]')"
 
 echo "$contents" | grep '^from __future__' | sort -u > build/slack.py
