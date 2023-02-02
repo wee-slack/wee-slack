@@ -243,10 +243,9 @@ class SlackWorkspace:
             except ssl.SSLWantReadError:
                 # No more data to read at this time.
                 return weechat.WEECHAT_RC_OK
-            except (WebSocketConnectionClosedException, socket.error) as e:
-                # TODO: Handle error
-                # handle_socket_error(e, team, "receive")
-                print(e)
+            except (WebSocketConnectionClosedException, socket.error):
+                print("lost connection on receive, reconnecting")
+                run_async(self.reconnect())
                 return weechat.WEECHAT_RC_OK
 
             if opcode == ABNF.OPCODE_PONG:
@@ -269,10 +268,13 @@ class SlackWorkspace:
         try:
             self._ws.ping()
             # workspace.last_ping_time = time.time()
-        except (WebSocketConnectionClosedException, socket.error) as e:
-            # TODO: Handle error
-            # handle_socket_error(e, team, "ping")
-            print(e)
+        except (WebSocketConnectionClosedException, socket.error):
+            print("lost connection on ping, reconnecting")
+            run_async(self.reconnect())
+
+    async def reconnect(self):
+        self.disconnect()
+        await self.connect()
 
     def disconnect(self):
         self.is_connected = False
