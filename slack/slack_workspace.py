@@ -185,6 +185,8 @@ class SlackWorkspace:
         weechat.bar_item_update("input_text")
 
     async def connect(self) -> None:
+        if self.is_connected:
+            return
         self._connect_task = create_task(self._connect())
         await self._connect_task
         self._connect_task = None
