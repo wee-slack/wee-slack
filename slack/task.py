@@ -20,7 +20,7 @@ from uuid import uuid4
 
 import weechat
 
-from slack.error import format_exception
+from slack.error import store_and_format_exception
 from slack.log import print_error
 from slack.shared import shared
 from slack.util import get_callback_name
@@ -212,7 +212,7 @@ def task_runner(task: Task[Any]):
             if not task.exception_read():
                 print_error(
                     f"{task} was never awaited and failed with: "
-                    f"{format_exception(exception)}"
+                    f"{store_and_format_exception(exception)}"
                 )
         failed_tasks.clear()
 
@@ -226,7 +226,7 @@ def create_task(coroutine: Coroutine[Future[Any], Any, T]) -> Task[T]:
 def _async_task_done(task: Task[object]):
     exception = task.exception()
     if exception:
-        print_error(f"{task} failed with: {format_exception(exception)}")
+        print_error(f"{task} failed with: {store_and_format_exception(exception)}")
 
 
 def run_async(coroutine: Coroutine[Future[Any], Any, Any]) -> None:

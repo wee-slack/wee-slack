@@ -8,8 +8,9 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import weechat
 
+from slack.error import UncaughtError
 from slack.log import print_error
-from slack.python_compatibility import removeprefix, removesuffix
+from slack.python_compatibility import format_exception, removeprefix, removesuffix
 from slack.shared import shared
 from slack.slack_conversation import (
     SlackConversation,
@@ -261,7 +262,14 @@ def command_slack_workspace_del(
     )
 
 
-@weechat_command("tasks|buffer")
+def print_uncaught_error(error: UncaughtError, detailed: bool = False):
+    weechat.prnt("", f"  {error.id} ({error.time}): {error.exception}")
+    if detailed:
+        for line in format_exception(error.exception):
+            weechat.prnt("", f"  {line}")
+
+
+@weechat_command("tasks|buffer|errors|error", split_all_args=True)
 def command_slack_debug(
     buffer: str, args: List[str], options: Dict[str, Optional[str]]
 ):
@@ -274,6 +282,36 @@ def command_slack_debug(
         conversation = get_conversation_from_buffer_pointer(buffer)
         if conversation:
             weechat.prnt("", f"Conversation id: {conversation.id}")
+    elif args[0] == "errors":
+        num_arg = int(args[1]) if len(args) > 1 and args[1].isdecimal() else 5
+        num = min(num_arg, len(shared.uncaught_errors))
+        weechat.prnt("", f"Last {num} errors:")
+        for error in shared.uncaught_errors[-num:]:
+            print_uncaught_error(error)
+    elif args[0] == "error":
+        if len(args) > 1:
+            if args[1].isdecimal() and args[1] != "0":
+                num = int(args[1])
+                if num > len(shared.uncaught_errors):
+                    print_error(
+                        f"Only {len(shared.uncaught_errors)} error(s) have occurred"
+                    )
+                    return
+                error = shared.uncaught_errors[-num]
+            else:
+                errors = [e for e in shared.uncaught_errors if e.id == args[1]]
+                if not errors:
+                    print_error(f"Error {args[1]} not found")
+                    return
+                error = errors[0]
+            weechat.prnt("", f"Error {error.id}:")
+        elif not shared.uncaught_errors:
+            weechat.prnt("", "No errors have occurred")
+            return
+        else:
+            error = shared.uncaught_errors[-1]
+            weechat.prnt("", "Last error:")
+        print_uncaught_error(error, True)
 
 
 def completion_slack_workspaces_cb(
