@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Dict, List
 
 from slack_api.slack_common import SlackErrorResponse
+from slack_rtm.slack_rtm_message import SlackMessageRtm
 from typing_extensions import Literal, NotRequired, TypedDict, final
 
 @final
@@ -93,7 +94,7 @@ class SlackMessageStandardCommon(SlackMessageCommon):
     team: str
 
 @final
-class SlackMessageStandard(SlackMessageStandardCommon):
+class SlackMessageStandardFinal(SlackMessageStandardCommon):
     pass
 
 class SlackMessageThreadParentCommon(SlackMessageStandardCommon):
@@ -104,24 +105,32 @@ class SlackMessageThreadParentCommon(SlackMessageStandardCommon):
     reply_users: List[str]
     is_locked: bool
 
-@final
 class SlackMessageThreadParentNotSubscribed(SlackMessageThreadParentCommon):
     subscribed: Literal[False]
 
 @final
+class SlackMessageThreadParentNotSubscribedFinal(SlackMessageThreadParentNotSubscribed):
+    pass
+
 class SlackMessageThreadParentSubscribed(SlackMessageThreadParentCommon):
     subscribed: Literal[True]
     last_read: str
 
 @final
+class SlackMessageThreadParentSubscribedFinal(SlackMessageThreadParentSubscribed):
+    pass
+
 class SlackMessageWithFiles(SlackMessageCommon):
     user: str
     files: List[SlackMessageFile]
     upload: bool
     display_as_bot: bool
 
-# TODO: Add other subtypes
 @final
+class SlackMessageWithFilesFinal(SlackMessageWithFiles):
+    pass
+
+# TODO: Add other subtypes
 class SlackMessageSubtypeBotMessage(SlackMessageCommon):
     subtype: Literal["bot_message"]
     bot_id: str
@@ -129,6 +138,9 @@ class SlackMessageSubtypeBotMessage(SlackMessageCommon):
     icons: NotRequired[Dict[str, str]]
 
 @final
+class SlackMessageSubtypeBotMessageFinal(SlackMessageSubtypeBotMessage):
+    pass
+
 class SlackMessageSubtypeBotRemove(SlackMessageCommon):
     subtype: Literal["bot_remove"]
     user: str
@@ -136,20 +148,28 @@ class SlackMessageSubtypeBotRemove(SlackMessageCommon):
     bot_link: str
 
 @final
+class SlackMessageSubtypeBotRemoveFinal(SlackMessageSubtypeBotRemove):
+    pass
+
 class SlackMessageSubtypeBotAdd(SlackMessageCommon):
     subtype: Literal["bot_add"]
     user: str
     bot_id: str
     bot_link: str
 
+@final
+class SlackMessageSubtypeBotAddFinal(SlackMessageSubtypeBotAdd):
+    pass
+
 SlackMessage = (
-    SlackMessageStandard
-    | SlackMessageThreadParentNotSubscribed
-    | SlackMessageThreadParentSubscribed
-    | SlackMessageWithFiles
-    | SlackMessageSubtypeBotMessage
-    | SlackMessageSubtypeBotRemove
-    | SlackMessageSubtypeBotAdd
+    SlackMessageStandardFinal
+    | SlackMessageThreadParentNotSubscribedFinal
+    | SlackMessageThreadParentSubscribedFinal
+    | SlackMessageWithFilesFinal
+    | SlackMessageSubtypeBotMessageFinal
+    | SlackMessageSubtypeBotRemoveFinal
+    | SlackMessageSubtypeBotAddFinal
+    | SlackMessageRtm
 )
 
 @final

@@ -20,6 +20,7 @@ from slack.proxy import Proxy
 from slack.shared import shared
 from slack.slack_api import SlackApi
 from slack.slack_conversation import SlackConversation
+from slack.slack_message import SlackMessage
 from slack.slack_user import SlackBot, SlackUser, SlackUsergroup
 from slack.task import Future, Task, create_task, gather, run_async
 from slack.util import get_callback_name
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
     from slack_api.slack_conversations_info import SlackConversationsInfo
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_info import SlackUserInfo
+    from slack_rtm.slack_rtm_message import SlackRtmMessage
 else:
     SlackBotInfo = object
     SlackConversationsInfo = object
@@ -257,10 +259,24 @@ class SlackWorkspace:
             elif opcode != ABNF.OPCODE_TEXT:
                 return weechat.WEECHAT_RC_OK
 
-            self._ws_recv(json.loads(recv_data.decode()))
+            run_async(self._ws_recv(json.loads(recv_data.decode())))
 
-    def _ws_recv(self, data: object):
-        print(f"received: {data}")
+    async def _ws_recv(self, data: SlackRtmMessage):
+        if data["type"] == "message":
+            if "subtype" in data and data["subtype"] == "message_changed":
+                pass
+            elif "subtype" in data and data["subtype"] == "message_deleted":
+                pass
+            elif "subtype" in data and data["subtype"] == "message_replied":
+                pass
+            else:
+                channel_id = data["channel"]
+                if channel_id in self.open_conversations:
+                    channel = self.open_conversations[channel_id]
+                    message = SlackMessage(channel, data)
+                    await channel.add_message(message)
+        else:
+            weechat.prnt("", f"\t{self.name} received: {json.dumps(data)}")
 
     def ping(self):
         if not self.is_connected:

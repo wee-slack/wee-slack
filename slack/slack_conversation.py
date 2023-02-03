@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from collections import OrderedDict
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, List, Optional
 
@@ -38,6 +39,7 @@ class SlackConversation:
         self.workspace = workspace
         self._info = info
         self._members: Optional[List[str]] = None
+        self._messages: OrderedDict[str, SlackMessage] = OrderedDict()
         # TODO: buffer_pointer may be accessed by buffer_switch before it's initialized
         self.buffer_pointer: str = ""
         self.is_loading = False
@@ -150,6 +152,8 @@ class SlackConversation:
             start = time.time()
 
             messages = [SlackMessage(self, message) for message in history["messages"]]
+            for message in messages:
+                self._messages[message.ts] = message
 
             sender_user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
             await self.workspace.users.initialize_items(sender_user_ids)
@@ -164,6 +168,11 @@ class SlackConversation:
             print(f"history w/o fetch took: {time.time() - start}")
             self.history_filled = True
             self.history_pending = False
+
+    async def add_message(self, message: SlackMessage):
+        self._messages[message.ts] = message
+        message_rendered = await message.render_message()
+        weechat.prnt(self.buffer_pointer, message_rendered)
 
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
         weechat.prnt(buffer, "Text: %s" % input_data)
