@@ -18,5 +18,9 @@ def removesuffix(self: str, suffix: str) -> str:
         return self[:]
 
 
+def format_exception_only(exc: BaseException) -> List[str]:
+    return traceback.format_exception_only(type(exc), exc)
+
+
 def format_exception(exc: BaseException) -> List[str]:
     return traceback.format_exception(type(exc), exc, exc.__traceback__)
