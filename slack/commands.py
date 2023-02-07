@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import pprint
 import re
 from dataclasses import dataclass
@@ -8,7 +9,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import weechat
 
-from slack.error import UncaughtError
+from slack.error import SlackRtmError, UncaughtError
 from slack.log import print_error
 from slack.python_compatibility import format_exception, removeprefix, removesuffix
 from slack.shared import shared
@@ -262,11 +263,19 @@ def command_slack_workspace_del(
     )
 
 
-def print_uncaught_error(error: UncaughtError, detailed: bool = False):
+def print_uncaught_error(
+    error: UncaughtError, detailed: bool, options: Dict[str, Optional[str]]
+):
     weechat.prnt("", f"  {error.id} ({error.time}): {error.exception}")
     if detailed:
         for line in format_exception(error.exception):
             weechat.prnt("", f"  {line}")
+    data = options.get("data", False) is None
+    if data:
+        if isinstance(error.exception, SlackRtmError):
+            weechat.prnt("", f"  data: {json.dumps(error.exception.message_json)}")
+        else:
+            print_error("This error does not have any data")
 
 
 @weechat_command("tasks|buffer|errors|error", split_all_args=True)
@@ -287,7 +296,7 @@ def command_slack_debug(
         num = min(num_arg, len(shared.uncaught_errors))
         weechat.prnt("", f"Last {num} errors:")
         for error in shared.uncaught_errors[-num:]:
-            print_uncaught_error(error)
+            print_uncaught_error(error, False, options)
     elif args[0] == "error":
         if len(args) > 1:
             if args[1].isdecimal() and args[1] != "0":
@@ -311,7 +320,7 @@ def command_slack_debug(
         else:
             error = shared.uncaught_errors[-1]
             weechat.prnt("", "Last error:")
-        print_uncaught_error(error, True)
+        print_uncaught_error(error, True, options)
 
 
 def completion_slack_workspaces_cb(

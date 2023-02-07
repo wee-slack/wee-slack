@@ -15,7 +15,8 @@ from websocket import (
     create_connection,
 )
 
-from slack.error import SlackError
+from slack.error import SlackError, SlackRtmError, store_and_format_exception
+from slack.log import print_error
 from slack.proxy import Proxy
 from slack.shared import shared
 from slack.slack_api import SlackApi
@@ -262,21 +263,25 @@ class SlackWorkspace:
             run_async(self._ws_recv(json.loads(recv_data.decode())))
 
     async def _ws_recv(self, data: SlackRtmMessage):
-        if data["type"] == "message":
-            if "subtype" in data and data["subtype"] == "message_changed":
-                pass
-            elif "subtype" in data and data["subtype"] == "message_deleted":
-                pass
-            elif "subtype" in data and data["subtype"] == "message_replied":
-                pass
+        try:
+            if data["type"] == "message":
+                if "subtype" in data and data["subtype"] == "message_changed":
+                    pass
+                elif "subtype" in data and data["subtype"] == "message_deleted":
+                    pass
+                elif "subtype" in data and data["subtype"] == "message_replied":
+                    pass
+                else:
+                    channel_id = data["channel"]
+                    if channel_id in self.open_conversations:
+                        channel = self.open_conversations[channel_id]
+                        message = SlackMessage(channel, data)
+                        await channel.add_message(message)
             else:
-                channel_id = data["channel"]
-                if channel_id in self.open_conversations:
-                    channel = self.open_conversations[channel_id]
-                    message = SlackMessage(channel, data)
-                    await channel.add_message(message)
-        else:
-            weechat.prnt("", f"\t{self.name} received: {json.dumps(data)}")
+                weechat.prnt("", f"\t{self.name} received: {json.dumps(data)}")
+        except Exception as e:
+            slack_error = SlackRtmError(self, e, data)
+            print_error(store_and_format_exception(slack_error))
 
     def ping(self):
         if not self.is_connected:
