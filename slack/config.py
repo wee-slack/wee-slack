@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union
+from typing import Optional
 
 import weechat
 
@@ -88,8 +88,8 @@ class SlackConfigSectionWorkspace:
     def __init__(
         self,
         section: WeeChatSection,
-        workspace_name: Union[str, None],
-        parent_config: Union[SlackConfigSectionWorkspace, None],
+        workspace_name: Optional[str],
+        parent_config: Optional[SlackConfigSectionWorkspace],
     ):
         self._section = section
         self._workspace_name = workspace_name
@@ -132,9 +132,9 @@ class SlackConfigSectionWorkspace:
         name: str,
         description: str,
         default_value: WeeChatOptionType,
-        min_value: Union[int, None] = None,
-        max_value: Union[int, None] = None,
-        string_values: Union[str, None] = None,
+        min_value: Optional[int] = None,
+        max_value: Optional[int] = None,
+        string_values: Optional[str] = None,
     ) -> WeeChatOption[WeeChatOptionType]:
         if self._workspace_name:
             option_name = f"{self._workspace_name}.{name}"
@@ -159,7 +159,7 @@ class SlackConfigSectionWorkspace:
 
 
 def config_section_workspace_read_cb(
-    data: str, config_file: str, section: str, option_name: str, value: Union[str, None]
+    data: str, config_file: str, section: str, option_name: str, value: Optional[str]
 ) -> int:
     option_split = option_name.split(".", 1)
     if len(option_split) < 2:

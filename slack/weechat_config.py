@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Generic, TypeVar, Union, cast
+from typing import Generic, Optional, TypeVar, Union, cast
 
 import weechat
 
@@ -58,10 +58,10 @@ class WeeChatOption(Generic[WeeChatOptionType]):
     name: str
     description: str
     default_value: WeeChatOptionType
-    min_value: Union[int, None] = None
-    max_value: Union[int, None] = None
-    string_values: Union[str, None] = None
-    parent_option: Union[WeeChatOption[WeeChatOptionType], None] = None
+    min_value: Optional[int] = None
+    max_value: Optional[int] = None
+    string_values: Optional[str] = None
+    parent_option: Optional[WeeChatOption[WeeChatOptionType]] = None
 
     def __post_init__(self):
         self._pointer = self._create_weechat_option()
