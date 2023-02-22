@@ -4803,10 +4803,12 @@ def unwrap_huddle(message, message_json):
 
         for channel in message_json.get("room").get("channels"):
             huddle_texts.append(
-                "https://app.slack.com/client/{team}/{channel}?open=start_huddle"
-                .format(team=message_json.get("team"), channel=channel))
+                "https://app.slack.com/client/{team}/{channel}?open=start_huddle".format(
+                    team=message_json.get("team"), channel=channel
+                )
+            )
 
-    return '\n'.join(huddle_texts)
+    return "\n".join(huddle_texts)
 
 
 def unwrap_files(message, message_json, text_before):
