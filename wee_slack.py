@@ -4791,11 +4791,8 @@ def unwrap_huddle(message, message_json):
 
     if "room" in message_json:
         for block in message_json.get("blocks"):
-            print(block)
             for element in block.get("elements"):
                 for element2 in element.get("elements"):
-                    print(element2)
-                    print(json.dumps(element2))
                     huddle_texts.append(element2.get("text"))
 
         if "name" in message_json.get("room"):
