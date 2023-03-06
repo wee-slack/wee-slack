@@ -832,7 +832,6 @@ class EventRouter(object):
                     dbg("Max retries for Slackrequest")
 
             else:
-
                 if "reply_to" in j:
                     dbg("SET FROM REPLY")
                     function_name = "reply"
@@ -1005,7 +1004,6 @@ def buffer_renamed_cb(data, signal, current_buffer):
         isinstance(channel, SlackChannelCommon)
         and not channel.buffer_rename_in_progress
     ):
-
         if w.buffer_get_string(channel.channel_buffer, "old_full_name"):
             channel.label_full_drop_prefix = True
             channel.label_full = w.buffer_get_string(channel.channel_buffer, "name")
@@ -2531,7 +2529,7 @@ class SlackChannel(SlackChannelCommon):
             self.messages.items(), max(0, len(self.messages) - max_history)
         )
         messages_to_delete = []
-        for (ts, message) in messages_to_check:
+        for ts, message in messages_to_check:
             if ts == message_to_store.ts:
                 pass
             elif isinstance(message, SlackThreadMessage):
@@ -3681,7 +3679,6 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
         login_data["team"]["id"], login_data["team"]["domain"]
     )
     if not eventrouter.teams.get(th):
-
         users = {}
         for item in login_data["users"]:
             users[item["id"]] = SlackUser(login_data["team"]["id"], **item)
@@ -7104,7 +7101,6 @@ def create_team(token, initial_data):
 
 
 if __name__ == "__main__":
-
     w = WeechatWrapper(weechat)
 
     if w.register(
@@ -7116,7 +7112,6 @@ if __name__ == "__main__":
         "script_unloaded",
         "",
     ):
-
         weechat_version = int(w.info_get("version_number", "") or 0)
         weechat_upgrading = w.info_get("weechat_upgrading", "")
 
@@ -7147,7 +7142,6 @@ if __name__ == "__main__":
                 " will not receive any new messages in wee-slack buffers until doing this.",
             )
         else:
-
             EVENTROUTER = EventRouter()
 
             receive_httprequest_callback = EVENTROUTER.receive_httprequest_callback
