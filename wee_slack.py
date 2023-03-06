@@ -4781,7 +4781,7 @@ def unwrap_attachments(message, text_before):
 
 def unwrap_huddle(message, message_json):
     """
-    If huddle is linked to message append huddle information and link
+    If huddle is linked to message, append huddle information and link
     to connect.
     """
     huddle_texts = []
@@ -4796,7 +4796,7 @@ def unwrap_huddle(message, message_json):
             room_name = message_json.get("room").get("name")
 
             if room_name != "":
-                huddle_texts.append("Huddle name : {}".format(room_name))
+                huddle_texts.append("Huddle name: {}".format(room_name))
 
         for channel in message_json.get("room").get("channels"):
             huddle_texts.append(
