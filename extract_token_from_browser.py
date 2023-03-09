@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+from configparser import ConfigParser
 import json
 from pathlib import Path
 import sqlite3
@@ -26,9 +27,21 @@ else:
     print("Currently only Linux and macOS is supported by this script", file=sys.stderr)
     sys.exit(1)
 
-try:
-    default_profile_path = next(firefox_path.glob("*.default-release"))
-except StopIteration:
+profile_path = firefox_path.joinpath("profiles.ini")
+profile_data = ConfigParser()
+profile_data.read(profile_path)
+
+default_profile_path = None
+for key in profile_data.sections():
+    if not key.startswith("Install"):
+        continue
+
+    value = profile_data[key]
+    if "Default" in value:
+        default_profile_path = firefox_path.joinpath(value["Default"])
+        break
+
+if default_profile_path is None:
     print("Couldn't find the default profile for Firefox", file=sys.stderr)
     sys.exit(1)
 
