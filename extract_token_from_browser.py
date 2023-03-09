@@ -4,6 +4,7 @@ import argparse
 from configparser import ConfigParser
 import json
 from pathlib import Path
+from snappy import snappy
 import sqlite3
 import sys
 
@@ -62,11 +63,22 @@ if cookie_ds_values:
 else:
     cookie_value = cookie_d_value
 
-local_storage_path = default_profile_path.joinpath("webappsstore.sqlite")
-con = sqlite3.connect(f"file:{local_storage_path}?immutable=1", uri=True)
-local_storage_query = "SELECT value FROM webappsstore2 WHERE key = 'localConfig_v2'"
-local_config_str = con.execute(local_storage_query).fetchone()[0]
+storage_path = default_profile_path.joinpath(
+    "storage/default/https+++app.slack.com/ls/data.sqlite"
+)
+con = sqlite3.connect(f"file:{storage_path}?immutable=1", uri=True)
+storage_query = "SELECT compression_type, conversion_type, value FROM data WHERE key = 'localConfig_v2'"
+is_compressed, conversion, payload = con.execute(storage_query).fetchone()
 con.close()
+
+if is_compressed:
+    payload = snappy.decompress(payload)
+
+if conversion == 1:
+    local_config_str = payload.decode("utf-8")
+else:
+    # untested; possibly Windows-only?
+    local_config_str = payload.decode("utf-16")
 
 local_config = json.loads(local_config_str)
 teams = [

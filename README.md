@@ -207,6 +207,8 @@ get the tokens and cookies for all the teams you're logged into:
 ./extract_token_from_browser.py firefox
 ```
 
+(Note this script requires the python3-snappy library.)
+
 #### Optional: Connecting to multiple teams
 
 You can run the register command multiple times to connect to multiple teams.
