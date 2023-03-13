@@ -14,6 +14,9 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "browser", help="Which browser to extract from", metavar="<browser>"
 )
+parser.add_argument(
+    "--profile-path", help="Skip detection and use this Firefox profile"
+)
 args = parser.parse_args()
 
 if args.browser != "firefox":
@@ -28,23 +31,37 @@ else:
     print("Currently only Linux and macOS is supported by this script", file=sys.stderr)
     sys.exit(1)
 
-profile_path = firefox_path.joinpath("profiles.ini")
-profile_data = ConfigParser()
-profile_data.read(profile_path)
-
 default_profile_path = None
-for key in profile_data.sections():
-    if not key.startswith("Install"):
-        continue
+if args.profile_path is not None:
+    rel = firefox_path.joinpath(args.profile_path)
+    for p in [Path(args.profile_path), rel]:
+        if p.exists():
+            default_profile_path = p
+            break
 
-    value = profile_data[key]
-    if "Default" in value:
-        default_profile_path = firefox_path.joinpath(value["Default"])
-        break
+    if default_profile_path is None:
+        print(f"Path {args.profile_path} doesn't exist", file=sys.stderr)
+        sys.exit(1)
+else:
+    profile_path = firefox_path.joinpath("profiles.ini")
+    profile_data = ConfigParser()
+    profile_data.read(profile_path)
 
-if default_profile_path is None:
-    print("Couldn't find the default profile for Firefox", file=sys.stderr)
-    sys.exit(1)
+    for key in profile_data.sections():
+        if not key.startswith("Install"):
+            continue
+
+        value = profile_data[key]
+        if "Default" in value:
+            default_profile_path = firefox_path.joinpath(value["Default"])
+            break
+
+    if default_profile_path is None or not default_profile_path.exists():
+        print(
+            "Default profile detection failed; try specifying --profile-path",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 cookies_path = default_profile_path.joinpath("cookies.sqlite")
 con = sqlite3.connect(f"file:{cookies_path}?immutable=1", uri=True)
