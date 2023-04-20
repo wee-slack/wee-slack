@@ -6158,6 +6158,17 @@ def line_event_cb(data, signal, hashtable):
     return w.WEECHAT_RC_OK
 
 
+@utf8_decode
+def info_slack_message_cb(data, info_name, args):
+    current_channel = EVENTROUTER.weechat_controller.buffers.get(w.current_buffer())
+    message = current_channel.message_from_hash_or_index(args)
+
+    if not message:
+        print_message_not_found_error(args)
+        return ""
+    return message.render()
+
+
 @slack_buffer_required
 @utf8_decode
 def command_back(data, current_buffer, args):
@@ -6402,6 +6413,14 @@ def setup_hooks():
     w.hook_hsignal("slack_cursor_message", "line_event_cb", "message")
     w.hook_hsignal("slack_cursor_reply", "line_event_cb", "reply")
     w.hook_hsignal("slack_cursor_thread", "line_event_cb", "thread")
+
+    w.hook_info(
+        "slack_message",
+        "get contents of a slack message",
+        "id or count to the message",
+        "info_slack_message_cb",
+        "",
+    )
 
     # Hooks to fix/implement
     # w.hook_signal('buffer_opened', "buffer_opened_cb", "")
