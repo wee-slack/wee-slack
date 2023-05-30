@@ -263,10 +263,11 @@ class WeechatWrapper(object):
     # first, we want to disable the prefix, which we do by specifying the same
     # number of spaces, so it aligns correctly.
     def prnt_date_tags(self, buffer, date, tags, message):
-        prefix, _, _ = message.partition("\t")
-        prefix = weechat.string_remove_color(encode_to_utf8(prefix), "")
-        prefix_spaces = " " * weechat.strlen_screen(prefix)
-        message = message.replace("\n", "\n{}\t".format(prefix_spaces))
+        if weechat_version < 0x04000000:
+            prefix, _, _ = message.partition("\t")
+            prefix = weechat.string_remove_color(encode_to_utf8(prefix), "")
+            prefix_spaces = " " * weechat.strlen_screen(prefix)
+            message = message.replace("\n", "\n{}\t".format(prefix_spaces))
         return self.wrap_for_utf8(self.wrapped_class.prnt_date_tags)(
             buffer, date, tags, message
         )
