@@ -4907,7 +4907,7 @@ def create_user_status_string(profile):
 def create_reaction_string(reaction, myidentifier):
     if config.show_reaction_nicks:
         nicks = [resolve_ref("@{}".format(user)) for user in reaction["users"]]
-        users = "({})".format(",".join(nicks))
+        users = "({})".format(", ".join(nicks))
     else:
         users = len(reaction["users"])
     reaction_string = ":{}:{}".format(reaction["name"], users)
