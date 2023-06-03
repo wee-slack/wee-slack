@@ -4954,6 +4954,11 @@ def modify_buffer_line(buffer_pointer, ts, new_text):
         is_last_line = False
         line_pointer = w.hdata_move(hdata.line, line_pointer, -1)
 
+    if weechat_version >= 0x04000000:
+        data = w.hdata_pointer(hdata.line, line_pointer, "data")
+        w.hdata_update(hdata.line_data, data, {"message": new_text})
+        return w.WEECHAT_RC_OK
+
     # Find all lines for the message
     pointers = []
     while line_pointer and hdata_line_ts(line_pointer) == ts:
