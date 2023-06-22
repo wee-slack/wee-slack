@@ -2180,6 +2180,7 @@ class SlackChannel(SlackChannelCommon):
         self.last_line_from = None
         self.buffer_name_needs_update = False
         self.last_refresh_typing = False
+        self.is_starred = kwargs.get("is_starred", False)
 
     def __eq__(self, compare_str):
         if (
@@ -2421,6 +2422,11 @@ class SlackChannel(SlackChannelCommon):
                 self.channel_buffer, "localvar_set_channel", self.formatted_name()
             )
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
+            w.buffer_set(
+                self.channel_buffer,
+                "localvar_set_is_starred",
+                "1" if self.is_starred else "0",
+            )
             self.buffer_rename_in_progress = True
             w.buffer_set(
                 self.channel_buffer, "short_name", self.formatted_name(style="sidebar")
