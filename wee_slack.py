@@ -1694,6 +1694,11 @@ class SlackTeam(object):
             w.buffer_set(self.channel_buffer, "localvar_set_slack_type", self.type)
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.nick)
             w.buffer_set(self.channel_buffer, "localvar_set_server", self.name)
+            w.buffer_set(
+                self.channel_buffer,
+                "localvar_set_completion_default_template",
+                "${weechat.completion.default_template}|%(usergroups)|%(emoji)",
+            )
             self.buffer_merge()
 
     def buffer_merge(self, config_value=None):
@@ -2421,6 +2426,11 @@ class SlackChannel(SlackChannelCommon):
                 self.channel_buffer, "localvar_set_channel", self.formatted_name()
             )
             w.buffer_set(self.channel_buffer, "localvar_set_nick", self.team.nick)
+            w.buffer_set(
+                self.channel_buffer,
+                "localvar_set_completion_default_template",
+                "${weechat.completion.default_template}|%(usergroups)|%(emoji)",
+            )
             self.buffer_rename_in_progress = True
             w.buffer_set(
                 self.channel_buffer, "short_name", self.formatted_name(style="sidebar")
@@ -3212,6 +3222,11 @@ class SlackThreadChannel(SlackChannelCommon):
                 self.channel_buffer, "localvar_set_channel", self.formatted_name()
             )
             w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.name)
+            w.buffer_set(
+                self.channel_buffer,
+                "localvar_set_completion_default_template",
+                "${weechat.completion.default_template}|%(usergroups)|%(emoji)",
+            )
             self.buffer_rename_in_progress = True
             w.buffer_set(
                 self.channel_buffer, "short_name", self.formatted_name(style="sidebar")

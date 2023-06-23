@@ -324,29 +324,10 @@ or symlink the
 [`weemoji.json`](https://github.com/wee-slack/wee-slack/blob/master/weemoji.json)
 file to your WeeChat config directory (e.g. `~/.local/share/weechat` or
 `~/.weechat`). If doing this after starting wee-slack, you will have to reload
-it by running `/python reload slack`. Then append `|%(emoji)` to the
-`weechat.completion.default_template` config option, e.g. like this:
-
-```
-/set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(emoji)"
-```
+it by running `/python reload slack`.
 
 Emoji names can be completed by typing colon and the start of the emoji name
 and pressing tab.
-
-### User group tab completions
-
-To enable tab completions for usergroups append `|%(usergroups)` to the
-`weechat.completion.default_template` config option, e.g. like this:
-
-```
-/set weechat.completion.default_template "%(nicks)|%(irc_channels)|%(usergroups)"
-```
-
-If you already added `%(emoji)` to this config option, like described in the
-last section, make sure not to overwrite that. The usergroup will appear in the
-same format as nicks, like the following: `@marketing`, where marketing is the
-usergroup handle.
 
 ### Cursor and mouse mode
 
