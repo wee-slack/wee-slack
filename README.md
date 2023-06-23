@@ -90,9 +90,6 @@ Setup
 
 **Other**: `python3 -m pip install websocket-client`
 
-Note for **macOS**: If you installed WeeChat with Homebrew, you will have to locate the python runtime environment used.
-If `--with-python@2` was used, you should use: `sudo /usr/local/opt/python@2/bin/pip2 install websocket_client`
-
 ### 2. Install and load wee-slack
 
 #### From the WeeChat script repo
