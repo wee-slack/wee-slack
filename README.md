@@ -80,7 +80,7 @@ Setup
 
 **Arch Linux**: `pacman -S python-websocket-client`
 
-**Debian/Ubuntu**: `apt install weechat-python python-websocket`. If using WeeChat 2.6 or newer, run `apt install weechat-python python3-websocket` instead.
+**Debian/Ubuntu**: `apt install weechat-python python3-websocket`
 
 **Fedora**: `dnf install python3-websocket-client`
 
