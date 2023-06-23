@@ -171,6 +171,10 @@ run in WeeChat. The command is of the form:
 /slack register <code>
 ```
 
+Note that this will store your token in plain text in the
+`plugins.var.python.slack.slack_api_token` option. See "Optional: Secure the
+tokens" below for how to secure it.
+
 Your Slack team is now added, and you can complete the setup by reloading the
 wee-slack script.
 
@@ -193,6 +197,10 @@ token (but not the token itself). If you're worried about this, you can use the
 7. Find the cookie named `d` and copy the value.
 8. Return to WeeChat and run `/slack register <token>:<cookie>`.
 9. Reload the script with `/python reload slack`.
+
+Note that this will store your token in plain text in the
+`plugins.var.python.slack.slack_api_token` option. See "Optional: Secure the
+tokens" below for how to secure it.
 
 Note that if you log in or out of any teams in your browser, the cookie will be
 invalidated, and you will have to update it.
