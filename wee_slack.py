@@ -5428,17 +5428,19 @@ def add_token(token, team_name=None):
 def msg_command_cb(data, current_buffer, args):
     aargs = args.split(None, 2)
     who = aargs[1].lstrip("@")
-    if who == "*":
-        who = EVENTROUTER.weechat_controller.buffers[current_buffer].name
-    else:
+    if who != "*":
         join_query_command_cb(data, current_buffer, "/query " + who)
 
     if len(aargs) > 2:
         message = aargs[2]
-        team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
-        cmap = team.get_channel_map()
-        if who in cmap:
-            channel = team.channels[cmap[who]]
+        buffer_pointer = EVENTROUTER.weechat_controller.buffers[current_buffer]
+        team = buffer_pointer.team
+        if who == "*":
+            channel = buffer_pointer
+        else:
+            cmap = team.get_channel_map()
+            channel = team.channels.get(cmap.get(who))
+        if channel:
             channel.send_message(message)
     return w.WEECHAT_RC_OK_EAT
 
