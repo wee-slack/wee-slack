@@ -230,7 +230,7 @@ slack` after changing it to take effect.
 
 **Default:** `INSERT VALID KEY HERE!`
 
-**Description:** List of Slack API tokens, one per Slack instance you want to connect to. See the README for details on how to get these.
+**Description:** List of Slack API tokens, one per Slack instance you want to connect to; see the README for details on how to get these (note: content is evaluated, see /help eval).
 
 ### slack_timeout
 

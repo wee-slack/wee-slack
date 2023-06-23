@@ -6658,7 +6658,8 @@ class PluginConfig(object):
         "slack_api_token": Setting(
             default="INSERT VALID KEY HERE!",
             desc="List of Slack API tokens, one per Slack instance you want to"
-            " connect to. See the README for details on how to get these.",
+            " connect to; see the README for details on how to get these"
+            " (note: content is evaluated, see /help eval).",
         ),
         "slack_timeout": Setting(
             default="20000", desc="How long (ms) to wait when communicating with Slack."
