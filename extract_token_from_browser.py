@@ -204,6 +204,8 @@ if not local_config and leveldb_path:
 
     local_storage_value = db.get(b"_https://app.slack.com\x00\x01localConfig_v2")
     local_config = json.loads(local_storage_value[1:])
+
+if local_config:
     teams = [
         team
         for team in local_config["teams"].values()
