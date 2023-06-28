@@ -81,7 +81,7 @@ elif sys.platform.startswith("darwin"):
             "Library/Application Support/Firefox/Profiles"
         )
     elif args.browser in ["chrome", "chrome-beta"]:
-        browser_data = Path.home().joinpath("Library/Application Support/Chrome")
+        browser_data = Path.home().joinpath("Library/Application Support/Google/Chrome")
     else:
         print(
             f'Unsupported browser "{args.browser}" on platform macOS.', file=sys.stderr
