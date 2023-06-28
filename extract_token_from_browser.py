@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import argparse
+from contextlib import contextmanager
 import json
 import os
+from typing import TYPE_CHECKING
 import secretstorage
 import shutil
 import sqlite3
@@ -21,6 +25,9 @@ try:
 except ModuleNotFoundError as e:
     import_err = e
 
+if TYPE_CHECKING:
+    from _typeshed import StrPath
+
 
 class AESCipher:
     def __init__(self, key):
@@ -32,6 +39,15 @@ class AESCipher:
 
     def _unpad(self, s):
         return s[: -ord(s[len(s) - 1 :])]
+
+
+@contextmanager
+def sqlite3_connect(path: StrPath):
+    con = sqlite3.connect(f"file:{path}?immutable=1", uri=True)
+    try:
+        yield con
+    finally:
+        con.close()
 
 
 parser = argparse.ArgumentParser(
@@ -114,20 +130,16 @@ else:
     cookies_path = default_profile_path.joinpath("Cookies")
     leveldb_path = default_profile_path.joinpath("Local Storage/leveldb")
 
-con = None
 cookie_d_value = None
 cookie_ds_value = None
 try:
-    con = sqlite3.connect(f"file:{cookies_path}?immutable=1", uri=True)
-    cookie_d_value = con.execute(cookie_d_query).fetchone()[0]
-    cookie_ds_value = con.execute(cookie_ds_query).fetchone()[0]
+    with sqlite3_connect(cookies_path) as con:
+        cookie_d_value = con.execute(cookie_d_query).fetchone()[0]
+        cookie_ds_value = con.execute(cookie_ds_query).fetchone()[0]
 except TypeError:
     if not cookie_d_value:
         print("Couldn't find the 'd' cookie value", file=sys.stderr)
         sys.exit(1)
-finally:
-    if con:
-        con.close()
 
 if args.browser in ["chrome", "chrome-beta"]:
     bus = secretstorage.dbus_init()
@@ -167,17 +179,13 @@ else:
 local_storage_path = default_profile_path.joinpath("webappsstore.sqlite")
 local_storage_query = "SELECT value FROM webappsstore2 WHERE key = 'localConfig_v2'"
 teams = []
-con = None
 local_config = None
 try:
-    con = sqlite3.connect(f"file:{local_storage_path}?immutable=1", uri=True)
-    local_config_str = con.execute(local_storage_query).fetchone()[0]
-    local_config = json.loads(local_config_str)
+    with sqlite3_connect(local_storage_path) as con:
+        local_config_str = con.execute(local_storage_query).fetchone()[0]
+        local_config = json.loads(local_config_str)
 except (OperationalError, TypeError):
     pass
-finally:
-    if con:
-        con.close()
 
 if not local_config and leveldb_path:
     try:
