@@ -61,30 +61,32 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-if args.browser not in ["firefox", "firefox-snap", "chrome", "chrome-beta"]:
-    print(
-        "Currently only firefox. firefox-snap, chrome, "
-        "chrome-beta are supported by this script",
-        file=sys.stderr,
-    )
-    sys.exit(1)
-
 if sys.platform.startswith("linux"):
     iterations = 1
     if args.browser == "firefox-snap":
         browser_data = Path.home().joinpath("snap/firefox/common/.mozilla/firefox")
     elif args.browser == "firefox":
         browser_data = Path.home().joinpath(".mozilla/firefox")
-    else:
+    elif args.browser in ["chrome", "chrome-beta"]:
         browser_data = Path.home().joinpath(".config/google-%s" % args.browser)
+    else:
+        print(
+            f'Unsupported browser "{args.browser}" on platform Linux.', file=sys.stderr
+        )
+        sys.exit(1)
 elif sys.platform.startswith("darwin"):
     iterations = 1003
     if args.browser in ["firefox", "firefox-snap"]:
         browser_data = Path.home().joinpath(
             "Library/Application Support/Firefox/Profiles"
         )
-    else:
+    elif args.browser in ["chrome", "chrome-beta"]:
         browser_data = Path.home().joinpath("Library/Application Support/Chrome")
+    else:
+        print(
+            f'Unsupported browser "{args.browser}" on platform macOS.', file=sys.stderr
+        )
+        sys.exit(1)
 else:
     print("Currently only Linux and macOS is supported by this script", file=sys.stderr)
     sys.exit(1)
