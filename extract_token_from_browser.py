@@ -115,6 +115,7 @@ else:
     cookies_path = default_profile_path.joinpath("Cookies")
     leveldb_path = default_profile_path.joinpath("Local Storage/leveldb")
 
+con = None
 cookie_d_value = None
 cookie_ds_value = None
 try:
@@ -126,7 +127,8 @@ except TypeError:
         print("Couldn't find the 'd' cookie value", file=sys.stderr)
         sys.exit(1)
 finally:
-    con.close()
+    if con:
+        con.close()
 
 if args.browser in ["chrome", "chrome-beta"]:
     bus = secretstorage.dbus_init()
@@ -166,6 +168,7 @@ else:
 local_storage_path = default_profile_path.joinpath("webappsstore.sqlite")
 local_storage_query = "SELECT value FROM webappsstore2 WHERE key = 'localConfig_v2'"
 teams = []
+con = None
 local_config = None
 try:
     con = sqlite3.connect(f"file:{local_storage_path}?immutable=1", uri=True)
@@ -182,7 +185,8 @@ except (OperationalError, TypeError):
         )
         sys.exit(1)
 finally:
-    con.close()
+    if con:
+        con.close()
 
 if not local_config and leveldb_path:
     try:
