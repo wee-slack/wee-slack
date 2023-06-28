@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-# Examples:
-# python ./extract_token_from_browser.py chrome --profile="Profile 2" \
-#   --token=xoxc-foo-bar
-# python ./extract_token_from_browser.py firefox-snap --token=xoxc-baz
 
 import argparse
 import json
