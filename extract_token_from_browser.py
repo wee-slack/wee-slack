@@ -179,18 +179,19 @@ if cookie_ds_value:
 else:
     cookie_value = cookie_d_value
 
-local_storage_path = default_profile_path.joinpath("webappsstore.sqlite")
-local_storage_query = "SELECT value FROM webappsstore2 WHERE key = 'localConfig_v2'"
 teams = []
-local_config = None
-try:
-    with sqlite3_connect(local_storage_path) as con:
-        local_config_str = con.execute(local_storage_query).fetchone()[0]
-        local_config = json.loads(local_config_str)
-except (OperationalError, TypeError):
-    pass
 
-if not local_config and leveldb_path:
+if args.browser in ["firefox", "firefox-snap"]:
+    local_storage_path = default_profile_path.joinpath("webappsstore.sqlite")
+    local_storage_query = "SELECT value FROM webappsstore2 WHERE key = 'localConfig_v2'"
+    local_config = None
+    try:
+        with sqlite3_connect(local_storage_path) as con:
+            local_config_str = con.execute(local_storage_query).fetchone()[0]
+            local_config = json.loads(local_config_str)
+    except (OperationalError, TypeError):
+        pass
+else:
     try:
         db = DB(str(leveldb_path))
     except pIOErr:
