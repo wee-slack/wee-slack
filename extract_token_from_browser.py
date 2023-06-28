@@ -20,7 +20,6 @@ try:
     from plyvel._plyvel import IOError as pIOErr
 except ModuleNotFoundError as e:
     import_err = e
-    pass
 
 
 class AESCipher:
@@ -126,7 +125,6 @@ except TypeError:
     if not cookie_d_value:
         print("Couldn't find the 'd' cookie value", file=sys.stderr)
         sys.exit(1)
-    pass
 finally:
     con.close()
 
