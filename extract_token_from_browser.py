@@ -194,8 +194,8 @@ if not local_config and leveldb_path:
         os.makedirs(leveldb_copy, exist_ok=True)
         shutil.copytree(leveldb_path, leveldb_copy, dirs_exist_ok=True)
         print(
-            f"Leveldb was locked by a running browser - made an online copy "
-            "of it in {leveldb_copy}",
+            "Leveldb was locked by a running browser - made an online copy "
+            f"of it in {leveldb_copy}",
             file=sys.stderr,
         )
         db = DB(str(leveldb_copy))
