@@ -40,7 +40,6 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "browser", help="Which browser to extract from", metavar="<browser>"
 )
-parser.add_argument("--token", help="Extracted token", metavar="<token>", nargs="?")
 parser.add_argument(
     "--profile", help="Profile to look up cookies for", metavar="<profile>", nargs="?"
 )
@@ -175,15 +174,7 @@ try:
     local_config_str = con.execute(local_storage_query).fetchone()[0]
     local_config = json.loads(local_config_str)
 except (OperationalError, TypeError):
-    if not args.token and args.browser not in ["chrome", "chrome-beta"]:
-        print(
-            "Couldn't find the token for team, extract it manually "
-            'by running \'window.prompt("Session token:", '
-            "TS.boot_data.api_token)' in your browser dev console "
-            "and specify it in --token",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+    pass
 finally:
     if con:
         con.close()
@@ -213,7 +204,12 @@ if local_config:
     ]
 
 if not teams:
-    teams = [{"token": args.token, "name": "Slack"}]
+    teams = [
+        {
+            "token": "<token>",
+            "name": "Couldn't find any tokens automatically, but you can try to extract it manually as described in the readme and register the team like this",
+        }
+    ]
 
 register_commands = [
     f"{team['name']}:\n/slack register {team['token']}:{cookie_value}" for team in teams
