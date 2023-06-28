@@ -67,6 +67,8 @@ if sys.platform.startswith("linux"):
         browser_data = Path.home().joinpath("snap/firefox/common/.mozilla/firefox")
     elif args.browser == "firefox":
         browser_data = Path.home().joinpath(".mozilla/firefox")
+    elif args.browser == "chromium":
+        browser_data = Path.home().joinpath(".config/chromium")
     elif args.browser in ["chrome", "chrome-beta"]:
         browser_data = Path.home().joinpath(".config/google-%s" % args.browser)
     else:
@@ -80,6 +82,8 @@ elif sys.platform.startswith("darwin"):
         browser_data = Path.home().joinpath(
             "Library/Application Support/Firefox/Profiles"
         )
+    elif args.browser == "chromium":
+        browser_data = Path.home().joinpath("Library/Application Support/Chromium")
     elif args.browser in ["chrome", "chrome-beta"]:
         browser_data = Path.home().joinpath("Library/Application Support/Google/Chrome")
     else:
@@ -115,8 +119,6 @@ else:
         print("Missing required modules for Chrome browser support", file=sys.stderr)
         raise import_err
 
-    # b'v10' is for Chromium, but not Chrome, it seems?
-    prefix = b"v11"
     cookie_d_query = (
         "SELECT encrypted_value FROM cookies WHERE "
         "host_key = '.slack.com' AND name = 'd'"
@@ -143,7 +145,7 @@ except TypeError:
         print("Couldn't find the 'd' cookie value", file=sys.stderr)
         sys.exit(1)
 
-if args.browser in ["chrome", "chrome-beta"]:
+if args.browser in ["chromium", "chrome", "chrome-beta"]:
     bus = secretstorage.dbus_init()
     try:
         collection = secretstorage.get_default_collection(bus)
@@ -167,10 +169,9 @@ if args.browser in ["chrome", "chrome-beta"]:
 
     cipher = AESCipher(key)
 
-    if cookie_d_value[:3] == prefix:
-        cookie_d_value = cipher.decrypt(cookie_d_value[3:]).decode("utf8")
+    cookie_d_value = cipher.decrypt(cookie_d_value[3:]).decode("utf8")
 
-    if cookie_ds_value and cookie_ds_value[:3] == prefix:
+    if cookie_ds_value:
         cookie_ds_value = cipher.decrypt(cookie_ds_value[3:]).decode("utf8")
 
 if cookie_ds_value:
