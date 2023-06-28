@@ -132,7 +132,11 @@ class SlackConversation:
         short_name = self.name_prefix("short_name") + name
 
         self.buffer_pointer = weechat.buffer_new(
-            full_name, get_callback_name(self._buffer_input_cb), "", "", ""
+            full_name,
+            get_callback_name(self._buffer_input_cb),
+            "",
+            get_callback_name(self._buffer_close_cb),
+            "",
         )
         weechat.buffer_set(self.buffer_pointer, "short_name", short_name)
         weechat.buffer_set(
@@ -176,4 +180,9 @@ class SlackConversation:
 
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
         weechat.prnt(buffer, "Text: %s" % input_data)
+        return weechat.WEECHAT_RC_OK
+
+    def _buffer_close_cb(self, data: str, buffer: str) -> int:
+        self.buffer_pointer = ""
+        self.history_filled = False
         return weechat.WEECHAT_RC_OK
