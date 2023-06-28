@@ -62,7 +62,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 if sys.platform.startswith("linux"):
-    iterations = 1
+    chrome_key_iterations = 1
     if args.browser == "firefox-snap":
         browser_data = Path.home().joinpath("snap/firefox/common/.mozilla/firefox")
     elif args.browser == "firefox":
@@ -75,7 +75,7 @@ if sys.platform.startswith("linux"):
         )
         sys.exit(1)
 elif sys.platform.startswith("darwin"):
-    iterations = 1003
+    chrome_key_iterations = 1003
     if args.browser in ["firefox", "firefox-snap"]:
         browser_data = Path.home().joinpath(
             "Library/Application Support/Firefox/Profiles"
@@ -163,7 +163,7 @@ if args.browser in ["chrome", "chrome-beta"]:
 
     salt = b"saltysalt"
     length = 16
-    key = PBKDF2(passwd, salt, length, iterations)
+    key = PBKDF2(passwd, salt, length, chrome_key_iterations)
 
     cipher = AESCipher(key)
 
