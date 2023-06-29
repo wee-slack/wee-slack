@@ -217,7 +217,10 @@ else:
     teams = [
         {
             "token": "<token>",
-            "name": "Couldn't find any tokens automatically, but you can try to extract it manually as described in the readme and register the team like this",
+            "name": (
+                "Couldn't find any tokens automatically, but you can try to extract "
+                "it manually as described in the readme and register the team like this"
+            ),
         }
     ]
 
