@@ -197,7 +197,7 @@ elif browser == "chrome":
             db = DB(tmp_dir)
             local_storage_value = db.get(leveldb_key)
 
-    local_config = json.loads(local_storage_value[1:])
+    local_config = json.loads(local_storage_value[1:]) if local_storage_value else None
 
 else:
     assert_never(browser)
