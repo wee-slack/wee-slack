@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 import sqlite3
 import sys
 import tempfile
+from configparser import ConfigParser
 from contextlib import contextmanager
 from pathlib import Path
 from sqlite3 import OperationalError
@@ -111,15 +111,37 @@ else:
 profile = args.profile
 
 if browser == "firefox":
-    if not profile:
-        profile = "*.default*"
+    default_profile_path = None
+    if profile is not None:
+        rel = browser_data.joinpath(profile)
+        for p in [Path(profile), rel]:
+            if p.exists():
+                default_profile_path = p
+                break
 
-    default_profile_path = max(
-        [x for x in browser_data.glob(profile)], key=os.path.getctime
-    )
-    if not default_profile_path:
-        print("Couldn't find the default profile for Firefox", file=sys.stderr)
-        sys.exit(1)
+        if default_profile_path is None:
+            print(f"Path {profile} doesn't exist", file=sys.stderr)
+            sys.exit(1)
+    else:
+        profile_path = browser_data.joinpath("profiles.ini")
+        profile_data = ConfigParser()
+        profile_data.read(profile_path)
+
+        for key in profile_data.sections():
+            if not key.startswith("Install"):
+                continue
+
+            value = profile_data[key]
+            if "Default" in value:
+                default_profile_path = browser_data.joinpath(value["Default"])
+                break
+
+        if default_profile_path is None or not default_profile_path.exists():
+            print(
+                "Default profile detection failed; try specifying --profile",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
     cookies_path = default_profile_path.joinpath("cookies.sqlite")
     cookie_query = (
@@ -127,12 +149,27 @@ if browser == "firefox":
     )
     cookie_d_value, cookie_ds_value = get_cookies(cookies_path, cookie_query)
 
-    local_storage_path = default_profile_path.joinpath("webappsstore.sqlite")
-    local_storage_query = "SELECT value FROM webappsstore2 WHERE key = 'localConfig_v2'"
+    storage_path = default_profile_path.joinpath(
+        "storage/default/https+++app.slack.com/ls/data.sqlite"
+    )
+    storage_query = "SELECT compression_type, conversion_type, value FROM data WHERE key = 'localConfig_v2'"
     local_config = None
+
     try:
-        with sqlite3_connect(local_storage_path) as con:
-            local_config_str = con.execute(local_storage_query).fetchone()[0]
+        with sqlite3_connect(storage_path) as con:
+            is_compressed, conversion, payload = con.execute(storage_query).fetchone()
+
+        if is_compressed:
+            from snappy import snappy
+
+            payload = snappy.decompress(payload)
+
+        if conversion == 1:
+            local_config_str = payload.decode("utf-8")
+        else:
+            # untested; possibly Windows-only?
+            local_config_str = payload.decode("utf-16")
+
             local_config = json.loads(local_config_str)
     except (OperationalError, TypeError):
         pass
