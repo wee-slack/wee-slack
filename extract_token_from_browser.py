@@ -3,27 +3,15 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import contextmanager
 import json
 import os
-from typing import TYPE_CHECKING
-import secretstorage
 import shutil
 import sqlite3
 import sys
-
+from contextlib import contextmanager
 from pathlib import Path
-from secretstorage.exceptions import SecretStorageException
 from sqlite3 import OperationalError
-
-try:
-    import_err = None
-    from Crypto.Cipher import AES
-    from Crypto.Protocol.KDF import PBKDF2
-    from plyvel import DB
-    from plyvel._plyvel import IOError as pIOErr
-except ModuleNotFoundError as e:
-    import_err = e
+from typing import TYPE_CHECKING, Literal, assert_never
 
 if TYPE_CHECKING:
     from _typeshed import StrPath
@@ -50,6 +38,20 @@ def sqlite3_connect(path: StrPath):
         con.close()
 
 
+def get_cookies(cookies_path: StrPath, cookie_d_query: str, cookie_ds_query: str):
+    cookie_d_value = None
+    try:
+        with sqlite3_connect(cookies_path) as con:
+            cookie_d_value = con.execute(cookie_d_query).fetchone()[0]
+            cookie_ds_value = con.execute(cookie_ds_query).fetchone()[0]
+            return cookie_d_value, cookie_ds_value
+    except TypeError:
+        if not cookie_d_value:
+            print("Couldn't find the 'd' cookie value", file=sys.stderr)
+            sys.exit(1)
+        return cookie_d_value, None
+
+
 parser = argparse.ArgumentParser(
     description="Extract Slack tokens from the browser files"
 )
@@ -61,15 +63,21 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+browser: Literal["firefox", "chrome"]
+
 if sys.platform.startswith("linux"):
     chrome_key_iterations = 1
     if args.browser == "firefox-snap":
+        browser = "firefox"
         browser_data = Path.home().joinpath("snap/firefox/common/.mozilla/firefox")
     elif args.browser == "firefox":
+        browser = "firefox"
         browser_data = Path.home().joinpath(".mozilla/firefox")
     elif args.browser == "chromium":
+        browser = "chrome"
         browser_data = Path.home().joinpath(".config/chromium")
     elif args.browser in ["chrome", "chrome-beta"]:
+        browser = "chrome"
         browser_data = Path.home().joinpath(".config/google-%s" % args.browser)
     else:
         print(
@@ -79,12 +87,15 @@ if sys.platform.startswith("linux"):
 elif sys.platform.startswith("darwin"):
     chrome_key_iterations = 1003
     if args.browser in ["firefox", "firefox-snap"]:
+        browser = "firefox"
         browser_data = Path.home().joinpath(
             "Library/Application Support/Firefox/Profiles"
         )
     elif args.browser == "chromium":
+        browser = "chrome"
         browser_data = Path.home().joinpath("Library/Application Support/Chromium")
     elif args.browser in ["chrome", "chrome-beta"]:
+        browser = "chrome"
         browser_data = Path.home().joinpath("Library/Application Support/Google/Chrome")
     else:
         print(
@@ -95,9 +106,9 @@ else:
     print("Currently only Linux and macOS is supported by this script", file=sys.stderr)
     sys.exit(1)
 
-leveldb_path = None
 profile = args.profile
-if args.browser in ["firefox", "firefox-snap"]:
+
+if browser == "firefox":
     cookie_d_query = (
         "SELECT value FROM moz_cookies WHERE host = '.slack.com' " "AND name = 'd'"
     )
@@ -114,10 +125,28 @@ if args.browser in ["firefox", "firefox-snap"]:
         print("Couldn't find the default profile for Firefox", file=sys.stderr)
         sys.exit(1)
     cookies_path = default_profile_path.joinpath("cookies.sqlite")
-else:
-    if import_err:
-        print("Missing required modules for Chrome browser support", file=sys.stderr)
-        raise import_err
+
+    cookie_d_value, cookie_ds_value = get_cookies(
+        cookies_path, cookie_d_query, cookie_ds_query
+    )
+
+    local_storage_path = default_profile_path.joinpath("webappsstore.sqlite")
+    local_storage_query = "SELECT value FROM webappsstore2 WHERE key = 'localConfig_v2'"
+    local_config = None
+    try:
+        with sqlite3_connect(local_storage_path) as con:
+            local_config_str = con.execute(local_storage_query).fetchone()[0]
+            local_config = json.loads(local_config_str)
+    except (OperationalError, TypeError):
+        pass
+
+elif browser == "chrome":
+    import secretstorage
+    from Crypto.Cipher import AES
+    from Crypto.Protocol.KDF import PBKDF2
+    from plyvel import DB
+    from plyvel._plyvel import IOError as pIOErr
+    from secretstorage.exceptions import SecretStorageException
 
     cookie_d_query = (
         "SELECT encrypted_value FROM cookies WHERE "
@@ -134,18 +163,10 @@ else:
     cookies_path = default_profile_path.joinpath("Cookies")
     leveldb_path = default_profile_path.joinpath("Local Storage/leveldb")
 
-cookie_d_value = None
-cookie_ds_value = None
-try:
-    with sqlite3_connect(cookies_path) as con:
-        cookie_d_value = con.execute(cookie_d_query).fetchone()[0]
-        cookie_ds_value = con.execute(cookie_ds_query).fetchone()[0]
-except TypeError:
-    if not cookie_d_value:
-        print("Couldn't find the 'd' cookie value", file=sys.stderr)
-        sys.exit(1)
+    cookie_d_value, cookie_ds_value = get_cookies(
+        cookies_path, cookie_d_query, cookie_ds_query
+    )
 
-if args.browser in ["chromium", "chrome", "chrome-beta"]:
     bus = secretstorage.dbus_init()
     try:
         collection = secretstorage.get_default_collection(bus)
@@ -174,24 +195,6 @@ if args.browser in ["chromium", "chrome", "chrome-beta"]:
     if cookie_ds_value:
         cookie_ds_value = cipher.decrypt(cookie_ds_value[3:]).decode("utf8")
 
-if cookie_ds_value:
-    cookie_value = f"d={cookie_d_value};d-s={cookie_ds_value}"
-else:
-    cookie_value = cookie_d_value
-
-teams = []
-
-if args.browser in ["firefox", "firefox-snap"]:
-    local_storage_path = default_profile_path.joinpath("webappsstore.sqlite")
-    local_storage_query = "SELECT value FROM webappsstore2 WHERE key = 'localConfig_v2'"
-    local_config = None
-    try:
-        with sqlite3_connect(local_storage_path) as con:
-            local_config_str = con.execute(local_storage_query).fetchone()[0]
-            local_config = json.loads(local_config_str)
-    except (OperationalError, TypeError):
-        pass
-else:
     try:
         db = DB(str(leveldb_path))
     except pIOErr:
@@ -208,14 +211,21 @@ else:
     local_storage_value = db.get(b"_https://app.slack.com\x00\x01localConfig_v2")
     local_config = json.loads(local_storage_value[1:])
 
+else:
+    assert_never(browser)
+
+if cookie_ds_value:
+    cookie_value = f"d={cookie_d_value};d-s={cookie_ds_value}"
+else:
+    cookie_value = cookie_d_value
+
 if local_config:
     teams = [
         team
         for team in local_config["teams"].values()
         if not team["id"].startswith("E")
     ]
-
-if not teams:
+else:
     teams = [
         {
             "token": "<token>",
