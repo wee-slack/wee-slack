@@ -205,14 +205,14 @@ invalidated, and you will have to update it.
 Note that in some cases it may be necessary to include the `d-s` cookie as
 well. If so, you can supply it in this format `<token>:d=<d_cookie>;d-s=<d-s_cookie>`.
 
-If you use Firefox, you can run the `extract_token_from_browser.py` script to
-get the tokens and cookies for all the teams you're logged into:
+If you use Chrome or Firefox, you can run the `extract_token_from_browser.py`
+script to get the tokens and cookies for all the teams you're logged into:
 
 ```
-./extract_token_from_browser.py firefox
+./extract_token_from_browser.py <browser>
 ```
 
-(Note this script requires the python3-snappy library.)
+(Note this script requires the Plyvel, PyCryptodome and SecretStorage libraries for Chrome and may require the python-snappy library for Firefox.)
 
 #### Optional: Connecting to multiple teams
 

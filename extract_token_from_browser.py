@@ -58,7 +58,10 @@ parser = argparse.ArgumentParser(
     description="Extract Slack tokens from the browser files"
 )
 parser.add_argument(
-    "browser", help="Which browser to extract from", metavar="<browser>"
+    "browser",
+    help="Which browser to extract from",
+    metavar="<browser>",
+    choices=["firefox", "firefox-snap", "chromium", "chrome", "chrome-beta"],
 )
 parser.add_argument(
     "--profile", help="Profile to look up cookies for", metavar="<profile>", nargs="?"
