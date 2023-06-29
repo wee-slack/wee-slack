@@ -38,18 +38,21 @@ def sqlite3_connect(path: StrPath):
         con.close()
 
 
-def get_cookies(cookies_path: StrPath, cookie_d_query: str, cookie_ds_query: str):
-    cookie_d_value = None
-    try:
-        with sqlite3_connect(cookies_path) as con:
-            cookie_d_value = con.execute(cookie_d_query).fetchone()[0]
-            cookie_ds_value = con.execute(cookie_ds_query).fetchone()[0]
-            return cookie_d_value, cookie_ds_value
-    except TypeError:
-        if not cookie_d_value:
-            print("Couldn't find the 'd' cookie value", file=sys.stderr)
+def get_cookies(
+    cookies_path: StrPath, cookie_d_query: str, cookie_ds_query: str
+) -> tuple[str, str | None]:
+    with sqlite3_connect(cookies_path) as con:
+        cookie_d_value = con.execute(cookie_d_query).fetchone()
+        cookie_ds_value = con.execute(cookie_ds_query).fetchone()
+        if cookie_d_value and cookie_ds_value:
+            return cookie_d_value[0], cookie_ds_value[0]
+        elif cookie_d_value:
+            return cookie_d_value[0], None
+        else:
+            print(
+                f"Couldn't find the 'd' cookie value in {cookies_path}", file=sys.stderr
+            )
             sys.exit(1)
-        return cookie_d_value, None
 
 
 parser = argparse.ArgumentParser(
