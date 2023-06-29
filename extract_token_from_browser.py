@@ -173,7 +173,7 @@ if browser == "firefox":
             # untested; possibly Windows-only?
             local_config_str = payload.decode("utf-16")
 
-            local_config = json.loads(local_config_str)
+        local_config = json.loads(local_config_str)
     except (OperationalError, TypeError):
         pass
 
