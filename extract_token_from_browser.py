@@ -112,12 +112,6 @@ else:
 profile = args.profile
 
 if browser == "firefox":
-    cookie_d_query = (
-        "SELECT value FROM moz_cookies WHERE host = '.slack.com' " "AND name = 'd'"
-    )
-    cookie_ds_query = (
-        "SELECT value FROM moz_cookies WHERE host = '.slack.com' " "AND name = 'd-s'"
-    )
     if not profile:
         profile = "*.default*"
 
@@ -127,7 +121,14 @@ if browser == "firefox":
     if not default_profile_path:
         print("Couldn't find the default profile for Firefox", file=sys.stderr)
         sys.exit(1)
+
     cookies_path = default_profile_path.joinpath("cookies.sqlite")
+    cookie_d_query = (
+        "SELECT value FROM moz_cookies WHERE host = '.slack.com' " "AND name = 'd'"
+    )
+    cookie_ds_query = (
+        "SELECT value FROM moz_cookies WHERE host = '.slack.com' " "AND name = 'd-s'"
+    )
 
     cookie_d_value, cookie_ds_value = get_cookies(
         cookies_path, cookie_d_query, cookie_ds_query
@@ -151,6 +152,12 @@ elif browser == "chrome":
     from plyvel._plyvel import IOError as pIOErr
     from secretstorage.exceptions import SecretStorageException
 
+    if not profile:
+        profile = "Default"
+
+    default_profile_path = browser_data.joinpath(profile)
+
+    cookies_path = default_profile_path.joinpath("Cookies")
     cookie_d_query = (
         "SELECT encrypted_value FROM cookies WHERE "
         "host_key = '.slack.com' AND name = 'd'"
@@ -159,12 +166,6 @@ elif browser == "chrome":
         "SELECT encrypted_value FROM cookies WHERE "
         "host_key = '.slack.com' AND name = 'd-s'"
     )
-    if not profile:
-        profile = "Default"
-
-    default_profile_path = browser_data.joinpath(profile)
-    cookies_path = default_profile_path.joinpath("Cookies")
-    leveldb_path = default_profile_path.joinpath("Local Storage/leveldb")
 
     cookie_d_value, cookie_ds_value = get_cookies(
         cookies_path, cookie_d_query, cookie_ds_query
@@ -190,14 +191,13 @@ elif browser == "chrome":
     salt = b"saltysalt"
     length = 16
     key = PBKDF2(passwd, salt, length, chrome_key_iterations)
-
     cipher = AESCipher(key)
 
     cookie_d_value = cipher.decrypt(cookie_d_value[3:]).decode("utf8")
-
     if cookie_ds_value:
         cookie_ds_value = cipher.decrypt(cookie_ds_value[3:]).decode("utf8")
 
+    leveldb_path = default_profile_path.joinpath("Local Storage/leveldb")
     try:
         db = DB(str(leveldb_path))
     except pIOErr:
