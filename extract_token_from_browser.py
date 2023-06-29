@@ -8,6 +8,7 @@ import os
 import shutil
 import sqlite3
 import sys
+import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 from sqlite3 import OperationalError
@@ -182,21 +183,20 @@ elif browser == "chrome":
     if cookie_ds_value:
         cookie_ds_value = cipher.decrypt(cookie_ds_value[3:]).decode("utf8")
 
-    leveldb_path = default_profile_path.joinpath("Local Storage/leveldb")
+    local_storage_path = default_profile_path.joinpath("Local Storage")
+    leveldb_path = local_storage_path.joinpath("leveldb")
+    leveldb_key = b"_https://app.slack.com\x00\x01localConfig_v2"
     try:
         db = DB(str(leveldb_path))
+        local_storage_value = db.get(leveldb_key)
     except pIOErr:
-        leveldb_copy = str(leveldb_path) + ".bak"
-        os.makedirs(leveldb_copy, exist_ok=True)
-        shutil.copytree(leveldb_path, leveldb_copy, dirs_exist_ok=True)
-        print(
-            "Leveldb was locked by a running browser - made an online copy "
-            f"of it in {leveldb_copy}",
-            file=sys.stderr,
-        )
-        db = DB(str(leveldb_copy))
+        with tempfile.TemporaryDirectory(
+            dir=local_storage_path, prefix="leveldb-", suffix=".tmp"
+        ) as tmp_dir:
+            shutil.copytree(leveldb_path, tmp_dir, dirs_exist_ok=True)
+            db = DB(tmp_dir)
+            local_storage_value = db.get(leveldb_key)
 
-    local_storage_value = db.get(b"_https://app.slack.com\x00\x01localConfig_v2")
     local_config = json.loads(local_storage_value[1:])
 
 else:
