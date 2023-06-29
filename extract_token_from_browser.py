@@ -38,12 +38,10 @@ def sqlite3_connect(path: StrPath):
         con.close()
 
 
-def get_cookies(
-    cookies_path: StrPath, cookie_d_query: str, cookie_ds_query: str
-) -> tuple[str, str | None]:
+def get_cookies(cookies_path: StrPath, cookie_query: str) -> tuple[str, str | None]:
     with sqlite3_connect(cookies_path) as con:
-        cookie_d_value = con.execute(cookie_d_query).fetchone()
-        cookie_ds_value = con.execute(cookie_ds_query).fetchone()
+        cookie_d_value = con.execute(cookie_query.format("d")).fetchone()
+        cookie_ds_value = con.execute(cookie_query.format("ds")).fetchone()
         if cookie_d_value and cookie_ds_value:
             return cookie_d_value[0], cookie_ds_value[0]
         elif cookie_d_value:
@@ -123,16 +121,10 @@ if browser == "firefox":
         sys.exit(1)
 
     cookies_path = default_profile_path.joinpath("cookies.sqlite")
-    cookie_d_query = (
-        "SELECT value FROM moz_cookies WHERE host = '.slack.com' " "AND name = 'd'"
+    cookie_query = (
+        "SELECT value FROM moz_cookies WHERE host = '.slack.com' " "AND name = '{}'"
     )
-    cookie_ds_query = (
-        "SELECT value FROM moz_cookies WHERE host = '.slack.com' " "AND name = 'd-s'"
-    )
-
-    cookie_d_value, cookie_ds_value = get_cookies(
-        cookies_path, cookie_d_query, cookie_ds_query
-    )
+    cookie_d_value, cookie_ds_value = get_cookies(cookies_path, cookie_query)
 
     local_storage_path = default_profile_path.joinpath("webappsstore.sqlite")
     local_storage_query = "SELECT value FROM webappsstore2 WHERE key = 'localConfig_v2'"
@@ -158,18 +150,11 @@ elif browser == "chrome":
     default_profile_path = browser_data.joinpath(profile)
 
     cookies_path = default_profile_path.joinpath("Cookies")
-    cookie_d_query = (
+    cookie_query = (
         "SELECT encrypted_value FROM cookies WHERE "
-        "host_key = '.slack.com' AND name = 'd'"
+        "host_key = '.slack.com' AND name = '{}'"
     )
-    cookie_ds_query = (
-        "SELECT encrypted_value FROM cookies WHERE "
-        "host_key = '.slack.com' AND name = 'd-s'"
-    )
-
-    cookie_d_value, cookie_ds_value = get_cookies(
-        cookies_path, cookie_d_query, cookie_ds_query
-    )
+    cookie_d_value, cookie_ds_value = get_cookies(cookies_path, cookie_query)
 
     bus = secretstorage.dbus_init()
     try:
