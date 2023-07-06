@@ -4628,7 +4628,10 @@ def unfurl_block_element(text):
     elif text["type"] == "plain_text":
         return text["text"]
     elif text["type"] == "image":
-        return "{} ({})".format(text["image_url"], text["alt_text"])
+        if text.get("alt_text"):
+            return "{} ({})".format(text["image_url"], text["alt_text"])
+        else:
+            return text["image_url"]
 
 
 def unfurl_refs(text):
@@ -4852,10 +4855,11 @@ def unwrap_files(message, message_json, text_before):
                 f["permalink"], message.team.identifier, message.channel.identifier
             )
             text = "{} ({})".format(url, f["title"])
-        elif (
-            f.get("url_private", None) is not None and f.get("title", None) is not None
-        ):
-            text = "{} ({})".format(f["url_private"], f["title"])
+        elif f.get("url_private"):
+            if f.get("title"):
+                text = "{} ({})".format(f["url_private"], f["title"])
+            else:
+                text = f["url_private"]
         else:
             dbg("File {} has unrecognized mode {}".format(f["id"], f.get("mode")), 5)
             text = colorize_string(
