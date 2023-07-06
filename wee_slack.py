@@ -3394,14 +3394,7 @@ class SlackMessage(object):
 
         blocks = self.message_json.get("blocks", [])
         blocks_rendered = "\n".join(unfurl_blocks(blocks))
-        has_rich_text = any(block["type"] == "rich_text" for block in blocks)
-        if has_rich_text:
-            text = self.message_json.get("text", "")
-            if blocks_rendered:
-                if text:
-                    text += "\n"
-                text += blocks_rendered
-        elif blocks_rendered:
+        if blocks_rendered:
             text = blocks_rendered
         else:
             text = self.message_json.get("text", "")
@@ -4605,7 +4598,47 @@ def unfurl_blocks(blocks):
                     block_text.append(unfurl_block_element(block["title"]))
                 block_text.append(unfurl_block_element(block))
             elif block["type"] == "rich_text":
-                continue
+                for element in block.get("elements", []):
+                    if element["type"] == "rich_text_section":
+                        rendered = unfurl_rich_text_section(element)
+                        if rendered:
+                            block_text.append(rendered)
+                    elif element["type"] == "rich_text_list":
+                        rendered = [
+                            "{}{} {}".format(
+                                "    " * element.get("indent", 0),
+                                block_list_prefix(
+                                    element, element.get("offset", 0) + i
+                                ),
+                                unfurl_rich_text_section(e),
+                            )
+                            for i, e in enumerate(element["elements"])
+                        ]
+                        block_text.extend(rendered)
+                    elif element["type"] == "rich_text_quote":
+                        lines = [
+                            "> {}".format(line)
+                            for e in element["elements"]
+                            for line in unfurl_block_element(e).split("\n")
+                        ]
+                        block_text.extend(lines)
+                    elif element["type"] == "rich_text_preformatted":
+                        texts = [
+                            e.get("text", e.get("url", "")) for e in element["elements"]
+                        ]
+                        if texts:
+                            block_text.append("```\n{}\n```".format("".join(texts)))
+                    else:
+                        text = '<<Unsupported rich_text type "{}">>'.format(
+                            element["type"]
+                        )
+                        block_text.append(colorize_string(config.color_deleted, text))
+                        dbg(
+                            "Unsupported rich_text element: '{}'".format(
+                                json.dumps(element)
+                            ),
+                            level=4,
+                        )
             else:
                 block_text.append(
                     colorize_string(
@@ -4613,7 +4646,7 @@ def unfurl_blocks(blocks):
                         '<<Unsupported block type "{}">>'.format(block["type"]),
                     )
                 )
-                dbg('Unsupported block: "{}"'.format(json.dumps(block)), level=4)
+                dbg("Unsupported block: '{}'".format(json.dumps(block)), level=4)
         except Exception as e:
             dbg(
                 "Failed to unfurl block ({}): {}".format(repr(e), json.dumps(block)),
@@ -4622,9 +4655,92 @@ def unfurl_blocks(blocks):
     return block_text
 
 
+def convert_int_to_letter(num):
+    letter = ""
+    while num > 0:
+        num -= 1
+        letter = chr((num % 26) + 97) + letter
+        num //= 26
+    return letter
+
+
+def convert_int_to_roman(num):
+    roman_numerals = {
+        1000: "m",
+        900: "cm",
+        500: "d",
+        400: "cd",
+        100: "c",
+        90: "xc",
+        50: "l",
+        40: "xl",
+        10: "x",
+        9: "ix",
+        5: "v",
+        4: "iv",
+        1: "i",
+    }
+    roman_numeral = ""
+    for value, symbol in roman_numerals.items():
+        while num >= value:
+            roman_numeral += symbol
+            num -= value
+    return roman_numeral
+
+
+def block_list_prefix(element, index):
+    if element["style"] == "ordered":
+        if element["indent"] == 0 or element["indent"] == 3:
+            return "{}.".format(index + 1)
+        elif element["indent"] == 1 or element["indent"] == 4:
+            return "{}.".format(convert_int_to_letter(index + 1))
+        else:
+            return "{}.".format(convert_int_to_roman(index + 1))
+    else:
+        if element["indent"] == 0 or element["indent"] == 3:
+            return "•"
+        elif element["indent"] == 1 or element["indent"] == 4:
+            return "◦"
+        else:
+            return "▪︎"
+
+
+def unfurl_rich_text_section(block):
+    text = "".join(
+        unfurl_block_element(sub_element) for sub_element in block["elements"]
+    )
+    if text.endswith("\n"):
+        return text[:-1]
+    else:
+        return text
+
+
 def unfurl_block_element(text):
     if text["type"] == "mrkdwn":
         return render_formatting(text["text"])
+    elif text["type"] == "text":
+        colors = []
+        characters = []
+        if text.get("style", {}).get("bold"):
+            colors.append(config.render_bold_as)
+            characters.append("*")
+        if text.get("style", {}).get("italic"):
+            colors.append(config.render_italic_as)
+            characters.append("_")
+        if text.get("style", {}).get("strike"):
+            characters.append("~")
+        if text.get("style", {}).get("code"):
+            characters.append("`")
+
+        colors_start = "".join(w.color(color) for color in colors)
+        colors_end = "".join(w.color("-" + color) for color in colors)
+        return (
+            colors_start
+            + "".join(characters)
+            + text["text"]
+            + "".join(reversed(characters))
+            + colors_end
+        )
     elif text["type"] == "plain_text":
         return text["text"]
     elif text["type"] == "image":
@@ -4632,6 +4748,30 @@ def unfurl_block_element(text):
             return "{} ({})".format(text["image_url"], text["alt_text"])
         else:
             return text["image_url"]
+    elif text["type"] == "link":
+        if text.get("text"):
+            if text.get("style", {}).get("code"):
+                return text["text"]
+            else:
+                return "{} ({})".format(text["url"], text["text"])
+        else:
+            return text["url"]
+    elif text["type"] == "emoji":
+        return replace_string_with_emoji(":{}:".format(text["name"]))
+    elif text["type"] == "user":
+        return resolve_ref("@{}".format(text["user_id"]))
+    elif text["type"] == "usergroup":
+        return resolve_ref("!subteam^{}".format(text["usergroup_id"]))
+    elif text["type"] == "broadcast":
+        return resolve_ref("@{}".format(text["range"]))
+    elif text["type"] == "channel":
+        return resolve_ref("#{}".format(text["channel_id"]))
+    else:
+        dbg("Unsupported block element: '{}'".format(json.dumps(text)), level=4)
+        return colorize_string(
+            config.color_deleted,
+            '<<Unsupported block element type "{}">>'.format(text["type"]),
+        )
 
 
 def unfurl_refs(text):
