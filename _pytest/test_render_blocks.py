@@ -110,7 +110,10 @@ import wee_slack
                 }
             ],
             "rendered": [
-                "normal <[color bold]>*bold*<[color -bold]> <[color italic]>_italic_<[color -italic]> ~strikethrough~ <[color bold]><[color italic]>*_~bold-italic-strikethrough~_*<[color -bold]><[color -italic]> https://vg.no (link)",
+                "normal <[color bold]>*bold*<[color -bold]> <[color italic]>_italic_"
+                "<[color -italic]> ~strikethrough~ <[color bold]><[color italic]>"
+                "*_~bold-italic-strikethrough~_*<[color -bold]><[color -italic]> "
+                "https://vg.no (link)",
                 "1. number",
                 "2. list",
                 "> some quote",
