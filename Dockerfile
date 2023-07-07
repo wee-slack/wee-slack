@@ -25,7 +25,7 @@ RUN pip install websocket-client
 
 ENV HOME /home/user
 
-COPY wee_slack.py /home/user/.weechat/python/autoload/wee_slack.py
+COPY wee_slack.py /home/user/.local/share/weechat/python/autoload/wee_slack.py
 
 RUN adduser -S user -h $HOME \
 	&& chown -R user $HOME
