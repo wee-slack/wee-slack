@@ -175,8 +175,13 @@ class SlackConversation:
 
     async def add_message(self, message: SlackMessage):
         self._messages[message.ts] = message
-        message_rendered = await message.render_message()
-        weechat.prnt(self.buffer_pointer, message_rendered)
+        if self.history_filled:
+            message_rendered = await message.render_message()
+            weechat.prnt(self.buffer_pointer, message_rendered)
+        else:
+            weechat.buffer_set(
+                self.buffer_pointer, "hotlist", str(message.priority.value)
+            )
 
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
         weechat.prnt(buffer, "Text: %s" % input_data)
