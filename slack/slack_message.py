@@ -25,11 +25,25 @@ class MessagePriority(Enum):
     HIGHLIGHT = 3
 
 
+class SlackTs:
+    def __init__(self, ts: str):
+        self.major, self.minor = [int(x) for x in ts.split(".", 1)]
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SlackTs):
+            return False
+        return self.major == other.major and self.minor == other.minor
+
+    def __hash__(self) -> int:
+        return hash((self.major, self.minor))
+
+
 class SlackMessage:
     def __init__(self, conversation: SlackConversation, message_json: SlackMessageDict):
         self._message_json = message_json
+        self._rendered = None
         self.conversation = conversation
-        self.ts = message_json["ts"]
+        self.ts = SlackTs(message_json["ts"])
 
     @property
     def workspace(self) -> SlackWorkspace:
@@ -43,11 +57,15 @@ class SlackMessage:
     def priority(self) -> MessagePriority:
         return MessagePriority.MESSAGE
 
-    async def render_message(self) -> str:
+    async def render(self) -> str:
+        if self._rendered is not None:
+            return self._rendered
+
         prefix_coro = self._prefix()
         message_coro = self._unfurl_refs(self._message_json["text"])
         prefix, message = await gather(prefix_coro, message_coro)
-        return f"{prefix}\t{message}"
+        self._rendered = f"{prefix}\t{message}"
+        return self._rendered
 
     async def _prefix(self) -> str:
         if (
