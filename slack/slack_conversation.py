@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, List, Optional
 import weechat
 
 from slack.shared import shared
-from slack.slack_message import SlackMessage
+from slack.slack_message import SlackMessage, SlackTs
 from slack.task import gather
 from slack.util import get_callback_name
 
@@ -39,7 +39,7 @@ class SlackConversation:
         self.workspace = workspace
         self._info = info
         self._members: Optional[List[str]] = None
-        self._messages: OrderedDict[str, SlackMessage] = OrderedDict()
+        self._messages: OrderedDict[SlackTs, SlackMessage] = OrderedDict()
         # TODO: buffer_pointer may be accessed by buffer_switch before it's initialized
         self.buffer_pointer: str = ""
         self.is_loading = False
@@ -162,12 +162,10 @@ class SlackConversation:
             sender_user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
             await self.workspace.users.initialize_items(sender_user_ids)
 
-            messages_rendered = await gather(
-                *(message.render_message() for message in messages)
-            )
+            await gather(*(message.render() for message in messages))
 
-            for rendered in reversed(messages_rendered):
-                weechat.prnt(self.buffer_pointer, rendered)
+            for message in reversed(messages):
+                self.print_message(message, await message.render())
 
             print(f"history w/o fetch took: {time.time() - start}")
             self.history_filled = True
@@ -176,12 +174,15 @@ class SlackConversation:
     async def add_message(self, message: SlackMessage):
         self._messages[message.ts] = message
         if self.history_filled:
-            message_rendered = await message.render_message()
-            weechat.prnt(self.buffer_pointer, message_rendered)
+            rendered = await message.render()
+            self.print_message(message, rendered)
         else:
             weechat.buffer_set(
                 self.buffer_pointer, "hotlist", str(message.priority.value)
             )
+
+    def print_message(self, message: SlackMessage, rendered: str):
+        weechat.prnt_date_tags(self.buffer_pointer, message.ts.major, "", rendered)
 
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
         weechat.prnt(buffer, "Text: %s" % input_data)
