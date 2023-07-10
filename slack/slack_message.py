@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from enum import Enum
 from typing import TYPE_CHECKING, List, Match, Optional
 
 from slack.log import print_exception_once
@@ -17,6 +18,13 @@ if TYPE_CHECKING:
     from slack.slack_workspace import SlackWorkspace
 
 
+class MessagePriority(Enum):
+    LOW = 0
+    MESSAGE = 1
+    PRIVATE = 2
+    HIGHLIGHT = 3
+
+
 class SlackMessage:
     def __init__(self, conversation: SlackConversation, message_json: SlackMessageDict):
         self._message_json = message_json
@@ -30,6 +38,10 @@ class SlackMessage:
     @property
     def sender_user_id(self) -> Optional[str]:
         return self._message_json.get("user")
+
+    @property
+    def priority(self) -> MessagePriority:
+        return MessagePriority.MESSAGE
 
     async def render_message(self) -> str:
         prefix_coro = self._prefix()
