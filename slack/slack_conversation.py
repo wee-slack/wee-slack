@@ -68,6 +68,17 @@ class SlackConversation:
     def id(self) -> str:
         return self._info["id"]
 
+    @property
+    def type(self) -> Literal["channel", "private", "mpim", "im"]:
+        if self._info["is_im"] is True:
+            return "im"
+        elif self._info["is_mpim"] is True:
+            return "mpim"
+        elif self._info["is_private"] is True:
+            return "private"
+        else:
+            return "channel"
+
     async def name(self) -> str:
         if self._info["is_im"] is True:
             im_user = await self.workspace.users[self._info["user"]]
@@ -128,20 +139,42 @@ class SlackConversation:
             return
 
         name = await self.name()
-        full_name = f"{shared.SCRIPT_NAME}.{self.workspace.name}.{self.name_prefix('full_name')}{name}"
+        name_with_prefix_for_full_name = f"{self.name_prefix('full_name')}{name}"
+        full_name = f"{shared.SCRIPT_NAME}.{self.workspace.name}.{name_with_prefix_for_full_name}"
         short_name = self.name_prefix("short_name") + name
 
-        self.buffer_pointer = weechat.buffer_new(
-            full_name,
-            get_callback_name(self._buffer_input_cb),
-            "",
-            get_callback_name(self._buffer_close_cb),
-            "",
-        )
-        weechat.buffer_set(self.buffer_pointer, "short_name", short_name)
-        weechat.buffer_set(
-            self.buffer_pointer, "localvar_set_nick", self.workspace.my_user.nick()
-        )
+        buffer_props = {
+            "short_name": short_name,
+            "title": "topic",
+            "input_multiline": "1",
+            "localvar_set_type": (
+                "private" if self.type in ("im", "mpim") else "channel"
+            ),
+            "localvar_set_slack_type": self.type,
+            "localvar_set_nick": self.workspace.my_user.nick(),
+            "localvar_set_channel": name_with_prefix_for_full_name,
+            "localvar_set_server": self.workspace.name,
+        }
+
+        if shared.weechat_version >= 0x03050000:
+            self.buffer_pointer = weechat.buffer_new_props(
+                full_name,
+                buffer_props,
+                get_callback_name(self._buffer_input_cb),
+                "",
+                get_callback_name(self._buffer_close_cb),
+                "",
+            )
+        else:
+            self.buffer_pointer = weechat.buffer_new(
+                full_name,
+                get_callback_name(self._buffer_input_cb),
+                "",
+                get_callback_name(self._buffer_close_cb),
+                "",
+            )
+            for prop_name, value in buffer_props.items():
+                weechat.buffer_set(self.buffer_pointer, prop_name, value)
 
         self.workspace.open_conversations[self.id] = self
 
