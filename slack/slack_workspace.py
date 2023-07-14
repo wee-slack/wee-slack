@@ -215,18 +215,15 @@ class SlackWorkspace:
 
     async def _connect_ws(self, url: str):
         proxy = Proxy()
-        proxy_options = {
-            "proxy_type": proxy.type,
-            "http_proxy_host": proxy.address,
-            "http_proxy_port": proxy.port,
-            "http_proxy_auth": (proxy.username, proxy.password),
-            "http_proxy_timeout": self.config.network_timeout.value,
-        }
         # TODO: Handle errors
         self._ws = create_connection(
             url,
             self.config.network_timeout.value,
-            **proxy_options,
+            proxy_type=proxy.type,
+            http_proxy_host=proxy.address,
+            http_proxy_port=proxy.port,
+            http_proxy_auth=(proxy.username, proxy.password),
+            http_proxy_timeout=self.config.network_timeout.value,
         )
 
         self._hook_ws_fd = weechat.hook_fd(

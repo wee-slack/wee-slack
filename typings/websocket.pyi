@@ -1,5 +1,7 @@
 from socket import socket
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
+
+from _typeshed import ReadableBuffer
 
 STATUS_NORMAL = 1000
 
@@ -52,11 +54,33 @@ class WebSocket:
     def ping(self, payload: str = ...) -> None: ...
     def recv_data(
         self, control_frame: bool
-    ) -> Tuple[int, Any,]: ...
+    ) -> tuple[int, Any,]: ...
     def close(
         self, status: int = STATUS_NORMAL, reason: bytes = b"", timeout: int = 3
     ) -> None: ...
 
 def create_connection(
-    url: str, timeout: Optional[int] = ..., **options: Dict[str, Any]
+    url: str,
+    timeout: int | float | None = ...,
+    class_: type[Any] = WebSocket,
+    header: list[str] | dict[str, str] | None = ...,
+    cookie: str | None = ...,
+    origin: str | None = ...,
+    suppress_origin: bool | None = ...,
+    host: str | None = ...,
+    proxy_type: str | None = ...,
+    http_proxy_host: str | None = ...,
+    http_proxy_port: str | int | None = ...,
+    http_no_proxy: list[str] | None = ...,
+    http_proxy_auth: tuple[str, str] | None = ...,
+    http_proxy_timeout: int | float | None = ...,
+    enable_multithread: bool | None = ...,
+    redirect_limit: int | None = ...,
+    sockopt: tuple[int, int, int | ReadableBuffer]
+    | tuple[int, int, None, int]
+    | None = ...,
+    sslopt: dict[str, Any] | None = ...,
+    subprotocols: list[str] | None = ...,
+    skip_utf8_validation: bool | None = ...,
+    socket: socket | None = ...,
 ) -> WebSocket: ...
