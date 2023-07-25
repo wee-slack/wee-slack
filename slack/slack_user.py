@@ -58,7 +58,7 @@ class SlackUser:
         nick = self._name_without_spaces()
 
         if colorize:
-            nick = with_color(self._nick_color(), nick)
+            nick = with_color(self.nick_color(), nick)
 
         if self._info["profile"]["team"] != self.workspace.id:
             nick += shared.config.look.external_user_suffix.value
@@ -68,7 +68,7 @@ class SlackUser:
     def _name_without_spaces(self) -> str:
         return name_from_user_info_without_spaces(self.workspace, self._info)
 
-    def _nick_color(self) -> str:
+    def nick_color(self) -> str:
         if self._info["id"] == self.workspace.my_user._info["id"]:
             return weechat.config_string(
                 weechat.config_get("weechat.color.chat_nick_self")
@@ -89,6 +89,9 @@ class SlackBot:
 
     def nick(self, colorize: bool = False) -> str:
         return format_bot_nick(self._info["name"], colorize)
+
+    def nick_color(self):
+        return nick_color(self._info["name"].replace(" ", ""))
 
 
 class SlackUsergroup:
