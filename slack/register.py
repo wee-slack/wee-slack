@@ -22,7 +22,7 @@ def shutdown_cb():
 def signal_buffer_switch_cb(data: str, signal: str, buffer_pointer: str) -> int:
     conversation = get_conversation_from_buffer_pointer(buffer_pointer)
     if conversation:
-        run_async(conversation.fill_history())
+        run_async(conversation.buffer_switched_to())
     return weechat.WEECHAT_RC_OK
 
 

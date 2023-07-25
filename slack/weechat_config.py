@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Generic, Optional, TypeVar, Union, cast
+from typing import Callable, Generic, Optional, TypeVar, Union, cast
 
 import weechat
 
 from slack.shared import shared
+from slack.util import get_callback_name
 
 
 class WeeChatColor(str):
@@ -52,6 +53,19 @@ WeeChatOptionTypes = Union[int, str]
 WeeChatOptionType = TypeVar("WeeChatOptionType", bound=WeeChatOptionTypes)
 
 
+def option_get_value(
+    option_pointer: str, option_type: WeeChatOptionType
+) -> WeeChatOptionType:
+    if isinstance(option_type, bool):
+        return cast(WeeChatOptionType, weechat.config_boolean(option_pointer) == 1)
+    if isinstance(option_type, int):
+        return cast(WeeChatOptionType, weechat.config_integer(option_pointer))
+    if isinstance(option_type, WeeChatColor):
+        color = weechat.config_color(option_pointer)
+        return cast(WeeChatOptionType, WeeChatColor(color))
+    return cast(WeeChatOptionType, weechat.config_string(option_pointer))
+
+
 @dataclass
 class WeeChatOption(Generic[WeeChatOptionType]):
     section: WeeChatSection
@@ -61,7 +75,10 @@ class WeeChatOption(Generic[WeeChatOptionType]):
     min_value: Optional[int] = None
     max_value: Optional[int] = None
     string_values: Optional[str] = None
-    parent_option: Optional[WeeChatOption[WeeChatOptionType]] = None
+    parent_option: Union[WeeChatOption[WeeChatOptionType], str, None] = None
+    callback_change: Optional[
+        Callable[[WeeChatOption[WeeChatOptionType], bool], None]
+    ] = None
 
     def __post_init__(self):
         self._pointer = self._create_weechat_option()
@@ -69,18 +86,13 @@ class WeeChatOption(Generic[WeeChatOptionType]):
     @property
     def value(self) -> WeeChatOptionType:
         if weechat.config_option_is_null(self._pointer):
-            if self.parent_option:
+            if isinstance(self.parent_option, str):
+                parent_option_pointer = weechat.config_get(self.parent_option)
+                return option_get_value(parent_option_pointer, self.default_value)
+            elif self.parent_option:
                 return self.parent_option.value
             return self.default_value
-
-        if isinstance(self.default_value, bool):
-            return cast(WeeChatOptionType, weechat.config_boolean(self._pointer) == 1)
-        if isinstance(self.default_value, int):
-            return cast(WeeChatOptionType, weechat.config_integer(self._pointer))
-        if isinstance(self.default_value, WeeChatColor):
-            color = weechat.config_color(self._pointer)
-            return cast(WeeChatOptionType, WeeChatColor(color))
-        return cast(WeeChatOptionType, weechat.config_string(self._pointer))
+        return option_get_value(self._pointer, self.default_value)
 
     @value.setter
     def value(self, value: WeeChatOptionType):
@@ -110,16 +122,32 @@ class WeeChatOption(Generic[WeeChatOptionType]):
             return "color"
         return "string"
 
+    def _changed_cb(self, data: str, option: str, value: Optional[str] = None):
+        if self.callback_change:
+            parent_changed = data == "parent_changed"
+            if not parent_changed or weechat.config_option_is_null(self._pointer):
+                self.callback_change(self, parent_changed)
+        return weechat.WEECHAT_RC_OK
+
     def _create_weechat_option(self) -> str:
         if self.parent_option:
-            parent_option_name = (
-                f"{self.parent_option.section.weechat_config.name}"
-                f".{self.parent_option.section.name}"
-                f".{self.parent_option.name}"
-            )
-            name = f"{self.name} << {parent_option_name}"
+            if isinstance(self.parent_option, str):
+                parent_option_name = self.parent_option
+                name = f"{self.name} << {parent_option_name}"
+            else:
+                parent_option_name = (
+                    f"{self.parent_option.section.weechat_config.name}"
+                    f".{self.parent_option.section.name}"
+                    f".{self.parent_option.name}"
+                )
+                name = f"{self.name} << {parent_option_name}"
             default_value = None
             null_value_allowed = True
+            weechat.hook_config(
+                parent_option_name,
+                get_callback_name(self._changed_cb),
+                "parent_changed",
+            )
         else:
             name = self.name
             default_value = str(self.default_value)
@@ -145,7 +173,7 @@ class WeeChatOption(Generic[WeeChatOptionType]):
             null_value_allowed,
             "",
             "",
-            "",
+            get_callback_name(self._changed_cb),
             "",
             "",
             "",

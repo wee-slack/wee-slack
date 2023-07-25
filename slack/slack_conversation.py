@@ -30,6 +30,12 @@ def get_conversation_from_buffer_pointer(
     return None
 
 
+def invalidate_nicklists():
+    for workspace in shared.workspaces.values():
+        for conversation in workspace.open_conversations.values():
+            conversation.nicklist_needs_refresh = True
+
+
 class SlackConversation:
     def __init__(
         self,
@@ -45,6 +51,7 @@ class SlackConversation:
         self.is_loading = False
         self.history_filled = False
         self.history_pending = False
+        self.nicklist_needs_refresh = True
 
         self.completion_context: Literal[
             "NO_COMPLETION",
@@ -84,12 +91,9 @@ class SlackConversation:
             im_user = await self.workspace.users[self._info["user"]]
             return im_user.nick()
         elif self._info["is_mpim"] is True:
-            if self._members is None:
-                members_response = await self._api.fetch_conversations_members(self)
-                self._members = members_response["members"]
-                await self.workspace.users.initialize_items(self._members)
+            members = await self.load_members(load_all=True)
             member_users = await gather(
-                *(self.workspace.users[user_id] for user_id in self._members)
+                *(self.workspace.users[user_id] for user_id in members)
             )
             return ",".join([user.nick() for user in member_users])
         else:
@@ -147,6 +151,8 @@ class SlackConversation:
             "short_name": short_name,
             "title": "topic",
             "input_multiline": "1",
+            "nicklist": "0" if self.type == "im" else "1",
+            "nicklist_display_groups": "0",
             "localvar_set_type": (
                 "private" if self.type in ("im", "mpim") else "channel"
             ),
@@ -178,6 +184,18 @@ class SlackConversation:
 
         self.workspace.open_conversations[self.id] = self
 
+    async def buffer_switched_to(self):
+        await gather(self.nicklist_update(), self.fill_history())
+
+    async def load_members(self, load_all: bool = False):
+        if self._members is None:
+            members_response = await self._api.fetch_conversations_members(
+                self, pages=-1 if load_all else 1
+            )
+            self._members = members_response["members"]
+        await self.workspace.users.initialize_items(self._members)
+        return self._members
+
     async def fill_history(self):
         if self.history_filled or self.history_pending:
             return
@@ -203,6 +221,25 @@ class SlackConversation:
             print(f"history w/o fetch took: {time.time() - start}")
             self.history_filled = True
             self.history_pending = False
+
+    async def nicklist_update(self):
+        if self.nicklist_needs_refresh:
+            self.nicklist_needs_refresh = False
+            members = await self.load_members()
+            weechat.nicklist_remove_all(self.buffer_pointer)
+            await gather(*(self.nicklist_add_user(user_id) for user_id in members))
+
+    async def nicklist_add_user(self, user_id: str):
+        user = await self.workspace.users[user_id]
+        # TODO: weechat.color.nicklist_away
+        color = (
+            user.nick_color()
+            if shared.config.look.color_nicks_in_nicklist.value
+            else ""
+        )
+        weechat.nicklist_add_nick(
+            self.buffer_pointer, "", user.nick(), color, "", "", 1
+        )
 
     async def add_message(self, message: SlackMessage):
         self._messages[message.ts] = message

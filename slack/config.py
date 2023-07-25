@@ -6,6 +6,7 @@ import weechat
 
 from slack.log import print_error
 from slack.shared import shared
+from slack.slack_conversation import invalidate_nicklists
 from slack.slack_workspace import SlackWorkspace
 from slack.util import get_callback_name
 from slack.weechat_config import (
@@ -76,12 +77,41 @@ class SlackConfigSectionLook:
             " :]",
         )
 
+        self.color_nicks_in_nicklist = WeeChatOption(
+            self._section,
+            "color_nicks_in_nicklist",
+            "use nick color in nicklist",
+            False,
+            parent_option="irc.look.color_nicks_in_nicklist",
+            callback_change=self.config_change_color_nicks_in_nicklist_cb,
+        )
+
         self.external_user_suffix = WeeChatOption(
             self._section,
             "external_user_suffix",
             "the suffix appended to nicks to indicate external users",
             "*",
         )
+
+        weechat.hook_config(
+            "weechat.look.nick_color_*",
+            get_callback_name(self.config_change_nick_colors_cb),
+            "",
+        )
+        weechat.hook_config(
+            "weechat.color.chat_nick_colors",
+            get_callback_name(self.config_change_nick_colors_cb),
+            "",
+        )
+
+    def config_change_color_nicks_in_nicklist_cb(
+        self, option: WeeChatOption[WeeChatOptionType], parent_changed: bool
+    ):
+        invalidate_nicklists()
+
+    def config_change_nick_colors_cb(self, data: str, option: str, value: str):
+        invalidate_nicklists()
+        return weechat.WEECHAT_RC_OK
 
 
 class SlackConfigSectionWorkspace:
