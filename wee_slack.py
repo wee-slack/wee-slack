@@ -5647,7 +5647,9 @@ def command_channels(data, current_buffer, args):
             return "not a member"
 
     if args:
-        return print_team_items_info(team, "Channels that match \"" + args + "\"", channels, extra_info_function)
+        return print_team_items_info(
+            team, 'Channels that match "' + args + '"', channels, extra_info_function
+        )
     else:
         return print_team_items_info(team, "Channels", channels, extra_info_function)
 
