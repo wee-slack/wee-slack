@@ -10,7 +10,7 @@ def convert_unicode_string(emoji_dict):
     for k, v in emoji_dict.items():
         if k == "unicode":
             emoji_dict[k] = "".join([chr(int(x, 16)) for x in v.split("-")])
-        if type(v) == dict:
+        if isinstance(v, dict):
             convert_unicode_string(v)
 
 
