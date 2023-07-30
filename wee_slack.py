@@ -5626,14 +5626,16 @@ def command_teams(data, current_buffer, args):
 @utf8_decode
 def command_channels(data, current_buffer, args):
     """
-    /slack channels
+    /slack channels [regex]
     List the channels in the current team.
+    If regex is given show channels whose names match the regular expression.
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    pat = re.compile(args)
     channels = [
         channel
         for channel in team.channels.values()
-        if channel.type not in ["im", "mpim"]
+        if channel.type not in ["im", "mpim"] and pat.search(channel.name)
     ]
 
     def extra_info_function(channel):
@@ -5644,7 +5646,12 @@ def command_channels(data, current_buffer, args):
         else:
             return "not a member"
 
-    return print_team_items_info(team, "Channels", channels, extra_info_function)
+    if args:
+        return print_team_items_info(
+            team, 'Channels that match "' + args + '"', channels, extra_info_function
+        )
+    else:
+        return print_team_items_info(team, "Channels", channels, extra_info_function)
 
 
 @slack_buffer_required
