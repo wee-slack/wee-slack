@@ -862,13 +862,15 @@ class EventRouter(object):
                     if "channel" in j:
                         channel_id = (
                             j["channel"]["id"]
-                            if type(j["channel"]) == dict
+                            if isinstance(j["channel"], dict)
                             else j["channel"]
                         )
                         channel = team.channels.get(channel_id, channel)
                     if "user" in j:
                         user_id = (
-                            j["user"]["id"] if type(j["user"]) == dict else j["user"]
+                            j["user"]["id"]
+                            if isinstance(j["user"], dict)
+                            else j["user"]
                         )
                         metadata["user"] = team.users.get(user_id)
 
@@ -1933,7 +1935,7 @@ class SlackChannelCommon(object):
         extra_tags = None
         if message.subtype == "thread_broadcast":
             extra_tags = [message.subtype]
-        elif type(message) == SlackThreadMessage and not thread_channel:
+        elif isinstance(message, SlackThreadMessage) and not thread_channel:
             if config.thread_messages_in_channel:
                 extra_tags = [message.subtype]
             else:
@@ -2110,13 +2112,13 @@ class SlackChannelCommon(object):
             m.change_text(text)
 
         if (
-            type(m) == SlackMessage
+            not isinstance(m, SlackThreadMessage)
             or m.subtype == "thread_broadcast"
             or config.thread_messages_in_channel
         ):
             new_text = self.render(m, force=True)
             modify_buffer_line(self.channel_buffer, ts, new_text)
-        if type(m) == SlackThreadMessage or m.thread_channel is not None:
+        if isinstance(m, SlackThreadMessage) or m.thread_channel is not None:
             thread_channel = (
                 m.parent_message.thread_channel
                 if isinstance(m, SlackThreadMessage)
@@ -2814,7 +2816,7 @@ class SlackChannelVisibleMessages(MappingReversible):
 
         message = self.get(ts)
         if (
-            type(message) == SlackThreadMessage
+            isinstance(message, SlackThreadMessage)
             and message.subtype != "thread_broadcast"
             and not config.thread_messages_in_channel
         ):
@@ -4916,7 +4918,7 @@ def unwrap_attachments(message, text_before):
             if footer:
                 ts = attachment.get("ts")
                 if ts:
-                    ts_int = ts if type(ts) == int else SlackTS(ts).major
+                    ts_int = ts if isinstance(ts, int) else SlackTS(ts).major
                     time_string = ""
                     if date.today() - date.fromtimestamp(ts_int) <= timedelta(days=1):
                         time_string = " at {time}"
