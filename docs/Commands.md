@@ -28,10 +28,11 @@ Sets your status as 'back'.
 ### channels
 
 ```
-/slack channels
+/slack channels [regex]
 ```
 
 List the channels in the current team.
+If regex is given show channels whose names match the regular expression.
 
 ### create
 
