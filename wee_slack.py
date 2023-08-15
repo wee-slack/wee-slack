@@ -2101,15 +2101,13 @@ class SlackChannelCommon(object):
             message = self.message_from_index(index, message_filter, reverse)
         return message
 
-    def change_message(self, ts, message_json=None, text=None):
+    def change_message(self, ts, message_json=None):
         ts = SlackTS(ts)
         m = self.messages.get(ts)
         if not m:
             return
         if message_json:
             m.message_json.update(message_json)
-        if text:
-            m.change_text(text)
 
         if (
             not isinstance(m, SlackThreadMessage)
@@ -3394,6 +3392,11 @@ class SlackMessage(object):
         if not force and self.message_json.get("_rendered_text"):
             return self.message_json["_rendered_text"]
 
+        if self.message_json.get("deleted"):
+            text = colorize_string(config.color_deleted, "(deleted)")
+            self.message_json["_rendered_text"] = text
+            return text
+
         blocks = self.message_json.get("blocks", [])
         blocks_rendered = "\n".join(unfurl_blocks(blocks))
         if blocks_rendered:
@@ -3444,10 +3447,6 @@ class SlackMessage(object):
 
         self.message_json["_rendered_text"] = text
         return text
-
-    def change_text(self, new_text):
-        self.message_json["text"] = new_text
-        dbg(self.message_json)
 
     def get_sender(self, plain):
         user = self.team.users.get(self.user_identifier)
@@ -4302,8 +4301,7 @@ def subprocess_message_changed(
 def subprocess_message_deleted(
     message_json, eventrouter, team, channel, history_message
 ):
-    message = colorize_string(config.color_deleted, "(deleted)")
-    channel.change_message(message_json["deleted_ts"], text=message)
+    channel.change_message(message_json["deleted_ts"], {"deleted": True})
 
 
 def process_reply(message_json, eventrouter, team, channel, metadata):

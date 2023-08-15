@@ -74,6 +74,8 @@ def test_process_message(realish_eventrouter, team, user_alice):
     assert list(deleted_message_channel.messages.keys()) == [deleted_message_ts]
     deleted_str = "<[color red]>(deleted)<[color reset]>"
     assert (
-        deleted_message_channel.messages[deleted_message_ts].message_json["text"]
+        deleted_message_channel.messages[deleted_message_ts].message_json[
+            "_rendered_text"
+        ]
         == deleted_str
     )
