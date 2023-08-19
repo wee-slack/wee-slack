@@ -15,7 +15,12 @@ from websocket import (
     create_connection,
 )
 
-from slack.error import SlackError, SlackRtmError, store_and_format_exception
+from slack.error import (
+    SlackApiError,
+    SlackError,
+    SlackRtmError,
+    store_and_format_exception,
+)
 from slack.log import print_error
 from slack.proxy import Proxy
 from slack.shared import shared
@@ -195,7 +200,14 @@ class SlackWorkspace:
         self._connect_task = None
 
     async def _connect(self) -> None:
-        rtm_connect = await self.api.fetch_rtm_connect()
+        try:
+            rtm_connect = await self.api.fetch_rtm_connect()
+        except SlackApiError as e:
+            print_error(
+                f'failed connecting to workspace "{self.name}": {e.response["error"]}'
+            )
+            return
+
         self.id = rtm_connect["team"]["id"]
         self.enterprise_id = rtm_connect["team"].get("enterprise_id")
         self.my_user = await self.users[rtm_connect["self"]["id"]]
