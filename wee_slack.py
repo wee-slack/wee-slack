@@ -4912,7 +4912,15 @@ def unwrap_attachments(message, text_before):
             if files:
                 t.append(files)
 
-            footer = attachment.get("footer")
+            if attachment.get("is_msg_unfurl"):
+                channel_name = resolve_ref("#{}".format(attachment["channel_id"]))
+                if attachment.get("is_reply_unfurl"):
+                    footer = "From a thread in {}".format(channel_name)
+                else:
+                    footer = "Posted in {}".format(channel_name)
+            else:
+                footer = attachment.get("footer")
+
             if footer:
                 ts = attachment.get("ts")
                 if ts:
