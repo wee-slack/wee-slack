@@ -2336,6 +2336,7 @@ class SlackChannel(SlackChannelCommon):
         self.get_history()
 
     def check_should_open(self, force=False):
+        w.prnt("", "check_should_open channel {}".format(self.name))
         if hasattr(self, "is_archived") and self.is_archived:
             return
 
@@ -2349,6 +2350,7 @@ class SlackChannel(SlackChannelCommon):
             or self.type not in ["im", "mpim"]
             and getattr(self, "is_member", False)
         ):
+            w.prnt("", "opening channel {}".format(self.name))
             self.create_buffer()
         elif self.type in ["im", "mpim"]:
             # If it is an IM or MPIM, we still might want to open it if there are unread messages.
@@ -7254,6 +7256,14 @@ def create_team(token, initial_data):
 
             channels = {}
             for channel_info in initial_data["channels"]:
+                w.prnt(
+                    "",
+                    "Creating channel {}".format(
+                        channel_info["name"]
+                        if "name" in channel_info
+                        else channel_info["id"]
+                    ),
+                )
                 channels[channel_info["id"]] = create_channel_from_info(
                     eventrouter, channel_info, None, myidentifier, users
                 )
