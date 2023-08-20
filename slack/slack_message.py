@@ -9,7 +9,7 @@ import weechat
 from slack.log import print_exception_once
 from slack.python_compatibility import removeprefix, removesuffix
 from slack.shared import shared
-from slack.slack_user import SlackUser, format_bot_nick
+from slack.slack_user import format_bot_nick, nick_color
 from slack.task import gather
 from slack.util import with_color
 
@@ -100,12 +100,11 @@ class SlackMessage:
         if self.sender_bot_id:
             tags.append(f"slack_bot_id_{self.sender_bot_id}")
 
-        if self.sender_user_id:
-            user_or_bot = await self.workspace.users[self.sender_user_id]
-        elif self.sender_bot_id:
-            user_or_bot = await self.workspace.bots[self.sender_bot_id]
-        else:
-            user_or_bot = None
+        user = (
+            await self.workspace.users[self.sender_user_id]
+            if self.sender_user_id
+            else None
+        )
 
         if self._message_json.get("subtype") in ["channel_join", "group_join"]:
             tags.append("slack_join")
@@ -117,10 +116,13 @@ class SlackMessage:
             tags.append("slack_privmsg")
             if self.is_bot_message:
                 tags.append("bot_message")
-            if user_or_bot and shared.weechat_version >= 0x04000000:
-                tags.append(f"prefix_nick_{user_or_bot.nick_color()}")
+            if shared.weechat_version >= 0x04000000:
+                if user:
+                    tags.append(f"prefix_nick_{user.nick_color()}")
+                else:
+                    tags.append(f"prefix_nick_{nick_color(nick)}")
 
-            if isinstance(user_or_bot, SlackUser) and user_or_bot.is_self:
+            if user and user.is_self:
                 tags.append("self_msg")
                 log_tags = ["notify_none", "no_highlight", "log1"]
             else:
