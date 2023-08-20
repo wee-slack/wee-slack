@@ -67,7 +67,7 @@ class SlackItem(
         self[key] = create_task(self._create_item(key))
         return self[key]
 
-    async def initialize_items(self, item_ids: Iterable[str]):
+    def initialize_items(self, item_ids: Iterable[str]):
         item_ids_to_init = set(item_id for item_id in item_ids if item_id not in self)
         if item_ids_to_init:
             items_info_task = create_task(self._fetch_items_info(item_ids_to_init))
@@ -218,7 +218,7 @@ class SlackWorkspace:
             "public_channel,private_channel,mpim,im"
         )
         channels = users_conversations_response["channels"]
-        await self.conversations.initialize_items(channel["id"] for channel in channels)
+        self.conversations.initialize_items(channel["id"] for channel in channels)
         for channel in channels:
             conversation = await self.conversations[channel["id"]]
             run_async(conversation.open_if_open())
