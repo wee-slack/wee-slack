@@ -25,7 +25,7 @@ class MessagePriority(Enum):
     HIGHLIGHT = 3
 
 
-class SlackTs:
+class SlackTs(str):
     def __init__(self, ts: str):
         self.major, self.minor = [int(x) for x in ts.split(".", 1)]
 
@@ -36,6 +36,9 @@ class SlackTs:
 
     def __hash__(self) -> int:
         return hash((self.major, self.minor))
+
+    def __repr__(self) -> str:
+        return f"SlackTs('{self}')"
 
 
 class SlackMessage:
@@ -50,12 +53,53 @@ class SlackMessage:
         return self.conversation.workspace
 
     @property
+    def is_bot_message(self) -> bool:
+        return (
+            "subtype" in self._message_json
+            and self._message_json["subtype"] == "bot_message"
+        )
+
+    @property
     def sender_user_id(self) -> Optional[str]:
-        return self._message_json.get("user")
+        if not self.is_bot_message:
+            return self._message_json.get("user")
+
+    @property
+    def sender_bot_id(self) -> Optional[str]:
+        if self.is_bot_message:
+            return self._message_json.get("bot_id")
 
     @property
     def priority(self) -> MessagePriority:
         return MessagePriority.MESSAGE
+
+    async def tags(self, backlog: bool = False) -> str:
+        nick = await self._prefix(colorize=False, only_nick=True)
+        tags = ["slack_privmsg", f"slack_ts_{self.ts}", f"nick_{nick}"]
+
+        if self.sender_user_id:
+            user_or_bot = await self.workspace.users[self.sender_user_id]
+        elif self.sender_bot_id:
+            user_or_bot = await self.workspace.bots[self.sender_bot_id]
+        else:
+            user_or_bot = None
+
+        if user_or_bot and shared.weechat_version >= 0x04000000:
+            tags.append(f"prefix_nick_{user_or_bot.nick_color()}")
+
+        if self.is_bot_message:
+            tags.append("bot_message")
+        if self.sender_user_id:
+            tags.append(f"slack_user_id_{self.sender_user_id}")
+        if self.sender_bot_id:
+            tags.append(f"slack_bot_id_{self.sender_bot_id}")
+
+        if backlog:
+            tags += ["no_highlight", "notify_none", "logger_backlog", "no_log"]
+        else:
+            tags += ["notify_message", "log1"]
+
+        return ",".join(tags)
 
     async def render(self) -> str:
         if self._rendered is not None:
@@ -67,20 +111,20 @@ class SlackMessage:
         self._rendered = f"{prefix}\t{message}"
         return self._rendered
 
-    async def _prefix(self) -> str:
+    async def _prefix(self, colorize: bool = True, only_nick: bool = False) -> str:
         if (
             "subtype" in self._message_json
             and self._message_json["subtype"] == "bot_message"
         ):
             username = self._message_json.get("username")
             if username:
-                return format_bot_nick(username, colorize=True)
+                return format_bot_nick(username, colorize=colorize, only_nick=only_nick)
             else:
                 bot = await self.workspace.bots[self._message_json["bot_id"]]
-                return bot.nick(colorize=True)
+                return bot.nick(colorize=colorize, only_nick=only_nick)
         else:
             user = await self.workspace.users[self._message_json["user"]]
-            return user.nick(colorize=True)
+            return user.nick(colorize=colorize, only_nick=only_nick)
 
     def _item_prefix(self, item_id: str):
         if item_id.startswith("#") or item_id.startswith("@"):

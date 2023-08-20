@@ -217,7 +217,7 @@ class SlackConversation:
             await gather(*(message.render() for message in messages))
 
             for message in reversed(messages):
-                self.print_message(message, await message.render())
+                await self.print_message(message, backlog=True)
 
             print(f"history w/o fetch took: {time.time() - start}")
             self.history_filled = True
@@ -245,8 +245,7 @@ class SlackConversation:
     async def add_message(self, message: SlackMessage):
         self._messages[message.ts] = message
         if self.history_filled:
-            rendered = await message.render()
-            self.print_message(message, rendered)
+            await self.print_message(message)
         else:
             weechat.buffer_set(
                 self.buffer_pointer, "hotlist", str(message.priority.value)
@@ -278,8 +277,10 @@ class SlackConversation:
             self._typing_self_last_sent = now
             self.workspace.send_typing(self.id)
 
-    def print_message(self, message: SlackMessage, rendered: str):
-        weechat.prnt_date_tags(self.buffer_pointer, message.ts.major, "", rendered)
+    async def print_message(self, message: SlackMessage, backlog: bool = False):
+        tags = await message.tags(backlog=backlog)
+        rendered = await message.render()
+        weechat.prnt_date_tags(self.buffer_pointer, message.ts.major, tags, rendered)
 
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
         weechat.prnt(buffer, "Text: %s" % input_data)
