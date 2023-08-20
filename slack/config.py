@@ -29,11 +29,25 @@ class SlackConfigSectionColor:
             WeeChatColor("blue"),
         )
 
+        self.deleted_message = WeeChatOption(
+            self._section,
+            "deleted_message",
+            "text color for a deleted message",
+            WeeChatColor("red"),
+        )
+
         self.disconnected = WeeChatOption(
             self._section,
             "disconnected",
             "text color for the disconnected text",
             WeeChatColor("red"),
+        )
+
+        self.edited_message_suffix = WeeChatOption(
+            self._section,
+            "edited_message_suffix",
+            "text color for the suffix after an edited message",
+            WeeChatColor("095"),
         )
 
         self.loading = WeeChatOption(

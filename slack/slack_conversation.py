@@ -14,6 +14,7 @@ from slack.util import get_callback_name
 
 if TYPE_CHECKING:
     from slack_api.slack_conversations_info import SlackConversationsInfo
+    from slack_rtm.slack_rtm_message import SlackMessageChanged, SlackMessageDeleted
     from typing_extensions import Literal
 
     from slack.slack_api import SlackApi
@@ -34,6 +35,109 @@ def invalidate_nicklists():
     for workspace in shared.workspaces.values():
         for conversation in workspace.open_conversations.values():
             conversation.nicklist_needs_refresh = True
+
+
+def hdata_line_ts(line_pointer: str) -> Optional[SlackTs]:
+    data = weechat.hdata_pointer(weechat.hdata_get("line"), line_pointer, "data")
+    for i in range(
+        weechat.hdata_integer(weechat.hdata_get("line_data"), data, "tags_count")
+    ):
+        tag = weechat.hdata_string(
+            weechat.hdata_get("line_data"), data, f"{i}|tags_array"
+        )
+        if tag.startswith("slack_ts_"):
+            return SlackTs(tag[9:])
+    return None
+
+
+def tags_set_notify_none(tags: List[str]) -> List[str]:
+    notify_tags = {"notify_highlight", "notify_message", "notify_private"}
+    tags = [tag for tag in tags if tag not in notify_tags]
+    tags += ["no_highlight", "notify_none"]
+    return tags
+
+
+def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
+    own_lines = weechat.hdata_pointer(
+        weechat.hdata_get("buffer"), buffer_pointer, "own_lines"
+    )
+    line_pointer = weechat.hdata_pointer(
+        weechat.hdata_get("lines"), own_lines, "last_line"
+    )
+
+    # Find the last line with this ts
+    is_last_line = True
+    while line_pointer and hdata_line_ts(line_pointer) != ts:
+        is_last_line = False
+        line_pointer = weechat.hdata_move(weechat.hdata_get("line"), line_pointer, -1)
+
+    if not line_pointer:
+        return
+
+    if shared.weechat_version >= 0x04000000:
+        data = weechat.hdata_pointer(weechat.hdata_get("line"), line_pointer, "data")
+        weechat.hdata_update(
+            weechat.hdata_get("line_data"), data, {"message": new_text}
+        )
+        return
+
+    # Find all lines for the message
+    pointers: List[str] = []
+    while line_pointer and hdata_line_ts(line_pointer) == ts:
+        pointers.append(line_pointer)
+        line_pointer = weechat.hdata_move(weechat.hdata_get("line"), line_pointer, -1)
+    pointers.reverse()
+
+    if not pointers:
+        return
+
+    if is_last_line:
+        lines = new_text.split("\n")
+        extra_lines_count = len(lines) - len(pointers)
+        if extra_lines_count > 0:
+            line_data = weechat.hdata_pointer(
+                weechat.hdata_get("line"), pointers[0], "data"
+            )
+            tags_count = weechat.hdata_integer(
+                weechat.hdata_get("line_data"), line_data, "tags_count"
+            )
+            tags = [
+                weechat.hdata_string(
+                    weechat.hdata_get("line_data"), line_data, f"{i}|tags_array"
+                )
+                for i in range(tags_count)
+            ]
+            tags = tags_set_notify_none(tags)
+            tags_str = ",".join(tags)
+            last_read_line = weechat.hdata_pointer(
+                weechat.hdata_get("lines"), own_lines, "last_read_line"
+            )
+            should_set_unread = last_read_line == pointers[-1]
+
+            # Insert new lines to match the number of lines in the message
+            weechat.buffer_set(buffer_pointer, "print_hooks_enabled", "0")
+            for _ in range(extra_lines_count):
+                weechat.prnt_date_tags(buffer_pointer, ts.major, tags_str, " \t ")
+                pointers.append(
+                    weechat.hdata_pointer(
+                        weechat.hdata_get("lines"), own_lines, "last_line"
+                    )
+                )
+            if should_set_unread:
+                weechat.buffer_set(buffer_pointer, "unread", "")
+            weechat.buffer_set(buffer_pointer, "print_hooks_enabled", "1")
+    else:
+        # Split the message into at most the number of existing lines as we can't insert new lines
+        lines = new_text.split("\n", len(pointers) - 1)
+        # Replace newlines to prevent garbled lines in bare display mode
+        lines = [line.replace("\n", " | ") for line in lines]
+
+    # Extend lines in case the new message is shorter than the old as we can't delete lines
+    lines += [""] * (len(pointers) - len(lines))
+
+    for pointer, line in zip(pointers, lines):
+        data = weechat.hdata_pointer(weechat.hdata_get("line"), pointer, "data")
+        weechat.hdata_update(weechat.hdata_get("line_data"), data, {"message": line})
 
 
 class SlackConversation:
@@ -267,6 +371,20 @@ class SlackConversation:
                 weechat.WEECHAT_HOOK_SIGNAL_STRING,
                 f"{self.buffer_pointer};off;{user.nick()}",
             )
+
+    async def change_message(self, data: SlackMessageChanged):
+        ts = SlackTs(data["ts"])
+        message = self._messages.get(ts)
+        if message:
+            message.update_message_json(data["message"])
+            modify_buffer_line(self.buffer_pointer, ts, await message.render_message())
+
+    async def delete_message(self, data: SlackMessageDeleted):
+        ts = SlackTs(data["deleted_ts"])
+        message = self._messages.get(ts)
+        if message:
+            message.deleted = True
+            modify_buffer_line(self.buffer_pointer, ts, await message.render_message())
 
     async def typing_add_user(self, user_id: str, thread_ts: Optional[str]):
         if not shared.config.look.typing_status_nicks.value:

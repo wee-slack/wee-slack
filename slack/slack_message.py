@@ -46,9 +46,11 @@ class SlackTs(str):
 class SlackMessage:
     def __init__(self, conversation: SlackConversation, message_json: SlackMessageDict):
         self._message_json = message_json
-        self._rendered = None
+        self._rendered_prefix = None
+        self._rendered_message = None
         self.conversation = conversation
         self.ts = SlackTs(message_json["ts"])
+        self._deleted = False
 
     @property
     def workspace(self) -> SlackWorkspace:
@@ -74,6 +76,20 @@ class SlackMessage:
     @property
     def priority(self) -> MessagePriority:
         return MessagePriority.MESSAGE
+
+    @property
+    def deleted(self) -> bool:
+        return self._deleted
+
+    @deleted.setter
+    def deleted(self, value: bool):
+        self._deleted = value
+        self._rendered_message = None
+
+    def update_message_json(self, message_json: SlackMessageDict):
+        self._message_json = message_json
+        self._rendered_prefix = None
+        self._rendered_message = None
 
     async def tags(self, backlog: bool = False) -> str:
         nick = await self._nick(colorize=False, only_nick=True)
@@ -118,11 +134,8 @@ class SlackMessage:
         return ",".join(tags)
 
     async def render(self) -> str:
-        if self._rendered is not None:
-            return self._rendered
-
-        prefix_coro = self._prefix()
-        message_coro = self._render_message()
+        prefix_coro = self.render_prefix()
+        message_coro = self.render_message()
         prefix, message = await gather(prefix_coro, message_coro)
         self._rendered = f"{prefix}\t{message}"
         return self._rendered
@@ -142,7 +155,9 @@ class SlackMessage:
             user = await self.workspace.users[self._message_json["user"]]
             return user.nick(colorize=colorize, only_nick=only_nick)
 
-    async def _prefix(self, colorize: bool = True, only_nick: bool = False) -> str:
+    async def _render_prefix(
+        self, colorize: bool = True, only_nick: bool = False
+    ) -> str:
         if self._message_json.get("subtype") in ["channel_join", "group_join"]:
             return removesuffix(weechat.prefix("join"), "\t")
         elif self._message_json.get("subtype") in ["channel_leave", "group_leave"]:
@@ -150,8 +165,16 @@ class SlackMessage:
         else:
             return await self._nick(colorize=colorize, only_nick=only_nick)
 
+    async def render_prefix(self) -> str:
+        if self._rendered_prefix is not None:
+            return self._rendered_prefix
+        self._rendered_prefix = await self._render_prefix()
+        return self._rendered_prefix
+
     async def _render_message(self) -> str:
-        if self._message_json.get("subtype") in [
+        if self._deleted:
+            return with_color(shared.config.color.deleted_message.value, "(deleted)")
+        elif self._message_json.get("subtype") in [
             "channel_join",
             "group_join",
             "channel_leave",
@@ -180,7 +203,19 @@ class SlackMessage:
 
             return f"{await self._nick()} {text_action} {text_conversation_name}{inviter_text}"
         else:
-            return await self._unfurl_refs(self._message_json["text"])
+            text = await self._unfurl_refs(self._message_json["text"])
+            text_edited = (
+                f" {with_color(shared.config.color.edited_message_suffix.value, '(edited)')}"
+                if self._message_json.get("edited")
+                else ""
+            )
+            return text + text_edited
+
+    async def render_message(self) -> str:
+        if self._rendered_message is not None:
+            return self._rendered_message
+        self._rendered_message = await self._render_message()
+        return self._rendered_message
 
     def _item_prefix(self, item_id: str):
         if item_id.startswith("#") or item_id.startswith("@"):

@@ -46,6 +46,11 @@ class SlackMessageReaction(TypedDict):
     count: int
 
 @final
+class SlackMessageEdited(TypedDict):
+    user: str
+    ts: str
+
+@final
 class SlackMessageFile(TypedDict):
     id: str
     created: int
@@ -92,6 +97,7 @@ class SlackMessageStandardCommon(SlackMessageCommon):
     blocks: List[SlackMessageBlock]
     attachments: NotRequired[List[SlackMessageAttachment]]
     team: str
+    edited: SlackMessageEdited
 
 @final
 class SlackMessageStandardFinal(SlackMessageStandardCommon):
