@@ -35,13 +35,16 @@ def name_from_user_info_without_spaces(
     return _name_from_user_info(workspace, info).replace(" ", "")
 
 
-def format_bot_nick(nick: str, colorize: bool = False) -> str:
+def format_bot_nick(nick: str, colorize: bool = False, only_nick: bool = False) -> str:
     nick = nick.replace(" ", "")
 
     if colorize:
         nick = with_color(nick_color(nick), nick)
 
-    return nick + shared.config.look.bot_user_suffix.value
+    if not only_nick:
+        nick = nick + shared.config.look.bot_user_suffix.value
+
+    return nick
 
 
 class SlackUser:
@@ -54,13 +57,13 @@ class SlackUser:
         info_response = await workspace.api.fetch_user_info(id)
         return cls(workspace, info_response["user"])
 
-    def nick(self, colorize: bool = False) -> str:
+    def nick(self, colorize: bool = False, only_nick: bool = False) -> str:
         nick = self._name_without_spaces()
 
         if colorize:
             nick = with_color(self.nick_color(), nick)
 
-        if self._info["profile"]["team"] != self.workspace.id:
+        if not only_nick and self._info["profile"]["team"] != self.workspace.id:
             nick += shared.config.look.external_user_suffix.value
 
         return nick
@@ -87,11 +90,13 @@ class SlackBot:
         info_response = await workspace.api.fetch_bot_info(id)
         return cls(workspace, info_response["bot"])
 
-    def nick(self, colorize: bool = False) -> str:
-        return format_bot_nick(self._info["name"], colorize)
+    def nick(self, colorize: bool = False, only_nick: bool = False) -> str:
+        return format_bot_nick(
+            self._info["name"], colorize=colorize, only_nick=only_nick
+        )
 
     def nick_color(self):
-        return nick_color(self._info["name"].replace(" ", ""))
+        return nick_color(self.nick(colorize=False, only_nick=True))
 
 
 class SlackUsergroup:
