@@ -161,6 +161,23 @@ class SlackMessageSubtypeBotAdd(SlackMessageCommon):
 class SlackMessageSubtypeBotAddFinal(SlackMessageSubtypeBotAdd):
     pass
 
+class SlackMessageSubtypeChannelJoin(SlackMessageCommon):
+    subtype: Literal["channel_join", "group_join"]
+    user: str
+    inviter: NotRequired[str]
+
+@final
+class SlackMessageSubtypeChannelJoinFinal(SlackMessageSubtypeChannelJoin):
+    pass
+
+class SlackMessageSubtypeChannelLeave(SlackMessageCommon):
+    subtype: Literal["channel_leave", "group_leave"]
+    user: str
+
+@final
+class SlackMessageSubtypeChannelLeaveFinal(SlackMessageSubtypeChannelLeave):
+    pass
+
 SlackMessage = (
     SlackMessageStandardFinal
     | SlackMessageThreadParentNotSubscribedFinal
@@ -169,6 +186,8 @@ SlackMessage = (
     | SlackMessageSubtypeBotMessageFinal
     | SlackMessageSubtypeBotRemoveFinal
     | SlackMessageSubtypeBotAddFinal
+    | SlackMessageSubtypeChannelJoinFinal
+    | SlackMessageSubtypeChannelLeaveFinal
     | SlackMessageRtm
 )
 

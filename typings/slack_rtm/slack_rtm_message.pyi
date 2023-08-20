@@ -4,6 +4,8 @@ from slack_api.slack_conversations_history import (
     SlackMessageSubtypeBotAdd,
     SlackMessageSubtypeBotMessage,
     SlackMessageSubtypeBotRemove,
+    SlackMessageSubtypeChannelJoin,
+    SlackMessageSubtypeChannelLeave,
     SlackMessageThreadParentNotSubscribed,
     SlackMessageThreadParentSubscribed,
     SlackMessageWithFiles,
@@ -43,6 +45,14 @@ class SlackMessageSubtypeBotRemoveRtm(SlackMessageSubtypeBotRemove):
 
 @final
 class SlackMessageSubtypeBotAddRtm(SlackMessageSubtypeBotAdd):
+    channel: str
+
+@final
+class SlackMessageSubtypeChannelJoinRtm(SlackMessageSubtypeChannelJoin):
+    channel: str
+
+@final
+class SlackMessageSubtypeChannelLeaveRtm(SlackMessageSubtypeChannelLeave):
     channel: str
 
 @final
@@ -93,6 +103,8 @@ SlackMessageRtm = (
     | SlackMessageSubtypeBotMessageRtm
     | SlackMessageSubtypeBotRemoveRtm
     | SlackMessageSubtypeBotAddRtm
+    | SlackMessageSubtypeChannelJoinRtm
+    | SlackMessageSubtypeChannelLeaveRtm
 )
 
 SlackRtmMessage = (

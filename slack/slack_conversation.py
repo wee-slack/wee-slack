@@ -100,19 +100,28 @@ class SlackConversation:
         else:
             return self._info["name"]
 
-    def name_prefix(self, name_type: Literal["full_name", "short_name"]) -> str:
+    def name_prefix(
+        self,
+        name_type: Literal["full_name", "short_name", "short_name_without_padding"],
+    ) -> str:
         if self._info["is_im"] is True:
             if name_type == "short_name":
                 return " "
             else:
                 return ""
         elif self._info["is_mpim"]:
-            if name_type == "short_name":
+            if name_type == "short_name" or name_type == "short_name_without_padding":
                 return "@"
             else:
                 return ""
         else:
             return "#"
+
+    async def name_with_prefix(
+        self,
+        name_type: Literal["full_name", "short_name", "short_name_without_padding"],
+    ) -> str:
+        return f"{self.name_prefix(name_type)}{await self.name()}"
 
     @contextmanager
     def loading(self):
