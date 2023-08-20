@@ -375,19 +375,36 @@ class SlackConversation:
                 f"{self.buffer_pointer};off;{user.nick()}",
             )
 
+    async def rerender_message(self, message: SlackMessage):
+        modify_buffer_line(
+            self.buffer_pointer, message.ts, await message.render_message(rerender=True)
+        )
+
     async def change_message(self, data: SlackMessageChanged):
         ts = SlackTs(data["ts"])
         message = self._messages.get(ts)
         if message:
             message.update_message_json(data["message"])
-            modify_buffer_line(self.buffer_pointer, ts, await message.render_message())
+            await self.rerender_message(message)
 
     async def delete_message(self, data: SlackMessageDeleted):
         ts = SlackTs(data["deleted_ts"])
         message = self._messages.get(ts)
         if message:
             message.deleted = True
-            modify_buffer_line(self.buffer_pointer, ts, await message.render_message())
+            await self.rerender_message(message)
+
+    async def reaction_add(self, message_ts: SlackTs, reaction: str, user_id: str):
+        message = self._messages.get(message_ts)
+        if message:
+            message.reaction_add(reaction, user_id)
+            await self.rerender_message(message)
+
+    async def reaction_remove(self, message_ts: SlackTs, reaction: str, user_id: str):
+        message = self._messages.get(message_ts)
+        if message:
+            message.reaction_remove(reaction, user_id)
+            await self.rerender_message(message)
 
     async def typing_add_user(self, user_id: str, thread_ts: Optional[str]):
         if not shared.config.look.typing_status_nicks.value:

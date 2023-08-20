@@ -58,8 +58,12 @@ class SlackUser:
         return cls(workspace, info_response["user"])
 
     @property
+    def id(self) -> str:
+        return self._info["id"]
+
+    @property
     def is_self(self) -> bool:
-        return self._info["id"] == self.workspace.my_user._info["id"]
+        return self.id == self.workspace.my_user.id
 
     def nick(self, colorize: bool = False, only_nick: bool = False) -> str:
         nick = self._name_without_spaces()

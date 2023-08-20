@@ -88,6 +88,32 @@ class SlackMessageReplied(TypedDict):
     event_ts: str
 
 @final
+class SlackReactionItem(TypedDict):
+    type: Literal["message", "file", "file_comment"]
+    channel: str
+    ts: str
+
+@final
+class SlackReactionAdded(TypedDict):
+    type: Literal["reaction_added"]
+    user: str
+    reaction: str
+    item: SlackReactionItem
+    item_user: NotRequired[str]
+    event_ts: str
+    ts: str
+
+@final
+class SlackReactionRemoved(TypedDict):
+    type: Literal["reaction_removed"]
+    user: str
+    reaction: str
+    item: SlackReactionItem
+    item_user: NotRequired[str]
+    event_ts: str
+    ts: str
+
+@final
 class SlackUserTyping(TypedDict):
     type: Literal["user_typing"]
     channel: str
@@ -113,5 +139,7 @@ SlackRtmMessage = (
     | SlackMessageChanged
     | SlackMessageDeleted
     | SlackMessageReplied
+    | SlackReactionAdded
+    | SlackReactionRemoved
     | SlackUserTyping
 )
