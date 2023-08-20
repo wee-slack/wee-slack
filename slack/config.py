@@ -222,7 +222,7 @@ def config_section_workspace_read_cb(
         return weechat.WEECHAT_CONFIG_OPTION_SET_ERROR
 
     if value is None or (
-        shared.weechat_version < 0x3080000
+        shared.weechat_version < 0x03080000
         and value == ""
         and option.weechat_type != "string"
     ):
@@ -271,7 +271,7 @@ class SlackConfig:
         # See https://github.com/weechat/weechat/pull/1843
         callback_write = (
             get_callback_name(config_section_workspace_write_for_old_weechat_cb)
-            if shared.weechat_version < 0x3080000
+            if shared.weechat_version < 0x03080000
             else ""
         )
         self._section_workspace = WeeChatSection(

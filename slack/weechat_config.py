@@ -164,7 +164,7 @@ class WeeChatOption(Generic[WeeChatOptionType]):
 
         value = None
 
-        if shared.weechat_version < 0x3050000:
+        if shared.weechat_version < 0x03050000:
             default_value = str(default_value)
             value = default_value
 
