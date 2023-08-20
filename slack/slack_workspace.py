@@ -26,7 +26,7 @@ from slack.proxy import Proxy
 from slack.shared import shared
 from slack.slack_api import SlackApi
 from slack.slack_conversation import SlackConversation
-from slack.slack_message import SlackMessage
+from slack.slack_message import SlackMessage, SlackTs
 from slack.slack_user import SlackBot, SlackUser, SlackUsergroup
 from slack.task import Future, Task, create_task, gather, run_async
 from slack.util import get_callback_name
@@ -273,13 +273,25 @@ class SlackWorkspace:
 
     async def _ws_recv(self, data: SlackRtmMessage):
         try:
-            channel_id = "channel" in data and data["channel"]
-            if channel_id in self.open_conversations:
-                channel = self.open_conversations[channel_id]
+            if data["type"] == "hello":
+                return
+            elif data["type"] == "reaction_added" or data["type"] == "reaction_removed":
+                channel_id = data["item"]["channel"]
+            elif "channel" in data and type(data["channel"]) == str:
+                channel_id = data["channel"]
             else:
-                channel = None
+                weechat.prnt("", f"\t{self.name} received: {json.dumps(data)}")
+                return
 
-            if data["type"] == "message" and channel is not None:
+            channel = self.open_conversations.get(channel_id)
+            if channel is None:
+                weechat.prnt(
+                    "",
+                    f"\t{self.name} received for not open conversation, discarding: {json.dumps(data)}",
+                )
+                return
+
+            if data["type"] == "message":
                 if "subtype" in data and data["subtype"] == "message_changed":
                     await channel.change_message(data)
                 elif "subtype" in data and data["subtype"] == "message_deleted":
@@ -289,7 +301,17 @@ class SlackWorkspace:
                 else:
                     message = SlackMessage(channel, data)
                     await channel.add_message(message)
-            elif data["type"] == "user_typing" and channel is not None:
+            elif data["type"] == "reaction_added" and data["item"]["type"] == "message":
+                await channel.reaction_add(
+                    SlackTs(data["item"]["ts"]), data["reaction"], data["user"]
+                )
+            elif (
+                data["type"] == "reaction_removed" and data["item"]["type"] == "message"
+            ):
+                await channel.reaction_remove(
+                    SlackTs(data["item"]["ts"]), data["reaction"], data["user"]
+                )
+            elif data["type"] == "user_typing":
                 await channel.typing_add_user(data["user"], data.get("thread_ts"))
             else:
                 weechat.prnt("", f"\t{self.name} received: {json.dumps(data)}")

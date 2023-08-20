@@ -15,6 +15,7 @@ from slack.util import with_color
 
 if TYPE_CHECKING:
     from slack_api.slack_conversations_history import SlackMessage as SlackMessageDict
+    from slack_api.slack_conversations_history import SlackMessageReaction
 
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
@@ -90,6 +91,32 @@ class SlackMessage:
         self._message_json = message_json
         self._rendered_prefix = None
         self._rendered_message = None
+
+    def _get_reaction(self, reaction_name: str):
+        for reaction in self._message_json.get("reactions", []):
+            if reaction["name"] == reaction_name:
+                return reaction
+
+    def reaction_add(self, reaction_name: str, user_id: str):
+        reaction = self._get_reaction(reaction_name)
+        if reaction:
+            if user_id not in reaction["users"]:
+                reaction["users"].append(user_id)
+                reaction["count"] += 1
+        else:
+            if "reactions" not in self._message_json:
+                self._message_json["reactions"] = []
+            self._message_json["reactions"].append(
+                {"name": reaction_name, "users": [user_id], "count": 1}
+            )
+        self._rendered_message = None
+
+    def reaction_remove(self, reaction_name: str, user_id: str):
+        reaction = self._get_reaction(reaction_name)
+        if reaction and user_id in reaction["users"]:
+            reaction["users"].remove(user_id)
+            reaction["count"] -= 1
+            self._rendered_message = None
 
     async def tags(self, backlog: bool = False) -> str:
         nick = await self._nick(colorize=False, only_nick=True)
@@ -173,10 +200,8 @@ class SlackMessage:
         self._rendered_prefix = await self._render_prefix()
         return self._rendered_prefix
 
-    async def _render_message(self) -> str:
-        if self._deleted:
-            return with_color(shared.config.color.deleted_message.value, "(deleted)")
-        elif self._message_json.get("subtype") in [
+    async def _render_message_text(self) -> str:
+        if self._message_json.get("subtype") in [
             "channel_join",
             "group_join",
             "channel_leave",
@@ -205,16 +230,23 @@ class SlackMessage:
 
             return f"{await self._nick()} {text_action} {text_conversation_name}{inviter_text}"
         else:
-            text = await self._unfurl_refs(self._message_json["text"])
+            return await self._unfurl_refs(self._message_json["text"])
+
+    async def _render_message(self) -> str:
+        if self._deleted:
+            return with_color(shared.config.color.deleted_message.value, "(deleted)")
+        else:
+            text = await self._render_message_text()
             text_edited = (
                 f" {with_color(shared.config.color.edited_message_suffix.value, '(edited)')}"
                 if self._message_json.get("edited")
                 else ""
             )
-            return text + text_edited
+            reactions = await self._create_reactions_string()
+            return text + text_edited + reactions
 
-    async def render_message(self) -> str:
-        if self._rendered_message is not None:
+    async def render_message(self, rerender: bool = False) -> str:
+        if self._rendered_message is not None and not rerender:
             return self._rendered_message
         self._rendered_message = await self._render_message()
         return self._rendered_message
@@ -278,3 +310,44 @@ class SlackMessage:
             return match[0]
 
         return re_mention.sub(unfurl_ref, message)
+
+    async def _create_reaction_string(self, reaction: SlackMessageReaction) -> str:
+        if shared.config.look.display_reaction_nicks.value:
+            # TODO: initialize_items?
+            users = await gather(
+                *(self.workspace.users[user_id] for user_id in reaction["users"])
+            )
+            nicks = ",".join(user.nick() for user in users)
+            users_str = f"({nicks})"
+        else:
+            users_str = len(reaction["users"])
+
+        reaction_string = f":{reaction['name']}:{users_str}"
+
+        if self.workspace.my_user.id in reaction["users"]:
+            return with_color(
+                shared.config.color.reaction_self_suffix.value,
+                reaction_string,
+                reset_color=shared.config.color.reaction_suffix.value,
+            )
+        else:
+            return reaction_string
+
+    async def _create_reactions_string(self) -> str:
+        reactions = self._message_json.get("reactions", [])
+        reactions_with_users = [
+            reaction for reaction in reactions if len(reaction["users"]) > 0
+        ]
+        reaction_strings = await gather(
+            *(
+                self._create_reaction_string(reaction)
+                for reaction in reactions_with_users
+            )
+        )
+        reactions_string = " ".join(reaction_strings)
+        if reactions_string:
+            return " " + with_color(
+                shared.config.color.reaction_suffix.value, f"[{reactions_string}]"
+            )
+        else:
+            return ""

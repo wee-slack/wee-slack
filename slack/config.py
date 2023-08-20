@@ -76,9 +76,15 @@ class SlackConfigSectionColor:
         self.reaction_suffix = WeeChatOption(
             self._section,
             "reaction_suffix",
-            "text color for the [:wave:(@user)] suffix on messages that have"
-            " reactions attached to them.",
+            "color for the reactions after a message",
             WeeChatColor("darkgray"),
+        )
+
+        self.reaction_self_suffix = WeeChatOption(
+            self._section,
+            "reaction_self_suffix",
+            "color for the reactions after a message, for reactions you have added",
+            WeeChatColor("blue"),
         )
 
         self.user_mention_color = WeeChatOption(
@@ -114,6 +120,13 @@ class SlackConfigSectionLook:
             False,
             parent_option="irc.look.color_nicks_in_nicklist",
             callback_change=self.config_change_color_nicks_in_nicklist_cb,
+        )
+
+        self.display_reaction_nicks = WeeChatOption(
+            self._section,
+            "display_reaction_nicks",
+            "display the name of the reacting user(s) after each reaction",
+            False,
         )
 
         self.external_user_suffix = WeeChatOption(

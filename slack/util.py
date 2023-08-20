@@ -13,5 +13,5 @@ def get_callback_name(callback: Callable[..., WeechatCallbackReturnType]) -> str
     return callback_id
 
 
-def with_color(color: str, string: str):
-    return f"{weechat.color(color)}{string}{weechat.color('reset')}"
+def with_color(color: str, string: str, reset_color: str = "reset"):
+    return f"{weechat.color(color)}{string}{weechat.color(reset_color)}"
