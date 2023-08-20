@@ -93,6 +93,20 @@ class SlackConfigSectionLook:
             "*",
         )
 
+        self.typing_status_nicks = WeeChatOption(
+            self._section,
+            "typing_status_nicks",
+            'display nicks typing on the channel in bar item "typing" (option typing.look.enabled_nicks must be enabled)',
+            True,
+        )
+
+        self.typing_status_self = WeeChatOption(
+            self._section,
+            "typing_status_self",
+            "send self typing status to channels so that other users see when you are typing a message (option typing.look.enabled_self must be enabled)",
+            True,
+        )
+
         weechat.hook_config(
             "weechat.look.nick_color_*",
             get_callback_name(self.config_change_nick_colors_cb),
