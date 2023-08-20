@@ -327,6 +327,9 @@ class SlackConversation:
             sender_user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
             self.workspace.users.initialize_items(sender_user_ids)
 
+            sender_bot_ids = [m.sender_bot_id for m in messages if m.sender_bot_id]
+            self.workspace.bots.initialize_items(sender_bot_ids)
+
             await gather(*(message.render() for message in messages))
 
             for message in reversed(messages):
