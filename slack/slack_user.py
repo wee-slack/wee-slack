@@ -57,6 +57,10 @@ class SlackUser:
         info_response = await workspace.api.fetch_user_info(id)
         return cls(workspace, info_response["user"])
 
+    @property
+    def is_self(self) -> bool:
+        return self._info["id"] == self.workspace.my_user._info["id"]
+
     def nick(self, colorize: bool = False, only_nick: bool = False) -> str:
         nick = self._name_without_spaces()
 
@@ -72,7 +76,7 @@ class SlackUser:
         return name_from_user_info_without_spaces(self.workspace, self._info)
 
     def nick_color(self) -> str:
-        if self._info["id"] == self.workspace.my_user._info["id"]:
+        if self.is_self:
             return weechat.config_string(
                 weechat.config_get("weechat.color.chat_nick_self")
             )

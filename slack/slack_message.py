@@ -9,7 +9,7 @@ import weechat
 from slack.log import print_exception_once
 from slack.python_compatibility import removeprefix, removesuffix
 from slack.shared import shared
-from slack.slack_user import format_bot_nick
+from slack.slack_user import SlackUser, format_bot_nick
 from slack.task import gather
 from slack.util import with_color
 
@@ -103,7 +103,12 @@ class SlackMessage:
                 tags.append("bot_message")
             if user_or_bot and shared.weechat_version >= 0x04000000:
                 tags.append(f"prefix_nick_{user_or_bot.nick_color()}")
-            log_tags = ["notify_message", "log1"]
+
+            if isinstance(user_or_bot, SlackUser) and user_or_bot.is_self:
+                tags.append("self_msg")
+                log_tags = ["notify_none", "no_highlight", "log1"]
+            else:
+                log_tags = ["notify_message", "log1"]
 
         if backlog:
             tags += ["no_highlight", "notify_none", "logger_backlog", "no_log"]
