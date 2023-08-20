@@ -279,20 +279,18 @@ class SlackWorkspace:
             else:
                 channel = None
 
-            if data["type"] == "message":
+            if data["type"] == "message" and channel is not None:
                 if "subtype" in data and data["subtype"] == "message_changed":
-                    pass
+                    await channel.change_message(data)
                 elif "subtype" in data and data["subtype"] == "message_deleted":
-                    pass
+                    await channel.delete_message(data)
                 elif "subtype" in data and data["subtype"] == "message_replied":
                     pass
                 else:
-                    if channel:
-                        message = SlackMessage(channel, data)
-                        await channel.add_message(message)
-            elif data["type"] == "user_typing":
-                if channel:
-                    await channel.typing_add_user(data["user"], data.get("thread_ts"))
+                    message = SlackMessage(channel, data)
+                    await channel.add_message(message)
+            elif data["type"] == "user_typing" and channel is not None:
+                await channel.typing_add_user(data["user"], data.get("thread_ts"))
             else:
                 weechat.prnt("", f"\t{self.name} received: {json.dumps(data)}")
         except Exception as e:
