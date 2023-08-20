@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Generic, Optional, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Callable, Generic, Optional, TypeVar, Union, cast
 
 import weechat
 
 from slack.shared import shared
 from slack.util import get_callback_name
+
+if TYPE_CHECKING:
+    from typing_extensions import Literal
 
 
 class WeeChatColor(str):
@@ -111,7 +114,9 @@ class WeeChatOption(Generic[WeeChatOptionType]):
         return weechat.config_option_set_null(self._pointer, 1)
 
     @property
-    def weechat_type(self) -> str:
+    def weechat_type(
+        self,
+    ) -> Literal["integer", "boolean", "color", "string"]:
         if self.string_values:
             return "integer"
         if isinstance(self.default_value, bool):
@@ -150,13 +155,17 @@ class WeeChatOption(Generic[WeeChatOptionType]):
             )
         else:
             name = self.name
-            default_value = str(self.default_value)
+            default_value = (
+                str(self.default_value).lower()
+                if self.weechat_type == "boolean"
+                else str(self.default_value)
+            )
             null_value_allowed = False
 
         value = None
 
         if shared.weechat_version < 0x3050000:
-            default_value = str(self.default_value)
+            default_value = str(default_value)
             value = default_value
 
         return weechat.config_new_option(
