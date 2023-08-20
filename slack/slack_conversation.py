@@ -307,7 +307,7 @@ class SlackConversation:
                 self, pages=-1 if load_all else 1
             )
             self._members = members_response["members"]
-        await self.workspace.users.initialize_items(self._members)
+        self.workspace.users.initialize_items(self._members)
         return self._members
 
     async def fill_history(self):
@@ -325,7 +325,7 @@ class SlackConversation:
                 self._messages[message.ts] = message
 
             sender_user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
-            await self.workspace.users.initialize_items(sender_user_ids)
+            self.workspace.users.initialize_items(sender_user_ids)
 
             await gather(*(message.render() for message in messages))
 
