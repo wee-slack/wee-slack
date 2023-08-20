@@ -46,6 +46,7 @@ class SlackConversation:
         self._info = info
         self._members: Optional[List[str]] = None
         self._messages: OrderedDict[SlackTs, SlackMessage] = OrderedDict()
+        self._typing_self_last_sent = time.time()
         # TODO: buffer_pointer may be accessed by buffer_switch before it's initialized
         self.buffer_pointer: str = ""
         self.is_loading = False
@@ -250,6 +251,32 @@ class SlackConversation:
             weechat.buffer_set(
                 self.buffer_pointer, "hotlist", str(message.priority.value)
             )
+
+        if message.sender_user_id:
+            user = await self.workspace.users[message.sender_user_id]
+            weechat.hook_signal_send(
+                "typing_set_nick",
+                weechat.WEECHAT_HOOK_SIGNAL_STRING,
+                f"{self.buffer_pointer};off;{user.nick()}",
+            )
+
+    async def typing_add_user(self, user_id: str, thread_ts: Optional[str]):
+        if not shared.config.look.typing_status_nicks.value:
+            return
+
+        if not thread_ts:
+            user = await self.workspace.users[user_id]
+            weechat.hook_signal_send(
+                "typing_set_nick",
+                weechat.WEECHAT_HOOK_SIGNAL_STRING,
+                f"{self.buffer_pointer};typing;{user.nick()}",
+            )
+
+    def typing_update_self(self, typing_state: str):
+        now = time.time()
+        if now - 4 > self._typing_self_last_sent:
+            self._typing_self_last_sent = now
+            self.workspace.send_typing(self.id)
 
     def print_message(self, message: SlackMessage, rendered: str):
         weechat.prnt_date_tags(self.buffer_pointer, message.ts.major, "", rendered)

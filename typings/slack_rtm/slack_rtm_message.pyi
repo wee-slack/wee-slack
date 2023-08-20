@@ -8,7 +8,7 @@ from slack_api.slack_conversations_history import (
     SlackMessageThreadParentSubscribed,
     SlackMessageWithFiles,
 )
-from typing_extensions import Literal, TypedDict, final
+from typing_extensions import Literal, NotRequired, TypedDict, final
 
 class SlackRtmHello(TypedDict):
     type: Literal["hello"]
@@ -81,7 +81,7 @@ class SlackMessageReplied(TypedDict):
 class SlackUserTyping(TypedDict):
     type: Literal["user_typing"]
     channel: str
-    thread_ts: str
+    thread_ts: NotRequired[str]
     id: int
     user: str
 

@@ -273,6 +273,12 @@ class SlackWorkspace:
 
     async def _ws_recv(self, data: SlackRtmMessage):
         try:
+            channel_id = "channel" in data and data["channel"]
+            if channel_id in self.open_conversations:
+                channel = self.open_conversations[channel_id]
+            else:
+                channel = None
+
             if data["type"] == "message":
                 if "subtype" in data and data["subtype"] == "message_changed":
                     pass
@@ -281,11 +287,12 @@ class SlackWorkspace:
                 elif "subtype" in data and data["subtype"] == "message_replied":
                     pass
                 else:
-                    channel_id = data["channel"]
-                    if channel_id in self.open_conversations:
-                        channel = self.open_conversations[channel_id]
+                    if channel:
                         message = SlackMessage(channel, data)
                         await channel.add_message(message)
+            elif data["type"] == "user_typing":
+                if channel:
+                    await channel.typing_add_user(data["user"], data.get("thread_ts"))
             else:
                 weechat.prnt("", f"\t{self.name} received: {json.dumps(data)}")
         except Exception as e:
@@ -303,6 +310,14 @@ class SlackWorkspace:
         except (WebSocketConnectionClosedException, socket.error):
             print("lost connection on ping, reconnecting")
             run_async(self.reconnect())
+
+    def send_typing(self, conversation_id: str):
+        if not self.is_connected:
+            raise SlackError(self, "Can't send typing when not connected")
+        if self._ws is None:
+            raise SlackError(self, "is_connected is True while _ws is None")
+        msg = {"type": "typing", "channel": conversation_id}
+        self._ws.send(json.dumps(msg))
 
     async def reconnect(self):
         self.disconnect()

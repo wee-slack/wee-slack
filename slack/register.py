@@ -68,6 +68,16 @@ def modifier_input_text_display_with_cursor_cb(
     return prefix + string
 
 
+def typing_self_cb(data: str, signal: str, signal_data: str) -> int:
+    if not shared.config.look.typing_status_self.value:
+        return weechat.WEECHAT_RC_OK
+
+    conversation = get_conversation_from_buffer_pointer(signal_data)
+    if conversation:
+        conversation.typing_update_self(signal)
+    return weechat.WEECHAT_RC_OK
+
+
 def ws_ping_cb(data: str, remaining_calls: int) -> int:
     for workspace in shared.workspaces.values():
         if workspace.is_connected:
@@ -117,6 +127,7 @@ def register():
             get_callback_name(modifier_input_text_display_with_cursor_cb),
             "",
         )
+        weechat.hook_signal("typing_self_*", get_callback_name(typing_self_cb), "")
         weechat.hook_timer(5000, 0, 0, get_callback_name(ws_ping_cb), "")
 
         run_async(init_async())
