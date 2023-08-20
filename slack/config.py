@@ -43,6 +43,22 @@ class SlackConfigSectionColor:
             WeeChatColor("yellow"),
         )
 
+        self.message_join = WeeChatOption(
+            self._section,
+            "message_join",
+            "color for text in join messages",
+            WeeChatColor("green"),
+            parent_option="irc.color.message_join",
+        )
+
+        self.message_quit = WeeChatOption(
+            self._section,
+            "message_quit",
+            "color for text in part messages",
+            WeeChatColor("red"),
+            parent_option="irc.color.message_quit",
+        )
+
         self.reaction_suffix = WeeChatOption(
             self._section,
             "reaction_suffix",
