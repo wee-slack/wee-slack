@@ -77,7 +77,7 @@ class WeeChatOption(Generic[WeeChatOptionType]):
     default_value: WeeChatOptionType
     min_value: Optional[int] = None
     max_value: Optional[int] = None
-    string_values: Optional[str] = None
+    string_values: Optional[list[WeeChatOptionType]] = None
     parent_option: Union[WeeChatOption[WeeChatOptionType], str, None] = None
     callback_change: Optional[
         Callable[[WeeChatOption[WeeChatOptionType], bool], None]
@@ -174,7 +174,7 @@ class WeeChatOption(Generic[WeeChatOptionType]):
             name,
             self.weechat_type,
             self.description,
-            self.string_values or "",
+            "|".join(str(x) for x in self.string_values or []),
             self.min_value or -(2**31),
             self.max_value or 2**31 - 1,
             default_value,

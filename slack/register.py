@@ -6,6 +6,7 @@ from slack.commands import register_commands
 from slack.config import SlackConfig
 from slack.shared import shared
 from slack.slack_conversation import get_conversation_from_buffer_pointer
+from slack.slack_emoji import load_standard_emojis
 from slack.task import run_async, sleep
 from slack.util import get_callback_name, with_color
 
@@ -105,6 +106,7 @@ def register():
         "",
     ):
         shared.weechat_version = int(weechat.info_get("version_number", "") or 0)
+        shared.standard_emojis = load_standard_emojis()
         shared.workspaces = {}
         shared.config = SlackConfig()
         shared.config.config_read()
