@@ -380,6 +380,10 @@ class SlackConversation:
             self.buffer_pointer, message.ts, await message.render_message(rerender=True)
         )
 
+    async def rerender_history(self):
+        for message in self._messages.values():
+            await self.rerender_message(message)
+
     async def change_message(self, data: SlackMessageChanged):
         ts = SlackTs(data["ts"])
         message = self._messages.get(ts)

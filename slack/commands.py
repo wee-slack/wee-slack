@@ -176,6 +176,15 @@ def command_slack_disconnect(
 
 
 @weechat_command()
+def command_slack_rehistory(
+    buffer: str, args: List[str], options: Dict[str, Optional[str]]
+):
+    conversation = get_conversation_from_buffer_pointer(buffer)
+    if conversation:
+        run_async(conversation.rerender_history())
+
+
+@weechat_command()
 def command_slack_workspace(
     buffer: str, args: List[str], options: Dict[str, Optional[str]]
 ):
