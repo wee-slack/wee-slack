@@ -1,5 +1,6 @@
 from slack_api.slack_conversations_history import (
     SlackMessage,
+    SlackMessageMe,
     SlackMessageStandardCommon,
     SlackMessageSubtypeBotAdd,
     SlackMessageSubtypeBotMessage,
@@ -21,6 +22,10 @@ class SlackRtmHello(TypedDict):
 
 @final
 class SlackMessageStandardRtm(SlackMessageStandardCommon):
+    channel: str
+
+@final
+class SlackMessageMeRtm(SlackMessageMe):
     channel: str
 
 @final
@@ -123,6 +128,7 @@ class SlackUserTyping(TypedDict):
 
 SlackMessageRtm = (
     SlackMessageStandardRtm
+    | SlackMessageMeRtm
     | SlackMessageThreadParentNotSubscribedRtm
     | SlackMessageThreadParentSubscribedRtm
     | SlackMessageWithFilesRtm

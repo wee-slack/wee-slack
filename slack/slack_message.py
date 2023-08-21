@@ -143,11 +143,15 @@ class SlackMessage:
             tags.append("slack_privmsg")
             if self.is_bot_message:
                 tags.append("bot_message")
-            if shared.weechat_version >= 0x04000000:
-                if user:
-                    tags.append(f"prefix_nick_{user.nick_color()}")
-                else:
-                    tags.append(f"prefix_nick_{nick_color(nick)}")
+
+            if self._message_json.get("subtype") == "me_message":
+                tags.append("slack_action")
+            else:
+                if shared.weechat_version >= 0x04000000:
+                    if user:
+                        tags.append(f"prefix_nick_{user.nick_color()}")
+                    else:
+                        tags.append(f"prefix_nick_{nick_color(nick)}")
 
             if user and user.is_self:
                 tags.append("self_msg")
@@ -191,6 +195,8 @@ class SlackMessage:
             return removesuffix(weechat.prefix("join"), "\t")
         elif self._message_json.get("subtype") in ["channel_leave", "group_leave"]:
             return removesuffix(weechat.prefix("quit"), "\t")
+        elif self._message_json.get("subtype") == "me_message":
+            return removesuffix(weechat.prefix("action"), "\t")
         else:
             return await self._nick(colorize=colorize, only_nick=only_nick)
 
@@ -229,6 +235,10 @@ class SlackMessage:
                 inviter_text = ""
 
             return f"{await self._nick()} {text_action} {text_conversation_name}{inviter_text}"
+
+        elif self._message_json.get("subtype") == "me_message":
+            text = await self._unfurl_refs(self._message_json["text"])
+            return f"{await self._nick()} {text}"
         else:
             return await self._unfurl_refs(self._message_json["text"])
 
