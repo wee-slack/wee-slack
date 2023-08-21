@@ -103,6 +103,13 @@ class SlackMessageStandardCommon(SlackMessageCommon):
 class SlackMessageStandardFinal(SlackMessageStandardCommon):
     pass
 
+class SlackMessageMe(SlackMessageStandardCommon):
+    subtype: Literal["me_message"]
+
+@final
+class SlackMessageMeFinal(SlackMessageMe):
+    pass
+
 class SlackMessageThreadParentCommon(SlackMessageStandardCommon):
     thread_ts: str
     reply_count: int
@@ -186,6 +193,7 @@ class SlackMessageSubtypeChannelLeaveFinal(SlackMessageSubtypeChannelLeave):
 
 SlackMessage = (
     SlackMessageStandardFinal
+    | SlackMessageMeFinal
     | SlackMessageThreadParentNotSubscribedFinal
     | SlackMessageThreadParentSubscribedFinal
     | SlackMessageWithFilesFinal
