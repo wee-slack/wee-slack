@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Union
 if TYPE_CHECKING:
     from slack.config import SlackConfig
     from slack.error import UncaughtError
+    from slack.slack_emoji import Emoji
     from slack.slack_workspace import SlackWorkspace
     from slack.task import Future, Task
 
@@ -24,6 +25,7 @@ class Shared:
         self.workspaces: Dict[str, SlackWorkspace] = {}
         self.config: SlackConfig
         self.uncaught_errors: List[UncaughtError] = []
+        self.standard_emojis: Dict[str, Emoji]
 
 
 shared = Shared()

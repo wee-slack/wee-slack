@@ -16,6 +16,7 @@ from slack.util import with_color
 if TYPE_CHECKING:
     from slack_api.slack_conversations_history import SlackMessage as SlackMessageDict
     from slack_api.slack_conversations_history import SlackMessageReaction
+    from typing_extensions import assert_never
 
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
@@ -321,6 +322,22 @@ class SlackMessage:
 
         return re_mention.sub(unfurl_ref, message)
 
+    def _get_emoji(self, emoji_name: str) -> str:
+        emoji_name_with_colons = f":{emoji_name}:"
+        if shared.config.look.render_emoji_as.value == "name":
+            return emoji_name_with_colons
+
+        emoji_item = shared.standard_emojis.get(emoji_name)
+        if emoji_item is None:
+            return emoji_name_with_colons
+
+        if shared.config.look.render_emoji_as.value == "emoji":
+            return emoji_item["unicode"]
+        elif shared.config.look.render_emoji_as.value == "both":
+            return f"{emoji_item['unicode']}({emoji_name_with_colons})"
+        else:
+            assert_never(shared.config.look.render_emoji_as.value)
+
     async def _create_reaction_string(self, reaction: SlackMessageReaction) -> str:
         if shared.config.look.display_reaction_nicks.value:
             # TODO: initialize_items?
@@ -332,7 +349,7 @@ class SlackMessage:
         else:
             users_str = len(reaction["users"])
 
-        reaction_string = f":{reaction['name']}:{users_str}"
+        reaction_string = f"{self._get_emoji(reaction['name'])}{users_str}"
 
         if self.workspace.my_user.id in reaction["users"]:
             return with_color(

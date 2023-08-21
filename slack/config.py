@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import weechat
 
@@ -16,6 +16,9 @@ from slack.weechat_config import (
     WeeChatOptionType,
     WeeChatSection,
 )
+
+if TYPE_CHECKING:
+    from typing_extensions import Literal
 
 
 class SlackConfigSectionColor:
@@ -136,6 +139,16 @@ class SlackConfigSectionLook:
             "*",
         )
 
+        self.render_emoji_as: WeeChatOption[
+            Literal["emoji", "name", "both"]
+        ] = WeeChatOption(
+            self._section,
+            "render_emoji_as",
+            "show emojis as: emoji = the emoji unicode character, name = the emoji name, both = both the emoji name and the emoji character",
+            "emoji",
+            string_values=["emoji", "name", "both"],
+        )
+
         self.typing_status_nicks = WeeChatOption(
             self._section,
             "typing_status_nicks",
@@ -221,7 +234,7 @@ class SlackConfigSectionWorkspace:
         default_value: WeeChatOptionType,
         min_value: Optional[int] = None,
         max_value: Optional[int] = None,
-        string_values: Optional[str] = None,
+        string_values: Optional[list[WeeChatOptionType]] = None,
     ) -> WeeChatOption[WeeChatOptionType]:
         if self._workspace_name:
             option_name = f"{self._workspace_name}.{name}"
