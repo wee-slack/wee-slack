@@ -4706,9 +4706,55 @@ def block_list_prefix(element, index):
 
 
 def unfurl_rich_text_section(block):
-    text = "".join(
-        unfurl_block_element(sub_element) for sub_element in block["elements"]
-    )
+    texts = []
+    prev_element = {"type": "text", "text": ""}
+    for element in block["elements"] + [prev_element.copy()]:
+        colors_apply = []
+        colors_remove = []
+        characters_apply = []
+        characters_remove = []
+        if element.get("style", {}).get("bold") != prev_element.get("style", {}).get(
+            "bold"
+        ):
+            if element.get("style", {}).get("bold"):
+                colors_apply.append(w.color(config.render_bold_as))
+                characters_apply.append("*")
+            else:
+                colors_remove.append(w.color("-" + config.render_bold_as))
+                characters_remove.append("*")
+        if element.get("style", {}).get("italic") != prev_element.get("style", {}).get(
+            "italic"
+        ):
+            if element.get("style", {}).get("italic"):
+                colors_apply.append(w.color(config.render_italic_as))
+                characters_apply.append("_")
+            else:
+                colors_remove.append(w.color("-" + config.render_italic_as))
+                characters_remove.append("_")
+        if element.get("style", {}).get("strike") != prev_element.get("style", {}).get(
+            "strike"
+        ):
+            if element.get("style", {}).get("strike"):
+                characters_apply.append("~")
+            else:
+                characters_remove.append("~")
+        if element.get("style", {}).get("code") != prev_element.get("style", {}).get(
+            "code"
+        ):
+            if element.get("style", {}).get("code"):
+                characters_apply.append("`")
+            else:
+                characters_remove.append("`")
+
+        texts.extend(reversed(characters_remove))
+        texts.extend(reversed(colors_remove))
+        texts.extend(colors_apply)
+        texts.extend(characters_apply)
+        texts.append(unfurl_block_element(element))
+        prev_element = element
+
+    text = "".join(texts)
+
     if text.endswith("\n"):
         return text[:-1]
     else:
@@ -4718,30 +4764,7 @@ def unfurl_rich_text_section(block):
 def unfurl_block_element(text):
     if text["type"] == "mrkdwn":
         return render_formatting(text["text"])
-    elif text["type"] == "text":
-        colors = []
-        characters = []
-        if text.get("style", {}).get("bold"):
-            colors.append(config.render_bold_as)
-            characters.append("*")
-        if text.get("style", {}).get("italic"):
-            colors.append(config.render_italic_as)
-            characters.append("_")
-        if text.get("style", {}).get("strike"):
-            characters.append("~")
-        if text.get("style", {}).get("code"):
-            characters.append("`")
-
-        colors_start = "".join(w.color(color) for color in colors)
-        colors_end = "".join(w.color("-" + color) for color in colors)
-        return (
-            colors_start
-            + "".join(characters)
-            + text["text"]
-            + "".join(reversed(characters))
-            + colors_end
-        )
-    elif text["type"] == "plain_text":
+    elif text["type"] in ["text", "plain_text"]:
         return text["text"]
     elif text["type"] == "image":
         if text.get("alt_text"):

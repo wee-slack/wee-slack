@@ -112,7 +112,7 @@ import wee_slack
             "rendered": [
                 "normal <[color bold]>*bold*<[color -bold]> <[color italic]>_italic_"
                 "<[color -italic]> ~strikethrough~ <[color bold]><[color italic]>"
-                "*_~bold-italic-strikethrough~_*<[color -bold]><[color -italic]> "
+                "*_~bold-italic-strikethrough~_*<[color -italic]><[color -bold]> "
                 "https://vg.no (link)",
                 "1. number",
                 "2. list",
@@ -242,6 +242,115 @@ import wee_slack
                 "    ◦ list",
                 "        ▪︎ third",
                 "• end bullet list",
+            ],
+        },
+        {
+            "blocks": [
+                {
+                    "type": "rich_text",
+                    "block_id": "usQpu",
+                    "elements": [
+                        {
+                            "type": "rich_text_section",
+                            "elements": [
+                                {
+                                    "type": "text",
+                                    "text": "test ",
+                                    "style": {"code": True},
+                                },
+                                {
+                                    "type": "link",
+                                    "url": "http://asdf.de",
+                                    "text": "asdf.de",
+                                    "style": {"code": True},
+                                },
+                                {
+                                    "type": "text",
+                                    "text": " asdf.de:443",
+                                    "style": {"code": True},
+                                },
+                                {"type": "text", "text": "\n"},
+                            ],
+                        },
+                        {
+                            "type": "rich_text_preformatted",
+                            "elements": [
+                                {"type": "text", "text": "asdf.de\nasdf.de:443"}
+                            ],
+                            "border": 0,
+                        },
+                    ],
+                }
+            ],
+            "rendered": [
+                "`test asdf.de asdf.de:443`",
+                "```\nasdf.de\nasdf.de:443\n```",
+            ],
+        },
+        {
+            "blocks": [
+                {
+                    "type": "rich_text",
+                    "block_id": "vLtn",
+                    "elements": [
+                        {
+                            "type": "rich_text_section",
+                            "elements": [
+                                {
+                                    "type": "text",
+                                    "text": "bold ",
+                                    "style": {"bold": True},
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "code ",
+                                    "style": {"bold": True, "code": True},
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "not bold ",
+                                    "style": {"code": True},
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "italic",
+                                    "style": {"italic": True, "code": True},
+                                },
+                                {
+                                    "type": "text",
+                                    "text": " text",
+                                    "style": {"italic": True},
+                                },
+                            ],
+                        }
+                    ],
+                }
+            ],
+            "rendered": [
+                "<[color bold]>*bold `code *<[color -bold]>not bold <[color italic]>_italic` text_<[color -italic]>",
+            ],
+        },
+        {
+            "blocks": [
+                {
+                    "type": "rich_text",
+                    "block_id": "28L",
+                    "elements": [
+                        {
+                            "type": "rich_text_section",
+                            "elements": [
+                                {
+                                    "type": "text",
+                                    "text": "bold and italic combined",
+                                    "style": {"bold": True, "italic": True},
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+            "rendered": [
+                "<[color bold]><[color italic]>*_bold and italic combined_*<[color -italic]><[color -bold]>"
             ],
         },
     ],
