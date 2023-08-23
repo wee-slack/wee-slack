@@ -90,6 +90,13 @@ class SlackConfigSectionColor:
             WeeChatColor("blue"),
         )
 
+        self.render_error = WeeChatOption(
+            self._section,
+            "render_error",
+            "color for displaying rendering errors in a message",
+            WeeChatColor("red"),
+        )
+
         self.user_mention_color = WeeChatOption(
             self._section,
             "user_mention_color",
