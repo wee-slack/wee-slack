@@ -92,8 +92,8 @@ def format_exception_only_str(exc: BaseException) -> str:
     return format_exception_only(exc)[-1].strip()
 
 
-def store_and_format_exception(e: BaseException):
-    uncaught_error = UncaughtError(e)
+def store_and_format_uncaught_error(uncaught_error: UncaughtError) -> str:
+    e = uncaught_error.exception
     shared.uncaught_errors.append(uncaught_error)
     stack_msg_command = f"/slack debug error {uncaught_error.id}"
     stack_msg = f"run `{stack_msg_command}` for the stack trace"
@@ -120,3 +120,8 @@ def store_and_format_exception(e: BaseException):
         )
     else:
         return f"Unknown error occurred: {format_exception_only_str(e)} ({stack_msg})"
+
+
+def store_and_format_exception(e: BaseException) -> str:
+    uncaught_error = UncaughtError(e)
+    return store_and_format_uncaught_error(uncaught_error)

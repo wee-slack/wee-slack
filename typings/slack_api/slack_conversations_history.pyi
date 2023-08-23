@@ -7,21 +7,219 @@ from slack_rtm.slack_rtm_message import SlackMessageRtm
 from typing_extensions import Literal, NotRequired, TypedDict, final
 
 @final
-class SlackMessageBlockElement(TypedDict):
-    type: str
-    url: NotRequired[str]
+class SlackMessageBlockRichTextElementTextStyle(TypedDict):
+    bold: bool
+    italic: bool
+    strike: bool
+    code: bool
+
+@final
+class SlackMessageBlockRichTextElementText(TypedDict):
+    type: Literal["text"]
     text: str
+    style: NotRequired[SlackMessageBlockRichTextElementTextStyle]
 
 @final
-class SlackMessageBlockElementParent(TypedDict):
-    type: str
-    elements: List[SlackMessageBlockElement]
+class SlackMessageBlockRichTextElementLink(TypedDict):
+    type: Literal["link"]
+    url: str
+    text: NotRequired[str]
+    style: NotRequired[SlackMessageBlockRichTextElementTextStyle]
 
 @final
-class SlackMessageBlock(TypedDict):
-    type: str
-    block_id: str
-    elements: List[SlackMessageBlockElementParent]
+class SlackMessageBlockRichTextElementEmoji(TypedDict):
+    type: Literal["emoji"]
+    name: str
+    unicode: str
+    skin_tone: int
+
+@final
+class SlackMessageBlockRichTextElementChannel(TypedDict):
+    type: Literal["channel"]
+    channel_id: str
+
+@final
+class SlackMessageBlockRichTextElementUser(TypedDict):
+    type: Literal["user"]
+    user_id: str
+
+@final
+class SlackMessageBlockRichTextElementUsergroup(TypedDict):
+    type: Literal["usergroup"]
+    usergroup_id: str
+
+@final
+class SlackMessageBlockRichTextElementBroadcast(TypedDict):
+    type: Literal["broadcast"]
+    range: Literal["channel", "here"]
+
+SlackMessageBlockRichTextElement = (
+    SlackMessageBlockRichTextElementText
+    | SlackMessageBlockRichTextElementLink
+    | SlackMessageBlockRichTextElementEmoji
+    | SlackMessageBlockRichTextElementChannel
+    | SlackMessageBlockRichTextElementUser
+    | SlackMessageBlockRichTextElementUsergroup
+    | SlackMessageBlockRichTextElementBroadcast
+)
+
+@final
+class SlackMessageBlockRichTextSection(TypedDict):
+    type: Literal["rich_text_section"]
+    elements: List[SlackMessageBlockRichTextElement]
+
+@final
+class SlackMessageBlockRichTextPreformatted(TypedDict):
+    type: Literal["rich_text_preformatted"]
+    elements: List[
+        SlackMessageBlockRichTextElementText | SlackMessageBlockRichTextElementLink
+    ]
+
+@final
+class SlackMessageBlockRichTextQuote(TypedDict):
+    type: Literal["rich_text_quote"]
+    elements: List[SlackMessageBlockRichTextElement]
+
+@final
+class SlackMessageBlockRichTextList(TypedDict):
+    type: Literal["rich_text_list"]
+    elements: List[SlackMessageBlockRichTextSection]
+    style: Literal["ordered", "bullet"]
+    indent: int
+    offset: int
+    border: int
+
+@final
+class SlackMessageBlockRichText(TypedDict):
+    type: Literal["rich_text"]
+    block_id: NotRequired[str]
+    elements: List[
+        SlackMessageBlockRichTextSection
+        | SlackMessageBlockRichTextPreformatted
+        | SlackMessageBlockRichTextQuote
+        | SlackMessageBlockRichTextList
+    ]
+
+@final
+class SlackMessageBlockCallV1(TypedDict):
+    id: str
+    app_id: str
+    app_icon_urls: object
+    date_start: int
+    active_participants: List[str]
+    all_participants: List[str]
+    display_id: str
+    join_url: str
+    desktop_app_join_url: str
+    name: str
+    created_by: str
+    date_end: int
+    channels: List[str]
+    is_dm_call: bool
+    was_rejected: bool
+    was_missed: bool
+    was_accepted: bool
+    has_ended: bool
+
+@final
+class SlackMessageBlockCallCall(TypedDict):
+    v1: SlackMessageBlockCallV1
+    media_backend_type: str
+
+@final
+class SlackMessageBlockCall(TypedDict):
+    type: Literal["call"]
+    block_id: NotRequired[str]
+    call_id: str
+    api_decoration_available: bool
+    call: SlackMessageBlockCallCall
+
+@final
+class SlackMessageBlockCompositionPlainText(TypedDict):
+    type: Literal["plain_text"]
+    text: str
+    emoji: NotRequired[bool]
+
+@final
+class SlackMessageBlockCompositionMrkdwn(TypedDict):
+    type: Literal["mrkdwn"]
+    text: str
+    verbatim: NotRequired[bool]
+
+SlackMessageBlockCompositionText = (
+    SlackMessageBlockCompositionPlainText | SlackMessageBlockCompositionMrkdwn
+)
+
+@final
+class SlackMessageBlockElementButton(TypedDict):
+    type: Literal["button"]
+    text: SlackMessageBlockCompositionPlainText
+    action_id: str
+    url: NotRequired[str]
+    value: NotRequired[str]
+    style: NotRequired[str]
+    confirm: NotRequired[object]
+    accessibility_label: NotRequired[str]
+
+@final
+class SlackMessageBlockElementImage(TypedDict):
+    type: Literal["image"]
+    image_url: str
+    alt_text: str
+
+SlackMessageBlockElementInteractive = SlackMessageBlockElementButton
+
+SlackMessageBlockElement = (
+    SlackMessageBlockElementInteractive | SlackMessageBlockElementImage
+)
+
+@final
+class SlackMessageBlockActions(TypedDict):
+    type: Literal["actions"]
+    block_id: NotRequired[str]
+    elements: List[SlackMessageBlockElementInteractive]
+
+@final
+class SlackMessageBlockContext(TypedDict):
+    type: Literal["context"]
+    block_id: NotRequired[str]
+    elements: List[SlackMessageBlockCompositionText | SlackMessageBlockElementImage]
+
+@final
+class SlackMessageBlockDivider(TypedDict):
+    type: Literal["divider"]
+    block_id: NotRequired[str]
+
+@final
+class SlackMessageBlockImage(TypedDict):
+    type: Literal["image"]
+    block_id: NotRequired[str]
+    image_url: str
+    alt_text: str
+    title: NotRequired[SlackMessageBlockCompositionPlainText]
+    image_width: NotRequired[int]
+    image_height: NotRequired[int]
+    image_bytes: NotRequired[int]
+    is_animated: NotRequired[bool]
+    fallback: NotRequired[str]
+
+@final
+class SlackMessageBlockSection(TypedDict):
+    type: Literal["section"]
+    block_id: NotRequired[str]
+    text: NotRequired[SlackMessageBlockCompositionText]
+    fields: NotRequired[List[SlackMessageBlockCompositionText]]
+    accessory: NotRequired[SlackMessageBlockElement]
+
+SlackMessageBlock = (
+    SlackMessageBlockRichText
+    | SlackMessageBlockCall
+    | SlackMessageBlockActions
+    | SlackMessageBlockContext
+    | SlackMessageBlockDivider
+    | SlackMessageBlockImage
+    | SlackMessageBlockSection
+)
 
 @final
 class SlackMessageAttachment(TypedDict):
