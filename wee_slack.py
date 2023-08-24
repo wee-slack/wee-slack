@@ -1947,7 +1947,6 @@ class SlackChannelCommon(object):
             message.ts,
             tagset=tagset,
             tag_nick=message.sender_plain,
-            prefix_color=message.prefix_color,
             history_message=history_message,
             no_log=no_log,
             extra_tags=extra_tags,
@@ -2479,7 +2478,6 @@ class SlackChannel(SlackChannelCommon):
         timestamp,
         tagset,
         tag_nick=None,
-        prefix_color=None,
         history_message=False,
         no_log=False,
         extra_tags=None,
@@ -2503,7 +2501,6 @@ class SlackChannel(SlackChannelCommon):
                 tagset,
                 user=tag_nick,
                 self_msg=self_msg,
-                prefix_color=prefix_color,
                 backlog=backlog,
                 no_log=no_log,
                 extra_tags=extra_tags,
@@ -3108,7 +3105,6 @@ class SlackThreadChannel(SlackChannelCommon):
         timestamp,
         tagset,
         tag_nick=None,
-        prefix_color=None,
         history_message=False,
         no_log=False,
         extra_tags=None,
@@ -3129,7 +3125,6 @@ class SlackThreadChannel(SlackChannelCommon):
                 tagset,
                 user=tag_nick,
                 self_msg=self_msg,
-                prefix_color=prefix_color,
                 backlog=backlog,
                 no_log=no_log,
                 extra_tags=extra_tags,
@@ -3494,14 +3489,6 @@ class SlackMessage(object):
     @property
     def sender_plain(self):
         return self.get_sender(True)
-
-    @property
-    def prefix_color(self):
-        user = self.team.users.get(self.user_identifier)
-        if user:
-            return user.color_name
-        else:
-            return get_nick_color(self.sender_plain)
 
     def get_reaction(self, reaction_name):
         for reaction in self.message_json.get("reactions", []):
@@ -5229,9 +5216,6 @@ def nick_from_profile(profile, username):
 
 
 def format_nick(nick, previous_nick=None):
-    if weechat_version >= 0x04000000:
-        return nick
-
     if nick == previous_nick:
         nick = w.config_string(w.config_get("weechat.look.prefix_same_nick")) or nick
     nick_prefix = w.config_string(w.config_get("weechat.look.nick_prefix"))
@@ -5262,7 +5246,6 @@ def tag(
     tagset=None,
     user=None,
     self_msg=False,
-    prefix_color=None,
     backlog=False,
     no_log=False,
     extra_tags=None,
@@ -5279,12 +5262,7 @@ def tag(
     ts_tag = "slack_ts_{}".format(ts)
     slack_tag = "slack_{}".format(tagset or "default")
     nick_tag = ["nick_{}".format(user).replace(" ", "_")] if user else []
-    prefix_nick_tag = (
-        ["prefix_nick_{}".format(prefix_color.replace(",", ":"))]
-        if prefix_color and weechat_version >= 0x04000000
-        else []
-    )
-    tags = [ts_tag, slack_tag] + nick_tag + prefix_nick_tag + tagsets.get(tagset, [])
+    tags = [ts_tag, slack_tag] + nick_tag + tagsets.get(tagset, [])
     if self_msg or backlog:
         tags = tags_set_notify_none(tags)
         if self_msg:
