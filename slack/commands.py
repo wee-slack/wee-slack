@@ -291,6 +291,7 @@ def print_uncaught_error(
 def command_slack_debug(
     buffer: str, args: List[str], options: Dict[str, Optional[str]]
 ):
+    # TODO: Add message info (message_json)
     if args[0] == "tasks":
         weechat.prnt("", "Active tasks:")
         weechat.prnt("", pprint.pformat(shared.active_tasks))

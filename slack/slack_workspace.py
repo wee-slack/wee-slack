@@ -300,7 +300,7 @@ class SlackWorkspace:
                     pass
                 else:
                     message = SlackMessage(channel, data)
-                    await channel.add_message(message)
+                    await channel.add_new_message(message)
             elif data["type"] == "reaction_added" and data["item"]["type"] == "message":
                 await channel.reaction_add(
                     SlackTs(data["item"]["ts"]), data["reaction"], data["user"]
