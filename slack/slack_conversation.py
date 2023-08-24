@@ -358,7 +358,8 @@ class SlackConversation:
             self.buffer_pointer, "", user.nick(), color, "", "", 1
         )
 
-    async def add_message(self, message: SlackMessage):
+    async def add_new_message(self, message: SlackMessage):
+        # TODO: Remove old messages
         self._messages[message.ts] = message
         if self.history_filled:
             await self.print_message(message)

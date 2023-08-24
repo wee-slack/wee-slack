@@ -162,6 +162,7 @@ class SlackMessage:
             self._rendered_message = None
 
     async def tags(self, backlog: bool = False) -> str:
+        # TODO: Add tags for highlight
         nick = await self._nick(colorize=False, only_nick=True)
         tags = [f"slack_ts_{self.ts}", f"nick_{nick}"]
 
