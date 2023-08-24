@@ -23,7 +23,6 @@ Table of Contents
   * [Commands and options](#commands-and-options)
      * [Threads](#threads)
      * [Emoji characters and tab completions of emoji names](#emoji-characters-and-tab-completions-of-emoji-names)
-     * [User group tab completions](#user-group-tab-completions)
      * [Cursor and mouse mode](#cursor-and-mouse-mode)
   * [Removing a team](#removing-a-team)
   * [Optional settings](#optional-settings)
@@ -35,6 +34,7 @@ Table of Contents
         * [Local notifications on macOS](#local-notifications-on-macos)
         * [Remote notifications](#remote-notifications)
      * [How do I send messages with multiple lines?](#how-do-i-send-messages-with-multiple-lines)
+        * [For WeeChat &lt; 4.0.0](#for-weechat--400)
   * [Known issues](#known-issues)
   * [Debugging](#debugging)
   * [Support](#support)
@@ -425,6 +425,13 @@ for various use cases. Note that not all may work with wee-slack, so you will
 have to test them.
 
 ### How do I send messages with multiple lines?
+
+With WeeChat >= 4.0.0 this is supported out of the box. You can either press
+Alt+Enter to insert a line break, or paste something containing multiple lines.
+
+For older versions of WeeChat, continue reading the next section.
+
+#### For WeeChat < 4.0.0
 
 You have to install a script to be able to send multiple lines, e.g. the
 `multiline.pl` script with: `/script install multiline.pl`
