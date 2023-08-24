@@ -4761,39 +4761,39 @@ def unfurl_rich_text_section(block):
         return text
 
 
-def unfurl_block_element(text):
-    if text["type"] == "mrkdwn":
-        return render_formatting(text["text"])
-    elif text["type"] in ["text", "plain_text"]:
-        return text["text"]
-    elif text["type"] == "image":
-        if text.get("alt_text"):
-            return "{} ({})".format(text["image_url"], text["alt_text"])
+def unfurl_block_element(element):
+    if element["type"] == "mrkdwn":
+        return render_formatting(element["text"])
+    elif element["type"] in ["text", "plain_text"]:
+        return element["text"]
+    elif element["type"] == "image":
+        if element.get("alt_text"):
+            return "{} ({})".format(element["image_url"], element["alt_text"])
         else:
-            return text["image_url"]
-    elif text["type"] == "link":
-        if text.get("text"):
-            if text.get("style", {}).get("code"):
-                return text["text"]
+            return element["image_url"]
+    elif element["type"] == "link":
+        if element.get("text"):
+            if element.get("style", {}).get("code"):
+                return element["text"]
             else:
-                return "{} ({})".format(text["url"], text["text"])
+                return "{} ({})".format(element["url"], element["text"])
         else:
-            return text["url"]
-    elif text["type"] == "emoji":
-        return replace_string_with_emoji(":{}:".format(text["name"]))
-    elif text["type"] == "user":
-        return resolve_ref("@{}".format(text["user_id"]))
-    elif text["type"] == "usergroup":
-        return resolve_ref("!subteam^{}".format(text["usergroup_id"]))
-    elif text["type"] == "broadcast":
-        return resolve_ref("@{}".format(text["range"]))
-    elif text["type"] == "channel":
-        return resolve_ref("#{}".format(text["channel_id"]))
+            return element["url"]
+    elif element["type"] == "emoji":
+        return replace_string_with_emoji(":{}:".format(element["name"]))
+    elif element["type"] == "user":
+        return resolve_ref("@{}".format(element["user_id"]))
+    elif element["type"] == "usergroup":
+        return resolve_ref("!subteam^{}".format(element["usergroup_id"]))
+    elif element["type"] == "broadcast":
+        return resolve_ref("@{}".format(element["range"]))
+    elif element["type"] == "channel":
+        return resolve_ref("#{}".format(element["channel_id"]))
     else:
-        dbg("Unsupported block element: '{}'".format(json.dumps(text)), level=4)
+        dbg("Unsupported block element: '{}'".format(json.dumps(element)), level=4)
         return colorize_string(
             config.color_deleted,
-            '<<Unsupported block element type "{}">>'.format(text["type"]),
+            '<<Unsupported block element type "{}">>'.format(element["type"]),
         )
 
 
