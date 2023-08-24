@@ -4772,11 +4772,12 @@ def unfurl_block_element(element):
         else:
             return element["image_url"]
     elif element["type"] == "link":
-        if element.get("text"):
+        text = element.get("text")
+        if text and text != element["url"]:
             if element.get("style", {}).get("code"):
-                return element["text"]
+                return text
             else:
-                return "{} ({})".format(element["url"], element["text"])
+                return unfurl_link(element["url"], text)
         else:
             return element["url"]
     elif element["type"] == "emoji":
@@ -4795,6 +4796,17 @@ def unfurl_block_element(element):
             config.color_deleted,
             '<<Unsupported block element type "{}">>'.format(element["type"]),
         )
+
+
+def unfurl_link(url, text):
+    match_url = r"^\w+:(//)?{}$".format(re.escape(text))
+    url_matches_desc = re.match(match_url, url)
+    if url_matches_desc and config.unfurl_auto_link_display == "text":
+        return text
+    elif url_matches_desc and config.unfurl_auto_link_display == "url":
+        return url
+    else:
+        return "{} ({})".format(url, text)
 
 
 def unfurl_refs(text):
@@ -4827,14 +4839,7 @@ def unfurl_refs(text):
             elif ref.startswith("!date"):
                 return fallback
             else:
-                match_url = r"^\w+:(//)?{}$".format(re.escape(fallback))
-                url_matches_desc = re.match(match_url, ref)
-                if url_matches_desc and config.unfurl_auto_link_display == "text":
-                    return fallback
-                elif url_matches_desc and config.unfurl_auto_link_display == "url":
-                    return ref
-                else:
-                    return "{} ({})".format(ref, fallback)
+                return unfurl_link(ref, fallback)
         return ref
 
     return re.sub(r"<([^|>]*)(?:\|([^>]*))?>", unfurl_ref, text)
