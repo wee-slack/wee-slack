@@ -3421,7 +3421,7 @@ class SlackMessage(object):
 
         text += unfurl_refs(unwrap_attachments(self, text))
         text += unfurl_refs(unwrap_files(self, self.message_json, text))
-        text += unfurl_refs(unwrap_huddle(self, self.message_json))
+        text += unfurl_refs(unwrap_huddle(self, self.message_json, text))
         text = unhtmlescape(text.lstrip().replace("\t", "    "))
 
         text += create_reactions_string(
@@ -4974,7 +4974,7 @@ def unwrap_attachments(message, text_before):
     return "\n".join(attachment_texts)
 
 
-def unwrap_huddle(message, message_json):
+def unwrap_huddle(message, message_json, text_before):
     """
     If huddle is linked to message, append huddle information and link
     to connect.
@@ -4982,11 +4982,6 @@ def unwrap_huddle(message, message_json):
     huddle_texts = []
 
     if "room" in message_json:
-        for block in message_json.get("blocks"):
-            for element in block.get("elements"):
-                for element2 in element.get("elements"):
-                    huddle_texts.append(element2.get("text"))
-
         if "name" in message_json.get("room"):
             room_name = message_json.get("room").get("name")
 
@@ -5000,6 +4995,8 @@ def unwrap_huddle(message, message_json):
                 )
             )
 
+    if text_before:
+        huddle_texts.insert(0, "")
     return "\n".join(huddle_texts)
 
 
