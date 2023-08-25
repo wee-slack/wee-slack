@@ -7,6 +7,8 @@ from slack_api.slack_conversations_history import (
     SlackMessageSubtypeBotRemove,
     SlackMessageSubtypeChannelJoin,
     SlackMessageSubtypeChannelLeave,
+    SlackMessageSubtypeHuddleThread,
+    SlackMessageSubtypeHuddleThreadRoom,
     SlackMessageThreadParentNotSubscribed,
     SlackMessageThreadParentSubscribed,
     SlackMessageWithFiles,
@@ -39,6 +41,11 @@ class SlackMessageThreadParentSubscribedRtm(SlackMessageThreadParentSubscribed):
 @final
 class SlackMessageWithFilesRtm(SlackMessageWithFiles):
     channel: str
+
+@final
+class SlackMessageSubtypeHuddleThreadRtm(SlackMessageSubtypeHuddleThread):
+    event_ts: str
+    suppress_notification: bool
 
 @final
 class SlackMessageSubtypeBotMessageRtm(SlackMessageSubtypeBotMessage):
@@ -118,6 +125,27 @@ class SlackReactionRemoved(TypedDict):
     event_ts: str
     ts: str
 
+class SlackShRoomHuddle(TypedDict):
+    channel_id: str
+
+@final
+class SlackShRoomJoin(TypedDict):
+    type: Literal["sh_room_join"]
+    room: SlackMessageSubtypeHuddleThreadRoom
+    user: str
+    huddle: SlackShRoomHuddle
+    event_ts: str
+    ts: str
+
+@final
+class SlackShRoomUpdate(TypedDict):
+    type: Literal["sh_room_update"]
+    room: SlackMessageSubtypeHuddleThreadRoom
+    user: str
+    huddle: SlackShRoomHuddle
+    event_ts: str
+    ts: str
+
 @final
 class SlackUserTyping(TypedDict):
     type: Literal["user_typing"]
@@ -132,6 +160,7 @@ SlackMessageRtm = (
     | SlackMessageThreadParentNotSubscribedRtm
     | SlackMessageThreadParentSubscribedRtm
     | SlackMessageWithFilesRtm
+    | SlackMessageSubtypeHuddleThreadRtm
     | SlackMessageSubtypeBotMessageRtm
     | SlackMessageSubtypeBotRemoveRtm
     | SlackMessageSubtypeBotAddRtm
@@ -147,5 +176,7 @@ SlackRtmMessage = (
     | SlackMessageReplied
     | SlackReactionAdded
     | SlackReactionRemoved
+    | SlackShRoomJoin
+    | SlackShRoomUpdate
     | SlackUserTyping
 )

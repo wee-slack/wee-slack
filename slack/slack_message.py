@@ -29,6 +29,7 @@ if TYPE_CHECKING:
         SlackMessageBlockRichTextList,
         SlackMessageBlockRichTextSection,
         SlackMessageReaction,
+        SlackMessageSubtypeHuddleThreadRoom,
     )
     from typing_extensions import assert_never
 
@@ -138,6 +139,11 @@ class SlackMessage:
     def update_message_json(self, message_json: SlackMessageDict):
         self._message_json = message_json
         self._rendered_prefix = None
+        self._rendered_message = None
+
+    def update_message_json_room(self, room: SlackMessageSubtypeHuddleThreadRoom):
+        if "room" in self._message_json:
+            self._message_json["room"] = room
         self._rendered_message = None
 
     def _get_reaction(self, reaction_name: str):
@@ -284,6 +290,23 @@ class SlackMessage:
                 inviter_text = ""
 
             return f"{await self._nick()} {text_action} {text_conversation_name}{inviter_text}"
+
+        elif (
+            "subtype" in self._message_json
+            and self._message_json["subtype"] == "huddle_thread"
+        ):
+            room = self._message_json["room"]
+            team = self._message_json["team"]
+
+            huddle_text = "Huddle started" if not room["has_ended"] else "Huddle ended"
+            name_text = f", name: {room['name']}" if room["name"] else ""
+            texts: List[str] = [huddle_text + name_text]
+
+            for channel_id in room["channels"]:
+                texts.append(
+                    f"https://app.slack.com/client/{team}/{channel_id}?open=start_huddle"
+                )
+            return "\n".join(texts)
 
         else:
             if "blocks" in self._message_json:
