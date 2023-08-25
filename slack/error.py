@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Dict, Mapping, Sequence, Union
+from typing import TYPE_CHECKING, Dict, Mapping, Optional, Sequence, Union
 from uuid import uuid4
 
 from slack.python_compatibility import format_exception_only
@@ -70,12 +70,15 @@ class SlackRtmError(Exception):
 
 
 class SlackError(Exception):
-    def __init__(self, workspace: SlackWorkspace, error: str):
+    def __init__(
+        self, workspace: SlackWorkspace, error: str, data: Optional[object] = None
+    ):
         super().__init__(
             f"{self.__class__.__name__}: workspace={workspace}, error={error}"
         )
         self.workspace = workspace
         self.error = error
+        self.data = data
 
 
 @dataclass
@@ -92,9 +95,13 @@ def format_exception_only_str(exc: BaseException) -> str:
     return format_exception_only(exc)[-1].strip()
 
 
-def store_and_format_uncaught_error(uncaught_error: UncaughtError) -> str:
-    e = uncaught_error.exception
+def store_uncaught_error(uncaught_error: UncaughtError) -> None:
     shared.uncaught_errors.append(uncaught_error)
+
+
+def store_and_format_uncaught_error(uncaught_error: UncaughtError) -> str:
+    store_uncaught_error(uncaught_error)
+    e = uncaught_error.exception
     stack_msg_command = f"/slack debug error {uncaught_error.id}"
     stack_msg = f"run `{stack_msg_command}` for the stack trace"
 

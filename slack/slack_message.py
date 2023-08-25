@@ -6,7 +6,12 @@ from typing import TYPE_CHECKING, List, Match, Optional, Union
 
 import weechat
 
-from slack.error import UncaughtError, store_and_format_uncaught_error
+from slack.error import (
+    SlackError,
+    UncaughtError,
+    store_and_format_uncaught_error,
+    store_uncaught_error,
+)
 from slack.log import print_error, print_exception_once
 from slack.python_compatibility import removeprefix, removesuffix
 from slack.shared import shared
@@ -282,14 +287,19 @@ class SlackMessage:
 
         else:
             if "blocks" in self._message_json:
-                text = await self._render_blocks(self._message_json["blocks"])
+                texts = await self._render_blocks(self._message_json["blocks"])
             else:
                 text = await self._unfurl_refs(self._message_json["text"])
+                texts = [text] if text else []
+
+            files_texts = self._render_files()
+
+            full_text = "\n".join(texts + files_texts)
 
             if self._message_json.get("subtype") == "me_message":
-                return f"{await self._nick()} {text}"
+                return f"{await self._nick()} {full_text}"
             else:
-                return text
+                return full_text
 
     async def _render_message(self) -> str:
         if self._deleted:
@@ -436,7 +446,7 @@ class SlackMessage:
         else:
             return ""
 
-    async def _render_blocks(self, blocks: List[SlackMessageBlock]) -> str:
+    async def _render_blocks(self, blocks: List[SlackMessageBlock]) -> List[str]:
         block_texts: List[str] = []
         for block in blocks:
             try:
@@ -538,7 +548,7 @@ class SlackMessage:
                     with_color(shared.config.color.render_error.value, text)
                 )
 
-        return "\n".join(block_texts)
+        return block_texts
 
     async def _render_block_rich_text_section(
         self, section: SlackMessageBlockRichTextSection
@@ -660,3 +670,38 @@ class SlackMessage:
                 return "◦"
             else:
                 return "▪︎"
+
+    def _render_files(self) -> List[str]:
+        if "files" not in self._message_json:
+            return []
+
+        texts: List[str] = []
+        for file in self._message_json.get("files", []):
+            if file.get("mode") == "tombstone":
+                text = with_color(
+                    shared.config.color.deleted_message.value, "(This file was deleted)"
+                )
+            elif file.get("mode") == "hidden_by_limit":
+                text = with_color(
+                    shared.config.color.deleted_message.value,
+                    "(This file is not available because the workspace has passed its storage limit)",
+                )
+            elif file.get("mimetype") == "application/vnd.slack-docs":
+                url = f"{file['permalink']}?origin_team={self.workspace.id}&origin_channel={self.conversation.id}"
+                text = f"{url} ({file['title']})"
+            elif file.get("url_private"):
+                if file.get("title"):
+                    text = f"{file['url_private']} ({file['title']})"
+                else:
+                    text = file["url_private"]
+            else:
+                error = SlackError(self.workspace, "Unsupported file", file)
+                uncaught_error = UncaughtError(error)
+                store_uncaught_error(uncaught_error)
+                text = with_color(
+                    shared.config.color.render_error.value,
+                    f"<Unsupported file, error id: {uncaught_error.id}>",
+                )
+            texts.append(text)
+
+        return texts
