@@ -341,6 +341,50 @@ class SlackMessageWithFiles(SlackMessageCommon):
 class SlackMessageWithFilesFinal(SlackMessageWithFiles):
     pass
 
+class SlackMessageSubtypeHuddleThreadRoom(TypedDict):
+    id: str
+    name: str
+    media_server: str
+    created_by: str
+    date_start: int
+    date_end: int
+    participants: List[str]
+    participant_history: List[str]
+    participants_camera_on: List[str]
+    participants_camera_off: List[str]
+    participants_screenshare_on: List[str]
+    participants_screenshare_off: List[str]
+    canvas_thread_ts: str
+    thread_root_ts: str
+    channels: List[str]
+    is_dm_call: bool
+    was_rejected: bool
+    was_missed: bool
+    was_accepted: bool
+    has_ended: bool
+    background_id: str
+    canvas_background: str
+    is_prewarmed: bool
+    is_scheduled: bool
+    attached_file_ids: List[str]
+    media_backend_type: str
+    display_id: str
+    external_unique_id: str
+    app_id: str
+    call_family: str
+    pending_invitees: Dict[str, str]
+
+class SlackMessageSubtypeHuddleThread(SlackMessageStandardCommon):
+    subtype: Literal["huddle_thread"]
+    channel: str
+    permalink: str
+    no_notifications: bool
+    room: SlackMessageSubtypeHuddleThreadRoom
+
+@final
+class SlackMessageSubtypeHuddleThreadFinal(SlackMessageSubtypeHuddleThread):
+    pass
+
 # TODO: Add other subtypes
 class SlackMessageSubtypeBotMessage(SlackMessageCommon):
     subtype: Literal["bot_message"]
@@ -395,6 +439,7 @@ SlackMessage = (
     | SlackMessageThreadParentNotSubscribedFinal
     | SlackMessageThreadParentSubscribedFinal
     | SlackMessageWithFilesFinal
+    | SlackMessageSubtypeHuddleThreadFinal
     | SlackMessageSubtypeBotMessageFinal
     | SlackMessageSubtypeBotRemoveFinal
     | SlackMessageSubtypeBotAddFinal

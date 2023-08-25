@@ -277,6 +277,8 @@ class SlackWorkspace:
                 return
             elif data["type"] == "reaction_added" or data["type"] == "reaction_removed":
                 channel_id = data["item"]["channel"]
+            elif data["type"] == "sh_room_join" or data["type"] == "sh_room_update":
+                channel_id = data["huddle"]["channel_id"]
             elif "channel" in data and type(data["channel"]) == str:
                 channel_id = data["channel"]
             else:
@@ -311,6 +313,8 @@ class SlackWorkspace:
                 await channel.reaction_remove(
                     SlackTs(data["item"]["ts"]), data["reaction"], data["user"]
                 )
+            elif data["type"] == "sh_room_join" or data["type"] == "sh_room_update":
+                await channel.update_message_room(data)
             elif data["type"] == "user_typing":
                 await channel.typing_add_user(data["user"], data.get("thread_ts"))
             else:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import weechat
 
@@ -14,7 +14,12 @@ from slack.util import get_callback_name
 
 if TYPE_CHECKING:
     from slack_api.slack_conversations_info import SlackConversationsInfo
-    from slack_rtm.slack_rtm_message import SlackMessageChanged, SlackMessageDeleted
+    from slack_rtm.slack_rtm_message import (
+        SlackMessageChanged,
+        SlackMessageDeleted,
+        SlackShRoomJoin,
+        SlackShRoomUpdate,
+    )
     from typing_extensions import Literal
 
     from slack.slack_api import SlackApi
@@ -397,6 +402,15 @@ class SlackConversation:
         message = self._messages.get(ts)
         if message:
             message.deleted = True
+            await self.rerender_message(message)
+
+    async def update_message_room(
+        self, data: Union[SlackShRoomJoin, SlackShRoomUpdate]
+    ):
+        ts = SlackTs(data["room"]["thread_root_ts"])
+        message = self._messages.get(ts)
+        if message:
+            message.update_message_json_room(data["room"])
             await self.rerender_message(message)
 
     async def reaction_add(self, message_ts: SlackTs, reaction: str, user_id: str):
