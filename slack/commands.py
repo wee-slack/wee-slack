@@ -9,7 +9,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import weechat
 
-from slack.error import SlackRtmError, UncaughtError
+from slack.error import SlackError, SlackRtmError, UncaughtError
 from slack.log import print_error
 from slack.python_compatibility import format_exception, removeprefix, removesuffix
 from slack.shared import shared
@@ -283,6 +283,8 @@ def print_uncaught_error(
     if data:
         if isinstance(error.exception, SlackRtmError):
             weechat.prnt("", f"  data: {json.dumps(error.exception.message_json)}")
+        elif isinstance(error.exception, SlackError):
+            weechat.prnt("", f"  data: {json.dumps(error.exception.data)}")
         else:
             print_error("This error does not have any data")
 
