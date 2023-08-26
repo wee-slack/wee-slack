@@ -70,7 +70,7 @@ def modifier_input_text_display_with_cursor_cb(
 
 
 def typing_self_cb(data: str, signal: str, signal_data: str) -> int:
-    if not shared.config.look.typing_status_self.value:
+    if not shared.config.look.typing_status_self:
         return weechat.WEECHAT_RC_OK
 
     conversation = get_conversation_from_buffer_pointer(signal_data)
@@ -91,7 +91,7 @@ async def init_async():
     if auto_connect:
         await sleep(1)  # Defer auto connect to ensure the logger plugin is loaded
         for workspace in shared.workspaces.values():
-            if workspace.config.autoconnect.value:
+            if workspace.config.autoconnect:
                 run_async(workspace.connect())
 
 

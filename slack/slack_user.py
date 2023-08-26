@@ -23,7 +23,7 @@ def nick_color(nick: str) -> str:
 # TODO: Probably need to do some mapping here based on the existing users, in case some has been changed to avoid duplicate names
 def _name_from_user_info(workspace: SlackWorkspace, info: SlackUserInfo) -> str:
     display_name = info["profile"].get("display_name")
-    if display_name and not workspace.config.use_real_names.value:
+    if display_name and not workspace.config.use_real_names:
         return display_name
 
     return info["profile"].get("display_name") or info.get("real_name") or info["name"]
