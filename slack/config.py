@@ -132,6 +132,23 @@ class SlackConfigSectionLook:
             callback_change=self.config_change_color_nicks_in_nicklist_cb,
         )
 
+        self.color_message_attachments: WeeChatOption[
+            Literal["prefix", "all", "none"]
+        ] = WeeChatOption(
+            self._section,
+            "color_message_attachments",
+            "colorize attachments in a message: prefix = only colorize the prefix, all = colorize the whole line, none = don't colorize",
+            "prefix",
+            string_values=["prefix", "all", "none"],
+        )
+
+        self.display_link_previews = WeeChatOption(
+            self._section,
+            "display_link_previews",
+            "display previews of URLs in messages",
+            True,
+        )
+
         self.display_reaction_nicks = WeeChatOption(
             self._section,
             "display_reaction_nicks",

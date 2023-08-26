@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import re
+from datetime import date, datetime, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING, List, Match, Optional, Union
+from typing import TYPE_CHECKING, List, Match, Optional, Tuple, Union
 
 import weechat
 
@@ -18,6 +19,7 @@ from slack.shared import shared
 from slack.slack_user import format_bot_nick, nick_color
 from slack.task import gather
 from slack.util import with_color
+from slack.weechat_config import WeeChatColor
 
 if TYPE_CHECKING:
     from slack_api.slack_conversations_history import SlackMessage as SlackMessageDict
@@ -28,6 +30,7 @@ if TYPE_CHECKING:
         SlackMessageBlockRichTextElement,
         SlackMessageBlockRichTextList,
         SlackMessageBlockRichTextSection,
+        SlackMessageFile,
         SlackMessageReaction,
         SlackMessageSubtypeHuddleThreadRoom,
     )
@@ -35,6 +38,10 @@ if TYPE_CHECKING:
 
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
+
+
+def unhtmlescape(text: str) -> str:
+    return text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
 
 
 def convert_int_to_letter(num: int) -> str:
@@ -315,9 +322,11 @@ class SlackMessage:
                 text = await self._unfurl_refs(self._message_json["text"])
                 texts = [text] if text else []
 
-            files_texts = self._render_files()
+            files_texts = self._render_files(self._message_json.get("files", []))
+            text_with_files = "\n".join(texts + files_texts)
 
-            full_text = "\n".join(texts + files_texts)
+            attachment_texts = await self._render_attachments(text_with_files)
+            full_text = "\n".join([text_with_files] + attachment_texts)
 
             if self._message_json.get("subtype") == "me_message":
                 return f"{await self._nick()} {full_text}"
@@ -355,7 +364,9 @@ class SlackMessage:
         else:
             return ""
 
-    async def _lookup_item_id(self, item_id: str):
+    async def _resolve_ref(
+        self, item_id: str
+    ) -> Optional[Tuple[Optional[WeeChatColor], str]]:
         if item_id.startswith("#"):
             conversation = await self.workspace.conversations[
                 removeprefix(item_id, "#")
@@ -377,12 +388,44 @@ class SlackMessage:
             color = shared.config.color.usergroup_mention_color.value
             return (color, self._item_prefix(item_id) + removeprefix(item_id, "!"))
 
+        elif item_id.startswith("!date"):
+            parts = item_id.split("^")
+            ref_datetime = datetime.fromtimestamp(int(parts[1]))
+            link_suffix = f" ({parts[3]})" if len(parts) > 3 else ""
+            token_to_format = {
+                "date_num": "%Y-%m-%d",
+                "date": "%B %d, %Y",
+                "date_short": "%b %d, %Y",
+                "date_long": "%A, %B %d, %Y",
+                "time": "%H:%M",
+                "time_secs": "%H:%M:%S",
+            }
+
+            def replace_token(match: Match[str]):
+                token = match.group(1)
+                if token.startswith("date_") and token.endswith("_pretty"):
+                    if ref_datetime.date() == date.today():
+                        return "today"
+                    elif ref_datetime.date() == date.today() - timedelta(days=1):
+                        return "yesterday"
+                    elif ref_datetime.date() == date.today() + timedelta(days=1):
+                        return "tomorrow"
+                    else:
+                        token = token.replace("_pretty", "")
+                if token in token_to_format:
+                    return ref_datetime.strftime(token_to_format[token])
+                else:
+                    return match.group(0)
+
+            text = re.sub(r"{([^}]+)}", replace_token, parts[2]) + link_suffix
+            return (None, text)
+
     async def _unfurl_refs(self, message: str) -> str:
         re_mention = re.compile(r"<(?P<id>[^|>]+)(?:\|(?P<fallback_name>[^>]*))?>")
         mention_matches = list(re_mention.finditer(message))
         mention_ids: List[str] = [match["id"] for match in mention_matches]
         items_list = await gather(
-            *(self._lookup_item_id(mention_id) for mention_id in mention_ids),
+            *(self._resolve_ref(mention_id) for mention_id in mention_ids),
             return_exceptions=True,
         )
         items = dict(zip(mention_ids, items_list))
@@ -694,12 +737,9 @@ class SlackMessage:
             else:
                 return "▪︎"
 
-    def _render_files(self) -> List[str]:
-        if "files" not in self._message_json:
-            return []
-
+    def _render_files(self, files: List[SlackMessageFile]) -> List[str]:
         texts: List[str] = []
-        for file in self._message_json.get("files", []):
+        for file in files:
             if file.get("mode") == "tombstone":
                 text = with_color(
                     shared.config.color.deleted_message.value, "(This file was deleted)"
@@ -728,3 +768,146 @@ class SlackMessage:
             texts.append(text)
 
         return texts
+
+    async def _render_attachments(self, text_before: str) -> List[str]:
+        if "attachments" not in self._message_json:
+            return []
+
+        text_before_unescaped = unhtmlescape(text_before)
+        attachments_texts: List[str] = []
+        for attachment in self._message_json["attachments"]:
+            # Attachments should be rendered roughly like:
+            #
+            # $pretext
+            # $author: (if rest of line is non-empty) $title ($title_link) OR $from_url
+            # $author: (if no $author on previous line) $text
+            # $fields
+
+            if (
+                attachment.get("is_app_unfurl")
+                and shared.config.look.display_link_previews
+            ):
+                continue
+
+            texts: List[str] = []
+            prepend_title_text = ""
+            if "author_name" in attachment:
+                prepend_title_text = attachment["author_name"] + ": "
+            if "pretext" in attachment:
+                texts.append(attachment["pretext"])
+            link_shown = False
+            title = attachment.get("title")
+            title_link = attachment.get("title_link", "")
+            if title_link and (
+                title_link in text_before or title_link in text_before_unescaped
+            ):
+                title_link = ""
+                link_shown = True
+            if title and title_link:
+                texts.append(f"{prepend_title_text}{title} ({title_link})")
+                prepend_title_text = ""
+            elif title and not title_link:
+                texts.append(f"{prepend_title_text}{title}")
+                prepend_title_text = ""
+            from_url = attachment.get("from_url", "")
+            if (
+                from_url not in text_before
+                and from_url not in text_before_unescaped
+                and from_url != title_link
+            ):
+                texts.append(from_url)
+            elif from_url:
+                link_shown = True
+
+            atext = attachment.get("text")
+            if atext:
+                tx = re.sub(r" *\n[\n ]+", "\n", atext)
+                texts.append(prepend_title_text + tx)
+                prepend_title_text = ""
+
+            # TODO: Don't render both text and blocks
+            blocks = await self._render_blocks(attachment.get("blocks", []))
+            texts.extend(blocks)
+
+            image_url = attachment.get("image_url", "")
+            if (
+                image_url not in text_before
+                and image_url not in text_before_unescaped
+                and image_url != from_url
+                and image_url != title_link
+            ):
+                texts.append(image_url)
+            elif image_url:
+                link_shown = True
+
+            for field in attachment.get("fields", []):
+                if field.get("title"):
+                    texts.append(f"{field['title']}: {field['value']}")
+                else:
+                    texts.append(field["value"])
+
+            files = self._render_files(attachment.get("files", []))
+            texts.extend(files)
+
+            if attachment.get("is_msg_unfurl"):
+                channel_name = await self.conversation.name_with_prefix(
+                    "short_name_without_padding"
+                )
+                if attachment.get("is_reply_unfurl"):
+                    footer = f"From a thread in {channel_name}"
+                else:
+                    footer = f"Posted in {channel_name}"
+            else:
+                footer = attachment.get("footer")
+
+            if footer:
+                ts = attachment.get("ts")
+                if ts:
+                    ts_int = ts if isinstance(ts, int) else SlackTs(ts).major
+                    if ts_int > 100000000000:
+                        # The Slack web interface interprets very large timestamps
+                        # as milliseconds after the epoch instead of regular Unix
+                        # timestamps. We use the same heuristic here.
+                        ts_int = ts_int // 1000
+                    time_string = ""
+                    if date.today() - date.fromtimestamp(ts_int) <= timedelta(days=1):
+                        time_string = " at {time}"
+                    timestamp_item = await self._resolve_ref(
+                        f"!date^{ts_int}^{{date_short_pretty}}{time_string}"
+                    )
+                    if timestamp_item:
+                        timestamp_formatted = with_color(
+                            timestamp_item[0], timestamp_item[1].capitalize()
+                        )
+                        footer += f" | {timestamp_formatted}"
+                texts.append(footer)
+
+            fallback = attachment.get("fallback")
+            if texts == [] and fallback and not link_shown:
+                texts.append(fallback)
+
+            lines = [
+                line for part in texts for line in part.strip().split("\n") if part
+            ]
+
+            if lines:
+                prefix = "|"
+                line_color = None
+                color = attachment.get("color")
+                if (
+                    color
+                    and shared.config.look.color_message_attachments.value != "none"
+                ):
+                    weechat_color = weechat.info_get(
+                        "color_rgb2term", str(int(color.lstrip("#"), 16))
+                    )
+                    if shared.config.look.color_message_attachments.value == "prefix":
+                        prefix = with_color(weechat_color, prefix)
+                    elif shared.config.look.color_message_attachments.value == "all":
+                        line_color = weechat_color
+
+                attachments_texts.extend(
+                    with_color(line_color, f"{prefix} {line}") for line in lines
+                )
+
+        return attachments_texts
