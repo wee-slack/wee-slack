@@ -154,7 +154,9 @@ class SlackUsergroups(SlackItem[SlackUsergroup, SlackUsergroupInfo]):
     async def _fetch_items_info(
         self, item_ids: Iterable[str]
     ) -> Dict[str, SlackUsergroupInfo]:
-        response = await self.workspace.api.fetch_usergroups_info(list(item_ids))
+        response = await self.workspace.api.edgeapi.fetch_usergroups_info(
+            list(item_ids)
+        )
         return {info["id"]: info for info in response["results"]}
 
     def _create_item_from_info(self, item_info: SlackUsergroupInfo) -> SlackUsergroup:
