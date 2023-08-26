@@ -156,6 +156,13 @@ class SlackConfigSectionLook:
             False,
         )
 
+        self.display_thread_replies_in_channel = WeeChatOption(
+            self._section,
+            "display_thread_replies_in_channel",
+            "display thread replies in the parent channel; can be overridden per buffer with the buffer localvar display_thread_replies_in_channel; note that it only takes effect for new messages; note that due to limitations in the Slack API, on load only thread messages for parents that are in the buffer and thread messages in subscribed threads will be displayed (but all thread messages received while connected will be displayed)",
+            False,
+        )
+
         self.external_user_suffix = WeeChatOption(
             self._section,
             "external_user_suffix",
