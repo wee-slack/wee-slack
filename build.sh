@@ -2,7 +2,7 @@
 
 shopt -s extglob
 
-contents="$(cat slack/python_compatibility.py slack/util.py slack/task.py slack/!(python_compatibility|util|task).py main.py | \
+contents="$(cat slack/python_compatibility.py slack/util.py slack/task.py slack/slack_message.py slack/!(python_compatibility|util|task|slack_message).py main.py | \
   perl -0777 -pe 's/^( *from [^(\n]+\([^)]+\))/$1=~s|\n+||gr/mge' | \
   grep -Ev '^from slack[. ]')"
 

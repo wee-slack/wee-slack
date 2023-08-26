@@ -9,6 +9,7 @@ from slack_api.slack_conversations_history import (
     SlackMessageSubtypeChannelLeave,
     SlackMessageSubtypeHuddleThread,
     SlackMessageSubtypeHuddleThreadRoom,
+    SlackMessageThreadParentCommon,
     SlackMessageThreadParentNotSubscribed,
     SlackMessageThreadParentSubscribed,
     SlackMessageWithFiles,
@@ -93,7 +94,7 @@ class SlackMessageDeleted(TypedDict):
 class SlackMessageReplied(TypedDict):
     type: Literal["message"]
     subtype: Literal["message_replied"]
-    message: SlackMessage
+    message: SlackMessageThreadParentCommon
     channel: str
     hidden: bool
     ts: str
