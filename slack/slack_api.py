@@ -29,7 +29,7 @@ EdgeParams = Mapping[
 ]
 
 
-class SlackApi:
+class SlackApiCommon:
     def __init__(self, workspace: SlackWorkspace):
         self.workspace = workspace
 
@@ -39,6 +39,54 @@ class SlackApi:
             "httpheader": f"Authorization: Bearer {self.workspace.config.api_token.value}",
             "cookie": self.workspace.config.api_cookies.value,  # TODO: url_encode_if_not_encoded
         }
+
+
+class SlackEdgeApi(SlackApiCommon):
+    async def _fetch_edgeapi(self, method: str, params: EdgeParams = {}):
+        enterprise_id_part = (
+            f"{self.workspace.enterprise_id}/" if self.workspace.enterprise_id else ""
+        )
+        url = f"https://edgeapi.slack.com/cache/{enterprise_id_part}{self.workspace.id}/{method}"
+        options = self._get_request_options()
+        options["postfields"] = json.dumps(params)
+        options["httpheader"] += "\nContent-Type: application/json"
+        response = await http_request(
+            url,
+            options,
+            self.workspace.config.network_timeout.value * 1000,
+        )
+        return json.loads(response)
+
+    async def fetch_usergroups_info(self, usergroup_ids: Sequence[str]):
+        method = "usergroups/info"
+        params: EdgeParams = {"ids": usergroup_ids}
+        response: SlackEdgeUsergroupsInfoResponse = await self._fetch_edgeapi(
+            method, params
+        )
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def fetch_users_search(self, query: str):
+        method = "users/search"
+        params: EdgeParams = {
+            "include_profile_only_users": True,
+            "query": query,
+            "count": 25,
+            "fuzz": 1,
+            "uax29_tokenizer": False,
+            "filter": "NOT deactivated",
+        }
+        response: SlackUsersSearchResponse = await self._fetch_edgeapi(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+
+class SlackApi(SlackApiCommon):
+    def __init__(self, workspace: SlackWorkspace):
+        super().__init__(workspace)
+        self.edgeapi = SlackEdgeApi(workspace)
 
     async def _fetch(self, method: str, params: Params = {}):
         url = f"https://api.slack.com/api/{method}"
@@ -66,21 +114,6 @@ class SlackApi:
             response[list_key].extend(next_pages[list_key])
             return response
         return response
-
-    async def _fetch_edgeapi(self, method: str, params: EdgeParams = {}):
-        enterprise_id_part = (
-            f"{self.workspace.enterprise_id}/" if self.workspace.enterprise_id else ""
-        )
-        url = f"https://edgeapi.slack.com/cache/{enterprise_id_part}{self.workspace.id}/{method}"
-        options = self._get_request_options()
-        options["postfields"] = json.dumps(params)
-        options["httpheader"] += "\nContent-Type: application/json"
-        response = await http_request(
-            url,
-            options,
-            self.workspace.config.network_timeout.value * 1000,
-        )
-        return json.loads(response)
 
     async def fetch_rtm_connect(self):
         method = "rtm.connect"
@@ -180,29 +213,4 @@ class SlackApi:
         response: SlackUsergroupsInfoResponse = await self._fetch(method)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response)
-        return response
-
-    async def fetch_usergroups_info(self, usergroup_ids: Sequence[str]):
-        method = "usergroups/info"
-        params: EdgeParams = {"ids": usergroup_ids}
-        response: SlackEdgeUsergroupsInfoResponse = await self._fetch_edgeapi(
-            method, params
-        )
-        if response["ok"] is False:
-            raise SlackApiError(self.workspace, method, response, params)
-        return response
-
-    async def fetch_users_search(self, query: str):
-        method = "users/search"
-        params: EdgeParams = {
-            "include_profile_only_users": True,
-            "query": query,
-            "count": 25,
-            "fuzz": 1,
-            "uax29_tokenizer": False,
-            "filter": "NOT deactivated",
-        }
-        response: SlackUsersSearchResponse = await self._fetch_edgeapi(method, params)
-        if response["ok"] is False:
-            raise SlackApiError(self.workspace, method, response, params)
         return response

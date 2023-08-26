@@ -456,7 +456,7 @@ async def complete_user_next(
 ):
     if conversation.completion_context == "NO_COMPLETION":
         conversation.completion_context = "PENDING_COMPLETION"
-        search = await conversation.workspace.api.fetch_users_search(query)
+        search = await conversation.workspace.api.edgeapi.fetch_users_search(query)
         if conversation.completion_context != "PENDING_COMPLETION":
             return
         conversation.completion_context = "ACTIVE_COMPLETION"

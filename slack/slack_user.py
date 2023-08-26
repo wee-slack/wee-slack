@@ -114,7 +114,7 @@ class SlackUsergroup:
 
     @classmethod
     async def create(cls, workspace: SlackWorkspace, id: str):
-        info_response = await workspace.api.fetch_usergroups_info([id])
+        info_response = await workspace.api.edgeapi.fetch_usergroups_info([id])
         if not info_response["results"] or info_response["results"][0]["id"] != id:
             raise SlackError(workspace, f"Couldn't find user group {id}")
         return cls(workspace, info_response["results"][0])
