@@ -14,6 +14,7 @@ from slack_api.slack_conversations_history import (
     SlackMessageThreadParentSubscribed,
     SlackMessageWithFiles,
 )
+from slack_api.slack_conversations_replies import SlackMessageThreadCommon
 from typing_extensions import Literal, NotRequired, TypedDict, final
 
 class SlackRtmHello(TypedDict):
@@ -38,6 +39,14 @@ class SlackMessageThreadParentNotSubscribedRtm(SlackMessageThreadParentNotSubscr
 @final
 class SlackMessageThreadParentSubscribedRtm(SlackMessageThreadParentSubscribed):
     channel: str
+
+@final
+class SlackMessageThreadRtm(SlackMessageThreadCommon):
+    channel: str
+    event_ts: str
+    source_team: str
+    suppress_notification: bool
+    user_team: str
 
 @final
 class SlackMessageWithFilesRtm(SlackMessageWithFiles):
@@ -160,6 +169,7 @@ SlackMessageRtm = (
     | SlackMessageMeRtm
     | SlackMessageThreadParentNotSubscribedRtm
     | SlackMessageThreadParentSubscribedRtm
+    | SlackMessageThreadRtm
     | SlackMessageWithFilesRtm
     | SlackMessageSubtypeHuddleThreadRtm
     | SlackMessageSubtypeBotMessageRtm

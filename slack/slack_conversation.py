@@ -199,6 +199,8 @@ class SlackConversationMessageHashes(Dict[SlackTs, str]):
             other_message = self._conversation.get_message(ts_with_same_hash)
             if other_message:
                 run_async(self._conversation.rerender_message(other_message))
+                for reply in other_message.replies:
+                    run_async(self._conversation.rerender_message(reply))
 
         self._setitem(key, short_hash)
         self._inverse_map[short_hash] = key
@@ -392,6 +394,8 @@ class SlackConversation:
             for message in messages:
                 self._messages[message.ts] = message
 
+            # TODO: Account for reply messages
+
             sender_user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
             self.workspace.users.initialize_items(sender_user_ids)
 
@@ -421,17 +425,32 @@ class SlackConversation:
             self.buffer_pointer, "", user.nick(), color, "", "", 1
         )
 
+    def display_thread_replies(self) -> bool:
+        buffer_value = weechat.buffer_get_string(
+            self.buffer_pointer, "localvar_display_thread_replies_in_channel"
+        )
+        if buffer_value:
+            return bool(weechat.config_string_to_boolean(buffer_value))
+        return shared.config.look.display_thread_replies_in_channel.value
+
     async def add_new_message(self, message: SlackMessage):
         # TODO: Remove old messages
         self._messages[message.ts] = message
-        if self.history_filled:
-            await self.print_message(message)
-        else:
-            weechat.buffer_set(
-                self.buffer_pointer, "hotlist", str(message.priority.value)
-            )
+
+        if not message.is_reply or self.display_thread_replies():
+            if self.history_filled:
+                await self.print_message(message)
+            else:
+                weechat.buffer_set(
+                    self.buffer_pointer, "hotlist", str(message.priority.value)
+                )
+
+        parent_message = message.parent_message
+        if parent_message:
+            parent_message.replies.append(message)
 
         if message.sender_user_id:
+            # TODO: thread buffers
             user = await self.workspace.users[message.sender_user_id]
             weechat.hook_signal_send(
                 "typing_set_nick",

@@ -107,6 +107,7 @@ class SlackMessage:
         self._rendered_message = None
         self.conversation = conversation
         self.ts = SlackTs(message_json["ts"])
+        self.replies: List[SlackMessage] = []
         self._deleted = False
 
     @property
@@ -116,6 +117,28 @@ class SlackMessage:
     @property
     def hash(self) -> str:
         return self.conversation.message_hashes[self.ts]
+
+    @property
+    def thread_ts(self) -> Optional[SlackTs]:
+        return (
+            SlackTs(self._message_json["thread_ts"])
+            if "thread_ts" in self._message_json
+            else None
+        )
+
+    @property
+    def is_thread_parent(self) -> bool:
+        return self.thread_ts == self.ts
+
+    @property
+    def is_reply(self) -> bool:
+        return self.thread_ts is not None and not self.is_thread_parent
+
+    @property
+    def parent_message(self) -> Optional[SlackMessage]:
+        if not self.is_reply or self.thread_ts is None:
+            return None
+        return self.conversation.get_message(self.thread_ts)
 
     @property
     def is_bot_message(self) -> bool:
@@ -341,6 +364,7 @@ class SlackMessage:
         if self._deleted:
             return with_color(shared.config.color.deleted_message.value, "(deleted)")
         else:
+            thread_prefix = self._create_thread_prefix()
             text = await self._render_message_text()
             text_edited = (
                 f" {with_color(shared.config.color.edited_message_suffix.value, '(edited)')}"
@@ -349,7 +373,7 @@ class SlackMessage:
             )
             reactions = await self._create_reactions_string()
             thread = self._create_thread_string()
-            return text + text_edited + reactions + thread
+            return thread_prefix + text + text_edited + reactions + thread
 
     async def render_message(self, rerender: bool = False) -> str:
         if self._rendered_message is not None and not rerender:
@@ -516,6 +540,14 @@ class SlackMessage:
             )
         else:
             return ""
+
+    def _create_thread_prefix(self) -> str:
+        parent_message = self.parent_message
+        if not parent_message:
+            return ""
+
+        text = f"[{parent_message.hash}]"
+        return with_color(nick_color(str(parent_message.hash)), text) + " "
 
     def _create_thread_string(self) -> str:
         if "reply_count" not in self._message_json:
