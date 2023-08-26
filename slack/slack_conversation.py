@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+import hashlib
 import time
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, NoReturn, Optional, Union
 
 import weechat
 
 from slack.shared import shared
 from slack.slack_message import SlackMessage, SlackTs
-from slack.task import gather
+from slack.task import gather, run_async
 from slack.util import get_callback_name
 
 if TYPE_CHECKING:
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
     from slack_rtm.slack_rtm_message import (
         SlackMessageChanged,
         SlackMessageDeleted,
+        SlackMessageReplied,
         SlackShRoomJoin,
         SlackShRoomUpdate,
     )
@@ -145,6 +147,64 @@ def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
         weechat.hdata_update(weechat.hdata_get("line_data"), data, {"message": line})
 
 
+def sha1_hex(string: str) -> str:
+    return str(hashlib.sha1(string.encode()).hexdigest())
+
+
+def hash_from_ts(ts: SlackTs) -> str:
+    return sha1_hex(str(ts))
+
+
+class SlackConversationMessageHashes(Dict[SlackTs, str]):
+    def __init__(self, conversation: SlackConversation):
+        self._conversation = conversation
+        self._inverse_map: Dict[str, SlackTs] = {}
+
+    def __setitem__(self, key: SlackTs, value: str) -> NoReturn:
+        raise RuntimeError("Set from outside isn't allowed")
+
+    def __delitem__(self, key: SlackTs) -> None:
+        if key in self:
+            hash_key = self[key]
+            del self._inverse_map[hash_key]
+        super().__delitem__(key)
+
+    def _setitem(self, key: SlackTs, value: str) -> None:
+        super().__setitem__(key, value)
+
+    def __missing__(self, key: SlackTs) -> str:
+        hash_len = 3
+        full_hash = hash_from_ts(key)
+        short_hash = full_hash[:hash_len]
+
+        while any(
+            existing_hash.startswith(short_hash) for existing_hash in self._inverse_map
+        ):
+            hash_len += 1
+            short_hash = full_hash[:hash_len]
+
+        if short_hash[:-1] in self._inverse_map:
+            ts_with_same_hash = self._inverse_map.pop(short_hash[:-1])
+            other_full_hash = hash_from_ts(ts_with_same_hash)
+            other_short_hash = other_full_hash[:hash_len]
+
+            while short_hash == other_short_hash:
+                hash_len += 1
+                short_hash = full_hash[:hash_len]
+                other_short_hash = other_full_hash[:hash_len]
+
+            self._setitem(ts_with_same_hash, other_short_hash)
+            self._inverse_map[other_short_hash] = ts_with_same_hash
+
+            other_message = self._conversation.get_message(ts_with_same_hash)
+            if other_message:
+                run_async(self._conversation.rerender_message(other_message))
+
+        self._setitem(key, short_hash)
+        self._inverse_map[short_hash] = key
+        return self[key]
+
+
 class SlackConversation:
     def __init__(
         self,
@@ -162,6 +222,7 @@ class SlackConversation:
         self.history_filled = False
         self.history_pending = False
         self.nicklist_needs_refresh = True
+        self.message_hashes = SlackConversationMessageHashes(self)
 
         self.completion_context: Literal[
             "NO_COMPLETION",
@@ -249,6 +310,9 @@ class SlackConversation:
             yield
         finally:
             self.completion_context = "ACTIVE_COMPLETION"
+
+    def get_message(self, ts: SlackTs) -> Optional[SlackMessage]:
+        return self._messages.get(ts)
 
     async def open_if_open(self):
         if "is_open" in self._info:
@@ -390,7 +454,9 @@ class SlackConversation:
         for message in self._messages.values():
             await self.rerender_message(message)
 
-    async def change_message(self, data: SlackMessageChanged):
+    async def change_message(
+        self, data: Union[SlackMessageChanged, SlackMessageReplied]
+    ):
         ts = SlackTs(data["ts"])
         message = self._messages.get(ts)
         if message:
@@ -399,6 +465,8 @@ class SlackConversation:
 
     async def delete_message(self, data: SlackMessageDeleted):
         ts = SlackTs(data["deleted_ts"])
+        if ts in self.message_hashes:
+            del self.message_hashes[ts]
         message = self._messages.get(ts)
         if message:
             message.deleted = True

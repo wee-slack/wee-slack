@@ -114,6 +114,10 @@ class SlackMessage:
         return self.conversation.workspace
 
     @property
+    def hash(self) -> str:
+        return self.conversation.message_hashes[self.ts]
+
+    @property
     def is_bot_message(self) -> bool:
         return (
             "subtype" in self._message_json
@@ -344,7 +348,8 @@ class SlackMessage:
                 else ""
             )
             reactions = await self._create_reactions_string()
-            return text + text_edited + reactions
+            thread = self._create_thread_string()
+            return text + text_edited + reactions + thread
 
     async def render_message(self, rerender: bool = False) -> str:
         if self._rendered_message is not None and not rerender:
@@ -511,6 +516,18 @@ class SlackMessage:
             )
         else:
             return ""
+
+    def _create_thread_string(self) -> str:
+        if "reply_count" not in self._message_json:
+            return ""
+
+        reply_count = self._message_json["reply_count"]
+        if not reply_count:
+            return ""
+
+        subscribed_text = " Subscribed" if self._message_json.get("subscribed") else ""
+        text = f"[ Thread: {self.hash} Replies: {reply_count}{subscribed_text} ]"
+        return " " + with_color(nick_color(str(self.hash)), text)
 
     async def _render_blocks(self, blocks: List[SlackMessageBlock]) -> List[str]:
         block_texts: List[str] = []

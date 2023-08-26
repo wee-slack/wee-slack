@@ -299,7 +299,7 @@ class SlackWorkspace:
                 elif "subtype" in data and data["subtype"] == "message_deleted":
                     await channel.delete_message(data)
                 elif "subtype" in data and data["subtype"] == "message_replied":
-                    pass
+                    await channel.change_message(data)
                 else:
                     message = SlackMessage(channel, data)
                     await channel.add_new_message(message)

@@ -436,6 +436,7 @@ class SlackMessageSubtypeChannelLeaveFinal(SlackMessageSubtypeChannelLeave):
 SlackMessage = (
     SlackMessageStandardFinal
     | SlackMessageMeFinal
+    | SlackMessageThreadParentCommon
     | SlackMessageThreadParentNotSubscribedFinal
     | SlackMessageThreadParentSubscribedFinal
     | SlackMessageWithFilesFinal
