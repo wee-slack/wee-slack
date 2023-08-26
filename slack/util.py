@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable
+from typing import Callable, Optional
 
 import weechat
 
@@ -13,5 +13,8 @@ def get_callback_name(callback: Callable[..., WeechatCallbackReturnType]) -> str
     return callback_id
 
 
-def with_color(color: str, string: str, reset_color: str = "reset"):
-    return f"{weechat.color(color)}{string}{weechat.color(reset_color)}"
+def with_color(color: Optional[str], string: str, reset_color: str = "reset"):
+    if color:
+        return f"{weechat.color(color)}{string}{weechat.color(reset_color)}"
+    else:
+        return string
