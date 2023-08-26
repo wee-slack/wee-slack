@@ -477,7 +477,7 @@ class SlackMessage:
             assert_never(shared.config.look.render_emoji_as.value)
 
     async def _create_reaction_string(self, reaction: SlackMessageReaction) -> str:
-        if shared.config.look.display_reaction_nicks.value:
+        if shared.config.look.display_reaction_nicks:
             # TODO: initialize_items?
             users = await gather(
                 *(self.workspace.users[user_id] for user_id in reaction["users"])

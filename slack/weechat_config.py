@@ -86,13 +86,16 @@ class WeeChatOption(Generic[WeeChatOptionType]):
     def __post_init__(self):
         self._pointer = self._create_weechat_option()
 
+    def __bool__(self) -> bool:
+        return bool(self.value)
+
     @property
     def value(self) -> WeeChatOptionType:
         if weechat.config_option_is_null(self._pointer):
             if isinstance(self.parent_option, str):
                 parent_option_pointer = weechat.config_get(self.parent_option)
                 return option_get_value(parent_option_pointer, self.default_value)
-            elif self.parent_option:
+            elif self.parent_option is not None:
                 return self.parent_option.value
             return self.default_value
         return option_get_value(self._pointer, self.default_value)
@@ -107,7 +110,7 @@ class WeeChatOption(Generic[WeeChatOptionType]):
         return weechat.config_option_set(self._pointer, value, 1)
 
     def value_set_null(self) -> int:
-        if not self.parent_option:
+        if self.parent_option is None:
             raise Exception(
                 f"Can't set null value for option without parent: {self.name}"
             )
@@ -135,7 +138,7 @@ class WeeChatOption(Generic[WeeChatOptionType]):
         return weechat.WEECHAT_RC_OK
 
     def _create_weechat_option(self) -> str:
-        if self.parent_option:
+        if self.parent_option is not None:
             if isinstance(self.parent_option, str):
                 parent_option_name = self.parent_option
                 name = f"{self.name} << {parent_option_name}"

@@ -416,11 +416,7 @@ class SlackConversation:
     async def nicklist_add_user(self, user_id: str):
         user = await self.workspace.users[user_id]
         # TODO: weechat.color.nicklist_away
-        color = (
-            user.nick_color()
-            if shared.config.look.color_nicks_in_nicklist.value
-            else ""
-        )
+        color = user.nick_color() if shared.config.look.color_nicks_in_nicklist else ""
         weechat.nicklist_add_nick(
             self.buffer_pointer, "", user.nick(), color, "", "", 1
         )
@@ -492,7 +488,7 @@ class SlackConversation:
             await self.rerender_message(message)
 
     async def typing_add_user(self, user_id: str, thread_ts: Optional[str]):
-        if not shared.config.look.typing_status_nicks.value:
+        if not shared.config.look.typing_status_nicks:
             return
 
         if not thread_ts:
