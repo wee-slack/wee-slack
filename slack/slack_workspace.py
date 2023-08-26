@@ -216,6 +216,13 @@ class SlackWorkspace:
 
         await self._connect_ws(rtm_connect["url"])
 
+        if not self.api.edgeapi.is_available:
+            usergroups = await self.api.fetch_usergroups_list()
+            for usergroup in usergroups["usergroups"]:
+                future = Future[SlackUsergroup]()
+                future.set_result(SlackUsergroup(self, usergroup))
+                self.usergroups[usergroup["id"]] = future
+
         users_conversations_response = await self.api.fetch_users_conversations(
             "public_channel,private_channel,mpim,im"
         )

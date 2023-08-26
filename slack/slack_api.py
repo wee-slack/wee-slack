@@ -42,6 +42,10 @@ class SlackApiCommon:
 
 
 class SlackEdgeApi(SlackApiCommon):
+    @property
+    def is_available(self) -> bool:
+        return self.workspace.config.api_token.value.startswith("xoxc-")
+
     async def _fetch_edgeapi(self, method: str, params: EdgeParams = {}):
         enterprise_id_part = (
             f"{self.workspace.enterprise_id}/" if self.workspace.enterprise_id else ""
