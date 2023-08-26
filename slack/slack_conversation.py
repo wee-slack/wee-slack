@@ -387,7 +387,6 @@ class SlackConversation:
             self.history_pending = True
 
             history = await self._api.fetch_conversations_history(self)
-            start = time.time()
 
             messages = [SlackMessage(self, message) for message in history["messages"]]
             for message in messages:
@@ -404,7 +403,6 @@ class SlackConversation:
             for message in reversed(messages):
                 await self.print_message(message, backlog=True)
 
-            print(f"history w/o fetch took: {time.time() - start}")
             self.history_filled = True
             self.history_pending = False
 
