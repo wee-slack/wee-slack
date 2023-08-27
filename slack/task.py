@@ -153,7 +153,7 @@ class FutureTimer(Future[Tuple[int]]):
 
 
 class Task(Future[T]):
-    def __init__(self, coroutine: Coroutine[Future[Any], Any, T]):
+    def __init__(self, coroutine: Coroutine[Future[T], None, T]):
         super().__init__()
         self.coroutine = coroutine
 
@@ -217,7 +217,7 @@ def task_runner(task: Task[Any]):
         failed_tasks.clear()
 
 
-def create_task(coroutine: Coroutine[Future[Any], Any, T]) -> Task[T]:
+def create_task(coroutine: Coroutine[Future[Any], None, T]) -> Task[T]:
     task = Task(coroutine)
     task_runner(task)
     return task
@@ -229,7 +229,7 @@ def _async_task_done(task: Task[object]):
         print_error(f"{task} failed with: {store_and_format_exception(exception)}")
 
 
-def run_async(coroutine: Coroutine[Future[Any], Any, Any]) -> None:
+def run_async(coroutine: Coroutine[Future[Any], None, Any]) -> None:
     task = Task(coroutine)
     task.add_done_callback(_async_task_done)
     task_runner(task)
@@ -237,7 +237,7 @@ def run_async(coroutine: Coroutine[Future[Any], Any, Any]) -> None:
 
 @overload
 async def gather(
-    *requests: Union[Future[T], Coroutine[Any, Any, T]],
+    *requests: Union[Future[T], Coroutine[Any, None, T]],
     return_exceptions: Literal[False] = False,
 ) -> List[T]:
     ...
@@ -245,14 +245,15 @@ async def gather(
 
 @overload
 async def gather(
-    *requests: Union[Future[T], Coroutine[Any, Any, T]],
+    *requests: Union[Future[T], Coroutine[Any, None, T]],
     return_exceptions: Literal[True],
 ) -> List[Union[T, BaseException]]:
     ...
 
 
 async def gather(
-    *requests: Union[Future[T], Coroutine[Any, Any, T]], return_exceptions: bool = False
+    *requests: Union[Future[T], Coroutine[Any, None, T]],
+    return_exceptions: bool = False,
 ) -> Sequence[Union[T, BaseException]]:
     tasks = [
         create_task(request) if isinstance(request, Coroutine) else request
