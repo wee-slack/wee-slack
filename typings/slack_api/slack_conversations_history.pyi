@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Dict, List
 
 from slack_api.slack_common import SlackErrorResponse
+from slack_api.slack_conversations_replies import SlackMessageThreadCommon
 from slack_rtm.slack_rtm_message import SlackMessageRtm
 from typing_extensions import Literal, NotRequired, TypedDict, final
 
@@ -331,6 +332,12 @@ class SlackMessageThreadParentSubscribed(SlackMessageThreadParentCommon):
 class SlackMessageThreadParentSubscribedFinal(SlackMessageThreadParentSubscribed):
     pass
 
+@final
+class SlackMessageThreadBroadcast(SlackMessageThreadCommon):
+    subtype: Literal["thread_broadcast"]
+    root: SlackMessageThreadParentCommon
+    # TODO: team is missing in response
+
 class SlackMessageWithFiles(SlackMessageCommon):
     user: str
     files: List[SlackMessageFile]
@@ -439,6 +446,7 @@ SlackMessage = (
     | SlackMessageThreadParentCommon
     | SlackMessageThreadParentNotSubscribedFinal
     | SlackMessageThreadParentSubscribedFinal
+    | SlackMessageThreadBroadcast
     | SlackMessageWithFilesFinal
     | SlackMessageSubtypeHuddleThreadFinal
     | SlackMessageSubtypeBotMessageFinal

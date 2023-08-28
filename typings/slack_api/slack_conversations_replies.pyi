@@ -3,6 +3,7 @@ from typing import List
 from slack_api.slack_common import SlackErrorResponse, SlackResponseMetadata
 from slack_api.slack_conversations_history import (
     SlackMessageStandardCommon,
+    SlackMessageThreadBroadcast,
     SlackMessageThreadParentNotSubscribedFinal,
     SlackMessageThreadParentSubscribedFinal,
 )
@@ -21,6 +22,7 @@ class SlackConversationsRepliesSuccessResponse(TypedDict):
     messages: List[
         SlackMessageThreadParentNotSubscribedFinal
         | SlackMessageThreadParentSubscribedFinal
+        | SlackMessageThreadBroadcast
         | SlackMessageThread
     ]
     has_more: bool
