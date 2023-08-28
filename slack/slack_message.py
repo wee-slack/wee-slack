@@ -135,6 +135,10 @@ class SlackMessage:
         return self.thread_ts is not None and not self.is_thread_parent
 
     @property
+    def is_thread_broadcast(self) -> bool:
+        return self._message_json.get("subtype") == "thread_broadcast"
+
+    @property
     def parent_message(self) -> Optional[SlackMessage]:
         if not self.is_reply or self.thread_ts is None:
             return None
@@ -546,7 +550,12 @@ class SlackMessage:
         if not parent_message:
             return ""
 
-        text = f"[{parent_message.hash}]"
+        broadcast_text = (
+            shared.config.look.thread_broadcast_prefix.value
+            if self.is_thread_broadcast
+            else ""
+        )
+        text = f"[{broadcast_text}{parent_message.hash}]"
         return with_color(nick_color(str(parent_message.hash)), text) + " "
 
     def _create_thread_string(self) -> str:
