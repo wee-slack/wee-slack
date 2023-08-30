@@ -271,7 +271,7 @@ def command_slack_workspace_del(
     )
 
 
-@weechat_command(min_args=1)
+@weechat_command("%(threads)", min_args=1)
 def command_slack_thread(
     buffer: str, args: List[str], options: Dict[str, Optional[str]]
 ):
@@ -392,9 +392,13 @@ def command_cb(data: str, buffer: str, args: str) -> int:
     return weechat.WEECHAT_RC_OK
 
 
-def completion_list_add(completion: str, word: str, nick_completion: int, where: str):
+def completion_list_add(
+    completion: str, word: str, nick_completion: int, where: str, buffer: str
+):
     if word == "%(slack_workspaces)":
-        completion_slack_workspaces_cb("", "slack_workspaces", "", completion)
+        completion_slack_workspaces_cb("", "slack_workspaces", buffer, completion)
+    elif word == "%(threads)":
+        completion_thread_hashes_cb("", "threads", buffer, completion)
     else:
         # TODO: Consider WeeChat verison support, in < 2.9 one must use hook_completion_list_add
         weechat.completion_list_add(completion, word, nick_completion, where)
@@ -421,11 +425,13 @@ def completion_slack_workspace_commands_cb(
             for match in matching_cmds:
                 cmd_arg = match.split(" ")
                 completion_list_add(
-                    completion, cmd_arg[0], 0, weechat.WEECHAT_LIST_POS_SORT
+                    completion, cmd_arg[0], 0, weechat.WEECHAT_LIST_POS_SORT, buffer
                 )
         else:
             for arg in command.completion.split("|"):
-                completion_list_add(completion, arg, 0, weechat.WEECHAT_LIST_POS_SORT)
+                completion_list_add(
+                    completion, arg, 0, weechat.WEECHAT_LIST_POS_SORT, buffer
+                )
 
     return weechat.WEECHAT_RC_OK
 
@@ -436,6 +442,31 @@ def completion_irc_channels_cb(
     if weechat.buffer_get_string(buffer, "full_name").startswith("core."):
         weechat.completion_list_add(
             completion, "#asd", 0, weechat.WEECHAT_LIST_POS_SORT
+        )
+    return weechat.WEECHAT_RC_OK
+
+
+def completion_thread_hashes_cb(
+    data: str, completion_item: str, buffer: str, completion: str
+) -> int:
+    slack_buffer = shared.buffers.get(buffer)
+    if not isinstance(slack_buffer, SlackConversation):
+        return weechat.WEECHAT_RC_OK
+
+    message_tss = sorted(slack_buffer.message_hashes.keys())
+    messages = [slack_buffer.messages.get(ts) for ts in message_tss]
+    thread_messages = [
+        message
+        for message in messages
+        if message is not None and message.is_thread_parent
+    ]
+    for message in thread_messages:
+        weechat.completion_list_add(
+            completion, message.hash, 0, weechat.WEECHAT_LIST_POS_BEGINNING
+        )
+    for message in thread_messages:
+        weechat.completion_list_add(
+            completion, f"${message.hash}", 0, weechat.WEECHAT_LIST_POS_BEGINNING
         )
     return weechat.WEECHAT_RC_OK
 
@@ -541,6 +572,12 @@ def register_commands():
         "irc_channels",
         "channels on all Slack workspaces",
         get_callback_name(completion_irc_channels_cb),
+        "",
+    )
+    weechat.hook_completion(
+        "threads",
+        "complete thread ids for slack",
+        get_callback_name(completion_thread_hashes_cb),
         "",
     )
 

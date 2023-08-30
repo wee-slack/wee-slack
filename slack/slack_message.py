@@ -90,16 +90,45 @@ class SlackTs(str):
     def __init__(self, ts: str):
         self.major, self.minor = [int(x) for x in ts.split(".", 1)]
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, SlackTs):
-            return False
-        return self.major == other.major and self.minor == other.minor
-
     def __hash__(self) -> int:
         return hash((self.major, self.minor))
 
     def __repr__(self) -> str:
         return f"SlackTs('{self}')"
+
+    def _cmp(self, other: object) -> int:
+        if isinstance(other, str):
+            other = SlackTs(other)
+        if not isinstance(other, SlackTs):
+            return NotImplemented
+        elif self.major > other.major:
+            return 1
+        elif self.major < other.major:
+            return -1
+        elif self.minor > other.minor:
+            return 1
+        elif self.minor < other.minor:
+            return -1
+        else:
+            return 0
+
+    def __eq__(self, other: object) -> bool:
+        return self._cmp(other) == 0
+
+    def __ne__(self, other: object) -> bool:
+        return self._cmp(other) != 0
+
+    def __gt__(self, other: object) -> bool:
+        return self._cmp(other) == 1
+
+    def __ge__(self, other: object) -> bool:
+        return self._cmp(other) >= 0
+
+    def __lt__(self, other: object) -> bool:
+        return self._cmp(other) == -1
+
+    def __le__(self, other: object) -> bool:
+        return self._cmp(other) <= 0
 
 
 class SlackMessage:
