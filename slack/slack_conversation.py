@@ -405,7 +405,8 @@ class SlackConversation:
             await gather(*(message.render() for message in messages))
 
             for message in reversed(messages):
-                await self.print_message(message, backlog=True)
+                if self.should_display_message(message):
+                    await self.print_message(message, backlog=True)
 
             self.history_filled = True
             self.history_pending = False
@@ -433,11 +434,18 @@ class SlackConversation:
             return bool(weechat.config_string_to_boolean(buffer_value))
         return shared.config.look.display_thread_replies_in_channel.value
 
+    def should_display_message(self, message: SlackMessage) -> bool:
+        return (
+            not message.is_reply
+            or message.is_thread_broadcast
+            or self.display_thread_replies()
+        )
+
     async def add_new_message(self, message: SlackMessage):
         # TODO: Remove old messages
         self._messages[message.ts] = message
 
-        if not message.is_reply or self.display_thread_replies():
+        if self.should_display_message(message):
             if self.history_filled:
                 await self.print_message(message)
             else:
