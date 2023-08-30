@@ -167,7 +167,7 @@ class SlackMessage:
 
     @property
     def deleted(self) -> bool:
-        return self._deleted
+        return self._deleted or self._message_json.get("subtype") == "tombstone"
 
     @deleted.setter
     def deleted(self, value: bool):
@@ -364,11 +364,12 @@ class SlackMessage:
             else:
                 return full_text
 
-    async def _render_message(self) -> str:
-        if self._deleted:
+    async def _render_message(self, rerender: bool = False) -> str:
+        if self.deleted:
             return with_color(shared.config.color.deleted_message.value, "(deleted)")
+        elif self._rendered_message is not None and not rerender:
+            return self._rendered_message
         else:
-            thread_prefix = self._create_thread_prefix()
             text = await self._render_message_text()
             text_edited = (
                 f" {with_color(shared.config.color.edited_message_suffix.value, '(edited)')}"
@@ -376,14 +377,14 @@ class SlackMessage:
                 else ""
             )
             reactions = await self._create_reactions_string()
-            thread = self._create_thread_string()
-            return thread_prefix + text + text_edited + reactions + thread
+            self._rendered_message = text + text_edited + reactions
+            return self._rendered_message
 
     async def render_message(self, rerender: bool = False) -> str:
-        if self._rendered_message is not None and not rerender:
-            return self._rendered_message
-        self._rendered_message = await self._render_message()
-        return self._rendered_message
+        thread_prefix = self._create_thread_prefix()
+        text = await self._render_message(rerender=rerender)
+        thread = self._create_thread_string()
+        return thread_prefix + text + thread
 
     def _item_prefix(self, item_id: str):
         if item_id.startswith("#") or item_id.startswith("@"):
