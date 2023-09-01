@@ -4,7 +4,7 @@ import hashlib
 import time
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Dict, List, NoReturn, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Mapping, NoReturn, Optional, Union
 
 import weechat
 
@@ -196,11 +196,10 @@ class SlackConversationMessageHashes(Dict[SlackTs, str]):
             self._setitem(ts_with_same_hash, other_short_hash)
             self._inverse_map[other_short_hash] = ts_with_same_hash
 
-            other_message = self._conversation.get_message(ts_with_same_hash)
-            if other_message:
-                run_async(self._conversation.rerender_message(other_message))
-                for reply in other_message.replies:
-                    run_async(self._conversation.rerender_message(reply))
+            other_message = self._conversation.messages[ts_with_same_hash]
+            run_async(self._conversation.rerender_message(other_message))
+            for reply in other_message.replies:
+                run_async(self._conversation.rerender_message(reply))
 
         self._setitem(key, short_hash)
         self._inverse_map[short_hash] = key
@@ -247,6 +246,10 @@ class SlackConversation:
     @property
     def id(self) -> str:
         return self._info["id"]
+
+    @property
+    def messages(self) -> Mapping[SlackTs, SlackMessage]:
+        return self._messages
 
     @property
     def type(self) -> Literal["channel", "private", "mpim", "im"]:
@@ -312,9 +315,6 @@ class SlackConversation:
             yield
         finally:
             self.completion_context = "ACTIVE_COMPLETION"
-
-    def get_message(self, ts: SlackTs) -> Optional[SlackMessage]:
-        return self._messages.get(ts)
 
     async def open_if_open(self):
         if "is_open" in self._info:
