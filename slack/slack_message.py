@@ -142,7 +142,7 @@ class SlackMessage:
     def parent_message(self) -> Optional[SlackMessage]:
         if not self.is_reply or self.thread_ts is None:
             return None
-        return self.conversation.get_message(self.thread_ts)
+        return self.conversation.messages[self.thread_ts]
 
     @property
     def is_bot_message(self) -> bool:
