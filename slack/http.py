@@ -9,7 +9,7 @@ import weechat
 
 from slack.error import HttpError
 from slack.log import LogLevel, log
-from slack.task import FutureProcess, sleep, weechat_task_cb
+from slack.task import FutureProcess, FutureUrl, sleep, weechat_task_cb
 from slack.util import get_callback_name
 
 
@@ -59,31 +59,69 @@ async def hook_process_hashtable(
     return command, return_code, out, err
 
 
-async def http_request(
-    url: str, options: Dict[str, str], timeout: int, max_retries: int = 5
-) -> str:
+async def hook_url(
+    url: str, options: Dict[str, str], timeout: int
+) -> Tuple[str, Dict[str, str], Dict[str, str]]:
+    future = FutureUrl()
+    weechat.hook_url(
+        url, options, timeout, get_callback_name(weechat_task_cb), future.id
+    )
+    return await future
+
+
+async def http_request_process(
+    url: str, options: Dict[str, str], timeout: int
+) -> Tuple[int, str, str]:
     options["header"] = "1"
     _, return_code, out, err = await hook_process_hashtable(
         f"url:{url}", options, timeout
     )
 
     if return_code != 0 or err:
+        raise HttpError(url, options, return_code, None, err)
+
+    parts = out.split("\r\n\r\nHTTP/")
+    headers, body = parts[-1].split("\r\n\r\n", 1)
+    http_status = int(headers.split(None, 2)[1])
+    return http_status, headers, body
+
+
+async def http_request_url(
+    url: str, options: Dict[str, str], timeout: int
+) -> Tuple[int, str, str]:
+    _, _, output = await hook_url(url, options, timeout)
+
+    if "error" in output:
+        raise HttpError(url, options, None, None, output["error"])
+
+    http_status = int(output["response_code"])
+    header_parts = output["headers"].split("\r\n\r\nHTTP/")
+    return http_status, header_parts[-1], output["output"]
+
+
+async def http_request(
+    url: str, options: Dict[str, str], timeout: int, max_retries: int = 5
+) -> str:
+    try:
+        if hasattr(weechat, "hook_url"):
+            http_status, headers, body = await http_request_url(url, options, timeout)
+        else:
+            http_status, headers, body = await http_request_process(
+                url, options, timeout
+            )
+    except HttpError as e:
         if max_retries > 0:
             log(
                 LogLevel.INFO,
                 f"HTTP error, retrying (max {max_retries} times): "
-                f"return_code: {return_code}, error: {err}, url: {url}",
+                f"return_code: {e.return_code}, error: {e.error}, url: {url}",
             )
             await sleep(1000)
             return await http_request(url, options, timeout, max_retries - 1)
-        raise HttpError(url, options, return_code, None, err)
-
-    parts = out.split("\r\n\r\nHTTP/")
-    last_header_part, body = parts[-1].split("\r\n\r\n", 1)
-    header_lines = last_header_part.split("\r\n")
-    http_status = int(header_lines[0].split(" ")[1])
+        raise
 
     if http_status == 429:
+        header_lines = headers.split("\r\n")
         for header in header_lines[1:]:
             name, value = header.split(":", 1)
             if name.lower() == "retry-after":
@@ -96,6 +134,6 @@ async def http_request(
                 return await http_request(url, options, timeout)
 
     if http_status >= 400:
-        raise HttpError(url, options, return_code, http_status, body)
+        raise HttpError(url, options, None, http_status, body)
 
     return body
