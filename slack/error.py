@@ -20,7 +20,7 @@ class HttpError(Exception):
         self,
         url: str,
         options: Dict[str, str],
-        return_code: int,
+        return_code: Optional[int],
         http_status_code: Optional[int],
         error: str,
     ):

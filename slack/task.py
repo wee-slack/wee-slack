@@ -6,6 +6,7 @@ from typing import (
     Awaitable,
     Callable,
     Coroutine,
+    Dict,
     Generator,
     List,
     Optional,
@@ -145,6 +146,10 @@ class Future(Awaitable[T]):
 
 
 class FutureProcess(Future[Tuple[str, int, str, str]]):
+    pass
+
+
+class FutureUrl(Future[Tuple[str, Dict[str, str], Dict[str, str]]]):
     pass
 
 
