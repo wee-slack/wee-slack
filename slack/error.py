@@ -21,7 +21,7 @@ class HttpError(Exception):
         url: str,
         options: Dict[str, str],
         return_code: int,
-        http_status_code: int,
+        http_status_code: Optional[int],
         error: str,
     ):
         super().__init__(
