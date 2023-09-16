@@ -350,7 +350,7 @@ class SlackMessage:
             if "blocks" in self._message_json:
                 texts = await self._render_blocks(self._message_json["blocks"])
             else:
-                text = await self._unfurl_refs(self._message_json["text"])
+                text = unhtmlescape(await self._unfurl_refs(self._message_json["text"]))
                 texts = [text] if text else []
 
             files_texts = self._render_files(self._message_json.get("files", []))
