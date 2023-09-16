@@ -5957,7 +5957,14 @@ def command_reply(data, current_buffer, args):
     In either case, -alsochannel also sends the reply to the parent channel.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
+
     parts = args.split(None, 1)
+    if len(parts) < 1:
+        w.prnt(
+            "", 'Too few arguments for command "/reply" (help on command: /help reply)'
+        )
+        return w.WEECHAT_RC_ERROR
+
     if parts[0] == "-alsochannel":
         args = parts[1]
         broadcast = True
