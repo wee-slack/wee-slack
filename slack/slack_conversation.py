@@ -375,7 +375,7 @@ class SlackConversation:
     async def load_members(self, load_all: bool = False):
         if self._members is None:
             members_response = await self._api.fetch_conversations_members(
-                self, pages=-1 if load_all else 1
+                self, limit=None if load_all else 1000
             )
             self._members = members_response["members"]
         self.workspace.users.initialize_items(self._members)

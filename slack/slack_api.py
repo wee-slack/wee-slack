@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Iterable, Mapping, Sequence, Union
+from typing import TYPE_CHECKING, Iterable, Mapping, Optional, Sequence, Union
 from urllib.parse import urlencode
 
 from slack.error import SlackApiError
@@ -108,13 +108,15 @@ class SlackApi(SlackApiCommon):
         method: str,
         list_key: str,
         params: Params = {},
-        pages: int = -1,  # negative or 0 means all pages
+        limit: Optional[int] = None,
     ):
-        response = await self._fetch(method, params)
+        cur_limit = 1000 if limit is None or limit > 1000 else limit
+        response = await self._fetch(method, {**params, "limit": cur_limit})
+        remaining = limit - cur_limit if limit is not None else None
         next_cursor = response.get("response_metadata", {}).get("next_cursor")
-        if pages != 1 and next_cursor and response["ok"]:
+        if (remaining is None or remaining > 0) and next_cursor and response["ok"]:
             new_params = {**params, "cursor": next_cursor}
-            next_pages = await self._fetch_list(method, list_key, new_params, pages - 1)
+            next_pages = await self._fetch_list(method, list_key, new_params, remaining)
             response[list_key].extend(next_pages[list_key])
             return response
         return response
@@ -145,13 +147,12 @@ class SlackApi(SlackApiCommon):
     async def fetch_conversations_members(
         self,
         conversation: SlackConversation,
-        limit: int = 1000,
-        pages: int = -1,
+        limit: Optional[int] = None,
     ):
         method = "conversations.members"
-        params: Params = {"channel": conversation.id, "limit": limit}
+        params: Params = {"channel": conversation.id}
         response: SlackConversationsMembersResponse = await self._fetch_list(
-            method, "members", params, pages
+            method, "members", params, limit
         )
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
@@ -161,20 +162,18 @@ class SlackApi(SlackApiCommon):
         self,
         types: str,
         exclude_archived: bool = True,
-        limit: int = 1000,
-        pages: int = -1,
+        limit: Optional[int] = None,
     ):
         method = "users.conversations"
         params: Params = {
             "types": types,
             "exclude_archived": exclude_archived,
-            "limit": limit,
         }
         response: SlackUsersConversationsResponse = await self._fetch_list(
             method,
             "channels",
             params,
-            pages,
+            limit,
         )
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
