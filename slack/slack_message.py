@@ -514,9 +514,11 @@ class SlackMessage:
             nicks = ",".join(user.nick() for user in users)
             users_str = f"({nicks})"
         else:
-            users_str = len(reaction["users"])
+            users_str = ""
 
-        reaction_string = f"{self._get_emoji(reaction['name'])}{users_str}"
+        reaction_string = (
+            f"{self._get_emoji(reaction['name'])}{len(reaction['users'])}{users_str}"
+        )
 
         if self.workspace.my_user.id in reaction["users"]:
             return with_color(
