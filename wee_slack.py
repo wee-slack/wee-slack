@@ -4750,9 +4750,9 @@ def unfurl_rich_text_section(block):
 
 def unfurl_block_element(element):
     if element["type"] == "mrkdwn":
-        return render_formatting(element["text"])
+        return htmlescape(render_formatting(element["text"]))
     elif element["type"] in ["text", "plain_text"]:
-        return element["text"]
+        return htmlescape(element["text"])
     elif element["type"] == "image":
         if element.get("alt_text"):
             return "{} ({})".format(element["image_url"], element["alt_text"])
@@ -4830,6 +4830,10 @@ def unfurl_refs(text):
         return ref
 
     return re.sub(r"<([^|>]*)(?:\|([^>]*))?>", unfurl_ref, text)
+
+
+def htmlescape(text):
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def unhtmlescape(text):
