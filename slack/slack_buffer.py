@@ -247,8 +247,8 @@ class SlackBuffer(ABC):
             self.workspace.send_typing(self)
 
     async def print_message(self, message: SlackMessage, backlog: bool = False):
-        tags = await message.tags(backlog=backlog)
         rendered = await message.render(self.context)
+        tags = await message.tags(backlog=backlog)
         weechat.prnt_date_tags(self.buffer_pointer, message.ts.major, tags, rendered)
 
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:

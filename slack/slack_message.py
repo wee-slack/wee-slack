@@ -29,6 +29,9 @@ if TYPE_CHECKING:
         SlackMessageBlockCompositionText,
         SlackMessageBlockElementImage,
         SlackMessageBlockRichTextElement,
+        SlackMessageBlockRichTextElementBroadcast,
+        SlackMessageBlockRichTextElementUser,
+        SlackMessageBlockRichTextElementUsergroup,
         SlackMessageBlockRichTextList,
         SlackMessageBlockRichTextSection,
         SlackMessageFile,
@@ -40,6 +43,14 @@ if TYPE_CHECKING:
     from slack.slack_conversation import SlackConversation
     from slack.slack_thread import SlackThread
     from slack.slack_workspace import SlackWorkspace
+
+    Mentions = List[
+        Union[
+            SlackMessageBlockRichTextElementUser,
+            SlackMessageBlockRichTextElementUsergroup,
+            SlackMessageBlockRichTextElementBroadcast,
+        ]
+    ]
 
 
 def unhtmlescape(text: str) -> str:
@@ -136,6 +147,7 @@ class SlackMessage:
         self._message_json = message_json
         self._rendered_prefix = None
         self._rendered_message = None
+        self._mentions: Optional[Mentions] = None
         self.conversation = conversation
         self.ts = SlackTs(message_json["ts"])
         self.replies: OrderedDict[SlackTs, SlackMessage] = OrderedDict()
@@ -258,8 +270,28 @@ class SlackMessage:
             reaction["count"] -= 1
             self._rendered_message = None
 
+    async def should_highlight(self) -> bool:
+        # TODO: Highlight words from user preferences
+        mentions = self._mentions
+        if mentions is None:
+            _, mentions = await self._render_message()
+
+        for mention in mentions:
+            if mention["type"] == "user":
+                if mention["user_id"] == self.workspace.my_user.id:
+                    return True
+            elif mention["type"] == "usergroup":
+                # TODO
+                pass
+            elif mention["type"] == "broadcast":
+                # TODO: figure out how to handle here broadcast
+                return True
+            else:
+                assert_never(mention)
+
+        return False
+
     async def tags(self, backlog: bool = False) -> str:
-        # TODO: Add tags for highlight
         nick = await self.nick(colorize=False, only_nick=True)
         tags = [f"slack_ts_{self.ts}", f"nick_{nick}"]
 
@@ -297,6 +329,8 @@ class SlackMessage:
             if user and user.is_self:
                 tags.append("self_msg")
                 log_tags = ["notify_none", "no_highlight", "log1"]
+            elif await self.should_highlight():
+                log_tags = ["notify_highlight", "log1"]
             else:
                 log_tags = ["notify_message", "log1"]
 
@@ -350,7 +384,7 @@ class SlackMessage:
         self._rendered_prefix = await self._render_prefix()
         return self._rendered_prefix
 
-    async def _render_message_text(self) -> str:
+    async def _render_message_text(self) -> Tuple[str, Mentions]:
         if self._message_json.get("subtype") in [
             "channel_join",
             "group_join",
@@ -378,7 +412,10 @@ class SlackMessage:
             else:
                 inviter_text = ""
 
-            return f"{await self.nick()} {text_action} {text_conversation_name}{inviter_text}"
+            return (
+                f"{await self.nick()} {text_action} {text_conversation_name}{inviter_text}",
+                [],
+            )
 
         elif (
             "subtype" in self._message_json
@@ -395,14 +432,18 @@ class SlackMessage:
                 texts.append(
                     f"https://app.slack.com/client/{team}/{channel_id}?open=start_huddle"
                 )
-            return "\n".join(texts)
+            return "\n".join(texts), []
 
         else:
             if "blocks" in self._message_json:
-                texts = await self._render_blocks(self._message_json["blocks"])
+                texts, mentions = await self._render_blocks(
+                    self._message_json["blocks"]
+                )
             else:
+                # TODO: highlights from text
                 text = unhtmlescape(await self._unfurl_refs(self._message_json["text"]))
                 texts = [text] if text else []
+                mentions = []
 
             files_texts = self._render_files(self._message_json.get("files", []))
             text_with_files = "\n".join(texts + files_texts)
@@ -411,17 +452,23 @@ class SlackMessage:
             full_text = "\n".join([text_with_files] + attachment_texts)
 
             if self._message_json.get("subtype") == "me_message":
-                return f"{await self.nick()} {full_text}"
+                return f"{await self.nick()} {full_text}", mentions
             else:
-                return full_text
+                return full_text, mentions
 
-    async def _render_message(self, rerender: bool = False) -> str:
+    async def _render_message(self, rerender: bool = False) -> Tuple[str, Mentions]:
         if self.deleted:
-            return with_color(shared.config.color.deleted_message.value, "(deleted)")
-        elif self._rendered_message is not None and not rerender:
-            return self._rendered_message
+            self._mentions = []
+            return (
+                with_color(shared.config.color.deleted_message.value, "(deleted)"),
+                self._mentions,
+            )
+        elif (
+            self._rendered_message is not None and self._mentions is not None
+        ) and not rerender:
+            return self._rendered_message, self._mentions
         else:
-            text = await self._render_message_text()
+            text, self._mentions = await self._render_message_text()
             text_edited = (
                 f" {with_color(shared.config.color.edited_message_suffix.value, '(edited)')}"
                 if self._message_json.get("edited")
@@ -429,14 +476,14 @@ class SlackMessage:
             )
             reactions = await self._create_reactions_string()
             self._rendered_message = text + text_edited + reactions
-            return self._rendered_message
+            return self._rendered_message, self._mentions
 
     async def render_message(
         self,
         context: Literal["conversation", "thread"],
         rerender: bool = False,
     ) -> str:
-        text = await self._render_message(rerender=rerender)
+        text, _ = await self._render_message(rerender=rerender)
         if context == "thread":
             return text
         thread_prefix = self._create_thread_prefix()
@@ -630,8 +677,19 @@ class SlackMessage:
         text = f"[ Thread: {self.hash} Replies: {reply_count}{subscribed_text} ]"
         return " " + with_color(nick_color(str(self.hash)), text)
 
-    async def _render_blocks(self, blocks: List[SlackMessageBlock]) -> List[str]:
+    def _block_element_mentions(self, elements: List[SlackMessageBlockRichTextElement]):
+        for element in elements:
+            if (
+                element["type"] == "user"
+                or element["type"] == "usergroup"
+                or element["type"] == "broadcast"
+            ):
+                yield element
+
+    async def _render_blocks(self, blocks: List[SlackMessageBlock]):
         block_texts: List[str] = []
+        mentions: Mentions = []
+
         for block in blocks:
             try:
                 if block["type"] == "section":
@@ -680,6 +738,9 @@ class SlackMessage:
                             )
                             if rendered:
                                 block_texts.append(rendered)
+                            mentions.extend(
+                                self._block_element_mentions(element["elements"])
+                            )
                         elif element["type"] == "rich_text_list":
                             rendered = [
                                 "{}{} {}".format(
@@ -707,6 +768,9 @@ class SlackMessage:
                                 ).split("\n")
                             ]
                             block_texts.extend(lines)
+                            mentions.extend(
+                                self._block_element_mentions(element["elements"])
+                            )
                         elif element["type"] == "rich_text_preformatted":
                             texts = [
                                 sub_element.get("text", sub_element.get("url", ""))
@@ -732,7 +796,7 @@ class SlackMessage:
                     with_color(shared.config.color.render_error.value, text)
                 )
 
-        return block_texts
+        return block_texts, mentions
 
     async def _render_block_rich_text_section(
         self, section: SlackMessageBlockRichTextSection
@@ -944,7 +1008,7 @@ class SlackMessage:
                 prepend_title_text = ""
 
             # TODO: Don't render both text and blocks
-            blocks = await self._render_blocks(attachment.get("blocks", []))
+            blocks, _ = await self._render_blocks(attachment.get("blocks", []))
             texts.extend(blocks)
 
             image_url = attachment.get("image_url", "")
