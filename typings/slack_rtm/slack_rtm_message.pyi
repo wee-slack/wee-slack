@@ -9,6 +9,7 @@ from slack_api.slack_conversations_history import (
     SlackMessageSubtypeChannelLeave,
     SlackMessageSubtypeHuddleThread,
     SlackMessageSubtypeHuddleThreadRoom,
+    SlackMessageThreadBroadcast,
     SlackMessageThreadParentCommon,
     SlackMessageThreadParentNotSubscribed,
     SlackMessageThreadParentSubscribed,
@@ -45,7 +46,15 @@ class SlackMessageThreadRtm(SlackMessageThreadCommon):
     channel: str
     event_ts: str
     source_team: str
-    suppress_notification: bool
+    suppress_notification: NotRequired[bool]
+    user_team: str
+
+@final
+class SlackMessageThreadBroadcastRtm(SlackMessageThreadBroadcast):
+    channel: str
+    event_ts: str
+    source_team: str
+    suppress_notification: NotRequired[bool]
     user_team: str
 
 @final
@@ -55,7 +64,7 @@ class SlackMessageWithFilesRtm(SlackMessageWithFiles):
 @final
 class SlackMessageSubtypeHuddleThreadRtm(SlackMessageSubtypeHuddleThread):
     event_ts: str
-    suppress_notification: bool
+    suppress_notification: NotRequired[bool]
 
 @final
 class SlackMessageSubtypeBotMessageRtm(SlackMessageSubtypeBotMessage):
@@ -170,6 +179,7 @@ SlackMessageRtm = (
     | SlackMessageThreadParentNotSubscribedRtm
     | SlackMessageThreadParentSubscribedRtm
     | SlackMessageThreadRtm
+    | SlackMessageThreadBroadcastRtm
     | SlackMessageWithFilesRtm
     | SlackMessageSubtypeHuddleThreadRtm
     | SlackMessageSubtypeBotMessageRtm

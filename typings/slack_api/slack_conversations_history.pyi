@@ -332,11 +332,14 @@ class SlackMessageThreadParentSubscribed(SlackMessageThreadParentCommon):
 class SlackMessageThreadParentSubscribedFinal(SlackMessageThreadParentSubscribed):
     pass
 
-@final
 class SlackMessageThreadBroadcast(SlackMessageThreadCommon):
     subtype: Literal["thread_broadcast"]
     root: SlackMessageThreadParentCommon
     # TODO: team is missing in response
+
+@final
+class SlackMessageThreadBroadcastFinal(SlackMessageThreadBroadcast):
+    pass
 
 class SlackMessageWithFiles(SlackMessageCommon):
     user: str
@@ -446,7 +449,7 @@ SlackMessage = (
     | SlackMessageThreadParentCommon
     | SlackMessageThreadParentNotSubscribedFinal
     | SlackMessageThreadParentSubscribedFinal
-    | SlackMessageThreadBroadcast
+    | SlackMessageThreadBroadcastFinal
     | SlackMessageWithFilesFinal
     | SlackMessageSubtypeHuddleThreadFinal
     | SlackMessageSubtypeBotMessageFinal
