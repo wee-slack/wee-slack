@@ -22,6 +22,7 @@ if TYPE_CHECKING:
         SlackMessageReplied,
         SlackShRoomJoin,
         SlackShRoomUpdate,
+        SlackUserTyping,
     )
     from typing_extensions import Literal
 
@@ -361,13 +362,20 @@ class SlackConversation(SlackBuffer):
             await self.fetch_replies(message.thread_ts)
 
         if message.sender_user_id:
-            # TODO: thread buffers
             user = await self.workspace.users[message.sender_user_id]
-            weechat.hook_signal_send(
-                "typing_set_nick",
-                weechat.WEECHAT_HOOK_SIGNAL_STRING,
-                f"{self.buffer_pointer};off;{user.nick()}",
-            )
+            if message.is_reply:
+                if parent_message and parent_message.thread_buffer:
+                    weechat.hook_signal_send(
+                        "typing_set_nick",
+                        weechat.WEECHAT_HOOK_SIGNAL_STRING,
+                        f"{parent_message.thread_buffer.buffer_pointer};off;{user.nick()}",
+                    )
+            else:
+                weechat.hook_signal_send(
+                    "typing_set_nick",
+                    weechat.WEECHAT_HOOK_SIGNAL_STRING,
+                    f"{self.buffer_pointer};off;{user.nick()}",
+                )
 
     async def change_message(
         self, data: Union[SlackMessageChanged, SlackMessageReplied]
@@ -407,6 +415,27 @@ class SlackConversation(SlackBuffer):
         if message:
             message.reaction_remove(reaction, user_id)
             await self.rerender_message(message)
+
+    async def typing_add_user(self, data: SlackUserTyping):
+        if not shared.config.look.typing_status_nicks:
+            return
+
+        user = await self.workspace.users[data["user"]]
+        if "thread_ts" not in data:
+            weechat.hook_signal_send(
+                "typing_set_nick",
+                weechat.WEECHAT_HOOK_SIGNAL_STRING,
+                f"{self.buffer_pointer};typing;{user.nick()}",
+            )
+        else:
+            thread_ts = SlackTs(data["thread_ts"])
+            parent_message = self._messages.get(thread_ts)
+            if parent_message and parent_message.thread_buffer:
+                weechat.hook_signal_send(
+                    "typing_set_nick",
+                    weechat.WEECHAT_HOOK_SIGNAL_STRING,
+                    f"{parent_message.thread_buffer.buffer_pointer};typing;{user.nick()}",
+                )
 
     async def open_thread(self, thread_hash: str, switch: bool = False):
         thread_ts = self.message_hashes.get_ts(thread_hash)

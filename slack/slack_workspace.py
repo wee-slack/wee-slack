@@ -344,7 +344,7 @@ class SlackWorkspace:
             elif data["type"] == "sh_room_join" or data["type"] == "sh_room_update":
                 await channel.update_message_room(data)
             elif data["type"] == "user_typing":
-                await channel.typing_add_user(data["user"], data.get("thread_ts"))
+                await channel.typing_add_user(data)
             else:
                 weechat.prnt("", f"\t{self.name} received: {json.dumps(data)}")
         except Exception as e:

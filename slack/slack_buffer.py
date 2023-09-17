@@ -240,18 +240,6 @@ class SlackBuffer(ABC):
         for message in self.messages.values():
             await self.rerender_message(message)
 
-    async def typing_add_user(self, user_id: str, thread_ts: Optional[str]):
-        if not shared.config.look.typing_status_nicks:
-            return
-
-        if not thread_ts:
-            user = await self.workspace.users[user_id]
-            weechat.hook_signal_send(
-                "typing_set_nick",
-                weechat.WEECHAT_HOOK_SIGNAL_STRING,
-                f"{self.buffer_pointer};typing;{user.nick()}",
-            )
-
     def set_typing_self(self):
         now = time.time()
         if now - 4 > self._typing_self_last_sent:
