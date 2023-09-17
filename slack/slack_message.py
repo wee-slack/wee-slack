@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections import OrderedDict
 from datetime import date, datetime, timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, List, Match, Optional, Tuple, Union
@@ -107,7 +108,8 @@ class SlackMessage:
         self._rendered_message = None
         self.conversation = conversation
         self.ts = SlackTs(message_json["ts"])
-        self.replies: List[SlackMessage] = []
+        self.replies: OrderedDict[SlackTs, SlackMessage] = OrderedDict()
+        self.reply_history_filled = False
         self._deleted = False
 
     @property

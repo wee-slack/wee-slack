@@ -198,7 +198,7 @@ class SlackConversationMessageHashes(Dict[SlackTs, str]):
 
             other_message = self._conversation.messages[ts_with_same_hash]
             run_async(self._conversation.rerender_message(other_message))
-            for reply in other_message.replies:
+            for reply in other_message.replies.values():
                 run_async(self._conversation.rerender_message(reply))
 
         self._setitem(key, short_hash)
@@ -385,6 +385,27 @@ class SlackConversation:
         self.workspace.users.initialize_items(self._members)
         return self._members
 
+    async def fetch_replies(
+        self, message: SlackMessage
+    ) -> Optional[List[SlackMessage]]:
+        if not message.is_thread_parent:
+            return
+
+        replies_response = await self._api.fetch_conversations_replies(message)
+        replies = [
+            SlackMessage(self, reply) for reply in replies_response["messages"][1:]
+        ]
+
+        for reply in replies:
+            message.replies[reply.ts] = reply
+            self._messages[reply.ts] = reply
+
+        message.replies = OrderedDict(sorted(message.replies.items()))
+        self._messages = OrderedDict(sorted(self._messages.items()))
+
+        message.reply_history_filled = True
+        return replies
+
     async def fill_history(self):
         if self.history_filled or self.history_pending:
             return
@@ -394,11 +415,23 @@ class SlackConversation:
 
             history = await self._api.fetch_conversations_history(self)
 
-            messages = [SlackMessage(self, message) for message in history["messages"]]
-            for message in messages:
+            conversation_messages = [
+                SlackMessage(self, message) for message in history["messages"]
+            ]
+            for message in reversed(conversation_messages):
                 self._messages[message.ts] = message
 
-            # TODO: Account for reply messages
+            if self.display_thread_replies():
+                await gather(
+                    *(self.fetch_replies(message) for message in conversation_messages)
+                )
+
+            self._messages = OrderedDict(sorted(self._messages.items()))
+            messages = [
+                message
+                for message in self._messages.values()
+                if self.should_display_message(message)
+            ]
 
             sender_user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
             self.workspace.users.initialize_items(sender_user_ids)
@@ -408,9 +441,8 @@ class SlackConversation:
 
             await gather(*(message.render() for message in messages))
 
-            for message in reversed(messages):
-                if self.should_display_message(message):
-                    await self.print_message(message, backlog=True)
+            for message in messages:
+                await self.print_message(message, backlog=True)
 
             self.history_filled = True
             self.history_pending = False
@@ -459,7 +491,7 @@ class SlackConversation:
 
         parent_message = message.parent_message
         if parent_message:
-            parent_message.replies.append(message)
+            parent_message.replies[message.ts] = message
 
         if message.sender_user_id:
             # TODO: thread buffers

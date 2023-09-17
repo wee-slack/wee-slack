@@ -7,12 +7,14 @@ from urllib.parse import urlencode
 from slack.error import SlackApiError
 from slack.http import http_request
 from slack.shared import shared
+from slack.slack_message import SlackMessage
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfoResponse, SlackBotsInfoResponse
     from slack_api.slack_conversations_history import SlackConversationsHistoryResponse
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
     from slack_api.slack_conversations_members import SlackConversationsMembersResponse
+    from slack_api.slack_conversations_replies import SlackConversationsRepliesResponse
     from slack_api.slack_rtm_connect import SlackRtmConnectResponse
     from slack_api.slack_usergroups_info import SlackUsergroupsInfoResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
@@ -132,6 +134,19 @@ class SlackApi(SlackApiCommon):
         method = "conversations.history"
         params: Params = {"channel": conversation.id}
         response: SlackConversationsHistoryResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def fetch_conversations_replies(self, parent_message: SlackMessage):
+        method = "conversations.replies"
+        params: Params = {
+            "channel": parent_message.conversation.id,
+            "ts": str(parent_message.ts),
+        }
+        response: SlackConversationsRepliesResponse = await self._fetch_list(
+            method, "messages", params
+        )
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
         return response
