@@ -269,9 +269,13 @@ class SlackConversation:
         elif self._info["is_mpim"] is True:
             members = await self.load_members(load_all=True)
             member_users = await gather(
-                *(self.workspace.users[user_id] for user_id in members)
+                *(
+                    self.workspace.users[user_id]
+                    for user_id in members
+                    if user_id != self.workspace.my_user.id
+                )
             )
-            return ",".join([user.nick() for user in member_users])
+            return ",".join(sorted(user.nick() for user in member_users))
         else:
             return self._info["name"]
 
