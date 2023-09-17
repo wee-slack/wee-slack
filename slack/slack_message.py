@@ -17,7 +17,7 @@ from slack.error import (
 from slack.log import print_error, print_exception_once
 from slack.python_compatibility import removeprefix, removesuffix
 from slack.shared import shared
-from slack.slack_user import format_bot_nick, nick_color
+from slack.slack_user import SlackBot, SlackUser, format_bot_nick, nick_color
 from slack.task import gather
 from slack.util import with_color
 from slack.weechat_config import WeeChatColor
@@ -152,6 +152,11 @@ class SlackMessage:
         return self.conversation.message_hashes[self.ts]
 
     @property
+    def subtype(self):
+        if "subtype" in self._message_json:
+            return self._message_json["subtype"]
+
+    @property
     def thread_ts(self) -> Optional[SlackTs]:
         return (
             SlackTs(self._message_json["thread_ts"])
@@ -193,6 +198,16 @@ class SlackMessage:
     def sender_bot_id(self) -> Optional[str]:
         if self.is_bot_message:
             return self._message_json.get("bot_id")
+
+    @property
+    async def sender(self) -> Union[SlackUser, SlackBot]:
+        if (
+            "subtype" in self._message_json
+            and self._message_json["subtype"] == "bot_message"
+        ):
+            return await self.workspace.bots[self._message_json["bot_id"]]
+        else:
+            return await self.workspace.users[self._message_json["user"]]
 
     @property
     def priority(self) -> MessagePriority:
@@ -245,7 +260,7 @@ class SlackMessage:
 
     async def tags(self, backlog: bool = False) -> str:
         # TODO: Add tags for highlight
-        nick = await self._nick(colorize=False, only_nick=True)
+        nick = await self.nick(colorize=False, only_nick=True)
         tags = [f"slack_ts_{self.ts}", f"nick_{nick}"]
 
         if self.sender_user_id:
@@ -302,7 +317,7 @@ class SlackMessage:
         self._rendered = f"{prefix}\t{message}"
         return self._rendered
 
-    async def _nick(self, colorize: bool = True, only_nick: bool = False) -> str:
+    async def nick(self, colorize: bool = True, only_nick: bool = False) -> str:
         if (
             "subtype" in self._message_json
             and self._message_json["subtype"] == "bot_message"
@@ -327,7 +342,7 @@ class SlackMessage:
         elif self._message_json.get("subtype") == "me_message":
             return removesuffix(weechat.prefix("action"), "\t")
         else:
-            return await self._nick(colorize=colorize, only_nick=only_nick)
+            return await self.nick(colorize=colorize, only_nick=only_nick)
 
     async def render_prefix(self) -> str:
         if self._rendered_prefix is not None:
@@ -363,7 +378,7 @@ class SlackMessage:
             else:
                 inviter_text = ""
 
-            return f"{await self._nick()} {text_action} {text_conversation_name}{inviter_text}"
+            return f"{await self.nick()} {text_action} {text_conversation_name}{inviter_text}"
 
         elif (
             "subtype" in self._message_json
@@ -396,7 +411,7 @@ class SlackMessage:
             full_text = "\n".join([text_with_files] + attachment_texts)
 
             if self._message_json.get("subtype") == "me_message":
-                return f"{await self._nick()} {full_text}"
+                return f"{await self.nick()} {full_text}"
             else:
                 return full_text
 

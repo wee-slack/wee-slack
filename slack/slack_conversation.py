@@ -12,6 +12,7 @@ from slack.shared import shared
 from slack.slack_buffer import SlackBuffer
 from slack.slack_message import SlackMessage, SlackTs
 from slack.slack_thread import SlackThread
+from slack.slack_user import SlackBot, SlackUser, nick_color
 from slack.task import gather, run_async
 
 if TYPE_CHECKING:
@@ -111,6 +112,7 @@ class SlackConversation(SlackBuffer):
         self._info = info
         self._members: Optional[List[str]] = None
         self._messages: OrderedDict[SlackTs, SlackMessage] = OrderedDict()
+        self._nicklist: Dict[Union[SlackUser, SlackBot], str] = {}
         self.nicklist_needs_refresh = True
         self.message_hashes = SlackConversationMessageHashes(self)
 
@@ -315,16 +317,41 @@ class SlackConversation(SlackBuffer):
         if self.nicklist_needs_refresh:
             self.nicklist_needs_refresh = False
             members = await self.load_members()
-            weechat.nicklist_remove_all(self.buffer_pointer)
-            await gather(*(self.nicklist_add_user(user_id) for user_id in members))
+            users = await gather(
+                *(self.workspace.users[user_id] for user_id in members)
+            )
+            for user in users:
+                self.nicklist_add_user(user)
 
-    async def nicklist_add_user(self, user_id: str):
-        user = await self.workspace.users[user_id]
+    def nicklist_add_user(
+        self, user: Union[SlackUser, SlackBot], nick: Optional[str] = None
+    ):
+        if user in self._nicklist:
+            return
+
+        nicklist_nick = nick if nick else user.nick(only_nick=True)
         # TODO: weechat.color.nicklist_away
-        color = user.nick_color() if shared.config.look.color_nicks_in_nicklist else ""
-        weechat.nicklist_add_nick(
-            self.buffer_pointer, "", user.nick(), color, "", "", 1
+        color = (
+            ""
+            if not shared.config.look.color_nicks_in_nicklist
+            else nick_color(nick)
+            if nick and (not isinstance(user, SlackUser) or not user.is_self)
+            else user.nick_color()
         )
+        prefix = (
+            shared.config.look.external_user_suffix.value
+            if isinstance(user, SlackUser) and user.is_external
+            else ""
+        )
+        visible = 1 if isinstance(user, SlackUser) else 0
+        nick_pointer = weechat.nicklist_add_nick(
+            self.buffer_pointer, "", nicklist_nick, color, prefix, "", visible
+        )
+        self._nicklist[user] = nick_pointer
+
+    def nicklist_remove_user(self, user: Union[SlackUser, SlackBot]):
+        nick_pointer = self._nicklist.pop(user)
+        weechat.nicklist_remove_nick(self.buffer_pointer, nick_pointer)
 
     def display_thread_replies(self) -> bool:
         buffer_value = weechat.buffer_get_string(
@@ -447,3 +474,12 @@ class SlackConversation(SlackBuffer):
             if thread_message.thread_buffer is None:
                 thread_message.thread_buffer = SlackThread(thread_message)
             await thread_message.thread_buffer.open_buffer(switch)
+
+    async def print_message(self, message: SlackMessage, backlog: bool = False):
+        await super().print_message(message, backlog)
+        sender = await message.sender
+        if message.subtype in ["channel_leave", "group_leave"]:
+            self.nicklist_remove_user(sender)
+        else:
+            nick = await message.nick(colorize=False, only_nick=True)
+            self.nicklist_add_user(sender, nick)
