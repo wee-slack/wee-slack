@@ -175,7 +175,7 @@ class SlackMessage:
     def parent_message(self) -> Optional[SlackMessage]:
         if not self.is_reply or self.thread_ts is None:
             return None
-        return self.conversation.messages[self.thread_ts]
+        return self.conversation.messages.get(self.thread_ts)
 
     @property
     def is_bot_message(self) -> bool:
@@ -591,17 +591,17 @@ class SlackMessage:
             return ""
 
     def _create_thread_prefix(self) -> str:
-        parent_message = self.parent_message
-        if not parent_message:
+        if not self.is_reply or self.thread_ts is None:
             return ""
+        thread_hash = self.conversation.message_hashes[self.thread_ts]
 
         broadcast_text = (
             shared.config.look.thread_broadcast_prefix.value
             if self.is_thread_broadcast
             else ""
         )
-        text = f"[{broadcast_text}{parent_message.hash}]"
-        return with_color(nick_color(str(parent_message.hash)), text) + " "
+        text = f"[{broadcast_text}{thread_hash}]"
+        return with_color(nick_color(thread_hash), text) + " "
 
     def _create_thread_string(self) -> str:
         if "reply_count" not in self._message_json:

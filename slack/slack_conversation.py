@@ -396,7 +396,10 @@ class SlackConversation(SlackBuffer):
     async def open_thread(self, thread_hash: str, switch: bool = False):
         thread_ts = self.message_hashes.get_ts(thread_hash)
         if thread_ts:
-            thread_message = self.messages[thread_ts]
+            thread_message = self.messages.get(thread_ts)
+            if thread_message is None:
+                # TODO: Fetch message
+                return
             if thread_message.thread_buffer is None:
                 thread_message.thread_buffer = SlackThread(thread_message)
             await thread_message.thread_buffer.open_buffer(switch)
