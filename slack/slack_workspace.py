@@ -5,7 +5,17 @@ import socket
 import ssl
 import time
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, Generic, Iterable, Optional, Type, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Generic,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+)
 
 import weechat
 from websocket import (
@@ -174,6 +184,8 @@ class SlackWorkspace:
         self._connect_task: Optional[Task[None]] = None
         self._ws: Optional[WebSocket] = None
         self._hook_ws_fd: Optional[str] = None
+        self._ws_messages: List[Tuple[float, SlackRtmMessage]] = []
+        self._debug_ws_buffer_pointer: Optional[str] = None
         self.conversations = SlackConversations(self)
         self.open_conversations: Dict[str, SlackConversation] = {}
         self.users = SlackUsers(self)
@@ -283,6 +295,11 @@ class SlackWorkspace:
             run_async(self._ws_recv(json.loads(recv_data.decode())))
 
     async def _ws_recv(self, data: SlackRtmMessage):
+        epoch = time.time()
+        # TODO: Remove old messages
+        self._ws_messages.append((epoch, data))
+        self.print_debug_ws_buffer(epoch, data)
+
         try:
             if data["type"] == "hello":
                 return
@@ -366,6 +383,33 @@ class SlackWorkspace:
         if isinstance(buffer, SlackThread):
             msg["thread_ts"] = buffer.parent.ts
         self._ws.send(json.dumps(msg))
+
+    def _close_debug_ws_buffer_cb(self, data: str, buffer: str):
+        self._debug_ws_buffer_pointer = None
+        return weechat.WEECHAT_RC_OK
+
+    def open_debug_ws_buffer(self):
+        if self._debug_ws_buffer_pointer:
+            weechat.buffer_set(self._debug_ws_buffer_pointer, "display", "1")
+            return
+
+        name = f"{shared.SCRIPT_NAME}.debug.ws.{self.name}"
+        self._debug_ws_buffer_pointer = weechat.buffer_new_props(
+            name,
+            {"display": "1"},
+            "",
+            "",
+            get_callback_name(self._close_debug_ws_buffer_cb),
+            "",
+        )
+        for epoch, message in self._ws_messages:
+            self.print_debug_ws_buffer(epoch, message)
+
+    def print_debug_ws_buffer(self, epoch: float, message: SlackRtmMessage):
+        if self._debug_ws_buffer_pointer:
+            weechat.prnt_date_tags(
+                self._debug_ws_buffer_pointer, int(epoch), "", json.dumps(message)
+            )
 
     async def reconnect(self):
         self.disconnect()
