@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 from slack.error import SlackApiError
 from slack.http import http_request
 from slack.shared import shared
-from slack.slack_message import SlackMessage
+from slack.slack_message import SlackTs
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfoResponse, SlackBotsInfoResponse
@@ -138,11 +138,13 @@ class SlackApi(SlackApiCommon):
             raise SlackApiError(self.workspace, method, response, params)
         return response
 
-    async def fetch_conversations_replies(self, parent_message: SlackMessage):
+    async def fetch_conversations_replies(
+        self, conversation: SlackConversation, parent_message_ts: SlackTs
+    ):
         method = "conversations.replies"
         params: Params = {
-            "channel": parent_message.conversation.id,
-            "ts": str(parent_message.ts),
+            "channel": conversation.id,
+            "ts": parent_message_ts,
         }
         response: SlackConversationsRepliesResponse = await self._fetch_list(
             method, "messages", params

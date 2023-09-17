@@ -71,9 +71,7 @@ class SlackThread(SlackBuffer):
         with self.loading():
             self.history_pending = True
 
-            messages = await self.parent.conversation.fetch_replies(self.parent)
-            if messages is None:
-                return
+            messages = await self.parent.conversation.fetch_replies(self.parent.ts)
 
             sender_user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
             self.workspace.users.initialize_items(sender_user_ids)

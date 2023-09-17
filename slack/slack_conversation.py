@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Dict, List, Mapping, NoReturn, Optional, Tuple
 
 import weechat
 
+from slack.error import SlackError
 from slack.python_compatibility import removeprefix
 from slack.shared import shared
 from slack.slack_buffer import SlackBuffer
@@ -235,25 +236,33 @@ class SlackConversation(SlackBuffer):
         self.workspace.users.initialize_items(self._members)
         return self._members
 
-    async def fetch_replies(
-        self, message: SlackMessage
-    ) -> Optional[List[SlackMessage]]:
-        if not message.is_thread_parent:
-            return
-
-        replies_response = await self._api.fetch_conversations_replies(message)
-        replies = [
-            SlackMessage(self, reply) for reply in replies_response["messages"][1:]
+    async def fetch_replies(self, thread_ts: SlackTs) -> List[SlackMessage]:
+        replies_response = await self._api.fetch_conversations_replies(self, thread_ts)
+        messages = [
+            SlackMessage(self, message) for message in replies_response["messages"]
         ]
 
+        if thread_ts != messages[0].ts:
+            raise SlackError(
+                self.workspace,
+                f"First message in conversations.replies response did not match thread_ts {thread_ts}",
+                replies_response,
+            )
+
+        if thread_ts not in self._messages:
+            self._messages[thread_ts] = messages[0]
+
+        parent_message = self._messages[thread_ts]
+
+        replies = messages[1:]
         for reply in replies:
-            message.replies[reply.ts] = reply
+            parent_message.replies[reply.ts] = reply
             self._messages[reply.ts] = reply
 
-        message.replies = OrderedDict(sorted(message.replies.items()))
+        parent_message.replies = OrderedDict(sorted(parent_message.replies.items()))
         self._messages = OrderedDict(sorted(self._messages.items()))
 
-        message.reply_history_filled = True
+        parent_message.reply_history_filled = True
         return replies
 
     async def fill_history(self):
@@ -273,7 +282,11 @@ class SlackConversation(SlackBuffer):
 
             if self.display_thread_replies():
                 await gather(
-                    *(self.fetch_replies(message) for message in conversation_messages)
+                    *(
+                        self.fetch_replies(message.ts)
+                        for message in conversation_messages
+                        if message.is_thread_parent
+                    )
                 )
 
             self._messages = OrderedDict(sorted(self._messages.items()))
@@ -344,6 +357,8 @@ class SlackConversation(SlackBuffer):
             parent_message.replies[message.ts] = message
             if parent_message.thread_buffer:
                 await parent_message.thread_buffer.print_message(message)
+        elif message.thread_ts is not None:
+            await self.fetch_replies(message.thread_ts)
 
         if message.sender_user_id:
             # TODO: thread buffers
