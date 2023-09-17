@@ -25,8 +25,10 @@ from slack.log import print_error
 from slack.proxy import Proxy
 from slack.shared import shared
 from slack.slack_api import SlackApi
+from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation
 from slack.slack_message import SlackMessage, SlackTs
+from slack.slack_thread import SlackThread
 from slack.slack_user import SlackBot, SlackUser, SlackUsergroup
 from slack.task import Future, Task, create_task, gather, run_async
 from slack.util import get_callback_name
@@ -344,12 +346,25 @@ class SlackWorkspace:
             print("lost connection on ping, reconnecting")
             run_async(self.reconnect())
 
-    def send_typing(self, conversation_id: str):
+    def send_typing(self, buffer: SlackBuffer):
         if not self.is_connected:
             raise SlackError(self, "Can't send typing when not connected")
         if self._ws is None:
             raise SlackError(self, "is_connected is True while _ws is None")
-        msg = {"type": "typing", "channel": conversation_id}
+
+        if isinstance(buffer, SlackConversation):
+            conversation_id = buffer.id
+        elif isinstance(buffer, SlackThread):
+            conversation_id = buffer.parent.conversation.id
+        else:
+            raise NotImplementedError(f"Unknown buffer type: {type(buffer)}")
+
+        msg = {
+            "type": "user_typing",
+            "channel": conversation_id,
+        }
+        if isinstance(buffer, SlackThread):
+            msg["thread_ts"] = buffer.parent.ts
         self._ws.send(json.dumps(msg))
 
     async def reconnect(self):

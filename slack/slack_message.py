@@ -35,9 +35,10 @@ if TYPE_CHECKING:
         SlackMessageReaction,
         SlackMessageSubtypeHuddleThreadRoom,
     )
-    from typing_extensions import assert_never
+    from typing_extensions import Literal, assert_never
 
     from slack.slack_conversation import SlackConversation
+    from slack.slack_thread import SlackThread
     from slack.slack_workspace import SlackWorkspace
 
 
@@ -110,6 +111,7 @@ class SlackMessage:
         self.ts = SlackTs(message_json["ts"])
         self.replies: OrderedDict[SlackTs, SlackMessage] = OrderedDict()
         self.reply_history_filled = False
+        self.thread_buffer: Optional[SlackThread] = None
         self._deleted = False
 
     @property
@@ -261,9 +263,12 @@ class SlackMessage:
 
         return ",".join(tags)
 
-    async def render(self) -> str:
+    async def render(
+        self,
+        context: Literal["conversation", "thread"],
+    ) -> str:
         prefix_coro = self.render_prefix()
-        message_coro = self.render_message()
+        message_coro = self.render_message(context)
         prefix, message = await gather(prefix_coro, message_coro)
         self._rendered = f"{prefix}\t{message}"
         return self._rendered
@@ -382,9 +387,15 @@ class SlackMessage:
             self._rendered_message = text + text_edited + reactions
             return self._rendered_message
 
-    async def render_message(self, rerender: bool = False) -> str:
-        thread_prefix = self._create_thread_prefix()
+    async def render_message(
+        self,
+        context: Literal["conversation", "thread"],
+        rerender: bool = False,
+    ) -> str:
         text = await self._render_message(rerender=rerender)
+        if context == "thread":
+            return text
+        thread_prefix = self._create_thread_prefix()
         thread = self._create_thread_string()
         return thread_prefix + text + thread
 
