@@ -65,13 +65,17 @@ class SlackUser:
     def is_self(self) -> bool:
         return self.id == self.workspace.my_user.id
 
+    @property
+    def is_external(self) -> bool:
+        return self._info["profile"]["team"] != self.workspace.id
+
     def nick(self, colorize: bool = False, only_nick: bool = False) -> str:
         nick = self._name_without_spaces()
 
         if colorize:
             nick = with_color(self.nick_color(), nick)
 
-        if not only_nick and self._info["profile"]["team"] != self.workspace.id:
+        if not only_nick and self.is_external:
             nick += shared.config.look.external_user_suffix.value
 
         return nick
