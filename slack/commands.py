@@ -297,7 +297,7 @@ def print_uncaught_error(
             print_error("This error does not have any data")
 
 
-@weechat_command("tasks|buffer|errors|error", split_all_args=True)
+@weechat_command("tasks|buffer|open_ws_buffer|errors|error", split_all_args=True)
 def command_slack_debug(
     buffer: str, args: List[str], options: Dict[str, Optional[str]]
 ):
@@ -316,6 +316,10 @@ def command_slack_debug(
                 "",
                 f"Conversation id: {slack_buffer.parent.conversation.id}, Thread ts: {slack_buffer.parent.thread_ts}, Thread hash: {slack_buffer.parent.hash}",
             )
+    elif args[0] == "open_ws_buffer":
+        slack_buffer = shared.buffers.get(buffer)
+        if slack_buffer:
+            slack_buffer.workspace.open_debug_ws_buffer()
     elif args[0] == "errors":
         num_arg = int(args[1]) if len(args) > 1 and args[1].isdecimal() else 5
         num = min(num_arg, len(shared.uncaught_errors))
