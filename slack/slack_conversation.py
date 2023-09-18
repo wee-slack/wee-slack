@@ -318,7 +318,7 @@ class SlackConversation(SlackBuffer):
             self.history_pending = False
 
     async def nicklist_update(self):
-        if self.nicklist_needs_refresh:
+        if self.nicklist_needs_refresh and self.type != "im":
             self.nicklist_needs_refresh = False
             members = await self.load_members()
             users = await gather(
@@ -330,7 +330,7 @@ class SlackConversation(SlackBuffer):
     def nicklist_add_user(
         self, user: Union[SlackUser, SlackBot], nick: Optional[str] = None
     ):
-        if user in self._nicklist:
+        if user in self._nicklist or self.type == "im":
             return
 
         nicklist_nick = nick if nick else user.nick(only_nick=True)
@@ -354,6 +354,8 @@ class SlackConversation(SlackBuffer):
         self._nicklist[user] = nick_pointer
 
     def nicklist_remove_user(self, user: Union[SlackUser, SlackBot]):
+        if self.type == "im":
+            return
         nick_pointer = self._nicklist.pop(user)
         weechat.nicklist_remove_nick(self.buffer_pointer, nick_pointer)
 
