@@ -203,23 +203,18 @@ class SlackMessage:
 
     @property
     def sender_user_id(self) -> Optional[str]:
-        if not self.is_bot_message:
-            return self._message_json.get("user")
+        return self._message_json.get("user")
 
     @property
     def sender_bot_id(self) -> Optional[str]:
-        if self.is_bot_message:
-            return self._message_json.get("bot_id")
+        return self._message_json.get("bot_id")
 
     @property
     async def sender(self) -> Union[SlackUser, SlackBot]:
-        if (
-            "subtype" in self._message_json
-            and self._message_json["subtype"] == "bot_message"
-        ):
-            return await self.workspace.bots[self._message_json["bot_id"]]
-        else:
+        if "user" in self._message_json:
             return await self.workspace.users[self._message_json["user"]]
+        else:
+            return await self.workspace.bots[self._message_json["bot_id"]]
 
     @property
     def priority(self) -> MessagePriority:
@@ -352,19 +347,16 @@ class SlackMessage:
         return self._rendered
 
     async def nick(self, colorize: bool = True, only_nick: bool = False) -> str:
-        if (
-            "subtype" in self._message_json
-            and self._message_json["subtype"] == "bot_message"
-        ):
+        if "user" in self._message_json:
+            user = await self.workspace.users[self._message_json["user"]]
+            return user.nick(colorize=colorize, only_nick=only_nick)
+        else:
             username = self._message_json.get("username")
             if username:
                 return format_bot_nick(username, colorize=colorize, only_nick=only_nick)
             else:
                 bot = await self.workspace.bots[self._message_json["bot_id"]]
                 return bot.nick(colorize=colorize, only_nick=only_nick)
-        else:
-            user = await self.workspace.users[self._message_json["user"]]
-            return user.nick(colorize=colorize, only_nick=only_nick)
 
     async def _render_prefix(
         self, colorize: bool = True, only_nick: bool = False
