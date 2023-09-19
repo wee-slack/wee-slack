@@ -4143,6 +4143,9 @@ def process_pong(message_json, eventrouter, team, channel, metadata):
 def process_message(
     message_json, eventrouter, team, channel, metadata, history_message=False
 ):
+    if channel is None:
+        return
+
     subtype = message_json.get("subtype")
     if (
         not history_message
@@ -4326,7 +4329,7 @@ def process_reply(message_json, eventrouter, team, channel, metadata):
 
 def process_channel_marked(message_json, eventrouter, team, channel, metadata):
     ts = message_json.get("ts")
-    if ts:
+    if ts and channel is not None:
         channel.mark_read(ts=ts, force=True, update_remote=False)
     else:
         dbg("tried to mark something weird {}".format(message_json))
@@ -4371,6 +4374,8 @@ def process_channel_created(message_json, eventrouter, team, channel, metadata):
 
 
 def process_channel_rename(message_json, eventrouter, team, channel, metadata):
+    if channel is None:
+        return
     channel.set_name(message_json["channel"]["name"])
 
 
@@ -4417,6 +4422,9 @@ def process_group_joined(message_json, eventrouter, team, channel, metadata):
 
 def process_reaction_added(message_json, eventrouter, team, channel, metadata):
     channel = team.channels.get(message_json["item"].get("channel"))
+    if channel is None:
+        return
+
     if message_json["item"].get("type") == "message":
         ts = SlackTS(message_json["item"]["ts"])
 
@@ -4430,6 +4438,9 @@ def process_reaction_added(message_json, eventrouter, team, channel, metadata):
 
 def process_reaction_removed(message_json, eventrouter, team, channel, metadata):
     channel = team.channels.get(message_json["item"].get("channel"))
+    if channel is None:
+        return
+
     if message_json["item"].get("type") == "message":
         ts = SlackTS(message_json["item"]["ts"])
 
@@ -4449,7 +4460,10 @@ def process_subteam_created(subteam_json, eventrouter, team, channel, metadata):
 
 
 def process_subteam_updated(subteam_json, eventrouter, team, channel, metadata):
-    current_subteam_info = team.subteams[subteam_json["subteam"]["id"]]
+    current_subteam_info = team.subteams.get(subteam_json["subteam"]["id"])
+    if current_subteam_info is None:
+        return
+
     is_member = team.myidentifier in subteam_json["subteam"].get("users", [])
     new_subteam_info = SlackSubteam(
         team.identifier, is_member=is_member, **subteam_json["subteam"]
