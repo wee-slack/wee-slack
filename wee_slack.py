@@ -1777,9 +1777,11 @@ class SlackTeam(object):
                     # only http proxy is currently supported
                     proxy = ProxyWrapper()
                     timeout = config.slack_timeout / 1000
+                    cookie = SlackRequest(self.team, "").options()["cookie"]
                     if proxy.has_proxy:
                         ws = create_connection(
                             self.ws_url,
+                            cookie=cookie,
                             timeout=timeout,
                             sslopt=sslopt_ca_certs,
                             http_proxy_host=proxy.proxy_address,
@@ -1788,7 +1790,10 @@ class SlackTeam(object):
                         )
                     else:
                         ws = create_connection(
-                            self.ws_url, timeout=timeout, sslopt=sslopt_ca_certs
+                            self.ws_url,
+                            cookie=cookie,
+                            timeout=timeout,
+                            sslopt=sslopt_ca_certs,
                         )
 
                     self.hook = w.hook_fd(
