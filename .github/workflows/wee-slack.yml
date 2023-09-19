@@ -2,49 +2,26 @@ name: wee-slack
 on: [push, pull_request]
 
 jobs:
-  lint:
+  test:
     if: >
       github.event_name == 'push' || (
         github.event_name == 'pull_request' &&
         github.event.pull_request.head.repo.full_name != github.repository
       )
+
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python_version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
+
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Set up Python (${{ matrix.python_version }})
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python_version }}
-
-    - uses: actions/cache@v2
-      env:
-        cache-name: lint-pip
-      with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-${{ matrix.python_version }}-${{ env.cache-name }}-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.python_version }}-${{ env.cache-name }}-
-
-    - name: Install Pipenv
-      run: |
-        pip install --upgrade pipenv
-
-    - uses: actions/cache@v2
-      env:
-        cache-name: lint-pipenv
-      with:
-        path: "$GITHUB_WORKSPACE/.venv"
-        key: ${{ runner.os }}-${{ matrix.python_version }}-${{ env.cache-name }}-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.python_version }}-${{ env.cache-name }}-
-
-    - name: Install dependencies
-      run: |
-        pipenv install --dev --skip-lock
+      - run: pip install --upgrade pipenv
+      - run: pipenv install --dev --skip-lock
 
     - name: Lint with Flake8
       run: |
@@ -58,50 +35,6 @@ jobs:
       run: |
         pipenv run black --check .
 
-  test:
-    if: >
-      github.event_name == 'push' || (
-        github.event_name == 'pull_request' &&
-        github.event.pull_request.head.repo.full_name != github.repository
-      )
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python_version: [3.7, 3.8, 3.9]
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up Python (${{ matrix.python_version }})
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python_version }}
-
-    - uses: actions/cache@v2
-      env:
-        cache-name: test-pip
-      with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-${{ matrix.python_version }}-${{ env.cache-name }}-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.python_version }}-${{ env.cache-name }}-
-
-    - name: Install Pipenv
-      run: |
-        pip install --upgrade pipenv
-
-    - uses: actions/cache@v2
-      env:
-        cache-name: test-pipenv
-      with:
-        path: "$GITHUB_WORKSPACE/.venv"
-        key: ${{ runner.os }}-${{ matrix.python_version }}-${{ env.cache-name }}-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.python_version }}-${{ env.cache-name }}-
-
-    - name: Install dependencies
-      run: |
-        pipenv install --dev --skip-lock
-
-    - name: python/test
-      run: |
-        pipenv run pytest
+      - name: python/test
+        run: |
+          pipenv run pytest
