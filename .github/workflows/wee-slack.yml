@@ -2,7 +2,7 @@ name: wee-slack
 on: [push, pull_request]
 
 jobs:
-  build:
+  test:
     if: >
       github.event_name == 'push' || (
         github.event_name == 'pull_request' &&
@@ -11,6 +11,7 @@ jobs:
 
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
 
@@ -31,7 +32,32 @@ jobs:
 
       - run: poetry run pytest tests
 
+  build:
+    if: >
+      github.event_name == 'push' || (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name != github.repository
+      )
+
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install WeeChat, tmux and python3-websocket
+        run: |
+          sudo apt-get update
+          sudo apt-get install weechat-headless tmux python3-websocket
+
       - run: ./build.sh
+
+      - name: Load slack.py in WeeChat
+        run: |
+          WEECHAT_DIR=$(mktemp -d)
+          tmux new-session -d "weechat-headless --dir $WEECHAT_DIR -r '/script load $PWD/build/slack.py; /quit'"
+          while pidof -q tmux; do :; done
+          cat $WEECHAT_DIR/logs/core.weechat.weechatlog
+          grep -q 'python: registered script "slack"' $WEECHAT_DIR/logs/core.weechat.weechatlog
 
       - uses: actions/upload-artifact@v3
         with:
