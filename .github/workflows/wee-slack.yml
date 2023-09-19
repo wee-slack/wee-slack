@@ -2,7 +2,7 @@ name: wee-slack
 on: [push, pull_request]
 
 jobs:
-  test:
+  build:
     if: >
       github.event_name == 'push' || (
         github.event_name == 'pull_request' &&
@@ -30,3 +30,10 @@ jobs:
       - run: poetry run pyright --pythonversion 3.7 main.py slack tests typings
 
       - run: poetry run pytest tests
+
+      - run: ./build.sh
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: slack.py
+          path: build/slack.py
