@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Dict
 
 import weechat
 
@@ -11,20 +11,16 @@ from slack.log import print_error
 
 if TYPE_CHECKING:
     from typing_extensions import NotRequired, TypedDict
-else:
-    TypedDict = Any
 
+    class EmojiSkinVariation(TypedDict):
+        name: str
+        unicode: str
 
-class EmojiSkinVariation(TypedDict):
-    name: str
-    unicode: str
-
-
-class Emoji(TypedDict):
-    aliasOf: NotRequired[str]
-    name: str
-    skinVariations: NotRequired[Dict[str, EmojiSkinVariation]]
-    unicode: str
+    class Emoji(TypedDict):
+        aliasOf: NotRequired[str]
+        name: str
+        skinVariations: NotRequired[Dict[str, EmojiSkinVariation]]
+        unicode: str
 
 
 def load_standard_emojis() -> Dict[str, Emoji]:
