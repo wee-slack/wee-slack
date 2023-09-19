@@ -254,6 +254,7 @@ class SlackWorkspace:
         self._ws = create_connection(
             url,
             self.config.network_timeout.value,
+            cookie=self.config.api_cookies.value,
             proxy_type=proxy.type,
             http_proxy_host=proxy.address,
             http_proxy_port=proxy.port,
