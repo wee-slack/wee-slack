@@ -689,13 +689,15 @@ class SlackMessage:
                     if "text" in block:
                         fields.insert(0, block["text"])
                     block_texts.extend(
-                        self._render_block_element(field) for field in fields
+                        [await self._render_block_element(field) for field in fields]
                     )
                 elif block["type"] == "actions":
                     texts: List[str] = []
                     for element in block["elements"]:
                         if element["type"] == "button":
-                            texts.append(self._render_block_element(element["text"]))
+                            texts.append(
+                                await self._render_block_element(element["text"])
+                            )
                             if "url" in element:
                                 texts.append(element["url"])
                         else:
@@ -714,14 +716,18 @@ class SlackMessage:
                 elif block["type"] == "context":
                     block_texts.append(
                         " | ".join(
-                            self._render_block_element(element)
-                            for element in block["elements"]
+                            [
+                                await self._render_block_element(element)
+                                for element in block["elements"]
+                            ]
                         )
                     )
                 elif block["type"] == "image":
                     if "title" in block:
-                        block_texts.append(self._render_block_element(block["title"]))
-                    block_texts.append(self._render_block_element(block))
+                        block_texts.append(
+                            await self._render_block_element(block["title"])
+                        )
+                    block_texts.append(await self._render_block_element(block))
                 elif block["type"] == "rich_text":
                     for element in block.get("elements", []):
                         if element["type"] == "rich_text_section":
@@ -876,13 +882,17 @@ class SlackMessage:
             text = f'<Unsupported rich text element type "{element["type"]}">'
             return with_color(shared.config.color.render_error.value, text)
 
-    def _render_block_element(
+    async def _render_block_element(
         self,
         element: Union[SlackMessageBlockCompositionText, SlackMessageBlockElementImage],
     ) -> str:
         if element["type"] == "plain_text" or element["type"] == "mrkdwn":
             # TODO: Support markdown, and verbatim and emoji properties
-            return element["text"]
+            # Looks like emoji and verbatim are only used when posting, so we don't need to care about them.
+            # We do have to resolve refs (users, dates etc.) and emojis for both plain_text and mrkdwn though.
+            # See a message for a poll from polly
+            # return element["text"]
+            return unhtmlescape(await self._unfurl_refs(element["text"]))
         elif element["type"] == "image":
             if element.get("alt_text"):
                 return f"{element['image_url']} ({element['alt_text']})"
