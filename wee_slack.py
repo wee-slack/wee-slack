@@ -3443,7 +3443,10 @@ class SlackMessage(object):
                 ),
             )
 
-        text = replace_string_with_emoji(text)
+        # replace_string_with_emoji() was called on blocks earlier via
+        # unfurl_blocks(), so exclude them here
+        text_to_replace = text[len(blocks_rendered) :]
+        text = text[: len(blocks_rendered)] + replace_string_with_emoji(text_to_replace)
 
         self.message_json["_rendered_text"] = text
         return text
