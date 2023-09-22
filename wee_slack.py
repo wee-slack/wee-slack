@@ -2524,7 +2524,7 @@ class SlackChannel(SlackChannelCommon):
             w.prnt_date_tags(self.channel_buffer, ts.major, tags, data)
             if no_log:
                 w.buffer_set(self.channel_buffer, "print_hooks_enabled", "1")
-            if backlog or self_msg:
+            if backlog or (self_msg and tagset != "join"):
                 self.mark_read(ts, update_remote=False, force=True)
 
     def store_message(self, message_to_store):
@@ -5290,7 +5290,7 @@ def tag(
     slack_tag = "slack_{}".format(tagset or "default")
     nick_tag = ["nick_{}".format(user).replace(" ", "_")] if user else []
     tags = [ts_tag, slack_tag] + nick_tag + tagsets.get(tagset, [])
-    if self_msg or backlog:
+    if (self_msg and tagset != "join") or backlog:
         tags = tags_set_notify_none(tags)
         if self_msg:
             tags += ["self_msg"]
