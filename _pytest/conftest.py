@@ -152,6 +152,8 @@ class FakeWeechat:
     def info_get(self, info_name, arguments):
         if info_name == "color_rgb2term":
             return arguments
+        elif info_name == "weechat_data_dir":
+            return "."
         else:
             return ""
 
