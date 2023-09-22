@@ -4351,7 +4351,14 @@ def process_thread_marked(message_json, eventrouter, team, channel, metadata):
 
 
 def process_channel_joined(message_json, eventrouter, team, channel, metadata):
-    channel.update_from_message_json(message_json["channel"])
+    if channel is None:
+        channel = create_channel_from_info(
+            eventrouter, message_json["channel"], team, team.myidentifier, team.users
+        )
+        team.channels[message_json["channel"]["id"]] = channel
+    else:
+        channel.update_from_message_json(message_json["channel"])
+
     channel.open()
 
 
