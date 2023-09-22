@@ -4614,7 +4614,7 @@ def unfurl_blocks(blocks):
                         lines = [
                             "> {}".format(line)
                             for e in element["elements"]
-                            for line in unfurl_block_element(e).split("\n")
+                            for line in unfurl_block_rich_text_element(e).split("\n")
                         ]
                         block_text.extend(lines)
                     elif element["type"] == "rich_text_preformatted":
@@ -4745,7 +4745,7 @@ def unfurl_rich_text_section(block):
         texts.extend(reversed(colors_remove))
         texts.extend(colors_apply)
         texts.extend(characters_apply)
-        texts.append(unfurl_block_element(element))
+        texts.append(unfurl_block_rich_text_element(element))
         prev_element = element
 
     text = "".join(texts)
@@ -4756,16 +4756,9 @@ def unfurl_rich_text_section(block):
         return text
 
 
-def unfurl_block_element(element):
-    if element["type"] == "mrkdwn":
-        return htmlescape(render_formatting(element["text"]))
-    elif element["type"] in ["text", "plain_text"]:
+def unfurl_block_rich_text_element(element):
+    if element["type"] == "text":
         return htmlescape(element["text"])
-    elif element["type"] == "image":
-        if element.get("alt_text"):
-            return "{} ({})".format(element["image_url"], element["alt_text"])
-        else:
-            return element["image_url"]
     elif element["type"] == "link":
         text = element.get("text")
         if text and text != element["url"]:
@@ -4785,6 +4778,24 @@ def unfurl_block_element(element):
         return resolve_ref("@{}".format(element["range"]))
     elif element["type"] == "channel":
         return resolve_ref("#{}".format(element["channel_id"]))
+    else:
+        dbg("Unsupported rich text element: '{}'".format(json.dumps(element)), level=4)
+        return colorize_string(
+            config.color_deleted,
+            '<<Unsupported rich text element type "{}">>'.format(element["type"]),
+        )
+
+
+def unfurl_block_element(element):
+    if element["type"] == "mrkdwn":
+        return render_formatting(element["text"])
+    elif element["type"] == "plain_text":
+        return element["text"]
+    elif element["type"] == "image":
+        if element.get("alt_text"):
+            return "{} ({})".format(element["image_url"], element["alt_text"])
+        else:
+            return element["image_url"]
     else:
         dbg("Unsupported block element: '{}'".format(json.dumps(element)), level=4)
         return colorize_string(
