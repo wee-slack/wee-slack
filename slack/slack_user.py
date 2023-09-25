@@ -32,11 +32,13 @@ def _name_from_user_info(workspace: SlackWorkspace, info: SlackUserInfo) -> str:
 def name_from_user_info_without_spaces(
     workspace: SlackWorkspace, info: SlackUserInfo
 ) -> str:
-    return _name_from_user_info(workspace, info).replace(" ", "")
+    return _name_from_user_info(workspace, info).replace(
+        " ", shared.config.look.replace_space_in_nicks_with.value
+    )
 
 
 def format_bot_nick(nick: str, colorize: bool = False, only_nick: bool = False) -> str:
-    nick = nick.replace(" ", "")
+    nick = nick.replace(" ", shared.config.look.replace_space_in_nicks_with.value)
 
     if colorize:
         nick = with_color(nick_color(nick), nick)

@@ -187,6 +187,13 @@ class SlackConfigSectionLook:
             string_values=["emoji", "name", "both"],
         )
 
+        self.replace_space_in_nicks_with = WeeChatOption(
+            self._section,
+            "replace_space_in_nicks_with",
+            "",
+            "",
+        )
+
         self.typing_status_nicks = WeeChatOption(
             self._section,
             "typing_status_nicks",
