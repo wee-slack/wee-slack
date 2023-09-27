@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfo
     from slack_api.slack_conversations_info import SlackConversationsInfo
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
+    from slack_api.slack_users_conversations import SlackUsersConversations
     from slack_api.slack_users_info import SlackUserInfo
     from slack_rtm.slack_rtm_message import SlackRtmMessage
 else:
@@ -242,11 +243,24 @@ class SlackWorkspace:
         )
         channels = users_conversations_response["channels"]
         self.conversations.initialize_items(channel["id"] for channel in channels)
-        for channel in channels:
-            conversation = await self.conversations[channel["id"]]
-            run_async(conversation.open_if_open())
+
+        conversations_if_should_open = await gather(
+            *(self._conversation_if_should_open(channel) for channel in channels)
+        )
+        conversations_to_open = [
+            c for c in conversations_if_should_open if c is not None
+        ]
+
+        for _, conversation in sorted(conversations_to_open):
+            await conversation.open_buffer()
 
         self.is_connected = True
+
+    async def _conversation_if_should_open(self, info: SlackUsersConversations):
+        conversation = await self.conversations[info["id"]]
+        if conversation.should_open():
+            sort_key = await conversation.sort_key()
+            return sort_key, conversation
 
     async def _connect_ws(self, url: str):
         proxy = Proxy()
