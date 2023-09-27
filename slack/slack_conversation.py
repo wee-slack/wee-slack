@@ -183,16 +183,18 @@ class SlackConversation(SlackBuffer):
         self,
         name_type: Literal["full_name", "short_name", "short_name_without_padding"],
     ) -> str:
-        if self._info["is_im"] is True:
+        if self.type == "im":
             if name_type == "short_name":
                 return " "
             else:
                 return ""
-        elif self._info["is_mpim"]:
+        elif self.type == "mpim":
             if name_type == "short_name" or name_type == "short_name_without_padding":
                 return "@"
             else:
                 return ""
+        elif self.type == "private":
+            return "&"
         else:
             return "#"
 
