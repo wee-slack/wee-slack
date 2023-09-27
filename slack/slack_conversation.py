@@ -152,6 +152,16 @@ class SlackConversation(SlackBuffer):
     def buffer_type(self) -> Literal["private", "channel"]:
         return "private" if self.type in ("im", "mpim") else "channel"
 
+    async def sort_key(self) -> str:
+        type_sort_key = {
+            "channel": 0,
+            "private": 1,
+            "mpim": 2,
+            "im": 3,
+        }[self.type]
+        name = await self.name()
+        return f"{type_sort_key}{name}".lower()
+
     async def name(self) -> str:
         if self._info["is_im"] is True:
             im_user = await self.workspace.users[self._info["user"]]
@@ -192,12 +202,13 @@ class SlackConversation(SlackBuffer):
     ) -> str:
         return f"{self.name_prefix(name_type)}{await self.name()}"
 
-    async def open_if_open(self):
+    def should_open(self):
         if "is_open" in self._info:
             if self._info["is_open"]:
-                await self.open_buffer()
+                return True
         elif self._info.get("is_member"):
-            await self.open_buffer()
+            return True
+        return False
 
     async def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
         name_without_prefix = await self.name()
