@@ -4729,35 +4729,29 @@ def unfurl_rich_text_section(block):
         colors_remove = []
         characters_apply = []
         characters_remove = []
-        if element.get("style", {}).get("bold") != prev_element.get("style", {}).get(
-            "bold"
-        ):
-            if element.get("style", {}).get("bold"):
+        prev_style = prev_element.get("style", {})
+        cur_style = element.get("style", {})
+        if cur_style.get("bold", False) != prev_style.get("bold", False):
+            if cur_style.get("bold"):
                 colors_apply.append(w.color(config.render_bold_as))
                 characters_apply.append("*")
             else:
                 colors_remove.append(w.color("-" + config.render_bold_as))
                 characters_remove.append("*")
-        if element.get("style", {}).get("italic") != prev_element.get("style", {}).get(
-            "italic"
-        ):
-            if element.get("style", {}).get("italic"):
+        if cur_style.get("italic", False) != prev_style.get("italic", False):
+            if cur_style.get("italic"):
                 colors_apply.append(w.color(config.render_italic_as))
                 characters_apply.append("_")
             else:
                 colors_remove.append(w.color("-" + config.render_italic_as))
                 characters_remove.append("_")
-        if element.get("style", {}).get("strike") != prev_element.get("style", {}).get(
-            "strike"
-        ):
-            if element.get("style", {}).get("strike"):
+        if cur_style.get("strike", False) != prev_style.get("strike", False):
+            if cur_style.get("strike"):
                 characters_apply.append("~")
             else:
                 characters_remove.append("~")
-        if element.get("style", {}).get("code") != prev_element.get("style", {}).get(
-            "code"
-        ):
-            if element.get("style", {}).get("code"):
+        if cur_style.get("code", False) != prev_style.get("code", False):
+            if cur_style.get("code"):
                 characters_apply.append("`")
             else:
                 characters_remove.append("`")
