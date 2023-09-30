@@ -217,6 +217,10 @@ class SlackMessage:
             return await self.workspace.bots[self._message_json["bot_id"]]
 
     @property
+    def reactions(self) -> List[SlackMessageReaction]:
+        return self._message_json.get("reactions", [])
+
+    @property
     def priority(self) -> MessagePriority:
         return MessagePriority.MESSAGE
 
@@ -603,7 +607,6 @@ class SlackMessage:
 
     async def _create_reaction_string(self, reaction: SlackMessageReaction) -> str:
         if self.conversation.display_reaction_nicks():
-            # TODO: initialize_items?
             users = await gather(
                 *(self.workspace.users[user_id] for user_id in reaction["users"])
             )
