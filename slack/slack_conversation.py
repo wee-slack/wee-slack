@@ -380,6 +380,14 @@ class SlackConversation(SlackBuffer):
             return bool(weechat.config_string_to_boolean(buffer_value))
         return shared.config.look.display_thread_replies_in_channel.value
 
+    def display_reaction_nicks(self) -> bool:
+        buffer_value = weechat.buffer_get_string(
+            self.buffer_pointer, "localvar_display_reaction_nicks"
+        )
+        if buffer_value:
+            return bool(weechat.config_string_to_boolean(buffer_value))
+        return shared.config.look.display_reaction_nicks.value
+
     def should_display_message(self, message: SlackMessage) -> bool:
         return (
             not message.is_reply
