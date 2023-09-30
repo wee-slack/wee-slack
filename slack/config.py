@@ -159,7 +159,7 @@ class SlackConfigSectionLook:
         self.display_reaction_nicks = WeeChatOption(
             self._section,
             "display_reaction_nicks",
-            "display the name of the reacting user(s) after each reaction",
+            "display the name of the reacting user(s) after each reaction; can be overridden per buffer with the buffer localvar display_reaction_nicks",
             False,
         )
 
