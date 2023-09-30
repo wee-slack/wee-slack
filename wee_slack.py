@@ -6616,6 +6616,7 @@ def setup_hooks():
     w.hook_command_run(
         "/input set_unread_current_buffer", "set_unread_current_buffer_cb", ""
     )
+    w.hook_command_run("/buffer set unread", "set_unread_current_buffer_cb", "")
     w.hook_command_run("/away", "away_command_cb", "")
     w.hook_command_run("/whois", "whois_command_cb", "")
 
