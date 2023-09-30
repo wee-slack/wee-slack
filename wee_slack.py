@@ -3553,7 +3553,7 @@ class SlackMessage(object):
 
         self.last_notify = max(message.ts, SlackTS())
 
-        if config.auto_open_threads:
+        if config.auto_open_threads and self.subscribed:
             self.open_thread()
 
         if message.user_identifier != self.team.myidentifier and (
