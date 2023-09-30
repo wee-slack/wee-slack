@@ -313,7 +313,17 @@ class SlackConversation(SlackBuffer):
             ]
 
             sender_user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
-            self.workspace.users.initialize_items(sender_user_ids)
+            if self.display_reaction_nicks():
+                reaction_user_ids = [
+                    user_id
+                    for m in messages
+                    for reaction in m.reactions
+                    for user_id in reaction["users"]
+                ]
+                user_ids = sender_user_ids + reaction_user_ids
+            else:
+                user_ids = sender_user_ids
+            self.workspace.users.initialize_items(user_ids)
 
             sender_bot_ids = [
                 m.sender_bot_id
