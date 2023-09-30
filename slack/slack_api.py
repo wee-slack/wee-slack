@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from itertools import chain
 from typing import TYPE_CHECKING, Iterable, Mapping, Optional, Sequence, Union
 from urllib.parse import urlencode
 
@@ -8,6 +9,8 @@ from slack.error import SlackApiError
 from slack.http import http_request
 from slack.shared import shared
 from slack.slack_message import SlackTs
+from slack.task import gather
+from slack.util import chunked
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfoResponse, SlackBotsInfoResponse
@@ -204,12 +207,23 @@ class SlackApi(SlackApiCommon):
             raise SlackApiError(self.workspace, method, response, params)
         return response
 
-    async def fetch_users_info(self, user_ids: Iterable[str]):
+    async def _fetch_users_info_without_splitting(self, user_ids: Iterable[str]):
         method = "users.info"
         params: Params = {"users": ",".join(user_ids)}
         response: SlackUsersInfoResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def fetch_users_info(self, user_ids: Iterable[str]):
+        responses = await gather(
+            *(
+                self._fetch_users_info_without_splitting(user_ids_batch)
+                for user_ids_batch in chunked(user_ids, 1000)
+            )
+        )
+        users = list(chain(*(response["users"] for response in responses)))
+        response: SlackUsersInfoResponse = {"ok": True, "users": users}
         return response
 
     async def fetch_bot_info(self, bot_id: str):
