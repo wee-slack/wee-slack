@@ -195,6 +195,13 @@ class SlackMessage:
         return self.conversation.messages.get(self.thread_ts)
 
     @property
+    def last_read(self) -> SlackTs:
+        if "last_read" in self._message_json:
+            return SlackTs(self._message_json["last_read"])
+        else:
+            return SlackTs("0.0")
+
+    @property
     def is_bot_message(self) -> bool:
         return (
             "subtype" in self._message_json
@@ -290,7 +297,7 @@ class SlackMessage:
 
         return False
 
-    async def tags(self, backlog: bool = False) -> str:
+    async def tags(self, backlog: bool) -> str:
         nick = await self.nick(colorize=False, only_nick=True)
         tags = [f"slack_ts_{self.ts}", f"nick_{nick}"]
 

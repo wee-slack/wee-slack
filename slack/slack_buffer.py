@@ -176,6 +176,11 @@ class SlackBuffer(ABC):
     def messages(self) -> Mapping[SlackTs, SlackMessage]:
         raise NotImplementedError()
 
+    @property
+    @abstractmethod
+    def last_read(self) -> SlackTs:
+        raise NotImplementedError()
+
     @abstractmethod
     async def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
         raise NotImplementedError()
@@ -246,9 +251,10 @@ class SlackBuffer(ABC):
             self._typing_self_last_sent = now
             self.workspace.send_typing(self)
 
-    async def print_message(self, message: SlackMessage, backlog: bool = False):
+    async def print_message(self, message: SlackMessage):
         rendered = await message.render(self.context)
-        tags = await message.tags(backlog=backlog)
+        backlog = message.ts <= self.last_read
+        tags = await message.tags(backlog)
         weechat.prnt_date_tags(self.buffer_pointer, message.ts.major, tags, rendered)
 
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:

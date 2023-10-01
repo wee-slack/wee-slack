@@ -30,6 +30,10 @@ class SlackThread(SlackBuffer):
     def messages(self) -> Mapping[SlackTs, SlackMessage]:
         return self.parent.replies
 
+    @property
+    def last_read(self) -> SlackTs:
+        return self.parent.last_read
+
     async def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
         conversation_name = await self.parent.conversation.name_with_prefix("full_name")
         name = f"{conversation_name}.${self.parent.hash}"
@@ -58,7 +62,7 @@ class SlackThread(SlackBuffer):
         with self.loading():
             messages = chain([self.parent], self.parent.replies.values())
             for message in messages:
-                await self.print_message(message, backlog=True)
+                await self.print_message(message)
 
     async def fill_history(self):
         if self.history_pending:
