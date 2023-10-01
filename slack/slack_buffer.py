@@ -259,6 +259,29 @@ class SlackBuffer(ABC):
         if backlog:
             weechat.buffer_set(self.buffer_pointer, "unread", "")
 
+    def last_read_line_ts(self) -> Optional[SlackTs]:
+        if self.buffer_pointer:
+            own_lines = weechat.hdata_pointer(
+                weechat.hdata_get("buffer"), self.buffer_pointer, "own_lines"
+            )
+            first_line_not_read = weechat.hdata_integer(
+                weechat.hdata_get("lines"), own_lines, "first_line_not_read"
+            )
+            if first_line_not_read:
+                return
+            line = weechat.hdata_pointer(
+                weechat.hdata_get("lines"), own_lines, "last_read_line"
+            )
+            while line:
+                ts = hdata_line_ts(line)
+                if ts:
+                    return ts
+                line = weechat.hdata_move(weechat.hdata_get("line"), line, -1)
+
+    @abstractmethod
+    async def mark_read(self) -> None:
+        raise NotImplementedError()
+
     def set_unread_and_hotlist(self):
         if self.buffer_pointer:
             # TODO: Move unread marker to correct position according to last_read for WeeChat >= 4.0.0

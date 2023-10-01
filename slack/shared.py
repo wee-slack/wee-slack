@@ -25,6 +25,7 @@ class Shared:
         self.active_futures: Dict[str, Future[object]] = {}
         self.buffers: Dict[str, SlackBuffer] = {}
         self.workspaces: Dict[str, SlackWorkspace] = {}
+        self.current_buffer_pointer: str
         self.config: SlackConfig
         self.uncaught_errors: List[UncaughtError] = []
         self.standard_emojis: Dict[str, Emoji]

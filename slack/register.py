@@ -20,9 +20,18 @@ def shutdown_cb():
 
 
 def signal_buffer_switch_cb(data: str, signal: str, buffer_pointer: str) -> int:
+    prev_buffer_pointer = shared.current_buffer_pointer
+    shared.current_buffer_pointer = buffer_pointer
+
+    if prev_buffer_pointer != buffer_pointer:
+        prev_slack_buffer = shared.buffers.get(prev_buffer_pointer)
+        if prev_slack_buffer:
+            run_async(prev_slack_buffer.mark_read())
+
     slack_buffer = shared.buffers.get(buffer_pointer)
     if slack_buffer:
         run_async(slack_buffer.buffer_switched_to())
+
     return weechat.WEECHAT_RC_OK
 
 
@@ -105,6 +114,7 @@ def register():
         "",
     ):
         shared.weechat_version = int(weechat.info_get("version_number", "") or 0)
+        shared.current_buffer_pointer = weechat.current_buffer()
         shared.standard_emojis = load_standard_emojis()
         shared.workspaces = {}
         shared.config = SlackConfig()
@@ -113,9 +123,6 @@ def register():
 
         weechat.hook_signal(
             "buffer_switch", get_callback_name(signal_buffer_switch_cb), ""
-        )
-        weechat.hook_signal(
-            "window_switch", get_callback_name(signal_buffer_switch_cb), ""
         )
         weechat.hook_signal(
             "input_text_changed", get_callback_name(input_text_changed_cb), ""

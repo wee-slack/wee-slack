@@ -18,7 +18,7 @@ from slack.slack_conversation import SlackConversation
 from slack.slack_thread import SlackThread
 from slack.slack_user import name_from_user_info_without_spaces
 from slack.slack_workspace import SlackWorkspace
-from slack.task import run_async
+from slack.task import run_async, sleep
 from slack.util import get_callback_name, with_color
 from slack.weechat_config import WeeChatOption, WeeChatOptionTypes
 
@@ -532,6 +532,19 @@ def complete_previous(slack_buffer: SlackBuffer, query: str) -> int:
     return weechat.WEECHAT_RC_OK
 
 
+async def mark_read(slack_buffer: SlackBuffer):
+    # Sleep so the read marker is updated before we run slack_buffer.mark_read
+    await sleep(1)
+    await slack_buffer.mark_read()
+
+
+def buffer_set_unread_cb(data: str, buffer: str, command: str) -> int:
+    slack_buffer = shared.buffers.get(buffer)
+    if slack_buffer:
+        run_async(mark_read(slack_buffer))
+    return weechat.WEECHAT_RC_OK
+
+
 def input_complete_cb(data: str, buffer: str, command: str) -> int:
     slack_buffer = shared.buffers.get(buffer)
     if slack_buffer:
@@ -557,6 +570,15 @@ def input_complete_cb(data: str, buffer: str, command: str) -> int:
 
 
 def register_commands():
+    weechat.hook_command_run(
+        "/buffer set unread", get_callback_name(buffer_set_unread_cb), ""
+    )
+    weechat.hook_command_run(
+        "/buffer set unread *", get_callback_name(buffer_set_unread_cb), ""
+    )
+    weechat.hook_command_run(
+        "/input set_unread_current_buffer", get_callback_name(buffer_set_unread_cb), ""
+    )
     weechat.hook_command_run(
         "/input complete_*", get_callback_name(input_complete_cb), ""
     )

@@ -529,3 +529,8 @@ class SlackConversation(SlackBuffer):
         else:
             nick = await message.nick(colorize=False, only_nick=True)
             self.nicklist_add_user(sender, nick)
+
+    async def mark_read(self):
+        last_read_line_ts = self.last_read_line_ts()
+        if last_read_line_ts and last_read_line_ts != self.last_read:
+            await self._api.conversations_mark(self, last_read_line_ts)
