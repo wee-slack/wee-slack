@@ -152,6 +152,10 @@ class SlackConversation(SlackBuffer):
     def buffer_type(self) -> Literal["private", "channel"]:
         return "private" if self.type in ("im", "mpim") else "channel"
 
+    @property
+    def last_read(self) -> SlackTs:
+        return SlackTs(self._info["last_read"])
+
     async def sort_key(self) -> str:
         type_sort_key = {
             "channel": 0,
@@ -335,7 +339,7 @@ class SlackConversation(SlackBuffer):
             await gather(*(message.render(self.context) for message in messages))
 
             for message in messages:
-                await self.print_message(message, backlog=True)
+                await self.print_message(message)
 
             self.history_filled = True
             self.history_pending = False
@@ -512,8 +516,8 @@ class SlackConversation(SlackBuffer):
                 thread_message.thread_buffer = SlackThread(thread_message)
             await thread_message.thread_buffer.open_buffer(switch)
 
-    async def print_message(self, message: SlackMessage, backlog: bool = False):
-        await super().print_message(message, backlog)
+    async def print_message(self, message: SlackMessage):
+        await super().print_message(message)
         sender = await message.sender
         if message.subtype in ["channel_leave", "group_leave"]:
             self.nicklist_remove_user(sender)
