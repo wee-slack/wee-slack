@@ -256,6 +256,8 @@ class SlackBuffer(ABC):
         backlog = message.ts <= self.last_read
         tags = await message.tags(backlog)
         weechat.prnt_date_tags(self.buffer_pointer, message.ts.major, tags, rendered)
+        if backlog:
+            weechat.buffer_set(self.buffer_pointer, "unread", "")
 
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
         weechat.prnt(buffer, "Text: %s" % input_data)
