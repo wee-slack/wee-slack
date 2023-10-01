@@ -156,6 +156,11 @@ class SlackConversation(SlackBuffer):
     def last_read(self) -> SlackTs:
         return SlackTs(self._info["last_read"])
 
+    @last_read.setter
+    def last_read(self, value: SlackTs):
+        self._info["last_read"] = value
+        self.set_unread_and_hotlist()
+
     async def sort_key(self) -> str:
         type_sort_key = {
             "channel": 0,
