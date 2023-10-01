@@ -144,6 +144,60 @@ class SlackReactionRemoved(TypedDict):
     event_ts: str
     ts: str
 
+class SlackNotImMarked(TypedDict):
+    channel: str
+    ts: str
+    unread_count: int
+    unread_count_display: int
+    num_mentions: int
+    num_mentions_display: int
+    mention_count: int
+    mention_count_display: int
+    event_ts: str
+
+@final
+class SlackChannelMarked(SlackNotImMarked):
+    type: Literal["channel_marked"]
+
+@final
+class SlackGroupMarked(SlackNotImMarked):
+    type: Literal["group_marked"]
+    is_mpim: Literal[False]
+
+@final
+class SlackMpImMarked(SlackNotImMarked):
+    type: Literal["mpim_marked"]
+    is_mpim: Literal[True]
+
+@final
+class SlackImMarked(TypedDict):
+    type: Literal["im_marked"]
+    channel: str
+    ts: str
+    dm_count: int
+    unread_count_display: int
+    num_mentions_display: int
+    mention_count_display: int
+    event_ts: str
+
+class SlackThreadSubscription(TypedDict):
+    type: Literal["thread"]
+    channel: str
+    thread_ts: str
+    date_create: int
+    active: bool
+    last_read: str
+
+# Dummy event to make sure we check that subscription is of type thead when used
+class SlackThreadSubscriptionUnknown(TypedDict):
+    type: Literal["unknown"]
+
+@final
+class SlackThreadMarked(TypedDict):
+    type: Literal["thread_marked"]
+    subscription: SlackThreadSubscription | SlackThreadSubscriptionUnknown
+    event_ts: str
+
 class SlackShRoomHuddle(TypedDict):
     channel_id: str
 
@@ -197,6 +251,11 @@ SlackRtmMessage = (
     | SlackMessageReplied
     | SlackReactionAdded
     | SlackReactionRemoved
+    | SlackChannelMarked
+    | SlackGroupMarked
+    | SlackMpImMarked
+    | SlackImMarked
+    | SlackThreadMarked
     | SlackShRoomJoin
     | SlackShRoomUpdate
     | SlackUserTyping

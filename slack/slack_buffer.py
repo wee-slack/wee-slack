@@ -259,6 +259,12 @@ class SlackBuffer(ABC):
         if backlog:
             weechat.buffer_set(self.buffer_pointer, "unread", "")
 
+    def set_unread_and_hotlist(self):
+        if self.buffer_pointer:
+            # TODO: Move unread marker to correct position according to last_read for WeeChat >= 4.0.0
+            weechat.buffer_set(self.buffer_pointer, "unread", "")
+            weechat.buffer_set(self.buffer_pointer, "hotlist", "-1")
+
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
         weechat.prnt(buffer, "Text: %s" % input_data)
         return weechat.WEECHAT_RC_OK

@@ -320,6 +320,11 @@ class SlackWorkspace:
                 return
             elif data["type"] == "reaction_added" or data["type"] == "reaction_removed":
                 channel_id = data["item"]["channel"]
+            elif (
+                data["type"] == "thread_marked"
+                and data["subscription"]["type"] == "thread"
+            ):
+                channel_id = data["subscription"]["channel"]
             elif data["type"] == "sh_room_join" or data["type"] == "sh_room_update":
                 channel_id = data["huddle"]["channel_id"]
             elif "channel" in data and type(data["channel"]) == str:
@@ -356,6 +361,22 @@ class SlackWorkspace:
                 await channel.reaction_remove(
                     SlackTs(data["item"]["ts"]), data["reaction"], data["user"]
                 )
+            elif (
+                data["type"] == "channel_marked"
+                or data["type"] == "group_marked"
+                or data["type"] == "mpim_marked"
+                or data["type"] == "im_marked"
+            ):
+                channel.last_read = SlackTs(data["ts"])
+            elif (
+                data["type"] == "thread_marked"
+                and data["subscription"]["type"] == "thread"
+            ):
+                message = channel.messages.get(
+                    SlackTs(data["subscription"]["thread_ts"])
+                )
+                if message:
+                    message.last_read = SlackTs(data["subscription"]["last_read"])
             elif data["type"] == "sh_room_join" or data["type"] == "sh_room_update":
                 await channel.update_message_room(data)
             elif data["type"] == "user_typing":

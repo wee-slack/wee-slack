@@ -201,6 +201,17 @@ class SlackMessage:
         else:
             return SlackTs("0.0")
 
+    @last_read.setter
+    def last_read(self, value: SlackTs):
+        if "last_read" in self._message_json:
+            self._message_json["last_read"] = value
+            if self.thread_buffer:
+                self.thread_buffer.set_unread_and_hotlist()
+        else:
+            raise SlackError(
+                self.workspace, "Cannot set last_read on a message without last_read"
+            )
+
     @property
     def is_bot_message(self) -> bool:
         return (
