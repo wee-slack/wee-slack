@@ -91,3 +91,18 @@ class SlackThread(SlackBuffer):
             await self.print_history()
 
             self.history_pending = False
+
+    async def mark_read(self):
+        # subscriptions.thread.mark is only available for session tokens
+        if self.workspace.token_type != "session":
+            return
+
+        # last_read can only be set if it exists (which is on threads you're subscribed to)
+        if self.last_read == SlackTs("0.0"):
+            return
+
+        last_read_line_ts = self.last_read_line_ts()
+        if last_read_line_ts and last_read_line_ts != self.last_read:
+            await self._api.subscriptions_thread_mark(
+                self.parent.conversation, self.parent.ts, last_read_line_ts
+            )

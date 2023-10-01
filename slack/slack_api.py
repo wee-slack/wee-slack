@@ -14,6 +14,7 @@ from slack.util import chunked
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfoResponse, SlackBotsInfoResponse
+    from slack_api.slack_common import SlackGenericResponse
     from slack_api.slack_conversations_history import SlackConversationsHistoryResponse
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
     from slack_api.slack_conversations_members import SlackConversationsMembersResponse
@@ -49,7 +50,7 @@ class SlackApiCommon:
 class SlackEdgeApi(SlackApiCommon):
     @property
     def is_available(self) -> bool:
-        return self.workspace.config.api_token.value.startswith("xoxc-")
+        return self.workspace.token_type == "session"
 
     async def _fetch_edgeapi(self, method: str, params: EdgeParams = {}):
         enterprise_id_part = (
@@ -247,4 +248,27 @@ class SlackApi(SlackApiCommon):
         response: SlackUsergroupsInfoResponse = await self._fetch(method)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response)
+        return response
+
+    async def conversations_mark(self, conversation: SlackConversation, ts: SlackTs):
+        method = "conversations.mark"
+        params: Params = {"channel": conversation.id, "ts": ts}
+        response: SlackGenericResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def subscriptions_thread_mark(
+        self, conversation: SlackConversation, thread_ts: SlackTs, ts: SlackTs
+    ):
+        method = "subscriptions.thread.mark"
+        params: Params = {
+            "channel": conversation.id,
+            "thread_ts": thread_ts,
+            "ts": ts,
+            "read": 1,
+        }
+        response: SlackGenericResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
         return response

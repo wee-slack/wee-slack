@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from slack_api.slack_users_conversations import SlackUsersConversations
     from slack_api.slack_users_info import SlackUserInfo
     from slack_rtm.slack_rtm_message import SlackRtmMessage
+    from typing_extensions import Literal
 else:
     SlackBotInfo = object
     SlackConversationsInfo = object
@@ -195,6 +196,15 @@ class SlackWorkspace:
 
     def __repr__(self):
         return f"{self.__class__.__name__}('{self.name}')"
+
+    @property
+    def token_type(self) -> Literal["oauth", "session", "unknown"]:
+        if self.config.api_token.value.startswith("xoxp-"):
+            return "oauth"
+        elif self.config.api_token.value.startswith("xoxc-"):
+            return "session"
+        else:
+            return "unknown"
 
     @property
     def is_connected(self):
