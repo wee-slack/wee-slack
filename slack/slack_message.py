@@ -252,7 +252,9 @@ class SlackMessage:
         self._rendered_message = None
 
     def update_message_json(self, message_json: SlackMessageDict):
-        self._message_json = message_json
+        self._message_json.update(
+            message_json  # pyright: ignore [reportGeneralTypeIssues]
+        )
         self._rendered_prefix = None
         self._rendered_message = None
 
