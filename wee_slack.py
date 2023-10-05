@@ -4978,6 +4978,11 @@ def unwrap_attachments(message, text_before):
                 ts = attachment.get("ts")
                 if ts:
                     ts_int = ts if isinstance(ts, int) else SlackTS(ts).major
+                    if ts_int > 100000000000:
+                        # The Slack web interface interprets very large timestamps
+                        # as milliseconds after the epoch instead of regular Unix
+                        # timestamps. We use the same heuristic here.
+                        ts_int = ts_int // 1000
                     time_string = ""
                     if date.today() - date.fromtimestamp(ts_int) <= timedelta(days=1):
                         time_string = " at {time}"
