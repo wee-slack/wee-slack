@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Dict, List, Mapping, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Mapping, Optional, Set, Tuple
 
 import weechat
 
@@ -127,8 +127,11 @@ class SlackBuffer(ABC):
         # TODO: buffer_pointer may be accessed by buffer_switch before it's initialized
         self.buffer_pointer: str = ""
         self.is_loading = False
-        self.history_filled = False
         self.history_pending = False
+        self.history_pending_messages: List[SlackMessage] = []
+        self.history_needs_refresh = False
+        self.last_printed_ts: Optional[SlackTs] = None
+        self.hotlist_tss: Set[SlackTs] = set()
 
         self.completion_context: Literal[
             "NO_COMPLETION",
@@ -185,9 +188,8 @@ class SlackBuffer(ABC):
     async def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
         raise NotImplementedError()
 
-    @abstractmethod
     async def buffer_switched_to(self) -> None:
-        raise NotImplementedError()
+        self.hotlist_tss.clear()
 
     def get_full_name(self, name: str) -> str:
         return f"{shared.SCRIPT_NAME}.{self.workspace.name}.{name}"
@@ -234,6 +236,10 @@ class SlackBuffer(ABC):
         for key, value in buffer_props.items():
             weechat.buffer_set(self.buffer_pointer, key, value)
 
+    @abstractmethod
+    async def set_hotlist(self) -> None:
+        raise NotImplementedError()
+
     async def rerender_message(self, message: SlackMessage):
         modify_buffer_line(
             self.buffer_pointer,
@@ -258,6 +264,9 @@ class SlackBuffer(ABC):
         weechat.prnt_date_tags(self.buffer_pointer, message.ts.major, tags, rendered)
         if backlog:
             weechat.buffer_set(self.buffer_pointer, "unread", "")
+        else:
+            self.hotlist_tss.add(message.ts)
+        self.last_printed_ts = message.ts
 
     def last_read_line_ts(self) -> Optional[SlackTs]:
         if self.buffer_pointer:
@@ -287,6 +296,7 @@ class SlackBuffer(ABC):
             # TODO: Move unread marker to correct position according to last_read for WeeChat >= 4.0.0
             weechat.buffer_set(self.buffer_pointer, "unread", "")
             weechat.buffer_set(self.buffer_pointer, "hotlist", "-1")
+            self.hotlist_tss.clear()
 
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
         weechat.prnt(buffer, "Text: %s" % input_data)
@@ -296,5 +306,5 @@ class SlackBuffer(ABC):
         if self.buffer_pointer in shared.buffers:
             del shared.buffers[self.buffer_pointer]
         self.buffer_pointer = ""
-        self.history_filled = False
+        self.last_printed_ts = None
         return weechat.WEECHAT_RC_OK
