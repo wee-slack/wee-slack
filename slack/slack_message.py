@@ -91,10 +91,10 @@ def convert_int_to_roman(num: int) -> str:
 
 
 class MessagePriority(Enum):
-    LOW = 0
-    MESSAGE = 1
-    PRIVATE = 2
-    HIGHLIGHT = 3
+    LOW = weechat.WEECHAT_HOTLIST_LOW
+    MESSAGE = weechat.WEECHAT_HOTLIST_MESSAGE
+    PRIVATE = weechat.WEECHAT_HOTLIST_PRIVATE
+    HIGHLIGHT = weechat.WEECHAT_HOTLIST_HIGHLIGHT
 
 
 class SlackTs(str):
@@ -238,9 +238,35 @@ class SlackMessage:
     def reactions(self) -> List[SlackMessageReaction]:
         return self._message_json.get("reactions", [])
 
+    # This does not account for highlights
     @property
     def priority(self) -> MessagePriority:
-        return MessagePriority.MESSAGE
+        if self.subtype in [
+            "channel_join",
+            "group_join",
+            "channel_leave",
+            "group_leave",
+        ]:
+            return MessagePriority.LOW
+        elif self.conversation.buffer_type == "private":
+            return MessagePriority.PRIVATE
+        else:
+            return MessagePriority.MESSAGE
+
+    # This does not account for highlights
+    @property
+    def priority_notify_tag(self) -> Optional[str]:
+        priority = self.priority
+        if priority == MessagePriority.HIGHLIGHT:
+            return "notify_highlight"
+        elif priority == MessagePriority.PRIVATE:
+            return "notify_private"
+        elif priority == MessagePriority.MESSAGE:
+            return "notify_message"
+        elif priority == MessagePriority.LOW:
+            return None
+        else:
+            assert_never(priority)
 
     @property
     def deleted(self) -> bool:
@@ -351,7 +377,10 @@ class SlackMessage:
             elif await self.should_highlight():
                 log_tags = ["notify_highlight", "log1"]
             else:
-                log_tags = ["notify_message", "log1"]
+                log_tags = ["log1"]
+                notify_tag = self.priority_notify_tag
+                if notify_tag:
+                    log_tags.append(notify_tag)
 
         if backlog:
             tags += ["no_highlight", "notify_none", "logger_backlog", "no_log"]
