@@ -423,7 +423,7 @@ class SlackConversation(SlackBuffer):
                 await self.print_message(message)
             else:
                 weechat.buffer_set(
-                    self.buffer_pointer, "hotlist", str(message.priority.value)
+                    self.buffer_pointer, "hotlist", message.priority.value
                 )
 
         parent_message = message.parent_message
