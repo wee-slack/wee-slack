@@ -94,6 +94,15 @@ async def http_request_url(
     if "error" in output:
         raise HttpError(url, options, None, None, output["error"])
 
+    if "response_code" not in output:
+        raise HttpError(
+            url,
+            options,
+            None,
+            None,
+            f"Unexpectedly missing response_code, output: {output}",
+        )
+
     http_status = int(output["response_code"])
     header_parts = output["headers"].split("\r\n\r\nHTTP/")
     return http_status, header_parts[-1], output["output"]
