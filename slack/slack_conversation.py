@@ -290,6 +290,20 @@ class SlackConversation(SlackBuffer):
         parent_message.reply_history_filled = True
         return replies
 
+    async def set_hotlist(self):
+        history = await self._api.fetch_conversations_history(self)
+        if self.buffer_pointer and shared.current_buffer_pointer != self.buffer_pointer:
+            for message_json in history["messages"]:
+                message = SlackMessage(self, message_json)
+                if message.ts > self.last_read or (
+                    self.display_thread_replies()
+                    and message.latest_reply
+                    and message.latest_reply > message.last_read
+                ):
+                    weechat.buffer_set(
+                        self.buffer_pointer, "hotlist", message.priority.value
+                    )
+
     async def fill_history(self):
         if self.history_filled or self.history_pending:
             return

@@ -178,7 +178,7 @@ class SlackBuffer(ABC):
 
     @property
     @abstractmethod
-    def last_read(self) -> SlackTs:
+    def last_read(self) -> Optional[SlackTs]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -253,7 +253,7 @@ class SlackBuffer(ABC):
 
     async def print_message(self, message: SlackMessage):
         rendered = await message.render(self.context)
-        backlog = message.ts <= self.last_read
+        backlog = self.last_read is not None and message.ts <= self.last_read
         tags = await message.tags(backlog)
         weechat.prnt_date_tags(self.buffer_pointer, message.ts.major, tags, rendered)
         if backlog:
