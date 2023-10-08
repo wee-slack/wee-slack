@@ -142,6 +142,22 @@ class SlackApi(SlackApiCommon):
             raise SlackApiError(self.workspace, method, response, params)
         return response
 
+    async def fetch_conversations_history_after(
+        self, conversation: SlackConversation, after: SlackTs
+    ):
+        method = "conversations.history"
+        params: Params = {
+            "channel": conversation.id,
+            "oldest": after,
+            "inclusive": False,
+        }
+        response: SlackConversationsHistoryResponse = await self._fetch_list(
+            method, "messages", params
+        )
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
     async def fetch_conversations_replies(
         self, conversation: SlackConversation, parent_message_ts: SlackTs
     ):

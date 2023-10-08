@@ -265,7 +265,7 @@ class SlackWorkspace:
             await conversation.open_buffer()
 
         await gather(
-            *(conversation[1].set_hotlist() for conversation in conversations_to_open)
+            *(slack_buffer.set_hotlist() for slack_buffer in shared.buffers.values())
         )
 
         self.is_connected = True

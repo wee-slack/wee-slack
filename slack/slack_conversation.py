@@ -10,7 +10,7 @@ from slack.error import SlackError
 from slack.python_compatibility import removeprefix
 from slack.shared import shared
 from slack.slack_buffer import SlackBuffer
-from slack.slack_message import SlackMessage, SlackTs
+from slack.slack_message import MessagePriority, SlackMessage, SlackTs
 from slack.slack_thread import SlackThread
 from slack.slack_user import SlackBot, SlackUser, nick_color
 from slack.task import gather, run_async
@@ -240,6 +240,7 @@ class SlackConversation(SlackBuffer):
         }
 
     async def buffer_switched_to(self):
+        await super().buffer_switched_to()
         await gather(self.nicklist_update(), self.fill_history())
 
     async def open_buffer(self, switch: bool = False):
@@ -291,27 +292,68 @@ class SlackConversation(SlackBuffer):
         return replies
 
     async def set_hotlist(self):
-        history = await self._api.fetch_conversations_history(self)
+        if self.last_printed_ts is not None:
+            self.history_needs_refresh = True
+
+        if self.buffer_pointer and shared.current_buffer_pointer == self.buffer_pointer:
+            await self.fill_history()
+            return
+
+        if self.last_printed_ts is not None:
+            history_after_ts = (
+                next(iter(self._messages))
+                if self.display_thread_replies()
+                else self.last_printed_ts
+            )
+            history = await self._api.fetch_conversations_history_after(
+                self, history_after_ts
+            )
+        else:
+            history = await self._api.fetch_conversations_history(self)
+
         if self.buffer_pointer and shared.current_buffer_pointer != self.buffer_pointer:
             for message_json in history["messages"]:
                 message = SlackMessage(self, message_json)
-                if message.ts > self.last_read or (
-                    self.display_thread_replies()
-                    and message.latest_reply
-                    and message.latest_reply > message.last_read
-                ):
+                if message.ts > self.last_read and message.ts not in self.hotlist_tss:
                     weechat.buffer_set(
                         self.buffer_pointer, "hotlist", message.priority.value
                     )
+                    self.hotlist_tss.add(message.ts)
+                if (
+                    self.display_thread_replies()
+                    and message.latest_reply
+                    and message.latest_reply > self.last_read
+                    and message.latest_reply not in self.hotlist_tss
+                ):
+                    priority = (
+                        MessagePriority.PRIVATE
+                        if self.buffer_type == "private"
+                        else MessagePriority.MESSAGE
+                    )
+                    weechat.buffer_set(self.buffer_pointer, "hotlist", priority.value)
+                    self.hotlist_tss.add(message.latest_reply)
 
     async def fill_history(self):
-        if self.history_filled or self.history_pending:
+        if self.history_pending:
+            return
+
+        if self.last_printed_ts is not None and not self.history_needs_refresh:
             return
 
         with self.loading():
             self.history_pending = True
 
-            history = await self._api.fetch_conversations_history(self)
+            history_after_ts = (
+                next(iter(self._messages), None)
+                if self.history_needs_refresh
+                else self.last_printed_ts
+            )
+            if history_after_ts:
+                history = await self._api.fetch_conversations_history_after(
+                    self, history_after_ts
+                )
+            else:
+                history = await self._api.fetch_conversations_history(self)
 
             conversation_messages = [
                 SlackMessage(self, message) for message in history["messages"]
@@ -328,11 +370,17 @@ class SlackConversation(SlackBuffer):
                     )
                 )
 
+            if self.history_needs_refresh:
+                await self.rerender_history()
+
             self._messages = OrderedDict(sorted(self._messages.items()))
+            self.history_pending_messages.clear()
             messages = [
                 message
                 for message in self._messages.values()
                 if self.should_display_message(message)
+                and self.last_printed_ts is None
+                or message.ts > self.last_printed_ts
             ]
 
             sender_user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
@@ -360,7 +408,11 @@ class SlackConversation(SlackBuffer):
             for message in messages:
                 await self.print_message(message)
 
-            self.history_filled = True
+            while self.history_pending_messages:
+                message = self.history_pending_messages.pop(0)
+                await self.print_message(message)
+
+            self.history_needs_refresh = False
             self.history_pending = False
 
     async def nicklist_update(self):
@@ -433,18 +485,25 @@ class SlackConversation(SlackBuffer):
         self._messages[message.ts] = message
 
         if self.should_display_message(message):
-            if self.history_filled:
+            if self.history_pending:
+                self.history_pending_messages.append(message)
+            elif self.last_printed_ts is not None:
                 await self.print_message(message)
             else:
                 weechat.buffer_set(
                     self.buffer_pointer, "hotlist", message.priority.value
                 )
+                self.hotlist_tss.add(message.ts)
 
         parent_message = message.parent_message
         if parent_message:
             parent_message.replies[message.ts] = message
-            if parent_message.thread_buffer:
-                await parent_message.thread_buffer.print_message(message)
+            thread_buffer = parent_message.thread_buffer
+            if thread_buffer:
+                if thread_buffer.history_pending:
+                    thread_buffer.history_pending_messages.append(message)
+                else:
+                    await thread_buffer.print_message(message)
         elif message.thread_ts is not None:
             await self.fetch_replies(message.thread_ts)
 
