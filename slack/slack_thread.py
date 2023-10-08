@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING, Dict, Mapping, Tuple
+from typing import TYPE_CHECKING, Dict, Mapping, Optional, Tuple
 
 from slack.slack_buffer import SlackBuffer
 from slack.slack_message import SlackMessage, SlackTs
@@ -31,7 +31,7 @@ class SlackThread(SlackBuffer):
         return self.parent.replies
 
     @property
-    def last_read(self) -> SlackTs:
+    def last_read(self) -> Optional[SlackTs]:
         return self.parent.last_read
 
     async def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
@@ -98,7 +98,7 @@ class SlackThread(SlackBuffer):
             return
 
         # last_read can only be set if it exists (which is on threads you're subscribed to)
-        if self.last_read == SlackTs("0.0"):
+        if self.last_read is None:
             return
 
         last_read_line_ts = self.last_read_line_ts()

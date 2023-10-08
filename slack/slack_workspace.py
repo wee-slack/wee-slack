@@ -264,6 +264,10 @@ class SlackWorkspace:
         for _, conversation in sorted(conversations_to_open):
             await conversation.open_buffer()
 
+        await gather(
+            *(conversation[1].set_hotlist() for conversation in conversations_to_open)
+        )
+
         self.is_connected = True
 
     async def _conversation_if_should_open(self, info: SlackUsersConversations):

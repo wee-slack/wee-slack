@@ -195,11 +195,9 @@ class SlackMessage:
         return self.conversation.messages.get(self.thread_ts)
 
     @property
-    def last_read(self) -> SlackTs:
+    def last_read(self) -> Optional[SlackTs]:
         if "last_read" in self._message_json:
             return SlackTs(self._message_json["last_read"])
-        else:
-            return SlackTs("0.0")
 
     @last_read.setter
     def last_read(self, value: SlackTs):
@@ -211,6 +209,11 @@ class SlackMessage:
             raise SlackError(
                 self.workspace, "Cannot set last_read on a message without last_read"
             )
+
+    @property
+    def latest_reply(self) -> Optional[SlackTs]:
+        if "latest_reply" in self._message_json:
+            return SlackTs(self._message_json["latest_reply"])
 
     @property
     def is_bot_message(self) -> bool:
