@@ -38,6 +38,7 @@ if TYPE_CHECKING:
         SlackMessageReaction,
         SlackMessageSubtypeHuddleThreadRoom,
     )
+    from slack_rtm.slack_rtm_message import SlackThreadSubscription
     from typing_extensions import Literal, assert_never
 
     from slack.slack_conversation import SlackConversation
@@ -153,6 +154,12 @@ class SlackMessage:
         self.replies: OrderedDict[SlackTs, SlackMessage] = OrderedDict()
         self.reply_history_filled = False
         self.thread_buffer: Optional[SlackThread] = None
+        self._subscribed: bool = message_json.get("subscribed", False)
+        self._last_read = (
+            SlackTs(self._message_json["last_read"])
+            if "last_read" in self._message_json
+            else None
+        )
         self._deleted = False
 
     @property
@@ -196,19 +203,13 @@ class SlackMessage:
 
     @property
     def last_read(self) -> Optional[SlackTs]:
-        if "last_read" in self._message_json:
-            return SlackTs(self._message_json["last_read"])
+        return self._last_read
 
     @last_read.setter
     def last_read(self, value: SlackTs):
-        if "last_read" in self._message_json:
-            self._message_json["last_read"] = value
-            if self.thread_buffer:
-                self.thread_buffer.set_unread_and_hotlist()
-        else:
-            raise SlackError(
-                self.workspace, "Cannot set last_read on a message without last_read"
-            )
+        self._last_read = value
+        if self.thread_buffer:
+            self.thread_buffer.set_unread_and_hotlist()
 
     @property
     def latest_reply(self) -> Optional[SlackTs]:
@@ -291,6 +292,13 @@ class SlackMessage:
         if "room" in self._message_json:
             self._message_json["room"] = room
         self._rendered_message = None
+
+    async def update_subscribed(
+        self, subscribed: bool, subscription: SlackThreadSubscription
+    ):
+        self._subscribed = subscribed
+        self.last_read = SlackTs(subscription["last_read"])
+        await self.conversation.rerender_message(self)
 
     def _get_reaction(self, reaction_name: str):
         for reaction in self._message_json.get("reactions", []):
@@ -720,7 +728,7 @@ class SlackMessage:
         if not reply_count:
             return ""
 
-        subscribed_text = " Subscribed" if self._message_json.get("subscribed") else ""
+        subscribed_text = " Subscribed" if self._subscribed else ""
         text = f"[ Thread: {self.hash} Replies: {reply_count}{subscribed_text} ]"
         return " " + with_color(nick_color(str(self.hash)), text)
 
