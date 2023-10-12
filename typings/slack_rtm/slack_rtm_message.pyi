@@ -198,6 +198,18 @@ class SlackThreadMarked(TypedDict):
     subscription: SlackThreadSubscription | SlackThreadSubscriptionUnknown
     event_ts: str
 
+@final
+class SlackThreadSubscribed(TypedDict):
+    type: Literal["thread_subscribed"]
+    subscription: SlackThreadSubscription | SlackThreadSubscriptionUnknown
+    event_ts: str
+
+@final
+class SlackThreadUnsubscribed(TypedDict):
+    type: Literal["thread_unsubscribed"]
+    subscription: SlackThreadSubscription | SlackThreadSubscriptionUnknown
+    event_ts: str
+
 class SlackShRoomHuddle(TypedDict):
     channel_id: str
 
@@ -256,6 +268,8 @@ SlackRtmMessage = (
     | SlackMpImMarked
     | SlackImMarked
     | SlackThreadMarked
+    | SlackThreadSubscribed
+    | SlackThreadUnsubscribed
     | SlackShRoomJoin
     | SlackShRoomUpdate
     | SlackUserTyping

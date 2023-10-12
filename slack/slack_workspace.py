@@ -336,8 +336,9 @@ class SlackWorkspace:
                 channel_id = data["item"]["channel"]
             elif (
                 data["type"] == "thread_marked"
-                and data["subscription"]["type"] == "thread"
-            ):
+                or data["type"] == "thread_subscribed"
+                or data["type"] == "thread_unsubscribed"
+            ) and data["subscription"]["type"] == "thread":
                 channel_id = data["subscription"]["channel"]
             elif data["type"] == "sh_room_join" or data["type"] == "sh_room_update":
                 channel_id = data["huddle"]["channel_id"]
@@ -391,6 +392,16 @@ class SlackWorkspace:
                 )
                 if message:
                     message.last_read = SlackTs(data["subscription"]["last_read"])
+            elif (
+                data["type"] == "thread_subscribed"
+                or data["type"] == "thread_unsubscribed"
+            ) and data["subscription"]["type"] == "thread":
+                message = channel.messages.get(
+                    SlackTs(data["subscription"]["thread_ts"])
+                )
+                if message:
+                    subscribed = data["type"] == "thread_subscribed"
+                    await message.update_subscribed(subscribed, data["subscription"])
             elif data["type"] == "sh_room_join" or data["type"] == "sh_room_update":
                 await channel.update_message_room(data)
             elif data["type"] == "user_typing":
