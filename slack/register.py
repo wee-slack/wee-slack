@@ -131,7 +131,7 @@ def register():
             "input_text_cursor_moved", get_callback_name(input_text_cursor_moved_cb), ""
         )
         weechat.hook_modifier(
-            "input_text_display_with_cursor",
+            "100|input_text_display_with_cursor",
             get_callback_name(modifier_input_text_display_with_cursor_cb),
             "",
         )
