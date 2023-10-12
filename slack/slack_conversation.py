@@ -14,6 +14,7 @@ from slack.slack_message import MessagePriority, SlackMessage, SlackTs
 from slack.slack_thread import SlackThread
 from slack.slack_user import SlackBot, SlackUser, nick_color
 from slack.task import gather, run_async
+from slack.util import with_color
 
 if TYPE_CHECKING:
     from slack_api.slack_conversations_info import SlackConversationsInfo
@@ -28,6 +29,12 @@ if TYPE_CHECKING:
     from typing_extensions import Literal
 
     from slack.slack_workspace import SlackWorkspace
+
+
+def update_buffer_props():
+    for workspace in shared.workspaces.values():
+        for conversation in workspace.open_conversations.values():
+            run_async(conversation.update_buffer_props())
 
 
 def invalidate_nicklists():
@@ -164,6 +171,10 @@ class SlackConversation(SlackBuffer):
         self._info["last_read"] = value
         self.set_unread_and_hotlist()
 
+    @property
+    def muted(self) -> bool:
+        return self.id in self.workspace.muted_channels
+
     async def sort_key(self) -> str:
         type_sort_key = {
             "channel": 0,
@@ -228,6 +239,10 @@ class SlackConversation(SlackBuffer):
         name_without_prefix = await self.name()
         name = f"{self.name_prefix('full_name')}{name_without_prefix}"
         short_name = self.name_prefix("short_name") + name_without_prefix
+        if self.muted:
+            short_name = with_color(
+                shared.config.color.buflist_muted_conversation.value, short_name
+            )
 
         return name, {
             "short_name": short_name,
@@ -324,10 +339,15 @@ class SlackConversation(SlackBuffer):
                     self.hotlist_tss.add(message.ts)
                 if (
                     self.display_thread_replies()
+                    and (
+                        not self.muted
+                        or shared.config.look.muted_conversations_notify.value == "all"
+                    )
                     and message.latest_reply
                     and message.latest_reply > self.last_read
                     and message.latest_reply not in self.hotlist_tss
                 ):
+                    # TODO: Load subscribed threads, so they are added to hotlist for muted channels if they have highlights
                     priority = (
                         MessagePriority.PRIVATE
                         if self.buffer_type == "private"

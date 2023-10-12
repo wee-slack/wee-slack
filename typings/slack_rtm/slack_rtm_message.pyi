@@ -239,6 +239,12 @@ class SlackUserTyping(TypedDict):
     id: int
     user: str
 
+@final
+class SlackPrefChange(TypedDict):
+    type: Literal["pref_change"]
+    name: str
+    value: str
+
 SlackMessageRtm = (
     SlackMessageStandardRtm
     | SlackMessageMeRtm
@@ -273,4 +279,5 @@ SlackRtmMessage = (
     | SlackShRoomJoin
     | SlackShRoomUpdate
     | SlackUserTyping
+    | SlackPrefChange
 )
