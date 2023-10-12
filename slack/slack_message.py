@@ -111,6 +111,7 @@ def convert_int_to_roman(num: int) -> str:
 
 
 class MessagePriority(Enum):
+    NONE = "none"
     LOW = weechat.WEECHAT_HOTLIST_LOW
     MESSAGE = weechat.WEECHAT_HOTLIST_MESSAGE
     PRIVATE = weechat.WEECHAT_HOTLIST_PRIVATE
@@ -221,7 +222,7 @@ class PendingMessageItem:
         else:
             assert_never(self.item_type)
 
-    def should_highlight(self) -> bool:
+    def should_highlight(self, only_personal: bool) -> bool:
         if self.item_type == "conversation":
             return False
         elif self.item_type == "user":
@@ -231,7 +232,7 @@ class PendingMessageItem:
             return False
         elif self.item_type == "broadcast":
             # TODO: figure out how to handle here broadcast
-            return True
+            return not only_personal
         elif self.item_type == "message_nick":
             return False
         else:
@@ -342,8 +343,22 @@ class SlackMessage:
 
     @property
     def priority(self) -> MessagePriority:
-        if self.should_highlight():
+        if (
+            self.conversation.muted
+            and shared.config.look.muted_conversations_notify.value == "none"
+        ):
+            return MessagePriority.NONE
+        elif self.should_highlight(
+            self.conversation.muted
+            and shared.config.look.muted_conversations_notify.value
+            == "personal_highlights"
+        ):
             return MessagePriority.HIGHLIGHT
+        elif (
+            self.conversation.muted
+            and shared.config.look.muted_conversations_notify.value != "all"
+        ):
+            return MessagePriority.NONE
         elif self.subtype in [
             "channel_join",
             "group_join",
@@ -367,6 +382,8 @@ class SlackMessage:
             return "notify_message"
         elif priority == MessagePriority.LOW:
             return None
+        elif priority == MessagePriority.NONE:
+            return "notify_none"
         else:
             assert_never(priority)
 
@@ -427,12 +444,14 @@ class SlackMessage:
             reaction["count"] -= 1
             self._rendered_message = None
 
-    def should_highlight(self) -> bool:
+    def should_highlight(self, only_personal: bool) -> bool:
         # TODO: Highlight words from user preferences
         parsed_message = self._parse_message_text()
 
         for item in parsed_message:
-            if isinstance(item, PendingMessageItem) and item.should_highlight():
+            if isinstance(item, PendingMessageItem) and item.should_highlight(
+                only_personal
+            ):
                 return True
 
         return False

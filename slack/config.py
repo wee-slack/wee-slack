@@ -6,7 +6,7 @@ import weechat
 
 from slack.log import print_error
 from slack.shared import shared
-from slack.slack_conversation import invalidate_nicklists
+from slack.slack_conversation import invalidate_nicklists, update_buffer_props
 from slack.slack_workspace import SlackWorkspace
 from slack.util import get_callback_name
 from slack.weechat_config import (
@@ -24,6 +24,14 @@ if TYPE_CHECKING:
 class SlackConfigSectionColor:
     def __init__(self, weechat_config: WeeChatConfig):
         self._section = WeeChatSection(weechat_config, "color")
+
+        self.buflist_muted_conversation = WeeChatOption(
+            self._section,
+            "buflist_muted_conversation",
+            "text color for muted conversations in the buflist",
+            WeeChatColor("darkgray"),
+            callback_change=self.config_change_buflist_muted_conversation_cb,
+        )
 
         self.channel_mention = WeeChatOption(
             self._section,
@@ -111,6 +119,11 @@ class SlackConfigSectionColor:
             WeeChatColor("blue"),
         )
 
+    def config_change_buflist_muted_conversation_cb(
+        self, option: WeeChatOption[WeeChatOptionType], parent_changed: bool
+    ):
+        update_buffer_props()
+
 
 class SlackConfigSectionLook:
     def __init__(self, weechat_config: WeeChatConfig):
@@ -175,6 +188,16 @@ class SlackConfigSectionLook:
             "external_user_suffix",
             "the suffix appended to nicks to indicate external users",
             "*",
+        )
+
+        self.muted_conversations_notify: WeeChatOption[
+            Literal["none", "personal_highlights", "all_highlights", "all"]
+        ] = WeeChatOption(
+            self._section,
+            "muted_conversations_notify",
+            "notify level to set for messages in muted conversations; none: don't notify for any messages; personal_highlights: only notify for personal highlights, i.e. not @channel and @here; all_highlights: notify for all highlights, but not other messages; all: notify for all messages, like other channels; note that this doesn't affect messages in threads you are subscribed to or in open thread buffers, those will always notify",
+            "personal_highlights",
+            string_values=["none", "personal_highlights", "all_highlights", "all"],
         )
 
         self.render_emoji_as: WeeChatOption[

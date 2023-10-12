@@ -12,6 +12,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -193,6 +194,7 @@ class SlackWorkspace:
         self.users = SlackUsers(self)
         self.bots = SlackBots(self)
         self.usergroups = SlackUsergroups(self)
+        self.muted_channels: Set[str] = set()
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name})"
@@ -240,6 +242,9 @@ class SlackWorkspace:
         self.my_user = await self.users[rtm_connect["self"]["id"]]
 
         await self._connect_ws(rtm_connect["url"])
+
+        prefs = await self.api.fetch_users_get_prefs("muted_channels")
+        self.muted_channels = set(prefs["prefs"]["muted_channels"].split(","))
 
         if not self.api.edgeapi.is_available:
             usergroups = await self.api.fetch_usergroups_list()
@@ -331,6 +336,16 @@ class SlackWorkspace:
 
         try:
             if data["type"] == "hello":
+                return
+            elif data["type"] == "pref_change":
+                if data["name"] == "muted_channels":
+                    new_muted_channels = set(data["value"].split(","))
+                    changed_channels = self.muted_channels ^ new_muted_channels
+                    self.muted_channels = new_muted_channels
+                    for channel_id in changed_channels:
+                        channel = self.open_conversations.get(channel_id)
+                        if channel:
+                            await channel.update_buffer_props()
                 return
             elif data["type"] == "reaction_added" or data["type"] == "reaction_removed":
                 channel_id = data["item"]["channel"]

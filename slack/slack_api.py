@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from slack_api.slack_usergroups_info import SlackUsergroupsInfoResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
     from slack_api.slack_users_info import SlackUserInfoResponse, SlackUsersInfoResponse
+    from slack_api.slack_users_prefs import SlackUsersPrefsGetResponse
     from slack_edgeapi.slack_usergroups_info import SlackEdgeUsergroupsInfoResponse
     from slack_edgeapi.slack_users_search import SlackUsersSearchResponse
 
@@ -130,6 +131,14 @@ class SlackApi(SlackApiCommon):
     async def fetch_rtm_connect(self):
         method = "rtm.connect"
         response: SlackRtmConnectResponse = await self._fetch(method)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response)
+        return response
+
+    async def fetch_users_get_prefs(self, prefs: Optional[str] = None):
+        method = "users.prefs.get"
+        params: Params = {"prefs": prefs} if prefs else {}
+        response: SlackUsersPrefsGetResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response)
         return response
