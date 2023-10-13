@@ -62,13 +62,16 @@ def modifier_input_text_display_with_cursor_cb(
         )
         input_delim_start = with_color(input_delim_color, "[")
         input_delim_end = with_color(input_delim_color, "]")
-        if not slack_buffer.workspace.is_connected:
+        if (
+            not slack_buffer.workspace.is_connected
+            and not slack_buffer.workspace.is_connecting
+        ):
             prefix += (
                 f"{input_delim_start}"
                 f"{with_color(shared.config.color.disconnected.value, 'disconnected')}"
                 f"{input_delim_end} "
             )
-        if slack_buffer.is_loading:
+        if slack_buffer.is_loading or slack_buffer.workspace.is_connecting:
             prefix += (
                 f"{input_delim_start}"
                 f"{with_color(shared.config.color.loading.value, 'loading')}"
