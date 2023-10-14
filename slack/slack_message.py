@@ -185,7 +185,7 @@ class PendingMessageItem:
             conversation = await self.message.workspace.conversations[self.item_id]
             name = await conversation.name_with_prefix("short_name_without_padding")
             if self.display_type == "mention":
-                color = shared.config.color.channel_mention_color.value
+                color = shared.config.color.channel_mention.value
             elif self.display_type == "chat":
                 color = "chat_channel"
             else:
@@ -196,7 +196,7 @@ class PendingMessageItem:
             user = await self.message.workspace.users[self.item_id]
             if self.display_type == "mention":
                 name = f"@{user.nick()}"
-                return with_color(shared.config.color.user_mention_color.value, name)
+                return with_color(shared.config.color.user_mention.value, name)
             elif self.display_type == "chat":
                 return user.nick(colorize=True)
             else:
@@ -206,11 +206,11 @@ class PendingMessageItem:
             # TODO: Handle error
             usergroup = await self.message.workspace.usergroups[self.item_id]
             name = f"@{usergroup.handle()}"
-            return with_color(shared.config.color.usergroup_mention_color.value, name)
+            return with_color(shared.config.color.usergroup_mention.value, name)
 
         elif self.item_type == "broadcast":
             name = f"@{self.item_id}"
-            return with_color(shared.config.color.usergroup_mention_color.value, name)
+            return with_color(shared.config.color.usergroup_mention.value, name)
 
         elif self.item_type == "message_nick":
             return await self.message.nick()

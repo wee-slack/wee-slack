@@ -25,9 +25,9 @@ class SlackConfigSectionColor:
     def __init__(self, weechat_config: WeeChatConfig):
         self._section = WeeChatSection(weechat_config, "color")
 
-        self.channel_mention_color = WeeChatOption(
+        self.channel_mention = WeeChatOption(
             self._section,
-            "channel_mention_color",
+            "channel_mention",
             "text color for mentioned channel names in the chat",
             WeeChatColor("blue"),
         )
@@ -97,16 +97,16 @@ class SlackConfigSectionColor:
             WeeChatColor("red"),
         )
 
-        self.user_mention_color = WeeChatOption(
+        self.user_mention = WeeChatOption(
             self._section,
-            "user_mention_color",
+            "user_mention",
             "text color for mentioned user names in the chat",
             WeeChatColor("blue"),
         )
 
-        self.usergroup_mention_color = WeeChatOption(
+        self.usergroup_mention = WeeChatOption(
             self._section,
-            "usergroup_mention_color",
+            "usergroup_mention",
             "text color for mentioned user group names in the chat",
             WeeChatColor("blue"),
         )
