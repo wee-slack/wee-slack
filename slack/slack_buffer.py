@@ -203,6 +203,12 @@ class SlackBuffer(ABC):
         name, buffer_props = await self.get_name_and_buffer_props()
         full_name = self.get_full_name(name)
 
+        buffer_props["highlight_tags"] = (
+            f"{buffer_props['highlight_tags']},{shared.highlight_tag}"
+            if buffer_props.get("highlight_tags")
+            else shared.highlight_tag
+        )
+
         if switch:
             buffer_props["display"] = "1"
 
