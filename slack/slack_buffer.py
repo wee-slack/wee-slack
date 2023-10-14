@@ -15,21 +15,21 @@ from slack.task import run_async
 from slack.util import get_callback_name, htmlescape
 
 if TYPE_CHECKING:
-    from typing_extensions import Literal
+    from typing_extensions import Literal, assert_never
 
     from slack.slack_api import SlackApi
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
 
 MESSAGE_ID_REGEX_STRING = r"(?P<msg_id>\d+|\$[0-9a-z]{3,})"
-REACTION_PREFIX_REGEX_STRING = rf"{MESSAGE_ID_REGEX_STRING}?(?P<reaction_change>\+|-)"
+REACTION_CHANGE_REGEX_STRING = r"(?P<reaction_change>\+|-)"
 
 EMOJI_CHAR_REGEX_STRING = "(?P<emoji_char>[\U00000080-\U0010ffff]+)"
 EMOJI_NAME_REGEX_STRING = (
     ":(?P<emoji_name>[a-z0-9_+-]+(?:::skin-tone-[2-6](?:-[2-6])?)?):"
 )
 EMOJI_CHAR_OR_NAME_REGEX_STRING = (
-    f"({EMOJI_CHAR_REGEX_STRING}|{EMOJI_NAME_REGEX_STRING})"
+    f"(?:{EMOJI_CHAR_REGEX_STRING}|{EMOJI_NAME_REGEX_STRING})"
 )
 
 
@@ -327,21 +327,49 @@ class SlackBuffer(ABC):
     def ts_from_hash(self, ts_hash: str) -> Optional[SlackTs]:
         return self.conversation.message_hashes.get_ts(ts_hash)
 
-    def ts_from_index(self, index: int) -> Optional[SlackTs]:
+    def ts_from_index(
+        self, index: int, message_filter: Optional[Literal["sender_self"]] = None
+    ) -> Optional[SlackTs]:
+        if index < 0:
+            return
+
         lines = weechat.hdata_pointer(
             weechat.hdata_get("buffer"), self.buffer_pointer, "lines"
         )
-        line = weechat.hdata_pointer(weechat.hdata_get("lines"), lines, "last_line")
-        move = -index + 1
-        if move:
-            line = weechat.hdata_move(weechat.hdata_get("line"), line, move)
-        return hdata_line_ts(line)
 
-    def ts_from_hash_or_index(self, hash_or_index: str) -> Optional[SlackTs]:
+        line = weechat.hdata_pointer(weechat.hdata_get("lines"), lines, "last_line")
+        while line and index:
+            if not message_filter:
+                index -= 1
+            elif message_filter == "sender_self":
+                ts = hdata_line_ts(line)
+                if ts is not None:
+                    message = self.messages[ts]
+                    if (
+                        message.sender_user_id == self.workspace.my_user.id
+                        and message.subtype in [None, "me_message", "thread_broadcast"]
+                    ):
+                        index -= 1
+            else:
+                assert_never(message_filter)
+
+            if index == 0:
+                break
+
+            line = weechat.hdata_move(weechat.hdata_get("line"), line, -1)
+
+        if line:
+            return hdata_line_ts(line)
+
+    def ts_from_hash_or_index(
+        self,
+        hash_or_index: str,
+        message_filter: Optional[Literal["sender_self"]] = None,
+    ) -> Optional[SlackTs]:
         if not hash_or_index:
-            return self.ts_from_index(1)
+            return self.ts_from_index(1, message_filter)
         elif hash_or_index.isdigit():
-            return self.ts_from_index(int(hash_or_index))
+            return self.ts_from_index(int(hash_or_index), message_filter)
         else:
             return self.ts_from_hash(hash_or_index)
 
@@ -356,21 +384,57 @@ class SlackBuffer(ABC):
         emoji_name = emoji["name"] if emoji else emoji_char
         await self._api.reactions_change(self.conversation, ts, emoji_name, change_type)
 
+    async def edit_message(self, ts: SlackTs, old: str, new: str, flags: str):
+        message = self.messages[ts]
+
+        if new == "" and old == "":
+            await self._api.chat_delete_message(self.conversation, message.ts)
+        else:
+            num_replace = 0 if "g" in flags else 1
+            f = re.UNICODE
+            f |= re.IGNORECASE if "i" in flags else 0
+            f |= re.MULTILINE if "m" in flags else 0
+            f |= re.DOTALL if "s" in flags else 0
+            old_message_text = message.text
+            new_message_text = re.sub(old, new, old_message_text, num_replace, f)
+            if new_message_text != old_message_text:
+                await self._api.chat_update_message(
+                    self.conversation, message.ts, new_message_text
+                )
+            else:
+                print_error("The regex didn't match any part of the message")
+
     async def process_input(self, input_data: str):
-        reaction = re.match(
-            rf"{REACTION_PREFIX_REGEX_STRING}{EMOJI_CHAR_OR_NAME_REGEX_STRING}\s*$",
+        special = re.match(
+            rf"{MESSAGE_ID_REGEX_STRING}?(?:{REACTION_CHANGE_REGEX_STRING}{EMOJI_CHAR_OR_NAME_REGEX_STRING}\s*|s/)",
             input_data,
         )
-        if reaction:
-            msg_id = reaction.group("msg_id")
-            ts = self.ts_from_hash_or_index(msg_id)
+        if special:
+            msg_id = special.group("msg_id")
+            emoji = special.group("emoji_char") or special.group("emoji_name")
+            reaction_change_type = special.group("reaction_change")
+
+            message_filter = "sender_self" if not emoji else None
+            ts = self.ts_from_hash_or_index(msg_id, message_filter)
             if ts is None:
                 print_error(f"No slack message found for message id or index {msg_id}")
                 return
-            emoji = reaction.group("emoji_char") or reaction.group("emoji_name")
-            reaction_change_type = reaction.group("reaction_change")
-            if reaction_change_type == "+" or reaction_change_type == "-":
+
+            if emoji and (reaction_change_type == "+" or reaction_change_type == "-"):
                 await self.send_change_reaction(ts, emoji, reaction_change_type)
+            else:
+                try:
+                    old, new, flags = re.split(r"(?<!\\)/", input_data)[1:]
+                except ValueError:
+                    print_error(
+                        "Incomplete regex for changing a message, "
+                        "it should be in the form s/old text/new text/"
+                    )
+                else:
+                    # Replacement string in re.sub() is a string, not a regex, so get rid of escapes
+                    new = new.replace(r"\/", "/")
+                    old = old.replace(r"\/", "/")
+                    await self.edit_message(ts, old, new, flags)
         else:
             if input_data.startswith(("//", " ")):
                 input_data = input_data[1:]

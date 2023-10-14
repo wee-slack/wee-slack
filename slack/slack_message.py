@@ -387,6 +387,10 @@ class SlackMessage:
             assert_never(priority)
 
     @property
+    def text(self) -> str:
+        return self._message_json["text"]
+
+    @property
     def deleted(self) -> bool:
         return self._deleted or self._message_json.get("subtype") == "tombstone"
 
