@@ -29,6 +29,7 @@ class Shared:
         self.config: SlackConfig
         self.uncaught_errors: List[UncaughtError] = []
         self.standard_emojis: Dict[str, Emoji]
+        self.highlight_tag = "highlight"
 
 
 shared = Shared()

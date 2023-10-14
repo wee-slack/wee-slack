@@ -383,7 +383,10 @@ class SlackMessage:
         elif priority == MessagePriority.LOW:
             return None
         elif priority == MessagePriority.NONE:
-            return "notify_none"
+            tags = ["notify_none"]
+            if self.should_highlight(False):
+                tags.append(shared.highlight_tag)
+            return ",".join(tags)
         else:
             assert_never(priority)
 
