@@ -2,13 +2,23 @@ from __future__ import annotations
 
 from functools import partial
 from itertools import islice
-from typing import Callable, Iterable, Iterator, List, Optional, TypeVar
+from typing import (
+    Callable,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+)
 
 import weechat
 
 from slack.shared import WeechatCallbackReturnType, shared
 
 T = TypeVar("T")
+T2 = TypeVar("T2")
 
 
 def get_callback_name(callback: Callable[..., WeechatCallbackReturnType]) -> str:
@@ -58,3 +68,11 @@ def chunked(iterable: Iterable[T], n: int, strict: bool = False) -> Iterator[Lis
 
     """
     return iter(partial(take, n, iter(iterable)), [])
+
+
+# From https://stackoverflow.com/a/5921708
+def intersperse(lst: Sequence[Union[T, T2]], item: T2) -> List[Union[T, T2]]:
+    """Inserts item between each item in lst"""
+    result: List[Union[T, T2]] = [item] * (len(lst) * 2 - 1)
+    result[0::2] = lst
+    return result
