@@ -237,6 +237,7 @@ class SlackMessageAttachment(TypedDict):
     title: str
     title_link: str
     service_name: str
+    footer: str
 
 @final
 class SlackMessageReaction(TypedDict):
