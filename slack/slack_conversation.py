@@ -48,7 +48,9 @@ def sha1_hex(string: str) -> str:
 
 
 def hash_from_ts(ts: SlackTs) -> str:
-    return sha1_hex(str(ts))
+    hex_str = sha1_hex(str(ts))
+    only_letters = hex_str.translate(str.maketrans("0123456789", "ghijklmnop"))
+    return only_letters
 
 
 class SlackConversationMessageHashes(Dict[SlackTs, str]):
