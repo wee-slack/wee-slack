@@ -319,6 +319,37 @@ class SlackApi(SlackApiCommon):
             raise SlackApiError(self.workspace, method, response, params)
         return response
 
+    async def chat_update_message(
+        self,
+        conversation: SlackConversation,
+        ts: SlackTs,
+        text: str,
+    ):
+        method = "chat.update"
+        params: Params = {
+            "channel": conversation.id,
+            "ts": ts,
+            "text": text,
+            "as_user": True,
+            "link_names": True,
+        }
+        response: SlackGenericResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def chat_delete_message(self, conversation: SlackConversation, ts: SlackTs):
+        method = "chat.delete"
+        params: Params = {
+            "channel": conversation.id,
+            "ts": ts,
+            "as_user": True,
+        }
+        response: SlackGenericResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
     async def reactions_change(
         self,
         conversation: SlackConversation,
