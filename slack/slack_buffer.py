@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import time
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
@@ -7,6 +8,7 @@ from typing import TYPE_CHECKING, Dict, List, Mapping, Optional, Set, Tuple
 
 import weechat
 
+from slack.log import print_error
 from slack.shared import shared
 from slack.slack_message import SlackMessage, SlackTs
 from slack.task import run_async
@@ -18,6 +20,17 @@ if TYPE_CHECKING:
     from slack.slack_api import SlackApi
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
+
+MESSAGE_ID_REGEX_STRING = r"(?P<msg_id>\d+|\$[0-9a-z]{3,})"
+REACTION_PREFIX_REGEX_STRING = rf"{MESSAGE_ID_REGEX_STRING}?(?P<reaction_change>\+|-)"
+
+EMOJI_CHAR_REGEX_STRING = "(?P<emoji_char>[\U00000080-\U0010ffff]+)"
+EMOJI_NAME_REGEX_STRING = (
+    ":(?P<emoji_name>[a-z0-9_+-]+(?:::skin-tone-[2-6](?:-[2-6])?)?):"
+)
+EMOJI_CHAR_OR_NAME_REGEX_STRING = (
+    f"({EMOJI_CHAR_REGEX_STRING}|{EMOJI_NAME_REGEX_STRING})"
+)
 
 
 def hdata_line_ts(line_pointer: str) -> Optional[SlackTs]:
@@ -311,14 +324,57 @@ class SlackBuffer(ABC):
             weechat.buffer_set(self.buffer_pointer, "hotlist", "-1")
             self.hotlist_tss.clear()
 
+    def ts_from_hash(self, ts_hash: str) -> Optional[SlackTs]:
+        return self.conversation.message_hashes.get_ts(ts_hash)
+
+    def ts_from_index(self, index: int) -> Optional[SlackTs]:
+        lines = weechat.hdata_pointer(
+            weechat.hdata_get("buffer"), self.buffer_pointer, "lines"
+        )
+        line = weechat.hdata_pointer(weechat.hdata_get("lines"), lines, "last_line")
+        move = -index + 1
+        if move:
+            line = weechat.hdata_move(weechat.hdata_get("line"), line, move)
+        return hdata_line_ts(line)
+
+    def ts_from_hash_or_index(self, hash_or_index: str) -> Optional[SlackTs]:
+        if not hash_or_index:
+            return self.ts_from_index(1)
+        elif hash_or_index.isdigit():
+            return self.ts_from_index(int(hash_or_index))
+        else:
+            return self.ts_from_hash(hash_or_index)
+
     @abstractmethod
     async def post_message(self, text: str) -> None:
         raise NotImplementedError()
 
+    async def send_change_reaction(
+        self, ts: SlackTs, emoji_char: str, change_type: Literal["+", "-"]
+    ) -> None:
+        emoji = shared.standard_emojis_inverse.get(emoji_char)
+        emoji_name = emoji["name"] if emoji else emoji_char
+        await self._api.reactions_change(self.conversation, ts, emoji_name, change_type)
+
     async def process_input(self, input_data: str):
-        if input_data.startswith(("//", " ")):
-            input_data = input_data[1:]
-        await self.post_message(htmlescape(input_data))
+        reaction = re.match(
+            rf"{REACTION_PREFIX_REGEX_STRING}{EMOJI_CHAR_OR_NAME_REGEX_STRING}\s*$",
+            input_data,
+        )
+        if reaction:
+            msg_id = reaction.group("msg_id")
+            ts = self.ts_from_hash_or_index(msg_id)
+            if ts is None:
+                print_error(f"No slack message found for message id or index {msg_id}")
+                return
+            emoji = reaction.group("emoji_char") or reaction.group("emoji_name")
+            reaction_change_type = reaction.group("reaction_change")
+            if reaction_change_type == "+" or reaction_change_type == "-":
+                await self.send_change_reaction(ts, emoji, reaction_change_type)
+        else:
+            if input_data.startswith(("//", " ")):
+                input_data = input_data[1:]
+            await self.post_message(htmlescape(input_data))
 
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
         run_async(self.process_input(input_data))
