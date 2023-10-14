@@ -119,6 +119,9 @@ def register():
         shared.weechat_version = int(weechat.info_get("version_number", "") or 0)
         shared.current_buffer_pointer = weechat.current_buffer()
         shared.standard_emojis = load_standard_emojis()
+        shared.standard_emojis_inverse = {
+            value["unicode"]: value for value in shared.standard_emojis.values()
+        }
         shared.workspaces = {}
         shared.config = SlackConfig()
         shared.config.config_read()

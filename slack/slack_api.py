@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from slack_api.slack_users_prefs import SlackUsersPrefsGetResponse
     from slack_edgeapi.slack_usergroups_info import SlackEdgeUsergroupsInfoResponse
     from slack_edgeapi.slack_users_search import SlackUsersSearchResponse
+    from typing_extensions import Literal, assert_never
 
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
@@ -313,6 +314,30 @@ class SlackApi(SlackApiCommon):
         }
         if thread_ts is not None:
             params["thread_ts"] = thread_ts
+        response: SlackGenericResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def reactions_change(
+        self,
+        conversation: SlackConversation,
+        ts: SlackTs,
+        name: str,
+        change_type: Literal["+", "-"],
+    ):
+        method = (
+            "reactions.add"
+            if change_type == "+"
+            else "reactions.remove"
+            if change_type == "-"
+            else assert_never(change_type)
+        )
+        params: Params = {
+            "channel": conversation.id,
+            "timestamp": ts,
+            "name": name,
+        }
         response: SlackGenericResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)

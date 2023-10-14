@@ -613,7 +613,7 @@ class SlackConversation(SlackBuffer):
                 )
 
     async def open_thread(self, thread_hash: str, switch: bool = False):
-        thread_ts = self.message_hashes.get_ts(thread_hash)
+        thread_ts = self.ts_from_hash(thread_hash)
         if thread_ts:
             thread_message = self.messages.get(thread_ts)
             if thread_message is None:
