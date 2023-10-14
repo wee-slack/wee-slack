@@ -121,6 +121,9 @@ class SlackConversation(SlackBuffer):
         info_response = await workspace.api.fetch_conversations_info(conversation_id)
         return cls(workspace, info_response["channel"])
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.workspace}, {self.id})"
+
     @property
     def id(self) -> str:
         return self._info["id"]
