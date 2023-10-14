@@ -297,3 +297,23 @@ class SlackApi(SlackApiCommon):
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
         return response
+
+    async def chat_post_message(
+        self,
+        conversation: SlackConversation,
+        text: str,
+        thread_ts: Optional[SlackTs] = None,
+    ):
+        method = "chat.postMessage"
+        params: Params = {
+            "channel": conversation.id,
+            "text": text,
+            "as_user": True,
+            "link_names": True,
+        }
+        if thread_ts is not None:
+            params["thread_ts"] = thread_ts
+        response: SlackGenericResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response

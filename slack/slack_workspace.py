@@ -445,16 +445,9 @@ class SlackWorkspace:
         if self._ws is None:
             raise SlackError(self, "is_connected is True while _ws is None")
 
-        if isinstance(buffer, SlackConversation):
-            conversation_id = buffer.id
-        elif isinstance(buffer, SlackThread):
-            conversation_id = buffer.parent.conversation.id
-        else:
-            raise NotImplementedError(f"Unknown buffer type: {type(buffer)}")
-
         msg = {
             "type": "user_typing",
-            "channel": conversation_id,
+            "channel": buffer.conversation.id,
         }
         if isinstance(buffer, SlackThread):
             msg["thread_ts"] = buffer.parent.ts

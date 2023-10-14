@@ -19,7 +19,7 @@ from slack.python_compatibility import removeprefix, removesuffix
 from slack.shared import shared
 from slack.slack_user import SlackBot, SlackUser, format_bot_nick, nick_color
 from slack.task import gather
-from slack.util import intersperse, with_color
+from slack.util import intersperse, unhtmlescape, with_color
 
 if TYPE_CHECKING:
     from slack_api.slack_conversations_history import SlackMessage as SlackMessageDict
@@ -40,10 +40,6 @@ if TYPE_CHECKING:
     from slack.slack_conversation import SlackConversation
     from slack.slack_thread import SlackThread
     from slack.slack_workspace import SlackWorkspace
-
-
-def unhtmlescape(text: str) -> str:
-    return text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
 
 
 def format_date(timestamp: int, token_string: str, link: Optional[str] = None) -> str:

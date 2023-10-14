@@ -10,6 +10,7 @@ from slack.task import gather
 if TYPE_CHECKING:
     from typing_extensions import Literal
 
+    from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
 
 
@@ -21,6 +22,10 @@ class SlackThread(SlackBuffer):
     @property
     def workspace(self) -> SlackWorkspace:
         return self.parent.workspace
+
+    @property
+    def conversation(self) -> SlackConversation:
+        return self.parent.conversation
 
     @property
     def context(self) -> Literal["conversation", "thread"]:
@@ -116,3 +121,6 @@ class SlackThread(SlackBuffer):
             await self._api.subscriptions_thread_mark(
                 self.parent.conversation, self.parent.ts, last_read_line_ts
             )
+
+    async def post_message(self, text: str) -> None:
+        await self._api.chat_post_message(self.conversation, text, self.parent.ts)

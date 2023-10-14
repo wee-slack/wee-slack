@@ -34,6 +34,17 @@ def with_color(color: Optional[str], string: str, reset_color: str = "reset"):
         return string
 
 
+# Escape chars that have special meaning to Slack. Note that we do not
+# (and should not) perform full HTML entity-encoding here.
+# See https://api.slack.com/reference/surfaces/formatting#escaping for details.
+def htmlescape(text: str) -> str:
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def unhtmlescape(text: str) -> str:
+    return text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+
+
 # From https://github.com/more-itertools/more-itertools/blob/v10.1.0/more_itertools/recipes.py#L93-L106
 def take(n: int, iterable: Iterable[T]) -> List[T]:
     """Return first *n* items of the iterable as a list.
