@@ -180,6 +180,9 @@ class PendingMessageItem:
         self.item_id = item_id
         self.display_type: Literal["mention", "chat"] = display_type
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.message}, {self.item_type}, {self.item_id}, {self.display_type})"
+
     async def resolve(self) -> str:
         if self.item_type == "conversation":
             conversation = await self.message.workspace.conversations[self.item_id]
@@ -253,6 +256,9 @@ class SlackMessage:
             else None
         )
         self._deleted = False
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.conversation}, {self.ts})"
 
     @property
     def workspace(self) -> SlackWorkspace:
