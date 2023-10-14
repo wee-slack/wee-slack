@@ -140,6 +140,10 @@ class SlackConversation(SlackBuffer):
         return self._workspace
 
     @property
+    def conversation(self) -> SlackConversation:
+        return self
+
+    @property
     def context(self) -> Literal["conversation", "thread"]:
         return "conversation"
 
@@ -630,3 +634,6 @@ class SlackConversation(SlackBuffer):
         last_read_line_ts = self.last_read_line_ts()
         if last_read_line_ts and last_read_line_ts != self.last_read:
             await self._api.conversations_mark(self, last_read_line_ts)
+
+    async def post_message(self, text: str) -> None:
+        await self._api.chat_post_message(self.conversation, text)

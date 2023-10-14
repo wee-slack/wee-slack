@@ -9,12 +9,14 @@ import weechat
 
 from slack.shared import shared
 from slack.slack_message import SlackMessage, SlackTs
-from slack.util import get_callback_name
+from slack.task import run_async
+from slack.util import get_callback_name, htmlescape
 
 if TYPE_CHECKING:
     from typing_extensions import Literal
 
     from slack.slack_api import SlackApi
+    from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
 
 
@@ -171,6 +173,11 @@ class SlackBuffer(ABC):
 
     @property
     @abstractmethod
+    def conversation(self) -> SlackConversation:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
     def context(self) -> Literal["conversation", "thread"]:
         raise NotImplementedError()
 
@@ -304,8 +311,17 @@ class SlackBuffer(ABC):
             weechat.buffer_set(self.buffer_pointer, "hotlist", "-1")
             self.hotlist_tss.clear()
 
+    @abstractmethod
+    async def post_message(self, text: str) -> None:
+        raise NotImplementedError()
+
+    async def process_input(self, input_data: str):
+        if input_data.startswith(("//", " ")):
+            input_data = input_data[1:]
+        await self.post_message(htmlescape(input_data))
+
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
-        weechat.prnt(buffer, "Text: %s" % input_data)
+        run_async(self.process_input(input_data))
         return weechat.WEECHAT_RC_OK
 
     def _buffer_close_cb(self, data: str, buffer: str) -> int:
