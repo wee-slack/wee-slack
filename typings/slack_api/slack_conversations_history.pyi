@@ -9,10 +9,10 @@ from typing_extensions import Literal, NotRequired, TypedDict, final
 
 @final
 class SlackMessageBlockRichTextElementTextStyle(TypedDict):
-    bold: bool
-    italic: bool
-    strike: bool
-    code: bool
+    bold: NotRequired[bool]
+    italic: NotRequired[bool]
+    strike: NotRequired[bool]
+    code: NotRequired[bool]
 
 @final
 class SlackMessageBlockRichTextElementText(TypedDict):
@@ -32,7 +32,7 @@ class SlackMessageBlockRichTextElementEmoji(TypedDict):
     type: Literal["emoji"]
     name: str
     unicode: str
-    skin_tone: int
+    skin_tone: NotRequired[int]
 
 @final
 class SlackMessageBlockRichTextElementChannel(TypedDict):
@@ -75,6 +75,7 @@ class SlackMessageBlockRichTextPreformatted(TypedDict):
     elements: List[
         SlackMessageBlockRichTextElementText | SlackMessageBlockRichTextElementLink
     ]
+    border: int
 
 @final
 class SlackMessageBlockRichTextQuote(TypedDict):
@@ -87,7 +88,7 @@ class SlackMessageBlockRichTextList(TypedDict):
     elements: List[SlackMessageBlockRichTextSection]
     style: Literal["ordered", "bullet"]
     indent: int
-    offset: int
+    offset: NotRequired[int]
     border: int
 
 @final

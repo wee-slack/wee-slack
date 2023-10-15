@@ -43,6 +43,7 @@ import weechat
 from slack.config import SlackConfig
 from slack.shared import shared
 from slack.slack_conversation import SlackConversation
+from slack.slack_emoji import load_standard_emojis
 from slack.slack_message import PendingMessageItem, SlackMessage
 from slack.slack_user import SlackUser
 from slack.slack_workspace import SlackWorkspace
@@ -95,6 +96,7 @@ weechat.color = color
 
 shared.weechat_version = 0x03080000
 shared.weechat_callbacks = {}
+shared.standard_emojis = load_standard_emojis()
 
 color_channel_mention = "<[color:<[config_color:channel_mention]>]>"
 color_user_mention = "<[color:<[config_color:user_mention]>]>"
