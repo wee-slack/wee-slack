@@ -102,9 +102,12 @@ class WeeChatOption(Generic[WeeChatOptionType]):
 
     @value.setter
     def value(self, value: WeeChatOptionType):
-        rc = self.value_set_as_str(str(value))
+        value_str = (
+            str(value).lower() if isinstance(self.default_value, bool) else str(value)
+        )
+        rc = self.value_set_as_str(value_str)
         if rc == weechat.WEECHAT_CONFIG_OPTION_SET_ERROR:
-            raise Exception(f"Failed to value for option: {self.name}")
+            raise Exception(f"Failed to set value for option: {self.name}")
 
     def value_set_as_str(self, value: str) -> int:
         return weechat.config_option_set(self._pointer, value, 1)

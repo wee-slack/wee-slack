@@ -88,7 +88,7 @@ def config_option_set(option: str, value: str, run_callback: int) -> int:
 
 
 def config_boolean(option: str) -> int:
-    return config_values.get(option) == "True"
+    return config_values.get(option) in ["true", "on", "yes", "y", "true", "t", "1"]
 
 
 def config_integer(option: str) -> int:
