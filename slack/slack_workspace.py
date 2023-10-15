@@ -346,14 +346,19 @@ class SlackWorkspace:
             elif "channel" in data and type(data["channel"]) == str:
                 channel_id = data["channel"]
             else:
-                weechat.prnt("", f"\t{self.name} received: {json.dumps(data)}")
+                log(
+                    LogLevel.DEBUG,
+                    DebugMessageType.LOG,
+                    f"unknown websocket message type (without channel): {data.get('type')}",
+                )
                 return
 
             channel = self.open_conversations.get(channel_id)
             if channel is None:
-                weechat.prnt(
-                    "",
-                    f"\t{self.name} received for not open conversation, discarding: {json.dumps(data)}",
+                log(
+                    LogLevel.DEBUG,
+                    DebugMessageType.LOG,
+                    f"received websocket message for not open conversation, discarding",
                 )
                 return
 
@@ -408,7 +413,11 @@ class SlackWorkspace:
             elif data["type"] == "user_typing":
                 await channel.typing_add_user(data)
             else:
-                weechat.prnt("", f"\t{self.name} received: {json.dumps(data)}")
+                log(
+                    LogLevel.DEBUG,
+                    DebugMessageType.LOG,
+                    f"unknown websocket message type (with channel): {data.get('type')}",
+                )
         except Exception as e:
             slack_error = SlackRtmError(self, e, data)
             print_error(store_and_format_exception(slack_error))
