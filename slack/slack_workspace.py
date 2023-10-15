@@ -85,7 +85,10 @@ class SlackItem(
     ) -> SlackItemClass:
         if items_info_task:
             items_info = await items_info_task
-            return self._create_item_from_info(items_info[item_id])
+            item = items_info.get(item_id)
+            if item is None:
+                raise SlackError(self.workspace, "item_not_found")
+            return self._create_item_from_info(item)
         else:
             return await self._item_class.create(self.workspace, item_id)
 
