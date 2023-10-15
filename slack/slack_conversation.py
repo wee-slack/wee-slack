@@ -11,7 +11,12 @@ from slack.log import print_exception_once
 from slack.python_compatibility import removeprefix
 from slack.shared import shared
 from slack.slack_buffer import SlackBuffer
-from slack.slack_message import MessagePriority, SlackMessage, SlackTs
+from slack.slack_message import (
+    MessagePriority,
+    PendingMessageItem,
+    SlackMessage,
+    SlackTs,
+)
 from slack.slack_thread import SlackThread
 from slack.slack_user import SlackBot, SlackUser, nick_color
 from slack.task import gather, run_async
@@ -414,7 +419,7 @@ class SlackConversation(SlackBuffer):
                 or message.ts > self.last_printed_ts
             ]
 
-            sender_user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
+            user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
             if self.display_reaction_nicks():
                 reaction_user_ids = [
                     user_id
@@ -422,9 +427,19 @@ class SlackConversation(SlackBuffer):
                     for reaction in m.reactions
                     for user_id in reaction["users"]
                 ]
-                user_ids = sender_user_ids + reaction_user_ids
-            else:
-                user_ids = sender_user_ids
+                user_ids.extend(reaction_user_ids)
+
+            parsed_messages = [
+                item for m in messages for item in m.parse_message_text()
+            ]
+            pending_items = [
+                item for item in parsed_messages if isinstance(item, PendingMessageItem)
+            ]
+            item_user_ids = [
+                item.item_id for item in pending_items if item.item_type == "user"
+            ]
+            user_ids.extend(item_user_ids)
+
             self.workspace.users.initialize_items(user_ids)
 
             sender_bot_ids = [

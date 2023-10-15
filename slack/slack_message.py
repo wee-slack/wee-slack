@@ -485,7 +485,7 @@ class SlackMessage:
 
     def should_highlight(self, only_personal: bool) -> bool:
         # TODO: Highlight words from user preferences
-        parsed_message = self._parse_message_text()
+        parsed_message = self.parse_message_text()
 
         for item in parsed_message:
             if isinstance(item, PendingMessageItem) and item.should_highlight(
@@ -586,7 +586,7 @@ class SlackMessage:
         self._rendered_prefix = await self._render_prefix()
         return self._rendered_prefix
 
-    def _parse_message_text(
+    def parse_message_text(
         self, update: bool = False
     ) -> List[Union[str, PendingMessageItem]]:
         if self._parsed_message is not None and not update:
@@ -680,7 +680,7 @@ class SlackMessage:
                 else ""
             )
 
-            parsed_message = self._parse_message_text(rerender)
+            parsed_message = self.parse_message_text(rerender)
             text = "".join(
                 [
                     text if isinstance(text, str) else await text.resolve()
