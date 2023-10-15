@@ -4,7 +4,7 @@ import re
 from collections import OrderedDict
 from datetime import date, datetime, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING, Generator, List, Match, Optional, Union
+from typing import TYPE_CHECKING, Generator, Iterable, List, Match, Optional, Union
 
 import weechat
 
@@ -19,7 +19,7 @@ from slack.python_compatibility import removeprefix, removesuffix
 from slack.shared import shared
 from slack.slack_user import SlackBot, SlackUser, format_bot_nick, nick_color
 from slack.task import gather
-from slack.util import intersperse, unhtmlescape, with_color
+from slack.util import htmlescape, intersperse, unhtmlescape, with_color
 
 if TYPE_CHECKING:
     from slack_api.slack_conversations_history import SlackMessage as SlackMessageDict
@@ -662,7 +662,9 @@ class SlackMessage:
             uncaught_error = UncaughtError(e)
             print_error(store_and_format_uncaught_error(uncaught_error))
             text = f"<Error rendering message {self.ts}, error id: {uncaught_error.id}>"
-            self._rendered_message = with_color(shared.config.color.render_error.value, text)
+            self._rendered_message = with_color(
+                shared.config.color.render_error.value, text
+            )
 
         return self._rendered_message
 
@@ -715,6 +717,19 @@ class SlackMessage:
 
         if i < len(message):
             yield message[i:]
+
+    def _unfurl_and_unescape(
+        self, items: Iterable[Union[str, PendingMessageItem]]
+    ) -> Generator[Union[str, PendingMessageItem], None, None]:
+        for item in items:
+            if isinstance(item, str):
+                for sub_item in self._unfurl_refs(item):
+                    if isinstance(sub_item, str):
+                        yield unhtmlescape(sub_item)
+                    else:
+                        yield sub_item
+            else:
+                yield item
 
     def _get_emoji(self, emoji_name: str, skin_tone: Optional[int] = None) -> str:
         emoji_name_with_colons = f":{emoji_name}:"
@@ -1077,7 +1092,10 @@ class SlackMessage:
         if "attachments" not in self._message_json:
             return []
 
-        attachments_texts: List[Union[str, PendingMessageItem]] = []
+        attachments: List[List[Union[str, PendingMessageItem]]] = []
+        if any(items_before):
+            attachments.append([])
+
         for attachment in self._message_json["attachments"]:
             # Attachments should be rendered roughly like:
             #
@@ -1088,16 +1106,16 @@ class SlackMessage:
 
             if (
                 attachment.get("is_app_unfurl")
-                and shared.config.look.display_link_previews
+                and not shared.config.look.display_link_previews.value
             ):
                 continue
 
-            items: List[Union[str, PendingMessageItem]] = []
+            lines: List[List[Union[str, PendingMessageItem]]] = []
             prepend_title_text = ""
             if "author_name" in attachment:
                 prepend_title_text = attachment["author_name"] + ": "
             if "pretext" in attachment:
-                items.append(attachment["pretext"])
+                lines.append([attachment["pretext"]])
             link_shown = False
             title = attachment.get("title")
             title_link = attachment.get("title_link", "")
@@ -1107,10 +1125,12 @@ class SlackMessage:
                 title_link = ""
                 link_shown = True
             if title and title_link:
-                items.append(f"{prepend_title_text}{title} ({title_link})")
+                lines.append(
+                    [f"{prepend_title_text}{title} ({htmlescape(title_link)})"]
+                )
                 prepend_title_text = ""
             elif title and not title_link:
-                items.append(f"{prepend_title_text}{title}")
+                lines.append([f"{prepend_title_text}{title}"])
                 prepend_title_text = ""
             from_url = attachment.get("from_url", "")
             if (
@@ -1119,19 +1139,15 @@ class SlackMessage:
                 )
                 and from_url != title_link
             ):
-                items.append(from_url)
+                lines.append([htmlescape(from_url)])
             elif from_url:
                 link_shown = True
 
             atext = attachment.get("text")
             if atext:
                 tx = re.sub(r" *\n[\n ]+", "\n", atext)
-                items.append(prepend_title_text + tx)
+                lines.append([prepend_title_text + tx])
                 prepend_title_text = ""
-
-            # TODO: Don't render both text and blocks
-            blocks_items = self._render_blocks(attachment.get("blocks", []))
-            items.extend(blocks_items)
 
             image_url = attachment.get("image_url", "")
             if (
@@ -1141,30 +1157,41 @@ class SlackMessage:
                 and image_url != from_url
                 and image_url != title_link
             ):
-                items.append(image_url)
+                lines.append([htmlescape(image_url)])
             elif image_url:
                 link_shown = True
 
             for field in attachment.get("fields", []):
                 if field.get("title"):
-                    items.append(f"{field['title']}: {field['value']}")
+                    lines.append([f"{field['title']}: {field['value']}"])
                 else:
-                    items.append(field["value"])
+                    lines.append([field["value"]])
+
+            lines = [
+                [item for item in self._unfurl_and_unescape(line)] for line in lines
+            ]
 
             files = self._render_files(attachment.get("files", []))
             if files:
-                items.append(files)
+                lines.append([files])
 
-            if attachment.get("is_msg_unfurl"):
+            # TODO: Don't render both text and blocks
+            blocks_items = self._render_blocks(attachment.get("blocks", []))
+            if blocks_items:
+                lines.append(blocks_items)
+
+            if "is_msg_unfurl" in attachment and attachment["is_msg_unfurl"]:
                 channel_name = PendingMessageItem(
-                    self, "conversation", self.conversation.id
+                    self, "conversation", attachment["channel_id"], "chat"
                 )
                 if attachment.get("is_reply_unfurl"):
                     footer = ["From a thread in ", channel_name]
                 else:
                     footer = ["Posted in ", channel_name]
             elif attachment.get("footer"):
-                footer = [attachment.get("footer")]
+                footer: List[Union[str, PendingMessageItem]] = [
+                    attachment.get("footer")
+                ]
             else:
                 footer = []
 
@@ -1181,20 +1208,23 @@ class SlackMessage:
                     if date.today() - date.fromtimestamp(ts_int) <= timedelta(days=1):
                         time_string = " at {time}"
                     timestamp_formatted = format_date(
-                        ts_int, "date_short_pretty" + time_string
+                        ts_int, "{date_short_pretty}" + time_string
                     )
                     footer.append(f" | {timestamp_formatted.capitalize()}")
-                items.extend(footer)
+
+                lines.append([item for item in self._unfurl_and_unescape(footer)])
 
             fallback = attachment.get("fallback")
-            if items == [] and fallback and not link_shown:
-                items.append(fallback)
+            if not any(lines) and fallback and not link_shown:
+                lines.append([fallback])
+
+            items = [item for items in intersperse(lines, ["\n"]) for item in items]
 
             texts_separate_newlines = [
                 item_separate_newline
                 for item in items
                 for item_separate_newline in (
-                    intersperse(item.strip().split("\n"), "\n")
+                    intersperse(item.split("\n"), "\n")
                     if isinstance(item, str)
                     else [item]
                 )
@@ -1221,10 +1251,12 @@ class SlackMessage:
                     for item in texts_separate_newlines
                 ]
 
+                attachment_texts: List[Union[str, PendingMessageItem]] = []
                 if line_color:
-                    attachments_texts.append(weechat.color(line_color))
-                attachments_texts.extend(texts_with_prefix)
+                    attachment_texts.append(weechat.color(line_color))
+                attachment_texts.extend(texts_with_prefix)
                 if line_color:
-                    attachments_texts.append(weechat.color("reset"))
+                    attachment_texts.append(weechat.color("reset"))
+                attachments.append(attachment_texts)
 
-        return attachments_texts
+        return [item for items in intersperse(attachments, ["\n"]) for item in items]

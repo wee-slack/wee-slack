@@ -224,7 +224,7 @@ SlackMessageBlock = (
 )
 
 @final
-class SlackMessageAttachment(TypedDict):
+class SlackMessageAttachmentStandard(TypedDict):
     from_url: str
     image_url: str
     image_width: int
@@ -239,6 +239,17 @@ class SlackMessageAttachment(TypedDict):
     title_link: str
     service_name: str
     footer: str
+
+@final
+class SlackMessageAttachmentMsgUnfurl(TypedDict):
+    is_msg_unfurl: Literal[True]
+    channel_id: str
+    footer: str
+    # incomplete
+
+SlackMessageAttachment = (
+    SlackMessageAttachmentStandard | SlackMessageAttachmentMsgUnfurl
+)
 
 @final
 class SlackMessageReaction(TypedDict):
