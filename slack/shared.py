@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING, Callable, Dict, List, Union
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
 
 if TYPE_CHECKING:
     from slack.config import SlackConfig
@@ -31,6 +31,7 @@ class Shared:
         self.standard_emojis: Dict[str, Emoji]
         self.standard_emojis_inverse: Dict[str, Emoji]
         self.highlight_tag = "highlight"
+        self.debug_buffer_pointer: Optional[str] = None
 
 
 shared = Shared()
