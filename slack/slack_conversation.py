@@ -95,12 +95,13 @@ class SlackConversationMessageHashes(Dict[SlackTs, str]):
             self._setitem(ts_with_same_hash, other_short_hash)
             self._inverse_map[other_short_hash] = ts_with_same_hash
 
-            other_message = self._conversation.messages[ts_with_same_hash]
-            run_async(self._conversation.rerender_message(other_message))
-            if other_message.thread_buffer is not None:
-                run_async(other_message.thread_buffer.update_buffer_props())
-            for reply in other_message.replies.values():
-                run_async(self._conversation.rerender_message(reply))
+            other_message = self._conversation.messages.get(ts_with_same_hash)
+            if other_message:
+                run_async(self._conversation.rerender_message(other_message))
+                if other_message.thread_buffer is not None:
+                    run_async(other_message.thread_buffer.update_buffer_props())
+                for reply in other_message.replies.values():
+                    run_async(self._conversation.rerender_message(reply))
 
         self._setitem(key, short_hash)
         self._inverse_map[short_hash] = key
