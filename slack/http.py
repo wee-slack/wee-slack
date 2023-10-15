@@ -8,7 +8,7 @@ from typing import Dict, Tuple
 import weechat
 
 from slack.error import HttpError
-from slack.log import LogLevel, log
+from slack.log import DebugMessageType, LogLevel, log
 from slack.task import FutureProcess, FutureUrl, sleep, weechat_task_cb
 from slack.util import get_callback_name
 
@@ -25,6 +25,7 @@ async def hook_process_hashtable(
     future = FutureProcess()
     log(
         LogLevel.DEBUG,
+        DebugMessageType.LOG,
         f"hook_process_hashtable calling ({future.id}): command: {command}",
     )
     while available_file_descriptors() < 10:
@@ -42,6 +43,7 @@ async def hook_process_hashtable(
         _, return_code, out, err = await next_future
         log(
             LogLevel.TRACE,
+            DebugMessageType.LOG,
             f"hook_process_hashtable intermediary response ({next_future.id}): command: {command}",
         )
         stdout.write(out)
@@ -51,6 +53,7 @@ async def hook_process_hashtable(
     err = stderr.getvalue().strip()
     log(
         LogLevel.DEBUG,
+        DebugMessageType.LOG,
         f"hook_process_hashtable response ({future.id}): command: {command}, "
         f"return_code: {return_code}, response length: {len(out)}"
         + (f", error: {err}" if err else ""),
@@ -111,6 +114,11 @@ async def http_request_url(
 async def http_request(
     url: str, options: Dict[str, str], timeout: int, max_retries: int = 5
 ) -> str:
+    log(
+        LogLevel.DEBUG,
+        DebugMessageType.HTTP_REQUEST,
+        f"requesting: {url}, {options.get('postfields')}",
+    )
     try:
         if hasattr(weechat, "hook_url"):
             http_status, headers, body = await http_request_url(url, options, timeout)
@@ -122,6 +130,7 @@ async def http_request(
         if max_retries > 0:
             log(
                 LogLevel.INFO,
+                DebugMessageType.LOG,
                 f"HTTP error, retrying (max {max_retries} times): "
                 f"return_code: {e.return_code}, error: {e.error}, url: {url}",
             )
@@ -137,6 +146,7 @@ async def http_request(
                 retry_after = int(value.strip())
                 log(
                     LogLevel.INFO,
+                    DebugMessageType.LOG,
                     f"HTTP ratelimit, retrying in {retry_after} seconds, url: {url}",
                 )
                 await sleep(retry_after * 1000)
