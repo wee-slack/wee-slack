@@ -302,8 +302,8 @@ class SlackWorkspace:
             except ssl.SSLWantReadError:
                 # No more data to read at this time.
                 return weechat.WEECHAT_RC_OK
-            except (WebSocketConnectionClosedException, socket.error):
-                print("lost connection on receive, reconnecting")
+            except (WebSocketConnectionClosedException, socket.error) as e:
+                print("lost connection on receive, reconnecting", e)
                 run_async(self.reconnect())
                 return weechat.WEECHAT_RC_OK
 
