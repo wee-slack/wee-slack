@@ -187,8 +187,13 @@ class PendingMessageItem:
             try:
                 conversation = await self.message.workspace.conversations[self.item_id]
                 name = await conversation.name_with_prefix("short_name_without_padding")
-            except SlackApiError as e:
-                if e.response["error"] == "channel_not_found":
+            except (SlackApiError, SlackError) as e:
+                if (
+                    isinstance(e, SlackApiError)
+                    and e.response["error"] == "channel_not_found"
+                    or isinstance(e, SlackError)
+                    and e.error == "item_not_found"
+                ):
                     name = (
                         f"#{self.fallback_name}"
                         if self.fallback_name
@@ -207,8 +212,13 @@ class PendingMessageItem:
         elif self.item_type == "user":
             try:
                 user = await self.message.workspace.users[self.item_id]
-            except SlackApiError as e:
-                if e.response["error"] == "user_not_found":
+            except (SlackApiError, SlackError) as e:
+                if (
+                    isinstance(e, SlackApiError)
+                    and e.response["error"] == "user_not_found"
+                    or isinstance(e, SlackError)
+                    and e.error == "item_not_found"
+                ):
                     name = (
                         f"@{self.fallback_name}"
                         if self.fallback_name
@@ -235,7 +245,9 @@ class PendingMessageItem:
                     isinstance(e, SlackApiError)
                     and e.response["error"] == "invalid_auth"
                     or isinstance(e, SlackError)
-                    and e.error == "usergroup_not_found"
+                    and (
+                        e.error == "usergroup_not_found" or e.error == "item_not_found"
+                    )
                 ):
                     name = (
                         self.fallback_name if self.fallback_name else f"@{self.item_id}"
