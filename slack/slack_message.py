@@ -637,26 +637,33 @@ class SlackMessage:
         if self._rendered_message is not None and not rerender:
             return self._rendered_message
 
-        me_prefix = (
-            f"{await self.nick()} "
-            if self._message_json.get("subtype") == "me_message"
-            else ""
-        )
+        try:
+            me_prefix = (
+                f"{await self.nick()} "
+                if self._message_json.get("subtype") == "me_message"
+                else ""
+            )
 
-        parsed_message = self._parse_message_text(rerender)
-        text = "".join(
-            [
-                text if isinstance(text, str) else await text.resolve()
-                for text in parsed_message
-            ]
-        )
-        text_edited = (
-            f" {with_color(shared.config.color.edited_message_suffix.value, '(edited)')}"
-            if self._message_json.get("edited")
-            else ""
-        )
-        reactions = await self._create_reactions_string()
-        self._rendered_message = me_prefix + text + text_edited + reactions
+            parsed_message = self._parse_message_text(rerender)
+            text = "".join(
+                [
+                    text if isinstance(text, str) else await text.resolve()
+                    for text in parsed_message
+                ]
+            )
+            text_edited = (
+                f" {with_color(shared.config.color.edited_message_suffix.value, '(edited)')}"
+                if self._message_json.get("edited")
+                else ""
+            )
+            reactions = await self._create_reactions_string()
+            self._rendered_message = me_prefix + text + text_edited + reactions
+        except Exception as e:
+            uncaught_error = UncaughtError(e)
+            print_error(store_and_format_uncaught_error(uncaught_error))
+            text = f"<Error rendering message {self.ts}, error id: {uncaught_error.id}>"
+            self._rendered_message = with_color(shared.config.color.render_error.value, text)
+
         return self._rendered_message
 
     async def render_message(
@@ -900,7 +907,7 @@ class SlackMessage:
             except Exception as e:
                 uncaught_error = UncaughtError(e)
                 print_error(store_and_format_uncaught_error(uncaught_error))
-                text = f"<Error rendering message, error id: {uncaught_error.id}>"
+                text = f"<Error rendering message {self.ts}, error id: {uncaught_error.id}>"
                 block_lines.append(
                     [with_color(shared.config.color.render_error.value, text)]
                 )
