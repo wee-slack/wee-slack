@@ -4,7 +4,7 @@ import importlib
 import importlib.machinery
 import json
 import sys
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 import pytest
 
@@ -49,6 +49,10 @@ from slack.slack_user import SlackUser
 from slack.slack_workspace import SlackWorkspace
 from slack.task import Future
 
+config_values: Dict[str, str] = {
+    "replace_space_in_nicks_with": "_",
+}
+
 
 def config_new_option(
     config_file: str,
@@ -69,15 +73,30 @@ def config_new_option(
     callback_delete: str,
     callback_delete_data: str,
 ) -> str:
+    if name not in config_values and default_value is not None:
+        config_values[name] = default_value
     return name
 
 
+def config_option_set(option: str, value: str, run_callback: int) -> int:
+    # TODO: special values
+    old_value = config_values.get(option)
+    if value == old_value:
+        return weechat.WEECHAT_CONFIG_OPTION_SET_OK_SAME_VALUE
+    config_values[option] = value
+    return weechat.WEECHAT_CONFIG_OPTION_SET_OK_CHANGED
+
+
+def config_boolean(option: str) -> int:
+    return config_values.get(option) == "True"
+
+
 def config_integer(option: str) -> int:
-    return 1
+    return int(config_values.get(option, 0))
 
 
 def config_string(option: str) -> str:
-    return "_"
+    return config_values.get(option, "")
 
 
 def config_color(option: str) -> str:
@@ -88,11 +107,23 @@ def color(option: str) -> str:
     return f"<[color:{option}]>"
 
 
+def info_get(info_name: str, arguments: str):
+    if info_name == "color_rgb2term":
+        return arguments
+    elif info_name == "weechat_data_dir":
+        return "."
+    else:
+        return ""
+
+
 weechat.config_new_option = config_new_option
+weechat.config_option_set = config_option_set
+weechat.config_boolean = config_boolean
 weechat.config_integer = config_integer
 weechat.config_string = config_string
 weechat.config_color = config_color
 weechat.color = color
+weechat.info_get = info_get
 
 shared.weechat_version = 0x03080000
 shared.weechat_callbacks = {}
@@ -102,6 +133,8 @@ color_channel_mention = "<[color:<[config_color:channel_mention]>]>"
 color_user_mention = "<[color:<[config_color:user_mention]>]>"
 color_usergroup_mention = "<[color:<[config_color:usergroup_mention]>]>"
 color_reset = "<[color:reset]>"
+
+workspace_id = "T0FC8BFQR"
 
 with open("mock_data/slack_users_info_person.json") as f:
     user_test1_info_response: SlackUserInfoSuccessResponse[SlackUserInfo] = json.loads(
@@ -122,7 +155,7 @@ with open("mock_data/slack_conversations_info_channel_public.json") as f:
 def workspace():
     shared.config = SlackConfig()
     w = SlackWorkspace("workspace_name")
-    w.id = "T0FC8BFQR"
+    w.id = workspace_id
 
     user_test1 = SlackUser(w, user_test1_info)
     user_test1_future = Future[SlackUser]()

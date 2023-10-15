@@ -138,7 +138,7 @@ cases: List[Case] = [
             "block code",
             "more code",
             "```",
-            f"{color_user_mention}@Test_1{color_reset}: :open_mouth:",
+            f"{color_user_mention}@Test_1{color_reset}: 😮",
         ],
     },
     {
