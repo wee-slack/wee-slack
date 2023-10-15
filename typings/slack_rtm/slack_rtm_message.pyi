@@ -7,6 +7,7 @@ from slack_api.slack_conversations_history import (
     SlackMessageSubtypeBotRemove,
     SlackMessageSubtypeChannelJoin,
     SlackMessageSubtypeChannelLeave,
+    SlackMessageSubtypeChannelTopic,
     SlackMessageSubtypeHuddleThread,
     SlackMessageSubtypeHuddleThreadRoom,
     SlackMessageThreadBroadcast,
@@ -85,6 +86,12 @@ class SlackMessageSubtypeChannelJoinRtm(SlackMessageSubtypeChannelJoin):
 @final
 class SlackMessageSubtypeChannelLeaveRtm(SlackMessageSubtypeChannelLeave):
     channel: str
+
+@final
+class SlackMessageSubtypeChannelTopicRtm(SlackMessageSubtypeChannelTopic):
+    channel: str
+    team: str
+    event_ts: str
 
 @final
 class SlackMessageChanged(TypedDict):
@@ -259,6 +266,7 @@ SlackMessageRtm = (
     | SlackMessageSubtypeBotAddRtm
     | SlackMessageSubtypeChannelJoinRtm
     | SlackMessageSubtypeChannelLeaveRtm
+    | SlackMessageSubtypeChannelTopicRtm
 )
 
 SlackRtmMessage = (

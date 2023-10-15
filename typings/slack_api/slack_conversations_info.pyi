@@ -4,7 +4,7 @@ from typing import Generic, List, TypeVar
 
 from slack_api.slack_common import SlackErrorResponse
 from slack_api.slack_conversations_history import SlackMessage
-from typing_extensions import Literal, TypedDict, final
+from typing_extensions import Literal, NotRequired, TypedDict, final
 
 T = TypeVar("T")
 
@@ -76,6 +76,7 @@ class SlackConversationsInfoIm(SlackConversationsInfoCommon):
     unread_count_display: int
     is_open: bool
     priority: int
+    topic: NotRequired[SlackTopic]
 
 SlackConversationsInfoNotIm = (
     SlackConversationsInfoPublic

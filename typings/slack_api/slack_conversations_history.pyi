@@ -456,6 +456,15 @@ class SlackMessageSubtypeChannelLeave(SlackMessageCommon):
 class SlackMessageSubtypeChannelLeaveFinal(SlackMessageSubtypeChannelLeave):
     pass
 
+class SlackMessageSubtypeChannelTopic(SlackMessageCommon):
+    subtype: Literal["channel_topic"]
+    topic: str
+    user: str
+
+@final
+class SlackMessageSubtypeChannelTopicFinal(SlackMessageSubtypeChannelTopic):
+    pass
+
 SlackMessage = (
     SlackMessageStandardFinal
     | SlackMessageMeFinal
@@ -470,6 +479,7 @@ SlackMessage = (
     | SlackMessageSubtypeBotAddFinal
     | SlackMessageSubtypeChannelJoinFinal
     | SlackMessageSubtypeChannelLeaveFinal
+    | SlackMessageSubtypeChannelTopicFinal
     | SlackMessageRtm
 )
 

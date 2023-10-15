@@ -20,7 +20,7 @@ from slack.slack_message import (
 from slack.slack_thread import SlackThread
 from slack.slack_user import SlackBot, SlackUser, nick_color
 from slack.task import gather, run_async
-from slack.util import with_color
+from slack.util import unhtmlescape, with_color
 
 if TYPE_CHECKING:
     from slack_api.slack_conversations_info import SlackConversationsInfo
@@ -248,6 +248,16 @@ class SlackConversation(SlackBuffer):
             return True
         return False
 
+    def buffer_title(self) -> str:
+        # TODO: unfurl and apply styles
+        return unhtmlescape(self._info.get("topic", {}).get("value", ""))
+
+    async def set_topic(self, title: str):
+        if "topic" not in self._info:
+            self._info["topic"] = {"value": "", "creator": "", "last_set": 0}
+        self._info["topic"]["value"] = title
+        await self.update_buffer_props()
+
     async def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
         name_without_prefix = await self.name()
         name = f"{self.name_prefix('full_name')}{name_without_prefix}"
@@ -259,7 +269,7 @@ class SlackConversation(SlackBuffer):
 
         return name, {
             "short_name": short_name,
-            "title": "topic",
+            "title": self.buffer_title(),
             "input_multiline": "1",
             "nicklist": "0" if self.type == "im" else "1",
             "nicklist_display_groups": "0",
