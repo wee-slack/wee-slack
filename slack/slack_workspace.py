@@ -375,6 +375,9 @@ class SlackWorkspace:
                 elif "subtype" in data and data["subtype"] == "message_replied":
                     await channel.change_message(data)
                 else:
+                    if "subtype" in data and data["subtype"] == "channel_topic":
+                        await channel.set_topic(data["topic"])
+
                     message = SlackMessage(channel, data)
                     await channel.add_new_message(message)
             elif data["type"] == "reaction_added" and data["item"]["type"] == "message":
