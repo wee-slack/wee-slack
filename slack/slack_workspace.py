@@ -212,8 +212,10 @@ class SlackWorkspace:
     async def connect(self) -> None:
         if self.is_connected:
             return
+        weechat.prnt("", f"Connecting to workspace {self.name}")
         self._connect_task = create_task(self._connect())
         await self._connect_task
+        weechat.prnt("", f"Connected to workspace {self.name}")
         self._connect_task = None
 
     async def _connect(self) -> None:
@@ -454,6 +456,7 @@ class SlackWorkspace:
 
     def disconnect(self):
         self.is_connected = False
+        weechat.prnt("", f"Disconnected from workspace {self.name}")
 
         if self._connect_task:
             self._connect_task.cancel()
