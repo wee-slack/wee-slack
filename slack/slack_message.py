@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Generator, Iterable, List, Match, Optional, Un
 import weechat
 
 from slack.error import (
+    SlackApiError,
     SlackError,
     UncaughtError,
     store_and_format_uncaught_error,
@@ -159,7 +160,6 @@ class SlackTs(str):
         return self._cmp(other) <= 0
 
 
-# TODO: Add fallback_name for when it can't be looked up
 class PendingMessageItem:
     def __init__(
         self,
@@ -169,6 +169,7 @@ class PendingMessageItem:
         ],
         item_id: str,
         display_type: Literal["mention", "chat"] = "mention",
+        fallback_name: Optional[str] = None,
     ):
         self.message = message
         self.item_type: Literal[
@@ -176,14 +177,25 @@ class PendingMessageItem:
         ] = item_type
         self.item_id = item_id
         self.display_type: Literal["mention", "chat"] = display_type
+        self.fallback_name = fallback_name
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.message}, {self.item_type}, {self.item_id}, {self.display_type})"
 
     async def resolve(self) -> str:
         if self.item_type == "conversation":
-            conversation = await self.message.workspace.conversations[self.item_id]
-            name = await conversation.name_with_prefix("short_name_without_padding")
+            try:
+                conversation = await self.message.workspace.conversations[self.item_id]
+                name = await conversation.name_with_prefix("short_name_without_padding")
+            except SlackApiError as e:
+                if e.response["error"] == "channel_not_found":
+                    name = (
+                        f"#{self.fallback_name}"
+                        if self.fallback_name
+                        else "#<private channel>"
+                    )
+                else:
+                    raise e
             if self.display_type == "mention":
                 color = shared.config.color.channel_mention.value
             elif self.display_type == "chat":
@@ -193,7 +205,19 @@ class PendingMessageItem:
             return with_color(color, name)
 
         elif self.item_type == "user":
-            user = await self.message.workspace.users[self.item_id]
+            try:
+                user = await self.message.workspace.users[self.item_id]
+            except SlackApiError as e:
+                if e.response["error"] == "user_not_found":
+                    name = (
+                        f"@{self.fallback_name}"
+                        if self.fallback_name
+                        else f"@{self.item_id}"
+                    )
+                    return name
+                else:
+                    raise e
+
             if self.display_type == "mention":
                 name = f"@{user.nick()}"
                 return with_color(shared.config.color.user_mention.value, name)
@@ -203,9 +227,21 @@ class PendingMessageItem:
                 assert_never(self.display_type)
 
         elif self.item_type == "usergroup":
-            # TODO: Handle error
-            usergroup = await self.message.workspace.usergroups[self.item_id]
-            name = f"@{usergroup.handle()}"
+            try:
+                usergroup = await self.message.workspace.usergroups[self.item_id]
+                name = f"@{usergroup.handle()}"
+            except (SlackApiError, SlackError) as e:
+                if (
+                    isinstance(e, SlackApiError)
+                    and e.response["error"] == "invalid_auth"
+                    or isinstance(e, SlackError)
+                    and e.error == "usergroup_not_found"
+                ):
+                    name = (
+                        self.fallback_name if self.fallback_name else f"@{self.item_id}"
+                    )
+                else:
+                    raise e
             return with_color(shared.config.color.usergroup_mention.value, name)
 
         elif self.item_type == "broadcast":
@@ -680,17 +716,33 @@ class SlackMessage:
         thread = self._create_thread_string()
         return thread_prefix + text + thread
 
-    def _resolve_ref(self, item_id: str) -> Optional[Union[str, PendingMessageItem]]:
+    def _resolve_ref(
+        self, item_id: str, fallback_name: Optional[str]
+    ) -> Optional[Union[str, PendingMessageItem]]:
         if item_id.startswith("#"):
-            return PendingMessageItem(self, "conversation", removeprefix(item_id, "#"))
+            return PendingMessageItem(
+                self,
+                "conversation",
+                removeprefix(item_id, "#"),
+                "mention",
+                fallback_name,
+            )
         elif item_id.startswith("@"):
-            return PendingMessageItem(self, "user", removeprefix(item_id, "@"))
+            return PendingMessageItem(
+                self, "user", removeprefix(item_id, "@"), "mention", fallback_name
+            )
         elif item_id.startswith("!subteam^"):
             return PendingMessageItem(
-                self, "usergroup", removeprefix(item_id, "!subteam^")
+                self,
+                "usergroup",
+                removeprefix(item_id, "!subteam^"),
+                "mention",
+                fallback_name,
             )
         elif item_id in ["!here", "!channel", "!everyone"]:
-            return PendingMessageItem(self, "broadcast", removeprefix(item_id, "!"))
+            return PendingMessageItem(
+                self, "broadcast", removeprefix(item_id, "!"), "mention", fallback_name
+            )
         elif item_id.startswith("!date"):
             parts = item_id.split("^")
             timestamp = int(parts[1])
@@ -706,11 +758,12 @@ class SlackMessage:
         for match in re_ref.finditer(message):
             if i < match.start(0):
                 yield message[i : match.start(0)]
-            item = self._resolve_ref(match["id"])
+            fallback_name = match["fallback_name"]
+            item = self._resolve_ref(match["id"], fallback_name)
             if item:
                 yield item
-            elif match["fallback_name"] is not None:
-                yield match["fallback_name"]
+            elif fallback_name is not None:
+                yield fallback_name
             else:
                 yield match[0]
             i = match.end(0)
