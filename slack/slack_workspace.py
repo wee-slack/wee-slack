@@ -270,9 +270,21 @@ class SlackWorkspace:
 
     async def _conversation_if_should_open(self, info: SlackUsersConversations):
         conversation = await self.conversations[info["id"]]
-        if conversation.should_open():
-            sort_key = await conversation.sort_key()
-            return sort_key, conversation
+        if not conversation.should_open():
+            if conversation.type != "im" and conversation.type != "mpim":
+                return
+
+            if conversation.last_read == SlackTs("0.0"):
+                history = await self.api.fetch_conversations_history(conversation)
+            else:
+                history = await self.api.fetch_conversations_history_after(
+                    conversation, conversation.last_read
+                )
+            if not history["messages"]:
+                return
+
+        sort_key = await conversation.sort_key()
+        return sort_key, conversation
 
     async def _connect_ws(self, url: str):
         proxy = Proxy()
