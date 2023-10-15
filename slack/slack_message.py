@@ -926,6 +926,11 @@ class SlackMessage:
             characters_remove: List[str] = []
             prev_style = prev_element.get("style", {})
             cur_style = element.get("style", {})
+            if cur_style.get("code", False) != prev_style.get("code", False):
+                if cur_style.get("code"):
+                    characters_apply.append("`")
+                else:
+                    characters_remove.append("`")
             if cur_style.get("bold", False) != prev_style.get("bold", False):
                 if cur_style.get("bold"):
                     colors_apply.append(weechat.color("bold"))
@@ -945,11 +950,6 @@ class SlackMessage:
                     characters_apply.append("~")
                 else:
                     characters_remove.append("~")
-            if cur_style.get("code", False) != prev_style.get("code", False):
-                if cur_style.get("code"):
-                    characters_apply.append("`")
-                else:
-                    characters_remove.append("`")
 
             prepend = "".join(
                 characters_remove[::-1]

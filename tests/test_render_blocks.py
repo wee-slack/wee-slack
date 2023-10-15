@@ -372,6 +372,62 @@ cases: List[Case] = [
             "<[color:bold]><[color:italic]>*_bold and italic combined_*<[color:-italic]><[color:-bold]>"
         ],
     },
+    {
+        "blocks": [
+            {
+                "type": "rich_text",
+                "block_id": "tm5d+",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "text",
+                                "text": "foo",
+                                "style": {"italic": True, "code": True},
+                            },
+                            {
+                                "type": "text",
+                                "text": "bar",
+                                "style": {"bold": True, "code": True},
+                            },
+                        ],
+                    }
+                ],
+            }
+        ],
+        "rendered": [
+            "<[color:italic]>`_foo_<[color:-italic]><[color:bold]>*bar*`<[color:-bold]>"
+        ],
+    },
+    {
+        "blocks": [
+            {
+                "type": "rich_text",
+                "block_id": "A+l5x",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "text",
+                                "text": "all styles",
+                                "style": {
+                                    "bold": True,
+                                    "italic": True,
+                                    "strike": True,
+                                    "code": True,
+                                },
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+        "rendered": [
+            "<[color:bold]><[color:italic]>`*_~all styles~_*`<[color:-italic]><[color:-bold]>"
+        ],
+    },
 ]
 
 
