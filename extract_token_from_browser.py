@@ -39,10 +39,12 @@ def sqlite3_connect(path: StrPath):
         con.close()
 
 
-def get_cookies(cookies_path: StrPath, cookie_query: str) -> tuple[str, str | None]:
+def get_cookies(
+    cookies_path: StrPath, cookie_query: str, params: tuple
+) -> tuple[str, str | None]:
     with sqlite3_connect(cookies_path) as con:
-        cookie_d_value = con.execute(cookie_query.format("d")).fetchone()
-        cookie_ds_value = con.execute(cookie_query.format("ds")).fetchone()
+        cookie_d_value = con.execute(cookie_query.format("d"), params).fetchone()
+        cookie_ds_value = con.execute(cookie_query.format("ds"), params).fetchone()
         if cookie_d_value and cookie_ds_value:
             return cookie_d_value[0], cookie_ds_value[0]
         elif cookie_d_value:
@@ -65,6 +67,12 @@ parser.add_argument(
 )
 parser.add_argument(
     "--profile", help="Profile to look up cookies for", metavar="<profile>", nargs="?"
+)
+parser.add_argument(
+    "--container",
+    help="Firefox container to look up cookies for",
+    metavar="<id or name>",
+    nargs="?",
 )
 args = parser.parse_args()
 
@@ -147,13 +155,40 @@ if browser == "firefox":
             sys.exit(1)
 
     cookies_path = default_profile_path.joinpath("cookies.sqlite")
+
+    if args.container:
+        try:
+            ctx_id = int(args.container)
+        except ValueError:
+            # non-numeric container ID, try to find by name
+            ctx_id = None
+            with open(default_profile_path.joinpath("containers.json"), "rb") as fp:
+                containers = json.load(fp)
+                for i in containers["identities"]:
+                    if "name" in i and i["name"] == args.container:
+                        ctx_id = i["userContextId"]
+                        break
+            if ctx_id is None:
+                print(
+                    f"Couldn't find Firefox container '{args.container}'",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
+        userctx = f"^userContextId={ctx_id}"
+    else:
+        userctx = ""
+
     cookie_query = (
-        "SELECT value FROM moz_cookies WHERE host = '.slack.com' " "AND name = '{}'"
+        "SELECT value FROM moz_cookies WHERE originAttributes = ? "
+        "AND host = '.slack.com' AND name = '{}'"
     )
-    cookie_d_value, cookie_ds_value = get_cookies(cookies_path, cookie_query)
+    cookie_d_value, cookie_ds_value = get_cookies(
+        cookies_path, cookie_query, (userctx,)
+    )
 
     storage_path = default_profile_path.joinpath(
-        "storage/default/https+++app.slack.com/ls/data.sqlite"
+        f"storage/default/https+++app.slack.com{userctx}/ls/data.sqlite"
     )
     storage_query = "SELECT compression_type, conversion_type, value FROM data WHERE key = 'localConfig_v2'"
     local_config = None
@@ -195,7 +230,7 @@ elif browser == "chrome":
         "SELECT encrypted_value FROM cookies WHERE "
         "host_key = '.slack.com' AND name = '{}'"
     )
-    cookie_d_value, cookie_ds_value = get_cookies(cookies_path, cookie_query)
+    cookie_d_value, cookie_ds_value = get_cookies(cookies_path, cookie_query, ())
 
     bus = secretstorage.dbus_init()
     try:
