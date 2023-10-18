@@ -77,28 +77,7 @@ import pytest
                     }
                 ]
             },
-            "input_text_before": "http://link?a=1&amp;b=2",
-            "output": "\n".join(
-                [
-                    "",
-                    "| Title",
-                    "| Attachment text",
-                ]
-            ),
-        },
-        {
-            "input_message": {
-                "attachments": [
-                    {
-                        "title": "Title",
-                        "text": "Attachment text",
-                        "title_link": "http://link?a=1&amp;b=2",
-                        "from_url": "http://link?a=1&amp;b=2",
-                        "image_url": "http://link?a=1&amp;b=2",
-                    }
-                ]
-            },
-            "input_text_before": "http://link?a=1&amp;b=2",
+            "input_text_before": "http://link?a=1&b=2",
             "output": "\n".join(
                 [
                     "",
@@ -459,6 +438,109 @@ import pytest
                 ]
             ),
             "link_previews": False,
+        },
+        {
+            "input_message": {
+                "attachments": [
+                    {
+                        "id": 1,
+                        "ts": 1697480778,
+                        "fallback": "title &amp; &lt;asd&gt;",
+                        "text": "text &amp; &lt;asd&gt;",
+                        "pretext": "pretext &amp; &lt;asd&gt;",
+                        "title": "title &amp; &lt;asd&gt;",
+                        "title_link": "https://title.link/?x=<x>&z=z",
+                        "author_name": "author_name &amp; &lt;asd&gt;",
+                        "from_url": "https://from.url/?x=<x>&z=z",
+                        "image_url": "https://image.url/?x=<x>&z=z",
+                        "footer": "footer &amp; &lt;asd&gt;",
+                        "fields": [
+                            {
+                                "value": "field value &amp; &lt;asd&gt;",
+                                "title": "field title &amp; &lt;asd&gt;",
+                                "short": False,
+                            },
+                            {
+                                "value": "field value mention <@U407ABLLW>",
+                                "title": "field title mention &lt;@U407ABLLW&gt;",
+                                "short": False,
+                            },
+                        ],
+                    },
+                    {
+                        "id": 2,
+                        "blocks": [
+                            {
+                                "type": "rich_text",
+                                "block_id": "IQm+Q",
+                                "elements": [
+                                    {
+                                        "type": "rich_text_preformatted",
+                                        "elements": [
+                                            {
+                                                "type": "text",
+                                                "text": "block rich_text_preformatted & <asd>",
+                                            }
+                                        ],
+                                    }
+                                ],
+                            },
+                            {
+                                "type": "rich_text",
+                                "block_id": "a5bVo",
+                                "elements": [
+                                    {
+                                        "type": "rich_text_section",
+                                        "elements": [
+                                            {
+                                                "type": "text",
+                                                "text": "block rich_text_section & <asd> ",
+                                            },
+                                            {
+                                                "type": "link",
+                                                "url": "https://block.link?x=<x>&z=z",
+                                                "style": {"code": True},
+                                            },
+                                        ],
+                                    }
+                                ],
+                            },
+                            {
+                                "type": "rich_text",
+                                "block_id": "FeChA",
+                                "elements": [
+                                    {
+                                        "type": "rich_text_section",
+                                        "elements": [
+                                            {"type": "user", "user_id": "U407ABLLW"},
+                                            {"type": "text", "text": ": <@ASD>"},
+                                        ],
+                                    }
+                                ],
+                            },
+                        ],
+                        "fallback": "[no preview available]",
+                    },
+                ]
+            },
+            "input_text_before": "",
+            "output": "\n".join(
+                [
+                    "| pretext & <asd>",
+                    "| author_name & <asd>: title & <asd> (https://title.link/?x=<x>&z=z)",
+                    "| https://from.url/?x=<x>&z=z",
+                    "| text & <asd>",
+                    "| https://image.url/?x=<x>&z=z",
+                    "| field title & <asd>: field value & <asd>",
+                    "| field title mention <@U407ABLLW>: field value mention @alice",
+                    "| footer & <asd> | Oct 16, 2023",
+                    "| ```",
+                    "| block rich_text_preformatted & <asd>",
+                    "| ```",
+                    "| block rich_text_section & <asd> `https://block.link?x=<x>&z=z`",
+                    "| @alice: <@ASD>",
+                ]
+            ),
         },
     ),
 )

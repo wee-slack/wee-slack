@@ -89,6 +89,56 @@ import wee_slack
             ),
             "render_emoji_as_string": "both",
         },
+        {
+            "input_message": {
+                "blocks": [
+                    {
+                        "type": "rich_text",
+                        "block_id": "ASgLI",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {"type": "text", "text": "<text> & "},
+                                    {
+                                        "type": "link",
+                                        "url": "https://text.link?x=<x>&z=z",
+                                    },
+                                    {"type": "text", "text": " "},
+                                    {
+                                        "type": "text",
+                                        "text": "<code> & ",
+                                        "style": {"code": True},
+                                    },
+                                    {
+                                        "type": "link",
+                                        "url": "https://code.link?x=<x>&z=z",
+                                        "style": {"code": True},
+                                    },
+                                    {"type": "text", "text": "\n"},
+                                ],
+                            },
+                            {
+                                "type": "rich_text_preformatted",
+                                "elements": [
+                                    {"type": "text", "text": "<code block> & "},
+                                    {
+                                        "type": "link",
+                                        "url": "https://codeblock.link?x=<x>&z=z",
+                                    },
+                                ],
+                                "border": 0,
+                            },
+                        ],
+                    }
+                ],
+            },
+            "rendered": (
+                "<text> & https://text.link?x=<x>&z=z `<code> & https://code.link?x=<x>&z=z`\n"
+                "```\n<code block> & https://codeblock.link?x=<x>&z=z\n```"
+            ),
+            "render_emoji_as_string": "both",
+        },
     ],
 )
 def test_render_message(case, channel_general):

@@ -3402,7 +3402,7 @@ class SlackMessage(object):
         if blocks_rendered:
             text = blocks_rendered
         else:
-            text = self.message_json.get("text", "")
+            text = unhtmlescape(unfurl_refs(self.message_json.get("text", "")))
 
         if self.message_json.get("mrkdwn", True):
             text = render_formatting(text)
@@ -3412,9 +3412,7 @@ class SlackMessage(object):
             "group_join",
         ) and self.message_json.get("inviter"):
             inviter_id = self.message_json.get("inviter")
-            text += " by invitation from <@{}>".format(inviter_id)
-
-        text = unfurl_refs(text)
+            text += unfurl_refs(" by invitation from <@{}>".format(inviter_id))
 
         if self.subtype == "me_message" and not self.message_json["text"].startswith(
             self.sender
@@ -3424,10 +3422,10 @@ class SlackMessage(object):
         if "edited" in self.message_json:
             text += " " + colorize_string(config.color_edited_suffix, "(edited)")
 
-        text += unfurl_refs(unwrap_attachments(self, text))
-        text += unfurl_refs(unwrap_files(self, self.message_json, text))
-        text += unfurl_refs(unwrap_huddle(self, self.message_json, text))
-        text = unhtmlescape(text.lstrip().replace("\t", "    "))
+        text += unwrap_attachments(self, text)
+        text += unhtmlescape(unfurl_refs(unwrap_files(self, self.message_json, text)))
+        text += unwrap_huddle(self, self.message_json, text)
+        text = text.lstrip().replace("\t", "    ")
 
         text += create_reactions_string(
             self.message_json.get("reactions", ""), self.team.myidentifier
@@ -4773,7 +4771,7 @@ def unfurl_rich_text_section(block):
 
 def unfurl_block_rich_text_element(element):
     if element["type"] == "text":
-        return htmlescape(element["text"])
+        return element["text"]
     elif element["type"] == "link":
         text = element.get("text")
         if text and text != element["url"]:
@@ -4803,9 +4801,9 @@ def unfurl_block_rich_text_element(element):
 
 def unfurl_block_element(element):
     if element["type"] == "mrkdwn":
-        return render_formatting(element["text"])
+        return render_formatting(unhtmlescape(unfurl_refs(element["text"])))
     elif element["type"] == "plain_text":
-        return element["text"]
+        return unhtmlescape(unfurl_refs(element["text"]))
     elif element["type"] == "image":
         if element.get("alt_text"):
             return "{} ({})".format(element["image_url"], element["alt_text"])
@@ -4875,7 +4873,6 @@ def unhtmlescape(text):
 
 
 def unwrap_attachments(message, text_before):
-    text_before_unescaped = unhtmlescape(text_before)
     attachment_texts = []
     a = message.message_json.get("attachments")
     if a:
@@ -4901,9 +4898,7 @@ def unwrap_attachments(message, text_before):
             link_shown = False
             title = attachment.get("title")
             title_link = attachment.get("title_link", "")
-            if title_link and (
-                title_link in text_before or title_link in text_before_unescaped
-            ):
+            if title_link and title_link in text_before:
                 title_link = ""
                 link_shown = True
             if title and title_link:
@@ -4912,7 +4907,7 @@ def unwrap_attachments(message, text_before):
                     % (
                         prepend_title_text,
                         title,
-                        title_link,
+                        htmlescape(title_link),
                     )
                 )
                 prepend_title_text = ""
@@ -4926,12 +4921,8 @@ def unwrap_attachments(message, text_before):
                 )
                 prepend_title_text = ""
             from_url = attachment.get("from_url", "")
-            if (
-                from_url not in text_before
-                and from_url not in text_before_unescaped
-                and from_url != title_link
-            ):
-                t.append(from_url)
+            if from_url not in text_before and from_url != title_link:
+                t.append(htmlescape(from_url))
             elif from_url:
                 link_shown = True
 
@@ -4941,17 +4932,13 @@ def unwrap_attachments(message, text_before):
                 t.append(prepend_title_text + tx)
                 prepend_title_text = ""
 
-            blocks = attachment.get("blocks", [])
-            t.extend(unfurl_blocks(blocks))
-
             image_url = attachment.get("image_url", "")
             if (
                 image_url not in text_before
-                and image_url not in text_before_unescaped
                 and image_url != from_url
                 and image_url != title_link
             ):
-                t.append(image_url)
+                t.append(htmlescape(image_url))
             elif image_url:
                 link_shown = True
 
@@ -4964,6 +4951,11 @@ def unwrap_attachments(message, text_before):
             files = unwrap_files(message, attachment, None)
             if files:
                 t.append(files)
+
+            t = [unhtmlescape(unfurl_refs(x)) for x in t]
+
+            blocks = attachment.get("blocks", [])
+            t.extend(unfurl_blocks(blocks))
 
             if attachment.get("is_msg_unfurl"):
                 channel_name = resolve_ref("#{}".format(attachment["channel_id"]))
@@ -4990,7 +4982,7 @@ def unwrap_attachments(message, text_before):
                         "!date^{}^{{date_short_pretty}}{}".format(ts_int, time_string)
                     ).capitalize()
                     footer += " | {}".format(timestamp_formatted)
-                t.append(footer)
+                t.append(unhtmlescape(unfurl_refs(footer)))
 
             fallback = attachment.get("fallback")
             if t == [] and fallback and not link_shown:
