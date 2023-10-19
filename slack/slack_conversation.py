@@ -687,3 +687,14 @@ class SlackConversation(SlackBuffer):
 
     async def post_message(self, text: str) -> None:
         await self._api.chat_post_message(self.conversation, text)
+
+    async def _buffer_closed(self):
+        if self.id in self.workspace.open_conversations:
+            del self.workspace.open_conversations[self.id]
+        if self.type in ["im", "mpim"]:
+            await self._api.conversations_close(self)
+
+    def _buffer_close_cb(self, data: str, buffer: str) -> int:
+        super()._buffer_close_cb(data, buffer)
+        run_async(self._buffer_closed())
+        return weechat.WEECHAT_RC_OK
