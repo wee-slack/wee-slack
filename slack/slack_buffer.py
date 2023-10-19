@@ -449,4 +449,5 @@ class SlackBuffer(ABC):
             del shared.buffers[self.buffer_pointer]
         self.buffer_pointer = ""
         self.last_printed_ts = None
+        self.hotlist_tss.clear()
         return weechat.WEECHAT_RC_OK
