@@ -350,6 +350,13 @@ class SlackWorkspace:
                         if channel:
                             await channel.update_buffer_props()
                 return
+            elif data["type"] == "user_status_changed":
+                user = await self.users[data["user"]["id"]]
+                user.update_info_json(data["user"])
+                for conversation in self.open_conversations.values():
+                    if conversation.im_user_id == user.id:
+                        await conversation.update_buffer_props()
+                return
             elif data["type"] == "reaction_added" or data["type"] == "reaction_removed":
                 channel_id = data["item"]["channel"]
             elif (

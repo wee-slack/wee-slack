@@ -18,6 +18,7 @@ from slack.error import (
 from slack.log import print_error
 from slack.python_compatibility import removeprefix, removesuffix
 from slack.shared import shared
+from slack.slack_emoji import get_emoji
 from slack.slack_user import SlackBot, SlackUser, format_bot_nick, nick_color
 from slack.task import gather
 from slack.util import htmlescape, intersperse, unhtmlescape, with_color
@@ -796,31 +797,6 @@ class SlackMessage:
             else:
                 yield item
 
-    def _get_emoji(self, emoji_name: str, skin_tone: Optional[int] = None) -> str:
-        emoji_name_with_colons = f":{emoji_name}:"
-        if shared.config.look.render_emoji_as.value == "name":
-            return emoji_name_with_colons
-
-        emoji_item = shared.standard_emojis.get(emoji_name)
-        if emoji_item is None:
-            return emoji_name_with_colons
-
-        skin_tone_item = (
-            emoji_item.get("skinVariations", {}).get(str(skin_tone))
-            if skin_tone
-            else None
-        )
-        emoji_unicode = (
-            skin_tone_item["unicode"] if skin_tone_item else emoji_item["unicode"]
-        )
-
-        if shared.config.look.render_emoji_as.value == "emoji":
-            return emoji_unicode
-        elif shared.config.look.render_emoji_as.value == "both":
-            return f"{emoji_unicode}({emoji_name_with_colons})"
-        else:
-            assert_never(shared.config.look.render_emoji_as.value)
-
     async def _create_reaction_string(self, reaction: SlackMessageReaction) -> str:
         if self.conversation.display_reaction_nicks():
             users = await gather(
@@ -832,7 +808,7 @@ class SlackMessage:
             users_str = ""
 
         reaction_string = (
-            f"{self._get_emoji(reaction['name'])}{len(reaction['users'])}{users_str}"
+            f"{get_emoji(reaction['name'])}{len(reaction['users'])}{users_str}"
         )
 
         if self.workspace.my_user.id in reaction["users"]:
@@ -1063,7 +1039,7 @@ class SlackMessage:
             else:
                 return element["url"]
         elif element["type"] == "emoji":
-            return self._get_emoji(element["name"], element.get("skin_tone"))
+            return get_emoji(element["name"], element.get("skin_tone"))
         elif element["type"] == "channel":
             return PendingMessageItem(self, "conversation", element["channel_id"])
         elif element["type"] == "user":

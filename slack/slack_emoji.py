@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import json
 import os
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, Optional
 
 import weechat
 
 from slack.error import store_and_format_exception
 from slack.log import print_error
+from slack.shared import shared
 
 if TYPE_CHECKING:
-    from typing_extensions import NotRequired, TypedDict
+    from typing_extensions import NotRequired, TypedDict, assert_never
 
     class EmojiSkinVariation(TypedDict):
         name: str
@@ -58,3 +59,27 @@ def load_standard_emojis() -> Dict[str, Emoji]:
     except Exception as e:
         print_error(f"couldn't read weemoji.json: {store_and_format_exception(e)}")
         return {}
+
+
+def get_emoji(emoji_name: str, skin_tone: Optional[int] = None) -> str:
+    emoji_name_with_colons = f":{emoji_name}:"
+    if shared.config.look.render_emoji_as.value == "name":
+        return emoji_name_with_colons
+
+    emoji_item = shared.standard_emojis.get(emoji_name)
+    if emoji_item is None:
+        return emoji_name_with_colons
+
+    skin_tone_item = (
+        emoji_item.get("skinVariations", {}).get(str(skin_tone)) if skin_tone else None
+    )
+    emoji_unicode = (
+        skin_tone_item["unicode"] if skin_tone_item else emoji_item["unicode"]
+    )
+
+    if shared.config.look.render_emoji_as.value == "emoji":
+        return emoji_unicode
+    elif shared.config.look.render_emoji_as.value == "both":
+        return f"{emoji_unicode}({emoji_name_with_colons})"
+    else:
+        assert_never(shared.config.look.render_emoji_as.value)

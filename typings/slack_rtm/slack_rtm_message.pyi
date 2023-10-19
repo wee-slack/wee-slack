@@ -17,6 +17,7 @@ from slack_api.slack_conversations_history import (
     SlackMessageWithFiles,
 )
 from slack_api.slack_conversations_replies import SlackMessageThreadCommon
+from slack_api.slack_users_info import SlackUserInfoPerson
 from typing_extensions import Literal, NotRequired, TypedDict, final
 
 class SlackRtmHello(TypedDict):
@@ -252,6 +253,13 @@ class SlackPrefChange(TypedDict):
     name: str
     value: str
 
+@final
+class SlackUserStatusChanged(TypedDict):
+    type: Literal["user_status_changed"]
+    user: SlackUserInfoPerson
+    cache_ts: str
+    event_ts: str
+
 SlackMessageRtm = (
     SlackMessageStandardRtm
     | SlackMessageMeRtm
@@ -288,4 +296,5 @@ SlackRtmMessage = (
     | SlackShRoomUpdate
     | SlackUserTyping
     | SlackPrefChange
+    | SlackUserStatusChanged
 )

@@ -188,6 +188,11 @@ class SlackConversation(SlackBuffer):
     def muted(self) -> bool:
         return self.id in self.workspace.muted_channels
 
+    @property
+    def im_user_id(self) -> Optional[str]:
+        if self.type == "im":
+            return self._info.get("user")
+
     async def sort_key(self) -> str:
         type_sort_key = {
             "channel": 0,
@@ -248,9 +253,14 @@ class SlackConversation(SlackBuffer):
             return True
         return False
 
-    def buffer_title(self) -> str:
+    async def buffer_title(self) -> str:
         # TODO: unfurl and apply styles
-        return unhtmlescape(self._info.get("topic", {}).get("value", ""))
+        topic = unhtmlescape(self._info.get("topic", {}).get("value", ""))
+        if self.im_user_id:
+            user = await self.workspace.users[self.im_user_id]
+            status = f"{user.status_emoji} {user.status_text}".strip()
+            return " | ".join(part for part in [status, topic] if part)
+        return topic
 
     async def set_topic(self, title: str):
         if "topic" not in self._info:
@@ -269,7 +279,7 @@ class SlackConversation(SlackBuffer):
 
         return name, {
             "short_name": short_name,
-            "title": self.buffer_title(),
+            "title": await self.buffer_title(),
             "input_multiline": "1",
             "nicklist": "0" if self.type == "im" else "1",
             "nicklist_display_groups": "0",
