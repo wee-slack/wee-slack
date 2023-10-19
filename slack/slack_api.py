@@ -276,6 +276,14 @@ class SlackApi(SlackApiCommon):
             raise SlackApiError(self.workspace, method, response)
         return response
 
+    async def conversations_close(self, conversation: SlackConversation):
+        method = "conversations.close"
+        params: Params = {"channel": conversation.id}
+        response: SlackGenericResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
     async def conversations_mark(self, conversation: SlackConversation, ts: SlackTs):
         method = "conversations.mark"
         params: Params = {"channel": conversation.id, "ts": ts}
