@@ -379,11 +379,17 @@ class SlackWorkspace:
 
             channel = self.open_conversations.get(channel_id)
             if channel is None:
-                log(
-                    LogLevel.DEBUG,
-                    DebugMessageType.LOG,
-                    f"received websocket message for not open conversation, discarding",
-                )
+                if data["type"] == "message":
+                    channel = await self.conversations[channel_id]
+                    if channel.type in ["im", "mpim"]:
+                        await channel.open_buffer()
+                        await channel.set_hotlist()
+                else:
+                    log(
+                        LogLevel.DEBUG,
+                        DebugMessageType.LOG,
+                        f"received websocket message for not open conversation, discarding",
+                    )
                 return
 
             if data["type"] == "message":
