@@ -357,6 +357,8 @@ class SlackWorkspace:
                     if conversation.im_user_id == user.id:
                         await conversation.update_buffer_props()
                 return
+            elif data["type"] == "channel_joined" or data["type"] == "group_joined":
+                channel_id = data["channel"]["id"]
             elif data["type"] == "reaction_added" or data["type"] == "reaction_removed":
                 channel_id = data["item"]["channel"]
             elif (
@@ -379,9 +381,19 @@ class SlackWorkspace:
 
             channel = self.open_conversations.get(channel_id)
             if channel is None:
-                if data["type"] == "message":
+                if (
+                    data["type"] == "message"
+                    or data["type"] == "im_open"
+                    or data["type"] == "mpim_open"
+                    or data["type"] == "group_open"
+                    or data["type"] == "channel_joined"
+                    or data["type"] == "group_joined"
+                ):
                     channel = await self.conversations[channel_id]
-                    if channel.type in ["im", "mpim"]:
+                    if channel.type in ["im", "mpim"] or data["type"] in [
+                        "channel_joined",
+                        "group_joined",
+                    ]:
                         await channel.open_buffer()
                         await channel.set_hotlist()
                 else:
@@ -405,6 +417,14 @@ class SlackWorkspace:
 
                     message = SlackMessage(channel, data)
                     await channel.add_new_message(message)
+            elif (
+                data["type"] == "im_close"
+                or data["type"] == "mpim_close"
+                or data["type"] == "group_close"
+                or data["type"] == "channel_left"
+                or data["type"] == "group_left"
+            ):
+                weechat.buffer_close(channel.buffer_pointer)
             elif data["type"] == "reaction_added" and data["item"]["type"] == "message":
                 await channel.reaction_add(
                     SlackTs(data["item"]["ts"]), data["reaction"], data["user"]

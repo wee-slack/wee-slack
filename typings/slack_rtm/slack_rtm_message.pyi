@@ -16,6 +16,7 @@ from slack_api.slack_conversations_history import (
     SlackMessageThreadParentSubscribed,
     SlackMessageWithFiles,
 )
+from slack_api.slack_conversations_info import SlackConversationsInfo
 from slack_api.slack_conversations_replies import SlackMessageThreadCommon
 from slack_api.slack_users_info import SlackUserInfoPerson
 from typing_extensions import Literal, NotRequired, TypedDict, final
@@ -152,6 +153,48 @@ class SlackReactionRemoved(TypedDict):
     event_ts: str
     ts: str
 
+@final
+class SlackImOpen(TypedDict):
+    type: Literal["im_open"]
+    user: str
+    channel: str
+    event_ts: str
+
+@final
+class SlackImClose(TypedDict):
+    type: Literal["im_close"]
+    user: str
+    channel: str
+    event_ts: str
+
+@final
+class SlackMpimOpen(TypedDict):
+    type: Literal["mpim_open", "group_open"]
+    is_mpim: Literal[True]
+    user: str
+    channel: str
+    event_ts: str
+
+@final
+class SlackMpimClose(TypedDict):
+    type: Literal["mpim_close", "group_close"]
+    is_mpim: Literal[True]
+    user: str
+    channel: str
+    event_ts: str
+
+@final
+class SlackChannelJoined(TypedDict):
+    type: Literal["channel_joined", "group_joined"]
+    channel: SlackConversationsInfo
+
+@final
+class SlackChannelLeft(TypedDict):
+    type: Literal["channel_left", "group_left"]
+    channel: str
+    actor_id: str
+    event_ts: str
+
 class SlackNotImMarked(TypedDict):
     channel: str
     ts: str
@@ -285,6 +328,12 @@ SlackRtmMessage = (
     | SlackMessageReplied
     | SlackReactionAdded
     | SlackReactionRemoved
+    | SlackImOpen
+    | SlackImClose
+    | SlackMpimOpen
+    | SlackMpimClose
+    | SlackChannelJoined
+    | SlackChannelLeft
     | SlackChannelMarked
     | SlackGroupMarked
     | SlackMpImMarked
