@@ -101,7 +101,7 @@ class SlackUserInfoPerson(SlackUserInfoCommon):
     profile: SlackProfilePerson
     is_bot: Literal[False]
     is_stranger: NotRequired[bool]
-    has_2fa: bool
+    has_2fa: NotRequired[bool]
 
 @final
 class SlackUserInfoBot(SlackUserInfoCommon):

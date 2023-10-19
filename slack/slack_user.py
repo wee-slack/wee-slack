@@ -6,6 +6,7 @@ import weechat
 
 from slack.error import SlackError
 from slack.shared import shared
+from slack.slack_emoji import get_emoji
 from slack.util import with_color
 
 if TYPE_CHECKING:
@@ -71,6 +72,17 @@ class SlackUser:
     def is_external(self) -> bool:
         return self._info["profile"]["team"] != self.workspace.id
 
+    @property
+    def status_text(self) -> str:
+        return self._info["profile"].get("status_text", "") or ""
+
+    @property
+    def status_emoji(self) -> str:
+        status_emoji = self._info["profile"].get("status_emoji")
+        if not status_emoji:
+            return ""
+        return get_emoji(status_emoji.strip(":"))
+
     def nick(self, colorize: bool = False, only_nick: bool = False) -> str:
         nick = self._name_without_spaces()
 
@@ -92,6 +104,12 @@ class SlackUser:
             )
 
         return nick_color(self._name_without_spaces())
+
+    def update_info_json(self, info_json: SlackUserInfo):
+        self._info.update(info_json)  # pyright: ignore [reportGeneralTypeIssues]
+        self._rendered_prefix = None
+        self._rendered_message = None
+        self._parsed_message = None
 
 
 class SlackBot:
