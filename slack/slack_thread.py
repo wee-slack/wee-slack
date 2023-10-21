@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING, Dict, Mapping, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, Generator, Mapping, Optional, Set, Tuple
 
+from slack.log import print_exception_once
 from slack.slack_buffer import SlackBuffer
 from slack.slack_message import SlackMessage, SlackTs
+from slack.slack_user import SlackUser
 from slack.task import gather
 
 if TYPE_CHECKING:
@@ -18,6 +20,7 @@ class SlackThread(SlackBuffer):
     def __init__(self, parent: SlackMessage) -> None:
         super().__init__()
         self.parent = parent
+        self._reply_users: Set[SlackUser] = set()
 
     @property
     def workspace(self) -> SlackWorkspace:
@@ -30,6 +33,11 @@ class SlackThread(SlackBuffer):
     @property
     def context(self) -> Literal["conversation", "thread"]:
         return "thread"
+
+    @property
+    def members(self) -> Generator[SlackUser, None, None]:
+        for user in self._reply_users:
+            yield user
 
     @property
     def messages(self) -> Mapping[SlackTs, SlackMessage]:
@@ -106,6 +114,16 @@ class SlackThread(SlackBuffer):
 
             self.history_needs_refresh = False
             self.history_pending = False
+
+    async def print_message(self, message: SlackMessage):
+        await super().print_message(message)
+        sender_user_id = message.sender_user_id
+        if sender_user_id is not None:
+            try:
+                sender_user = await self.workspace.users[sender_user_id]
+                self._reply_users.add(sender_user)
+            except Exception as e:
+                print_exception_once(e)
 
     async def mark_read(self):
         # subscriptions.thread.mark is only available for session tokens

@@ -4,13 +4,24 @@ import re
 import time
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Dict, List, Mapping, Match, Optional, Set, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Generator,
+    List,
+    Mapping,
+    Match,
+    Optional,
+    Set,
+    Tuple,
+)
 
 import weechat
 
 from slack.log import print_error
 from slack.shared import shared
 from slack.slack_message import SlackMessage, SlackTs
+from slack.slack_user import SlackUser
 from slack.task import gather, run_async
 from slack.util import get_callback_name, htmlescape
 
@@ -192,6 +203,11 @@ class SlackBuffer(ABC):
     @property
     @abstractmethod
     def context(self) -> Literal["conversation", "thread"]:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def members(self) -> Generator[SlackUser, None, None]:
         raise NotImplementedError()
 
     @property

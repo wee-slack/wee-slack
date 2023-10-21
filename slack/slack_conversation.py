@@ -2,7 +2,17 @@ from __future__ import annotations
 
 import hashlib
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Dict, List, Mapping, NoReturn, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Generator,
+    List,
+    Mapping,
+    NoReturn,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import weechat
 
@@ -155,6 +165,12 @@ class SlackConversation(SlackBuffer):
     @property
     def context(self) -> Literal["conversation", "thread"]:
         return "conversation"
+
+    @property
+    def members(self) -> Generator[SlackUser, None, None]:
+        for user_or_bot in self._nicklist:
+            if isinstance(user_or_bot, SlackUser):
+                yield user_or_bot
 
     @property
     def messages(self) -> Mapping[SlackTs, SlackMessage]:
