@@ -448,6 +448,23 @@ def completion_irc_channels_cb(
     return weechat.WEECHAT_RC_OK
 
 
+def completion_nicks_cb(
+    data: str, completion_item: str, buffer: str, completion: str
+) -> int:
+    slack_buffer = shared.buffers.get(buffer)
+    if slack_buffer is None:
+        return weechat.WEECHAT_RC_OK
+
+    for user in slack_buffer.members:
+        weechat.completion_list_add(
+            completion,
+            f"@{user.nick(only_nick=True)}",
+            1,
+            weechat.WEECHAT_LIST_POS_SORT,
+        )
+    return weechat.WEECHAT_RC_OK
+
+
 def completion_thread_hashes_cb(
     data: str, completion_item: str, buffer: str, completion: str
 ) -> int:
@@ -577,9 +594,10 @@ def register_commands():
     weechat.hook_command_run(
         "/input set_unread_current_buffer", get_callback_name(buffer_set_unread_cb), ""
     )
-    weechat.hook_command_run(
-        "/input complete_*", get_callback_name(input_complete_cb), ""
-    )
+    # Disable until working properly
+    # weechat.hook_command_run(
+    #     "/input complete_*", get_callback_name(input_complete_cb), ""
+    # )
     weechat.hook_completion(
         "slack_workspaces",
         "Slack workspaces (internal names)",
@@ -596,6 +614,12 @@ def register_commands():
         "irc_channels",
         "channels on all Slack workspaces",
         get_callback_name(completion_irc_channels_cb),
+        "",
+    )
+    weechat.hook_completion(
+        "nicks",
+        "nicks in the current Slack buffer",
+        get_callback_name(completion_nicks_cb),
         "",
     )
     weechat.hook_completion(
