@@ -258,7 +258,8 @@ class PendingMessageItem:
             return with_color(shared.config.color.usergroup_mention.value, name)
 
         elif self.item_type == "broadcast":
-            name = f"@{self.item_id}"
+            broadcast_name = self.item_id.replace("group", "channel")
+            name = f"@{broadcast_name}"
             return with_color(shared.config.color.usergroup_mention.value, name)
 
         elif self.item_type == "message_nick":
@@ -752,7 +753,7 @@ class SlackMessage:
                 "mention",
                 fallback_name,
             )
-        elif item_id in ["!here", "!channel", "!everyone"]:
+        elif item_id in ["!channel", "!everyone", "!group", "!here"]:
             return PendingMessageItem(
                 self, "broadcast", removeprefix(item_id, "!"), "mention", fallback_name
             )
