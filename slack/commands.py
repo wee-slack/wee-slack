@@ -438,13 +438,22 @@ def completion_slack_workspace_commands_cb(
     return weechat.WEECHAT_RC_OK
 
 
-def completion_irc_channels_cb(
+def completion_slack_channels_cb(
     data: str, completion_item: str, buffer: str, completion: str
 ) -> int:
-    if weechat.buffer_get_string(buffer, "full_name").startswith("core."):
-        weechat.completion_list_add(
-            completion, "#asd", 0, weechat.WEECHAT_LIST_POS_SORT
-        )
+    slack_buffer = shared.buffers.get(buffer)
+    if slack_buffer is None:
+        return weechat.WEECHAT_RC_OK
+
+    conversations = slack_buffer.workspace.open_conversations.values()
+    for conversation in conversations:
+        if conversation.buffer_type == "channel":
+            weechat.completion_list_add(
+                completion,
+                conversation.name_with_prefix("short_name_without_padding"),
+                0,
+                weechat.WEECHAT_LIST_POS_SORT,
+            )
     return weechat.WEECHAT_RC_OK
 
 
@@ -611,9 +620,9 @@ def register_commands():
         "",
     )
     weechat.hook_completion(
-        "irc_channels",
-        "channels on all Slack workspaces",
-        get_callback_name(completion_irc_channels_cb),
+        "slack_channels",
+        "conversations in the current Slack workspace",
+        get_callback_name(completion_slack_channels_cb),
         "",
     )
     weechat.hook_completion(
