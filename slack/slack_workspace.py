@@ -88,7 +88,7 @@ class SlackItem(
             item = items_info.get(item_id)
             if item is None:
                 raise SlackError(self.workspace, "item_not_found")
-            return self._create_item_from_info(item)
+            return await self._create_item_from_info(item)
         else:
             return await self._item_class.create(self.workspace, item_id)
 
@@ -99,7 +99,7 @@ class SlackItem(
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_item_from_info(self, item_info: SlackItemInfo) -> SlackItemClass:
+    async def _create_item_from_info(self, item_info: SlackItemInfo) -> SlackItemClass:
         raise NotImplementedError()
 
 
@@ -120,10 +120,10 @@ class SlackConversations(SlackItem[SlackConversation, SlackConversationsInfo]):
             response["channel"]["id"]: response["channel"] for response in responses
         }
 
-    def _create_item_from_info(
+    async def _create_item_from_info(
         self, item_info: SlackConversationsInfo
     ) -> SlackConversation:
-        return self._item_class(self.workspace, item_info)
+        return await self._item_class.create_from_info(self.workspace, item_info)
 
 
 class SlackUsers(SlackItem[SlackUser, SlackUserInfo]):
@@ -136,7 +136,7 @@ class SlackUsers(SlackItem[SlackUser, SlackUserInfo]):
         response = await self.workspace.api.fetch_users_info(item_ids)
         return {info["id"]: info for info in response["users"]}
 
-    def _create_item_from_info(self, item_info: SlackUserInfo) -> SlackUser:
+    async def _create_item_from_info(self, item_info: SlackUserInfo) -> SlackUser:
         return self._item_class(self.workspace, item_info)
 
 
@@ -150,7 +150,7 @@ class SlackBots(SlackItem[SlackBot, SlackBotInfo]):
         response = await self.workspace.api.fetch_bots_info(item_ids)
         return {info["id"]: info for info in response["bots"]}
 
-    def _create_item_from_info(self, item_info: SlackBotInfo) -> SlackBot:
+    async def _create_item_from_info(self, item_info: SlackBotInfo) -> SlackBot:
         return self._item_class(self.workspace, item_info)
 
 
@@ -166,7 +166,9 @@ class SlackUsergroups(SlackItem[SlackUsergroup, SlackUsergroupInfo]):
         )
         return {info["id"]: info for info in response["results"]}
 
-    def _create_item_from_info(self, item_info: SlackUsergroupInfo) -> SlackUsergroup:
+    async def _create_item_from_info(
+        self, item_info: SlackUsergroupInfo
+    ) -> SlackUsergroup:
         return self._item_class(self.workspace, item_info)
 
 
@@ -283,8 +285,7 @@ class SlackWorkspace:
             if not history["messages"]:
                 return
 
-        sort_key = await conversation.sort_key()
-        return sort_key, conversation
+        return conversation.sort_key(), conversation
 
     async def _connect_ws(self, url: str):
         proxy = Proxy()
@@ -348,14 +349,14 @@ class SlackWorkspace:
                     for channel_id in changed_channels:
                         channel = self.open_conversations.get(channel_id)
                         if channel:
-                            await channel.update_buffer_props()
+                            channel.update_buffer_props()
                 return
             elif data["type"] == "user_status_changed":
                 user = await self.users[data["user"]["id"]]
                 user.update_info_json(data["user"])
                 for conversation in self.open_conversations.values():
                     if conversation.im_user_id == user.id:
-                        await conversation.update_buffer_props()
+                        conversation.update_buffer_props()
                 return
             elif data["type"] == "channel_joined" or data["type"] == "group_joined":
                 channel_id = data["channel"]["id"]
@@ -413,7 +414,7 @@ class SlackWorkspace:
                     await channel.change_message(data)
                 else:
                     if "subtype" in data and data["subtype"] == "channel_topic":
-                        await channel.set_topic(data["topic"])
+                        channel.set_topic(data["topic"])
 
                     message = SlackMessage(channel, data)
                     await channel.add_new_message(message)
