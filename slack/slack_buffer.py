@@ -221,7 +221,7 @@ class SlackBuffer(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    async def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
+    def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
         raise NotImplementedError()
 
     async def buffer_switched_to(self) -> None:
@@ -236,7 +236,7 @@ class SlackBuffer(ABC):
                 weechat.buffer_set(self.buffer_pointer, "display", "1")
             return
 
-        name, buffer_props = await self.get_name_and_buffer_props()
+        name, buffer_props = self.get_name_and_buffer_props()
         full_name = self.get_full_name(name)
 
         buffer_props["highlight_tags"] = (
@@ -272,8 +272,8 @@ class SlackBuffer(ABC):
         if switch:
             await self.buffer_switched_to()
 
-    async def update_buffer_props(self) -> None:
-        name, buffer_props = await self.get_name_and_buffer_props()
+    def update_buffer_props(self) -> None:
+        name, buffer_props = self.get_name_and_buffer_props()
         buffer_props["name"] = self.get_full_name(name)
         for key, value in buffer_props.items():
             weechat.buffer_set(self.buffer_pointer, key, value)

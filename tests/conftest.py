@@ -163,10 +163,13 @@ def workspace():
     w.my_user = user_test1
     w.users[user_test1_id] = user_test1_future
 
-    channel_public = SlackConversation(w, channel_public_info)
     channel_public_future = Future[SlackConversation]()
-    channel_public_future.set_result(channel_public)
     w.conversations[channel_public_id] = channel_public_future
+    channel_public = SlackConversation.create_from_info(w, channel_public_info)
+    try:
+        channel_public.send(None)
+    except StopIteration as e:
+        channel_public_future.set_result(e.value)
 
     return w
 

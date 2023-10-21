@@ -50,7 +50,7 @@ if TYPE_CHECKING:
 def update_buffer_props():
     for workspace in shared.workspaces.values():
         for conversation in workspace.open_conversations.values():
-            run_async(conversation.update_buffer_props())
+            conversation.update_buffer_props()
 
 
 def invalidate_nicklists():
@@ -114,7 +114,7 @@ class SlackConversationMessageHashes(Dict[SlackTs, str]):
             if other_message:
                 run_async(self._conversation.rerender_message(other_message))
                 if other_message.thread_buffer is not None:
-                    run_async(other_message.thread_buffer.update_buffer_props())
+                    other_message.thread_buffer.update_buffer_props()
                 for reply in other_message.replies.values():
                     run_async(self._conversation.rerender_message(reply))
 
@@ -128,15 +128,25 @@ class SlackConversationMessageHashes(Dict[SlackTs, str]):
 
 
 class SlackConversation(SlackBuffer):
+    __create_key = object()
+
     def __init__(
         self,
+        create_key: object,
         workspace: SlackWorkspace,
         info: SlackConversationsInfo,
     ):
+        if create_key is not self.__create_key:
+            raise SlackError(
+                workspace,
+                "SlackConversation must be created with SlackConversation.create or SlackConversation.create_from_info",
+            )
         super().__init__()
         self._workspace = workspace
         self._info = info
         self._members: Optional[List[str]] = None
+        self._im_user: Optional[SlackUser] = None
+        self._mpim_users: Optional[List[SlackUser]] = None
         self._messages: OrderedDict[SlackTs, SlackMessage] = OrderedDict()
         self._nicklist: Dict[Union[SlackUser, SlackBot], str] = {}
         self.nicklist_needs_refresh = True
@@ -145,7 +155,27 @@ class SlackConversation(SlackBuffer):
     @classmethod
     async def create(cls, workspace: SlackWorkspace, conversation_id: str):
         info_response = await workspace.api.fetch_conversations_info(conversation_id)
-        return cls(workspace, info_response["channel"])
+        return await cls.create_from_info(workspace, info_response["channel"])
+
+    @classmethod
+    async def create_from_info(
+        cls, workspace: SlackWorkspace, info: SlackConversationsInfo
+    ):
+        conversation = cls(cls.__create_key, workspace, info)
+
+        if info["is_im"] is True:
+            conversation._im_user = await workspace.users[info["user"]]
+        elif conversation.type == "mpim":
+            members = await conversation.load_members(load_all=True)
+            conversation._mpim_users = await gather(
+                *(
+                    workspace.users[user_id]
+                    for user_id in members
+                    if user_id != workspace.my_user.id
+                )
+            )
+
+        return conversation
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.workspace}, {self.id})"
@@ -209,30 +239,22 @@ class SlackConversation(SlackBuffer):
         if self.type == "im":
             return self._info.get("user")
 
-    async def sort_key(self) -> str:
+    def sort_key(self) -> str:
         type_sort_key = {
             "channel": 0,
             "private": 1,
             "mpim": 2,
             "im": 3,
         }[self.type]
-        name = await self.name()
-        return f"{type_sort_key}{name}".lower()
+        return f"{type_sort_key}{self.name()}".lower()
 
-    async def name(self) -> str:
-        if self._info["is_im"] is True:
-            im_user = await self.workspace.users[self._info["user"]]
-            return im_user.nick()
-        elif self._info["is_mpim"] is True:
-            members = await self.load_members(load_all=True)
-            member_users = await gather(
-                *(
-                    self.workspace.users[user_id]
-                    for user_id in members
-                    if user_id != self.workspace.my_user.id
-                )
-            )
-            return ",".join(sorted(user.nick() for user in member_users))
+    def name(self) -> str:
+        if self._im_user is not None:
+            return self._im_user.nick()
+        elif self._info["is_im"] is True:
+            raise SlackError(self.workspace, "IM conversation without _im_user set")
+        elif self._mpim_users is not None:
+            return ",".join(sorted(user.nick() for user in self._mpim_users))
         else:
             return self._info["name"]
 
@@ -255,11 +277,11 @@ class SlackConversation(SlackBuffer):
         else:
             return "#"
 
-    async def name_with_prefix(
+    def name_with_prefix(
         self,
         name_type: Literal["full_name", "short_name", "short_name_without_padding"],
     ) -> str:
-        return f"{self.name_prefix(name_type)}{await self.name()}"
+        return f"{self.name_prefix(name_type)}{self.name()}"
 
     def should_open(self):
         if "is_open" in self._info:
@@ -269,23 +291,22 @@ class SlackConversation(SlackBuffer):
             return True
         return False
 
-    async def buffer_title(self) -> str:
+    def buffer_title(self) -> str:
         # TODO: unfurl and apply styles
         topic = unhtmlescape(self._info.get("topic", {}).get("value", ""))
-        if self.im_user_id:
-            user = await self.workspace.users[self.im_user_id]
-            status = f"{user.status_emoji} {user.status_text}".strip()
+        if self._im_user:
+            status = f"{self._im_user.status_emoji} {self._im_user.status_text}".strip()
             return " | ".join(part for part in [status, topic] if part)
         return topic
 
-    async def set_topic(self, title: str):
+    def set_topic(self, title: str):
         if "topic" not in self._info:
             self._info["topic"] = {"value": "", "creator": "", "last_set": 0}
         self._info["topic"]["value"] = title
-        await self.update_buffer_props()
+        self.update_buffer_props()
 
-    async def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
-        name_without_prefix = await self.name()
+    def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
+        name_without_prefix = self.name()
         name = f"{self.name_prefix('full_name')}{name_without_prefix}"
         short_name = self.name_prefix("short_name") + name_without_prefix
         if self.muted:
@@ -295,7 +316,7 @@ class SlackConversation(SlackBuffer):
 
         return name, {
             "short_name": short_name,
-            "title": await self.buffer_title(),
+            "title": self.buffer_title(),
             "input_multiline": "1",
             "nicklist": "0" if self.type == "im" else "1",
             "nicklist_display_groups": "0",

@@ -47,8 +47,8 @@ class SlackThread(SlackBuffer):
     def last_read(self) -> Optional[SlackTs]:
         return self.parent.last_read
 
-    async def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
-        conversation_name = await self.parent.conversation.name_with_prefix("full_name")
+    def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
+        conversation_name = self.parent.conversation.name_with_prefix("full_name")
         name = f"{conversation_name}.${self.parent.hash}"
         short_name = f" ${self.parent.hash}"
 

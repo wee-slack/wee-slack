@@ -187,7 +187,7 @@ class PendingMessageItem:
         if self.item_type == "conversation":
             try:
                 conversation = await self.message.workspace.conversations[self.item_id]
-                name = await conversation.name_with_prefix("short_name_without_padding")
+                name = conversation.name_with_prefix("short_name_without_padding")
             except (SlackApiError, SlackError) as e:
                 if (
                     isinstance(e, SlackApiError)
