@@ -4,14 +4,14 @@ import re
 import time
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Dict, List, Mapping, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Dict, List, Mapping, Match, Optional, Set, Tuple
 
 import weechat
 
 from slack.log import print_error
 from slack.shared import shared
 from slack.slack_message import SlackMessage, SlackTs
-from slack.task import run_async
+from slack.task import gather, run_async
 from slack.util import get_callback_name, htmlescape
 
 if TYPE_CHECKING:
@@ -404,6 +404,26 @@ class SlackBuffer(ABC):
             else:
                 print_error("The regex didn't match any part of the message")
 
+    async def linkify_text(self, text: str) -> str:
+        escaped_text = htmlescape(text)
+
+        users = await gather(*self.workspace.users.values(), return_exceptions=True)
+        nick_to_user_id = {
+            user.nick(only_nick=True): user.id
+            for user in users
+            if not isinstance(user, BaseException)
+        }
+
+        def linkify_word(match: Match[str]) -> str:
+            word = match.group(0)
+            nick = match.group(1)
+            if nick in nick_to_user_id:
+                return "<@{}>".format(nick_to_user_id[nick])
+            return word
+
+        linkify_regex = r"(?:^|(?<=\s))@([\w\(\)\'.-]+)"
+        return re.sub(linkify_regex, linkify_word, escaped_text, flags=re.UNICODE)
+
     async def process_input(self, input_data: str):
         special = re.match(
             rf"{MESSAGE_ID_REGEX_STRING}?(?:{REACTION_CHANGE_REGEX_STRING}{EMOJI_CHAR_OR_NAME_REGEX_STRING}\s*|s/)",
@@ -438,7 +458,8 @@ class SlackBuffer(ABC):
         else:
             if input_data.startswith(("//", " ")):
                 input_data = input_data[1:]
-            await self.post_message(htmlescape(input_data))
+            text = await self.linkify_text(input_data)
+            await self.post_message(text)
 
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
         run_async(self.process_input(input_data))
