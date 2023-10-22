@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import locale
 import pprint
 import re
 from dataclasses import dataclass
@@ -492,12 +493,26 @@ def completion_nicks_cb(
     if slack_buffer is None:
         return weechat.WEECHAT_RC_OK
 
-    for user in slack_buffer.members:
+    buffer_nicks = set(f"@{user.nick(only_nick=True)}" for user in slack_buffer.members)
+    for nick in sorted(buffer_nicks, key=locale.strxfrm):
         weechat.completion_list_add(
             completion,
-            f"@{user.nick(only_nick=True)}",
+            nick,
             1,
-            weechat.WEECHAT_LIST_POS_SORT,
+            weechat.WEECHAT_LIST_POS_END,
+        )
+
+    workspace_nicks = set(
+        f"@{user.result().nick(only_nick=True)}"
+        for user in slack_buffer.workspace.users.values()
+        if user.done_with_result()
+    )
+    for nick in sorted(workspace_nicks - buffer_nicks, key=locale.strxfrm):
+        weechat.completion_list_add(
+            completion,
+            nick,
+            1,
+            weechat.WEECHAT_LIST_POS_END,
         )
     return weechat.WEECHAT_RC_OK
 

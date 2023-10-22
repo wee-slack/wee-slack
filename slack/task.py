@@ -109,6 +109,9 @@ class Future(Awaitable[T]):
     def done(self):
         return self._state != "PENDING"
 
+    def done_with_result(self):
+        return self._state == "FINISHED" and self._exception is None
+
     def cancelled(self):
         return self._state == "CANCELLED"
 
