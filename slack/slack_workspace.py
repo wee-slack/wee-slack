@@ -188,6 +188,7 @@ class SlackWorkspace:
         self.bots = SlackBots(self)
         self.usergroups = SlackUsergroups(self)
         self.muted_channels: Set[str] = set()
+        self.custom_emojis: Dict[str, str] = {}
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name})"
@@ -240,6 +241,9 @@ class SlackWorkspace:
 
         prefs = await self.api.fetch_users_get_prefs("muted_channels")
         self.muted_channels = set(prefs["prefs"]["muted_channels"].split(","))
+
+        custom_emojis_response = await self.api.fetch_emoji_list()
+        self.custom_emojis = custom_emojis_response["emoji"]
 
         if not self.api.edgeapi.is_available:
             usergroups = await self.api.fetch_usergroups_list()

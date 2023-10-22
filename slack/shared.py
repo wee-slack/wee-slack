@@ -13,6 +13,9 @@ if TYPE_CHECKING:
 
 WeechatCallbackReturnType = Union[int, str, Dict[str, str], None]
 
+MESSAGE_ID_REGEX_STRING = r"(?P<msg_id>\d+|\$[0-9a-z]{3,})"
+REACTION_CHANGE_REGEX_STRING = r"(?P<reaction_change>\+|-)"
+
 
 class Shared:
     def __init__(self):
