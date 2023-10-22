@@ -165,7 +165,7 @@ def workspace():
 
     channel_public_future = Future[SlackConversation]()
     w.conversations[channel_public_id] = channel_public_future
-    channel_public = SlackConversation.create_from_info(w, channel_public_info)
+    channel_public = SlackConversation(w, channel_public_info)
     try:
         channel_public.send(None)
     except StopIteration as e:

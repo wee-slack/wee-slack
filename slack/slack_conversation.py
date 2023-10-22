@@ -11,6 +11,8 @@ from typing import (
     NoReturn,
     Optional,
     Tuple,
+    Type,
+    TypeVar,
     Union,
 )
 
@@ -29,7 +31,7 @@ from slack.slack_message import (
 )
 from slack.slack_thread import SlackThread
 from slack.slack_user import SlackBot, SlackUser, nick_color
-from slack.task import gather, run_async
+from slack.task import Task, gather, run_async
 from slack.util import unhtmlescape, with_color
 
 if TYPE_CHECKING:
@@ -128,19 +130,20 @@ class SlackConversationMessageHashes(Dict[SlackTs, str]):
 
 
 class SlackConversation(SlackBuffer):
-    __create_key = object()
-
-    def __init__(
-        self,
-        create_key: object,
+    async def __new__(
+        cls,
         workspace: SlackWorkspace,
         info: SlackConversationsInfo,
     ):
-        if create_key is not self.__create_key:
-            raise SlackError(
-                workspace,
-                "SlackConversation must be created with SlackConversation.create or SlackConversation.create_from_info",
-            )
+        conversation = super().__new__(cls)
+        conversation.__init__(workspace, info)
+        return await conversation
+
+    def __init__(
+        self,
+        workspace: SlackWorkspace,
+        info: SlackConversationsInfo,
+    ):
         super().__init__()
         self._workspace = workspace
         self._info = info
@@ -152,30 +155,29 @@ class SlackConversation(SlackBuffer):
         self.nicklist_needs_refresh = True
         self.message_hashes = SlackConversationMessageHashes(self)
 
-    @classmethod
-    async def create(cls, workspace: SlackWorkspace, conversation_id: str):
-        info_response = await workspace.api.fetch_conversations_info(conversation_id)
-        return await cls.create_from_info(workspace, info_response["channel"])
-
-    @classmethod
-    async def create_from_info(
-        cls, workspace: SlackWorkspace, info: SlackConversationsInfo
-    ):
-        conversation = cls(cls.__create_key, workspace, info)
-
-        if info["is_im"] is True:
-            conversation._im_user = await workspace.users[info["user"]]
-        elif conversation.type == "mpim":
-            members = await conversation.load_members(load_all=True)
-            conversation._mpim_users = await gather(
+    async def __init_async(self):
+        if self._info["is_im"] is True:
+            self._im_user = await self._workspace.users[self._info["user"]]
+        elif self.type == "mpim":
+            members = await self.load_members(load_all=True)
+            self._mpim_users = await gather(
                 *(
-                    workspace.users[user_id]
+                    self._workspace.users[user_id]
                     for user_id in members
-                    if user_id != workspace.my_user.id
+                    if user_id != self._workspace.my_user.id
                 )
             )
 
-        return conversation
+    def __await__(self: _T) -> Generator[Task[None], None, _T]:
+        yield from self.__init_async().__await__()
+        return self
+
+    @classmethod
+    async def create(
+        cls: Type[_T], workspace: SlackWorkspace, conversation_id: str
+    ) -> _T:
+        info_response = await workspace.api.fetch_conversations_info(conversation_id)
+        return await cls(workspace, info_response["channel"])
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.workspace}, {self.id})"
@@ -736,3 +738,6 @@ class SlackConversation(SlackBuffer):
         super()._buffer_close_cb(data, buffer)
         run_async(self._buffer_closed())
         return weechat.WEECHAT_RC_OK
+
+
+_T = TypeVar("_T", bound=SlackConversation)

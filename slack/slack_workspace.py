@@ -123,7 +123,7 @@ class SlackConversations(SlackItem[SlackConversation, SlackConversationsInfo]):
     async def _create_item_from_info(
         self, item_info: SlackConversationsInfo
     ) -> SlackConversation:
-        return await self._item_class.create_from_info(self.workspace, item_info)
+        return await self._item_class(self.workspace, item_info)
 
 
 class SlackUsers(SlackItem[SlackUser, SlackUserInfo]):
