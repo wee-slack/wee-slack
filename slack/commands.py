@@ -399,7 +399,7 @@ def command_cb(data: str, buffer: str, args: str) -> int:
     return weechat.WEECHAT_RC_OK
 
 
-def completion_list_add(
+def completion_list_add_expand(
     completion: str, word: str, nick_completion: int, where: str, buffer: str
 ):
     if word == "%(slack_workspaces)":
@@ -407,14 +407,12 @@ def completion_list_add(
     elif word == "%(threads)":
         completion_thread_hashes_cb("", "threads", buffer, completion)
     else:
-        # TODO: Consider WeeChat verison support, in < 2.9 one must use hook_completion_list_add
         weechat.completion_list_add(completion, word, nick_completion, where)
 
 
 def completion_slack_workspace_commands_cb(
     data: str, completion_item: str, buffer: str, completion: str
 ) -> int:
-    # TODO: Consider WeeChat verison support, in < 2.9 one must use hook_completion_get_string
     base_command = weechat.completion_get_string(completion, "base_command")
     base_word = weechat.completion_get_string(completion, "base_word")
     args = weechat.completion_get_string(completion, "args")
@@ -431,12 +429,12 @@ def completion_slack_workspace_commands_cb(
         if len(matching_cmds) > 1:
             for match in matching_cmds:
                 cmd_arg = match.split(" ")
-                completion_list_add(
+                completion_list_add_expand(
                     completion, cmd_arg[0], 0, weechat.WEECHAT_LIST_POS_SORT, buffer
                 )
         else:
             for arg in command.completion.split("|"):
-                completion_list_add(
+                completion_list_add_expand(
                     completion, arg, 0, weechat.WEECHAT_LIST_POS_SORT, buffer
                 )
 
@@ -624,6 +622,14 @@ def input_complete_cb(data: str, buffer: str, command: str) -> int:
 
 
 def register_commands():
+    if shared.weechat_version < 0x02090000:
+        weechat.completion_get_string = (
+            weechat.hook_completion_get_string  # pyright: ignore [reportUnknownMemberType, reportGeneralTypeIssues]
+        )
+        weechat.completion_list_add = (
+            weechat.hook_completion_list_add  # pyright: ignore [reportUnknownMemberType, reportGeneralTypeIssues]
+        )
+
     weechat.hook_command_run(
         "/buffer set unread", get_callback_name(buffer_set_unread_cb), ""
     )
