@@ -19,7 +19,7 @@ from typing import (
 import weechat
 
 from slack.log import print_error
-from slack.shared import shared
+from slack.shared import MESSAGE_ID_REGEX_STRING, REACTION_CHANGE_REGEX_STRING, shared
 from slack.slack_message import SlackMessage, SlackTs
 from slack.slack_user import SlackUser
 from slack.task import gather, run_async
@@ -31,9 +31,6 @@ if TYPE_CHECKING:
     from slack.slack_api import SlackApi
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
-
-MESSAGE_ID_REGEX_STRING = r"(?P<msg_id>\d+|\$[0-9a-z]{3,})"
-REACTION_CHANGE_REGEX_STRING = r"(?P<reaction_change>\+|-)"
 
 EMOJI_CHAR_REGEX_STRING = "(?P<emoji_char>[\U00000080-\U0010ffff]+)"
 EMOJI_NAME_REGEX_STRING = (

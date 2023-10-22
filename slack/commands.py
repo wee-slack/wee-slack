@@ -5,6 +5,7 @@ import pprint
 import re
 from dataclasses import dataclass
 from functools import wraps
+from itertools import chain
 from typing import Callable, Dict, List, Optional, Tuple
 
 import weechat
@@ -12,7 +13,7 @@ import weechat
 from slack.error import SlackError, SlackRtmError, UncaughtError
 from slack.log import open_debug_buffer, print_error
 from slack.python_compatibility import format_exception, removeprefix, removesuffix
-from slack.shared import shared
+from slack.shared import MESSAGE_ID_REGEX_STRING, REACTION_CHANGE_REGEX_STRING, shared
 from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation
 from slack.slack_thread import SlackThread
@@ -21,6 +22,10 @@ from slack.slack_workspace import SlackWorkspace
 from slack.task import run_async, sleep
 from slack.util import get_callback_name, with_color
 from slack.weechat_config import WeeChatOption, WeeChatOptionTypes
+
+REACTION_PREFIX_REGEX_STRING = (
+    rf"{MESSAGE_ID_REGEX_STRING}?{REACTION_CHANGE_REGEX_STRING}"
+)
 
 commands: Dict[str, Command] = {}
 
@@ -438,6 +443,31 @@ def completion_slack_workspace_commands_cb(
     return weechat.WEECHAT_RC_OK
 
 
+def completion_emojis_cb(
+    data: str, completion_item: str, buffer: str, completion: str
+) -> int:
+    slack_buffer = shared.buffers.get(buffer)
+    if slack_buffer is None:
+        return weechat.WEECHAT_RC_OK
+
+    base_word = weechat.completion_get_string(completion, "base_word")
+    reaction = re.match(REACTION_PREFIX_REGEX_STRING + ":", base_word)
+    prefix = reaction.group(0) if reaction else ":"
+
+    emoji_names = chain(
+        shared.standard_emojis.keys(), slack_buffer.workspace.custom_emojis.keys()
+    )
+    for emoji_name in emoji_names:
+        if "::skin-tone-" not in emoji_name:
+            weechat.completion_list_add(
+                completion,
+                f"{prefix}{emoji_name}:",
+                0,
+                weechat.WEECHAT_LIST_POS_SORT,
+            )
+    return weechat.WEECHAT_RC_OK
+
+
 def completion_slack_channels_cb(
     data: str, completion_item: str, buffer: str, completion: str
 ) -> int:
@@ -623,6 +653,12 @@ def register_commands():
         "slack_channels",
         "conversations in the current Slack workspace",
         get_callback_name(completion_slack_channels_cb),
+        "",
+    )
+    weechat.hook_completion(
+        "slack_emojis",
+        "Emoji names known to Slack",
+        get_callback_name(completion_emojis_cb),
         "",
     )
     weechat.hook_completion(
