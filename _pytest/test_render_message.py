@@ -91,6 +91,29 @@ import wee_slack
         },
         {
             "input_message": {
+                "text": "test",
+                "reactions": [{"name": "custom", "users": ["U01E8P3JKM1"], "count": 2}],
+            },
+            "rendered": "test <[color darkgray]>[:custom:2]<[color reset]>",
+        },
+        {
+            "input_message": {
+                "text": "test",
+                "reactions": [{"name": "custom", "users": ["U407ABLLW"], "count": 1}],
+            },
+            "rendered": "test <[color darkgray]>[:custom:(@alice)]<[color reset]>",
+            "show_reaction_nicks": True,
+        },
+        {
+            "input_message": {
+                "text": "test",
+                "reactions": [{"name": "custom", "users": ["U407ABLLW"], "count": 2}],
+            },
+            "rendered": "test <[color darkgray]>[:custom:(@alice, and others)]<[color reset]>",
+            "show_reaction_nicks": True,
+        },
+        {
+            "input_message": {
                 "blocks": [
                     {
                         "type": "rich_text",
@@ -144,6 +167,7 @@ import wee_slack
 def test_render_message(case, channel_general):
     wee_slack.EMOJI, wee_slack.EMOJI_WITH_SKIN_TONES_REVERSE = wee_slack.load_emoji()
     wee_slack.config.render_emoji_as_string = case.get("render_emoji_as_string")
+    wee_slack.config.show_reaction_nicks = case.get("show_reaction_nicks", False)
     message_json = {"ts": str(wee_slack.SlackTS()), **case["input_message"]}
     message = wee_slack.SlackMessage("normal", message_json, channel_general)
     result = message.render()

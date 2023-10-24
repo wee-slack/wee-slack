@@ -3505,17 +3505,19 @@ class SlackMessage(object):
     def add_reaction(self, reaction_name, user):
         reaction = self.get_reaction(reaction_name)
         if reaction:
+            reaction["count"] += 1
             if user not in reaction["users"]:
                 reaction["users"].append(user)
         else:
             if "reactions" not in self.message_json:
                 self.message_json["reactions"] = []
             self.message_json["reactions"].append(
-                {"name": reaction_name, "users": [user]}
+                {"name": reaction_name, "count": 1, "users": [user]}
             )
 
     def remove_reaction(self, reaction_name, user):
         reaction = self.get_reaction(reaction_name)
+        reaction["count"] -= 1
         if user in reaction["users"]:
             reaction["users"].remove(user)
 
@@ -5139,9 +5141,12 @@ def create_user_status_string(profile):
 def create_reaction_string(reaction, myidentifier):
     if config.show_reaction_nicks:
         nicks = [resolve_ref("@{}".format(user)) for user in reaction["users"]]
-        users = "({})".format(", ".join(nicks))
+        nicks_extra = (
+            ["and others"] if len(reaction["users"]) < reaction["count"] else []
+        )
+        users = "({})".format(", ".join(nicks + nicks_extra))
     else:
-        users = len(reaction["users"])
+        users = reaction["count"]
     reaction_string = ":{}:{}".format(reaction["name"], users)
     if myidentifier in reaction["users"]:
         return colorize_string(
@@ -5154,7 +5159,7 @@ def create_reaction_string(reaction, myidentifier):
 
 
 def create_reactions_string(reactions, myidentifier):
-    reactions_with_users = [r for r in reactions if len(r["users"]) > 0]
+    reactions_with_users = [r for r in reactions if r["count"] > 0]
     reactions_string = " ".join(
         create_reaction_string(r, myidentifier) for r in reactions_with_users
     )
