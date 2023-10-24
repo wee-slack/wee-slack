@@ -4783,6 +4783,10 @@ def unfurl_block_rich_text_element(element):
             return element["url"]
     elif element["type"] == "emoji":
         return replace_string_with_emoji(":{}:".format(element["name"]))
+    elif element["type"] == "color":
+        rgb_int = int(element["value"].lstrip("#"), 16)
+        weechat_color = w.info_get("color_rgb2term", str(rgb_int))
+        return "{} {}".format(element["value"], colorize_string(weechat_color, "■"))
     elif element["type"] == "user":
         return resolve_ref("@{}".format(element["user_id"]))
     elif element["type"] == "usergroup":

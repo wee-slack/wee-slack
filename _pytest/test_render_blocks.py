@@ -353,6 +353,21 @@ import wee_slack
                 "<[color bold]><[color italic]>*_bold and italic combined_*<[color -italic]><[color -bold]>"
             ],
         },
+        {
+            "blocks": [
+                {
+                    "type": "rich_text",
+                    "block_id": "M23r4",
+                    "elements": [
+                        {
+                            "type": "rich_text_section",
+                            "elements": [{"type": "color", "value": "#FFAA00"}],
+                        }
+                    ],
+                }
+            ],
+            "rendered": ["#FFAA00 <[color 16755200]>■<[color reset]>"],
+        },
     ],
 )
 def test_render_blocks(case):
