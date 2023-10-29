@@ -3584,6 +3584,9 @@ class SlackThreadMessage(SlackMessage):
     def parent_message(self):
         return self.parent_channel.messages.get(self.thread_ts)
 
+    def open_thread(self, switch=False):
+        self.parent_message.open_thread(switch)
+
 
 class Hdata(object):
     def __init__(self, w):
