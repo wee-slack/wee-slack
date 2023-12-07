@@ -26,11 +26,11 @@ activated, and that you have the latest development dependencies installed.
 
 ## Formatting
 
-The code is formatted with [`black`](https://black.readthedocs.io/). To format
+The code is formatted with [`ruff`](https://docs.astral.sh/ruff/). To format
 all the files, first navigate to the project root, and then execute:
 
 ```
-$ black .
+$ ruff format --target-version py37
 ```
 
 ## Linting
