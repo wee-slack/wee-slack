@@ -68,7 +68,7 @@ def weechat_command(
     Callable[[str, str], None],
 ]:
     def decorator(
-        f: Callable[[str, List[str], Dict[str, Optional[str]]], None]
+        f: Callable[[str, List[str], Dict[str, Optional[str]]], None],
     ) -> Callable[[str, str], None]:
         cmd = removeprefix(f.__name__, "command_").replace("_", " ")
         top_level = " " not in cmd

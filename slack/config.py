@@ -367,11 +367,8 @@ def config_section_workspace_write_for_old_weechat_cb(
     for workspace in shared.workspaces.values():
         for option in vars(workspace.config).values():
             if isinstance(option, WeeChatOption):
-                if (
-                    option.weechat_type != "string"
-                    or not weechat.config_option_is_null(
-                        option._pointer  # pyright: ignore [reportPrivateUsage]
-                    )
+                if option.weechat_type != "string" or not weechat.config_option_is_null(
+                    option._pointer  # pyright: ignore [reportPrivateUsage]
                 ):
                     if not weechat.config_write_option(
                         config_file,

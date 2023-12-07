@@ -1,6 +1,9 @@
 [tool.black]
 extend-exclude = '^/typings/weechat.pyi'
 
+[tool.ruff]
+extend-exclude = ['typings/weechat.pyi']
+
 [tool.isort]
 profile = "black"
 
@@ -26,6 +29,7 @@ pytest-cov = "^4.0.0"
 isort = "^5.10.1"
 typing-extensions = "^4.4.0"
 pyright = "^1.1.323"
+ruff = "^0.1.7"
 
 [tool.pylint.main]
 ignored-modules = ["weechat"]
