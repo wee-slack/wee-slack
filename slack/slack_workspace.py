@@ -374,7 +374,7 @@ class SlackWorkspace:
                 channel_id = data["subscription"]["channel"]
             elif data["type"] == "sh_room_join" or data["type"] == "sh_room_update":
                 channel_id = data["huddle"]["channel_id"]
-            elif "channel" in data and type(data["channel"]) == str:
+            elif "channel" in data and isinstance(data["channel"], str):
                 channel_id = data["channel"]
             else:
                 log(
@@ -405,7 +405,7 @@ class SlackWorkspace:
                     log(
                         LogLevel.DEBUG,
                         DebugMessageType.LOG,
-                        f"received websocket message for not open conversation, discarding",
+                        "received websocket message for not open conversation, discarding",
                     )
                 return
 

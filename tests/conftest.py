@@ -38,16 +38,16 @@ def import_stub(stubs_path: str, module_name: str):
 
 import_stub("typings", "weechat")
 
-import weechat
+import weechat  # noqa: E402
 
-from slack.config import SlackConfig
-from slack.shared import shared
-from slack.slack_conversation import SlackConversation
-from slack.slack_emoji import load_standard_emojis
-from slack.slack_message import PendingMessageItem, SlackMessage
-from slack.slack_user import SlackUser
-from slack.slack_workspace import SlackWorkspace
-from slack.task import Future
+from slack.config import SlackConfig  # noqa: E402
+from slack.shared import shared  # noqa: E402
+from slack.slack_conversation import SlackConversation  # noqa: E402
+from slack.slack_emoji import load_standard_emojis  # noqa: E402
+from slack.slack_message import PendingMessageItem, SlackMessage  # noqa: E402
+from slack.slack_user import SlackUser  # noqa: E402
+from slack.slack_workspace import SlackWorkspace  # noqa: E402
+from slack.task import Future  # noqa: E402
 
 config_values: Dict[str, str] = {
     "replace_space_in_nicks_with": "_",
