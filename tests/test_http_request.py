@@ -54,7 +54,7 @@ def test_http_request_process_success(mock_method: MagicMock):
         future.id,
     )
 
-    body = f"HTTP/2 200\r\n\r\nresponse"
+    body = "HTTP/2 200\r\n\r\nresponse"
     future.set_result(("", 0, body, ""))
 
     with pytest.raises(StopIteration) as excinfo:
@@ -74,8 +74,8 @@ def test_http_request_url_error():
         coroutine.send(None)
 
     assert excinfo.value.url == url
-    assert excinfo.value.return_code == None
-    assert excinfo.value.http_status_code == None
+    assert excinfo.value.return_code is None
+    assert excinfo.value.http_status_code is None
     assert excinfo.value.error == "error"
 
 
@@ -92,7 +92,7 @@ def test_http_request_process_error_return_code():
 
     assert excinfo.value.url == url
     assert excinfo.value.return_code == -2
-    assert excinfo.value.http_status_code == None
+    assert excinfo.value.http_status_code is None
     assert excinfo.value.error == ""
 
 
@@ -109,7 +109,7 @@ def test_http_request_process_error_stderr():
 
     assert excinfo.value.url == url
     assert excinfo.value.return_code == 0
-    assert excinfo.value.http_status_code == None
+    assert excinfo.value.http_status_code is None
     assert excinfo.value.error == "err"
 
 
@@ -128,7 +128,7 @@ def test_http_request_error_http_status():
         coroutine.send(None)
 
     assert excinfo.value.url == url
-    assert excinfo.value.return_code == None
+    assert excinfo.value.return_code is None
     assert excinfo.value.http_status_code == 400
     assert excinfo.value.error == "response"
 
@@ -185,8 +185,8 @@ def test_http_request_error_retry_error():
         coroutine.send(None)
 
     assert excinfo.value.url == url
-    assert excinfo.value.return_code == None
-    assert excinfo.value.http_status_code == None
+    assert excinfo.value.return_code is None
+    assert excinfo.value.http_status_code is None
     assert excinfo.value.error == "error"
 
 
@@ -198,7 +198,7 @@ def test_http_request_url_multiple_headers():
 
     headers = (
         dedent(
-            f"""
+            """
             HTTP/1.1 200 Connection established
 
             HTTP/2 200
@@ -229,7 +229,7 @@ def test_http_request_process_multiple_headers():
 
     body = (
         dedent(
-            f"""
+            """
             HTTP/1.1 200 Connection established
 
             HTTP/2 200
