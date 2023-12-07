@@ -3,6 +3,7 @@ extend-exclude = '^/typings/weechat.pyi'
 
 [tool.ruff]
 extend-exclude = ['typings/weechat.pyi']
+extend-select = ["I"]
 
 [tool.isort]
 profile = "black"
