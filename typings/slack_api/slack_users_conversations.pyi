@@ -50,7 +50,7 @@ class SlackUsersConversationsCommonNotIm(SlackUsersConversationsCommon):
 class SlackUsersConversationsPublic(SlackUsersConversationsCommonNotIm):
     is_mpim: Literal[False]
     is_private: Literal[False]
-    previous_names: List[str]  # TODO: Check if private and mpim has this
+    previous_names: List[str]
 
 @final
 class SlackUsersConversationsPrivate(SlackUsersConversationsCommonNotIm):
