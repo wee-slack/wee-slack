@@ -265,7 +265,9 @@ class SlackWorkspace:
             c for c in conversations_if_should_open if c is not None
         ]
 
-        for _, conversation in sorted(conversations_to_open):
+        for conversation in sorted(
+            conversations_to_open, key=lambda conversation: conversation.sort_key()
+        ):
             await conversation.open_buffer()
 
         await gather(
@@ -289,7 +291,7 @@ class SlackWorkspace:
             if not history["messages"]:
                 return
 
-        return conversation.sort_key(), conversation
+        return conversation
 
     async def _connect_ws(self, url: str):
         proxy = Proxy()
