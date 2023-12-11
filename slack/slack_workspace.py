@@ -343,7 +343,13 @@ class SlackWorkspace:
         log(LogLevel.DEBUG, DebugMessageType.WEBSOCKET_RECV, json.dumps(data))
 
         try:
-            if data["type"] == "hello":
+            if data["type"] in [
+                "hello",
+                "file_public",
+                "file_shared",
+                "file_deleted",
+                "dnd_updated_user",
+            ]:
                 return
             elif data["type"] == "pref_change":
                 if data["name"] == "muted_channels":
