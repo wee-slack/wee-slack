@@ -652,7 +652,7 @@ class SlackMessage:
             and self._message_json["subtype"] == "huddle_thread"
         ):
             room = self._message_json["room"]
-            team = self._message_json["team"]
+            team = self._message_json.get("team", self.workspace.id)
 
             huddle_text = "Huddle started" if not room["has_ended"] else "Huddle ended"
             name_text = f", name: {room['name']}" if room["name"] else ""

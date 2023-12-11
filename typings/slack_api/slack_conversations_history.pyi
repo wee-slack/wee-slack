@@ -308,7 +308,7 @@ class SlackMessageStandardCommon(SlackMessageCommon):
     user: str
     blocks: List[SlackMessageBlock]
     attachments: NotRequired[List[SlackMessageAttachment]]
-    team: str
+    team: NotRequired[str]
     edited: SlackMessageEdited
 
 @final
