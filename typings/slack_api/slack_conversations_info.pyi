@@ -27,7 +27,7 @@ class SlackConversationsInfoCommon(TypedDict):
     is_org_shared: bool
     context_team_id: str
     updated: int
-    last_read: str
+    last_read: NotRequired[str]
 
 class SlackConversationsInfoCommonNotIm(SlackConversationsInfoCommon):
     name: str
