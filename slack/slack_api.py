@@ -14,6 +14,8 @@ from slack.util import chunked
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfoResponse, SlackBotsInfoResponse
+    from slack_api.slack_client_counts import SlackClientCountsResponse
+    from slack_api.slack_client_userboot import SlackClientUserbootResponse
     from slack_api.slack_common import SlackGenericResponse
     from slack_api.slack_conversations_history import SlackConversationsHistoryResponse
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
@@ -56,10 +58,7 @@ class SlackEdgeApi(SlackApiCommon):
         return self.workspace.token_type == "session"
 
     async def _fetch_edgeapi(self, method: str, params: EdgeParams = {}):
-        enterprise_id_part = (
-            f"{self.workspace.enterprise_id}/" if self.workspace.enterprise_id else ""
-        )
-        url = f"https://edgeapi.slack.com/cache/{enterprise_id_part}{self.workspace.id}/{method}"
+        url = f"https://edgeapi.slack.com/cache/{self.workspace.id}/{method}"
         options = self._get_request_options()
         options["postfields"] = json.dumps(params)
         options["httpheader"] += "\nContent-Type: application/json"
@@ -280,6 +279,20 @@ class SlackApi(SlackApiCommon):
     async def fetch_emoji_list(self):
         method = "emoji.list"
         response: SlackEmojiListResponse = await self._fetch(method)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response)
+        return response
+
+    async def fetch_client_userboot(self):
+        method = "client.userBoot"
+        response: SlackClientUserbootResponse = await self._fetch(method)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response)
+        return response
+
+    async def fetch_client_counts(self):
+        method = "client.counts"
+        response: SlackClientCountsResponse = await self._fetch(method)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response)
         return response

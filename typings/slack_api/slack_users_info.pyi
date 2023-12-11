@@ -40,12 +40,12 @@ class SlackProfileCommon(TypedDict):
     is_custom_image: NotRequired[Optional[bool]]
     huddle_state: NotRequired[Optional[str]]
     huddle_state_expiration_ts: NotRequired[Optional[int]]
-    image_24: str
-    image_32: str
-    image_48: str
-    image_72: str
-    image_192: str
-    image_512: str
+    image_24: NotRequired[str]
+    image_32: NotRequired[str]
+    image_48: NotRequired[str]
+    image_72: NotRequired[str]
+    image_192: NotRequired[str]
+    image_512: NotRequired[str]
     image_1024: NotRequired[str]
     status_text_canonical: NotRequired[Optional[str]]
     team: str

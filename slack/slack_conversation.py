@@ -35,7 +35,9 @@ from slack.task import Task, gather, run_async
 from slack.util import unhtmlescape, with_color
 
 if TYPE_CHECKING:
-    from slack_api.slack_conversations_info import SlackConversationsInfo
+    from slack_api.slack_client_userboot import SlackClientUserbootIm
+    from slack_api.slack_conversations_info import SlackConversationsInfo, SlackTopic
+    from slack_api.slack_users_conversations import SlackUsersConversationsNotIm
     from slack_rtm.slack_rtm_message import (
         SlackMessageChanged,
         SlackMessageDeleted,
@@ -47,6 +49,10 @@ if TYPE_CHECKING:
     from typing_extensions import Literal
 
     from slack.slack_workspace import SlackWorkspace
+
+    SlackConversationsInfoInternal = Union[
+        SlackConversationsInfo, SlackUsersConversationsNotIm, SlackClientUserbootIm
+    ]
 
 
 def update_buffer_props():
@@ -133,7 +139,7 @@ class SlackConversation(SlackBuffer):
     async def __new__(
         cls,
         workspace: SlackWorkspace,
-        info: SlackConversationsInfo,
+        info: SlackConversationsInfoInternal,
     ):
         conversation = super().__new__(cls)
         conversation.__init__(workspace, info)
@@ -142,7 +148,7 @@ class SlackConversation(SlackBuffer):
     def __init__(
         self,
         workspace: SlackWorkspace,
-        info: SlackConversationsInfo,
+        info: SlackConversationsInfoInternal,
     ):
         super().__init__()
         self._workspace = workspace
@@ -155,11 +161,27 @@ class SlackConversation(SlackBuffer):
         self.nicklist_needs_refresh = True
         self.message_hashes = SlackConversationMessageHashes(self)
 
+        self._last_read = (
+            SlackTs(self._info["last_read"])
+            if "last_read" in self._info
+            else SlackTs("0.0")
+        )
+
+        self._topic: SlackTopic = (
+            self._info["topic"]
+            if "topic" in self._info
+            else {"value": "", "creator": "", "last_set": 0}
+        )
+
     async def __init_async(self):
         if self._info["is_im"] is True:
             self._im_user = await self._workspace.users[self._info["user"]]
         elif self.type == "mpim":
-            members = await self.load_members(load_all=True)
+            if "members" in self._info:
+                members = self._info["members"]
+            else:
+                members = await self.load_members(load_all=True)
+
             self._mpim_users = await gather(
                 *(
                     self._workspace.users[user_id]
@@ -225,11 +247,11 @@ class SlackConversation(SlackBuffer):
 
     @property
     def last_read(self) -> SlackTs:
-        return SlackTs(self._info["last_read"])
+        return self._last_read
 
     @last_read.setter
     def last_read(self, value: SlackTs):
-        self._info["last_read"] = value
+        self._last_read = value
         self.set_unread_and_hotlist()
 
     @property
@@ -295,16 +317,14 @@ class SlackConversation(SlackBuffer):
 
     def buffer_title(self) -> str:
         # TODO: unfurl and apply styles
-        topic = unhtmlescape(self._info.get("topic", {}).get("value", ""))
+        topic = unhtmlescape(self._topic["value"])
         if self._im_user:
             status = f"{self._im_user.status_emoji} {self._im_user.status_text}".strip()
             return " | ".join(part for part in [status, topic] if part)
         return topic
 
     def set_topic(self, title: str):
-        if "topic" not in self._info:
-            self._info["topic"] = {"value": "", "creator": "", "last_set": 0}
-        self._info["topic"]["value"] = title
+        self._topic["value"] = title
         self.update_buffer_props()
 
     def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
@@ -524,12 +544,18 @@ class SlackConversation(SlackBuffer):
     async def nicklist_update(self):
         if self.nicklist_needs_refresh and self.type != "im":
             self.nicklist_needs_refresh = False
-            members = await self.load_members()
-            users = await gather(
-                *(self.workspace.users[user_id] for user_id in members)
-            )
-            for user in users:
-                self.nicklist_add_user(user)
+            try:
+                members = await self.load_members()
+            except SlackApiError as e:
+                if e.response["error"] == "enterprise_is_restricted":
+                    return
+                raise e
+            else:
+                users = await gather(
+                    *(self.workspace.users[user_id] for user_id in members)
+                )
+                for user in users:
+                    self.nicklist_add_user(user)
 
     def nicklist_add_user(
         self, user: Optional[Union[SlackUser, SlackBot]], nick: Optional[str] = None
