@@ -74,6 +74,11 @@ parser.add_argument(
     metavar="<id or name>",
     nargs="?",
 )
+parser.add_argument(
+    "--no-secretstorage",
+    help="Disable accessing freedesktop Secret D-Bus service",
+    action="store_true",
+)
 args = parser.parse_args()
 
 browser: Literal["firefox", "chrome"]
@@ -232,22 +237,25 @@ elif browser == "chrome":
     )
     cookie_d_value, cookie_ds_value = get_cookies(cookies_path, cookie_query, ())
 
-    bus = secretstorage.dbus_init()
-    try:
-        collection = secretstorage.get_default_collection(bus)
-        for item in collection.get_all_items():
-            if item.get_label() == "Chrome Safe Storage":
-                passwd = item.get_secret()
-                break
-        else:
-            raise Exception("Chrome password not found!")
-    except SecretStorageException:
-        print(
-            "Error communicating org.freedesktop.secrets, trying 'peanuts' "
-            "as a password",
-            file=sys.stderr,
-        )
+    if args.no_secretstorage:
         passwd = "peanuts"
+    else:
+        bus = secretstorage.dbus_init()
+        try:
+            collection = secretstorage.get_default_collection(bus)
+            for item in collection.get_all_items():
+                if item.get_label() == "Chrome Safe Storage":
+                    passwd = item.get_secret()
+                    break
+            else:
+                raise Exception("Chrome password not found!")
+        except SecretStorageException:
+            print(
+                "Error communicating org.freedesktop.secrets, trying 'peanuts' "
+                "as a password",
+                file=sys.stderr,
+            )
+            passwd = "peanuts"
 
     salt = b"saltysalt"
     length = 16
