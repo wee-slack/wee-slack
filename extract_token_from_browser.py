@@ -76,7 +76,10 @@ parser.add_argument(
 )
 parser.add_argument(
     "--no-secretstorage",
-    help="Disable accessing freedesktop Secret D-Bus service",
+    help=(
+        "Disable accessing freedesktop Secret D-Bus service, "
+        "use the default password to decrypt Chrome cookies instead"
+    ),
     action="store_true",
 )
 args = parser.parse_args()
