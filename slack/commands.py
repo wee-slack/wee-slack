@@ -271,6 +271,27 @@ def command_slack_thread(buffer: str, args: List[str], options: Options):
         run_async(slack_buffer.open_thread(args[0], switch=True))
 
 
+@weechat_command("-alsochannel|%(threads)", min_args=1)
+def command_slack_reply(buffer: str, args: List[str], options: Options):
+    slack_buffer = shared.buffers.get(buffer)
+    if isinstance(slack_buffer, SlackThread):
+        broadcast = bool(options.get("alsochannel"))
+        run_async(slack_buffer.post_message(args[0], broadcast))
+    elif isinstance(slack_buffer, SlackConversation):
+        split_args = args[0].split(" ", 1)
+        if len(split_args) < 2:
+            print_error(
+                'Too few arguments for command "/slack reply" (help on command: /help slack reply)'
+            )
+            return
+        thread_ts = slack_buffer.ts_from_hash_or_index(split_args[0])
+        run_async(
+            slack_buffer.workspace.api.chat_post_message(
+                slack_buffer, split_args[1], thread_ts
+            )
+        )
+
+
 def print_uncaught_error(error: UncaughtError, detailed: bool, options: Options):
     weechat.prnt("", f"  {error.id} ({error.time}): {error.exception}")
     if detailed:
