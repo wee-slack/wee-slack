@@ -22,13 +22,13 @@ def test_parse_options_without_options():
 def test_parse_options_with_option():
     pos_args, options = parse_options("workspace add wee-slack-test -autoconnect")
     assert pos_args == "workspace add wee-slack-test"
-    assert options == {"autoconnect": None}
+    assert options == {"autoconnect": True}
 
 
 def test_parse_options_option_in_middle():
     pos_args, options = parse_options("workspace add -autoconnect wee-slack-test")
     assert pos_args == "workspace add wee-slack-test"
-    assert options == {"autoconnect": None}
+    assert options == {"autoconnect": True}
 
 
 def test_parse_options_option_with_value():
@@ -36,4 +36,4 @@ def test_parse_options_option_with_value():
         "workspace add wee-slack-test -autoconnect -api_token=xoxp-1"
     )
     assert pos_args == "workspace add wee-slack-test"
-    assert options == {"autoconnect": None, "api_token": "xoxp-1"}
+    assert options == {"autoconnect": True, "api_token": "xoxp-1"}

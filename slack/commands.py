@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 from functools import wraps
 from itertools import chain
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
 
 import weechat
 
@@ -23,6 +23,11 @@ from slack.slack_workspace import SlackWorkspace
 from slack.task import run_async, sleep
 from slack.util import get_callback_name, with_color
 from slack.weechat_config import WeeChatOption, WeeChatOptionTypes
+
+if TYPE_CHECKING:
+    from typing_extensions import Literal
+
+    Options = Dict[str, Union[str, Literal[True]]]
 
 REACTION_PREFIX_REGEX_STRING = (
     rf"{MESSAGE_ID_REGEX_STRING}?{REACTION_CHANGE_REGEX_STRING}"
@@ -41,8 +46,8 @@ commands: Dict[str, Command] = {}
 def parse_options(args: str):
     regex = re.compile("(?:^| )+-([^ =]+)(?:=([^ ]+))?")
     pos_args = regex.sub("", args)
-    options: Dict[str, Optional[str]] = {
-        match.group(1): match.group(2) for match in regex.finditer(args)
+    options: Options = {
+        match.group(1): match.group(2) or True for match in regex.finditer(args)
     }
     return pos_args, options
 
@@ -64,11 +69,11 @@ def weechat_command(
     split_all_args: bool = False,
     slack_buffer_required: bool = False,
 ) -> Callable[
-    [Callable[[str, List[str], Dict[str, Optional[str]]], None]],
+    [Callable[[str, List[str], Options], None]],
     Callable[[str, str], None],
 ]:
     def decorator(
-        f: Callable[[str, List[str], Dict[str, Optional[str]]], None],
+        f: Callable[[str, List[str], Options], None],
     ) -> Callable[[str, str], None]:
         cmd = removeprefix(f.__name__, "command_").replace("_", " ")
         top_level = " " not in cmd
@@ -116,7 +121,7 @@ def display_workspace(workspace: SlackWorkspace, detailed_list: bool):
 
 
 @weechat_command()
-def command_slack(buffer: str, args: List[str], options: Dict[str, Optional[str]]):
+def command_slack(buffer: str, args: List[str], options: Options):
     """
     slack command
     """
@@ -134,10 +139,8 @@ def workspace_connect(workspace: SlackWorkspace):
 
 
 @weechat_command("%(slack_workspaces)|-all", split_all_args=True)
-def command_slack_connect(
-    buffer: str, args: List[str], options: Dict[str, Optional[str]]
-):
-    if options.get("all", False) is None:
+def command_slack_connect(buffer: str, args: List[str], options: Options):
+    if options.get("all"):
         for workspace in shared.workspaces.values():
             run_async(workspace.connect())
     elif args[0]:
@@ -161,10 +164,8 @@ def workspace_disconnect(workspace: SlackWorkspace):
 
 
 @weechat_command("%(slack_workspaces)|-all", split_all_args=True)
-def command_slack_disconnect(
-    buffer: str, args: List[str], options: Dict[str, Optional[str]]
-):
-    if options.get("all", False) is None:
+def command_slack_disconnect(buffer: str, args: List[str], options: Options):
+    if options.get("all"):
         for workspace in shared.workspaces.values():
             workspace.disconnect()
     elif args[0]:
@@ -181,39 +182,29 @@ def command_slack_disconnect(
 
 
 @weechat_command()
-def command_slack_rehistory(
-    buffer: str, args: List[str], options: Dict[str, Optional[str]]
-):
+def command_slack_rehistory(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
     if slack_buffer:
         run_async(slack_buffer.rerender_history())
 
 
 @weechat_command()
-def command_slack_workspace(
-    buffer: str, args: List[str], options: Dict[str, Optional[str]]
-):
+def command_slack_workspace(buffer: str, args: List[str], options: Options):
     list_workspaces()
 
 
 @weechat_command("%(slack_workspaces)")
-def command_slack_workspace_list(
-    buffer: str, args: List[str], options: Dict[str, Optional[str]]
-):
+def command_slack_workspace_list(buffer: str, args: List[str], options: Options):
     list_workspaces()
 
 
 @weechat_command("%(slack_workspaces)")
-def command_slack_workspace_listfull(
-    buffer: str, args: List[str], options: Dict[str, Optional[str]]
-):
+def command_slack_workspace_listfull(buffer: str, args: List[str], options: Options):
     list_workspaces(detailed_list=True)
 
 
 @weechat_command(min_args=1)
-def command_slack_workspace_add(
-    buffer: str, args: List[str], options: Dict[str, Optional[str]]
-):
+def command_slack_workspace_add(buffer: str, args: List[str], options: Options):
     name = args[0]
     if name in shared.workspaces:
         print_error(f'workspace "{name}" already exists, can\'t add it!')
@@ -226,7 +217,7 @@ def command_slack_workspace_add(
             config_option: WeeChatOption[WeeChatOptionTypes] = getattr(
                 shared.workspaces[name].config, option_name
             )
-            value = "on" if option_value is None else option_value
+            value = "on" if option_value is True else option_value
             config_option.value_set_as_str(value)
 
     weechat.prnt(
@@ -236,9 +227,7 @@ def command_slack_workspace_add(
 
 
 @weechat_command("%(slack_workspaces)", min_args=2)
-def command_slack_workspace_rename(
-    buffer: str, args: List[str], options: Dict[str, Optional[str]]
-):
+def command_slack_workspace_rename(buffer: str, args: List[str], options: Options):
     old_name = args[0]
     new_name = args[1]
     workspace = shared.workspaces.get(old_name)
@@ -256,9 +245,7 @@ def command_slack_workspace_rename(
 
 
 @weechat_command("%(slack_workspaces)", min_args=1)
-def command_slack_workspace_del(
-    buffer: str, args: List[str], options: Dict[str, Optional[str]]
-):
+def command_slack_workspace_del(buffer: str, args: List[str], options: Options):
     name = args[0]
     workspace = shared.workspaces.get(name)
     if not workspace:
@@ -278,23 +265,18 @@ def command_slack_workspace_del(
 
 
 @weechat_command("%(threads)", min_args=1)
-def command_slack_thread(
-    buffer: str, args: List[str], options: Dict[str, Optional[str]]
-):
+def command_slack_thread(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
     if isinstance(slack_buffer, SlackConversation):
         run_async(slack_buffer.open_thread(args[0], switch=True))
 
 
-def print_uncaught_error(
-    error: UncaughtError, detailed: bool, options: Dict[str, Optional[str]]
-):
+def print_uncaught_error(error: UncaughtError, detailed: bool, options: Options):
     weechat.prnt("", f"  {error.id} ({error.time}): {error.exception}")
     if detailed:
         for line in format_exception(error.exception):
             weechat.prnt("", f"  {line}")
-    data = options.get("data", False) is None
-    if data:
+    if options.get("data"):
         if isinstance(error.exception, SlackRtmError):
             weechat.prnt("", f"  data: {json.dumps(error.exception.message_json)}")
         elif isinstance(error.exception, SlackError):
@@ -304,9 +286,7 @@ def print_uncaught_error(
 
 
 @weechat_command("tasks|buffer|open_buffer|errors|error", split_all_args=True)
-def command_slack_debug(
-    buffer: str, args: List[str], options: Dict[str, Optional[str]]
-):
+def command_slack_debug(buffer: str, args: List[str], options: Options):
     # TODO: Add message info (message_json)
     if args[0] == "tasks":
         weechat.prnt("", "Active tasks:")
