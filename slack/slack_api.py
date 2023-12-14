@@ -333,6 +333,7 @@ class SlackApi(SlackApiCommon):
         conversation: SlackConversation,
         text: str,
         thread_ts: Optional[SlackTs] = None,
+        broadcast: bool = False,
     ):
         method = "chat.postMessage"
         params: Params = {
@@ -343,6 +344,7 @@ class SlackApi(SlackApiCommon):
         }
         if thread_ts is not None:
             params["thread_ts"] = thread_ts
+            params["reply_broadcast"] = broadcast
         response: SlackGenericResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
