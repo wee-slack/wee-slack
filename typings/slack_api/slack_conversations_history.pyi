@@ -35,6 +35,11 @@ class SlackMessageBlockRichTextElementEmoji(TypedDict):
     skin_tone: NotRequired[int]
 
 @final
+class SlackMessageBlockRichTextElementColor(TypedDict):
+    type: Literal["color"]
+    value: str
+
+@final
 class SlackMessageBlockRichTextElementChannel(TypedDict):
     type: Literal["channel"]
     channel_id: str
@@ -58,6 +63,7 @@ SlackMessageBlockRichTextElement = (
     SlackMessageBlockRichTextElementText
     | SlackMessageBlockRichTextElementLink
     | SlackMessageBlockRichTextElementEmoji
+    | SlackMessageBlockRichTextElementColor
     | SlackMessageBlockRichTextElementChannel
     | SlackMessageBlockRichTextElementUser
     | SlackMessageBlockRichTextElementUsergroup

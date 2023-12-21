@@ -428,6 +428,21 @@ cases: List[Case] = [
             "<[color:bold]><[color:italic]>`*_~all styles~_*`<[color:-italic]><[color:-bold]>"
         ],
     },
+    {
+        "blocks": [
+            {
+                "type": "rich_text",
+                "block_id": "M23r4",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [{"type": "color", "value": "#FFAA00"}],
+                    }
+                ],
+            }
+        ],
+        "rendered": ["#FFAA00 <[color:16755200]>■<[color:reset]>"],
+    },
 ]
 
 

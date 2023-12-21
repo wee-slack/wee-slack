@@ -1041,6 +1041,10 @@ class SlackMessage:
                 return element["url"]
         elif element["type"] == "emoji":
             return get_emoji(element["name"], element.get("skin_tone"))
+        elif element["type"] == "color":
+            rgb_int = int(element["value"].lstrip("#"), 16)
+            weechat_color = weechat.info_get("color_rgb2term", str(rgb_int))
+            return f"{element['value']} {with_color(weechat_color, '■')}"
         elif element["type"] == "channel":
             return PendingMessageItem(self, "conversation", element["channel_id"])
         elif element["type"] == "user":
