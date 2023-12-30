@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import locale
 import pprint
 import re
 from dataclasses import dataclass
@@ -494,27 +493,62 @@ def completion_nicks_cb(
     if slack_buffer is None:
         return weechat.WEECHAT_RC_OK
 
-    buffer_nicks = set(f"@{user.nick(only_nick=True)}" for user in slack_buffer.members)
-    for nick in sorted(buffer_nicks, key=locale.strxfrm):
+    buffer_nicks = [user.nick() for user in slack_buffer.members]
+    for nick in buffer_nicks:
         weechat.completion_list_add(
             completion,
             nick,
             1,
-            weechat.WEECHAT_LIST_POS_END,
+            weechat.WEECHAT_LIST_POS_SORT,
+        )
+        weechat.completion_list_add(
+            completion,
+            f"@{nick}",
+            1,
+            weechat.WEECHAT_LIST_POS_SORT,
         )
 
-    workspace_nicks = set(
-        f"@{user.result().nick(only_nick=True)}"
-        for user in slack_buffer.workspace.users.values()
-        if user.done_with_result()
-    )
-    for nick in sorted(workspace_nicks - buffer_nicks, key=locale.strxfrm):
+    senders = [
+        m.sender_user_id
+        for m in slack_buffer.messages.values()
+        if m.sender_user_id and m.subtype in [None, "me_message", "thread_broadcast"]
+    ]
+    unique_senders = list(dict.fromkeys(senders))
+    sender_user_futures = [
+        slack_buffer.workspace.users[sender] for sender in unique_senders
+    ]
+    sender_users = [
+        future.result() for future in sender_user_futures if future.done_with_result()
+    ]
+    nicks = [user.nick() for user in sender_users]
+    for nick in nicks:
         weechat.completion_list_add(
             completion,
             nick,
             1,
-            weechat.WEECHAT_LIST_POS_END,
+            weechat.WEECHAT_LIST_POS_BEGINNING,
         )
+        weechat.completion_list_add(
+            completion,
+            f"@{nick}",
+            1,
+            weechat.WEECHAT_LIST_POS_BEGINNING,
+        )
+
+    my_user_nick = slack_buffer.workspace.my_user.nick()
+    weechat.completion_list_add(
+        completion,
+        my_user_nick,
+        1,
+        weechat.WEECHAT_LIST_POS_END,
+    )
+    weechat.completion_list_add(
+        completion,
+        f"@{my_user_nick}",
+        1,
+        weechat.WEECHAT_LIST_POS_END,
+    )
+
     return weechat.WEECHAT_RC_OK
 
 
