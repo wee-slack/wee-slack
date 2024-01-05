@@ -75,6 +75,16 @@ def format_date(timestamp: int, token_string: str, link: Optional[str] = None) -
     return re.sub(r"{([^}]+)}", replace_token, token_string) + link_suffix
 
 
+def format_url(url: str, text: Optional[str]) -> str:
+    if text is not None:
+        if url.endswith(text):
+            return text
+        else:
+            return f"{url} ({text})"
+    else:
+        return url
+
+
 def convert_int_to_letter(num: int) -> str:
     letter = ""
     while num > 0:
@@ -732,7 +742,7 @@ class SlackMessage:
 
     def _resolve_ref(
         self, item_id: str, fallback_name: Optional[str]
-    ) -> Optional[Union[str, PendingMessageItem]]:
+    ) -> Union[str, PendingMessageItem]:
         if item_id.startswith("#"):
             return PendingMessageItem(
                 self,
@@ -762,6 +772,8 @@ class SlackMessage:
             timestamp = int(parts[1])
             link = parts[3] if len(parts) > 3 else None
             return format_date(timestamp, parts[2], link)
+        else:
+            return format_url(item_id, fallback_name)
 
     def _unfurl_refs(
         self, message: str
@@ -772,14 +784,7 @@ class SlackMessage:
         for match in re_ref.finditer(message):
             if i < match.start(0):
                 yield message[i : match.start(0)]
-            fallback_name = match["fallback_name"]
-            item = self._resolve_ref(match["id"], fallback_name)
-            if item:
-                yield item
-            elif fallback_name is not None:
-                yield fallback_name
-            else:
-                yield match[0]
+            yield self._resolve_ref(match["id"], match["fallback_name"])
             i = match.end(0)
 
         if i < len(message):
@@ -1032,13 +1037,13 @@ class SlackMessage:
         if element["type"] == "text":
             return element["text"].replace("\n", "\n" + lines_prepend)
         elif element["type"] == "link":
-            if "text" in element:
-                if element.get("style", {}).get("code"):
+            if element.get("style", {}).get("code"):
+                if "text" in element:
                     return element["text"]
                 else:
-                    return f"{element['url']} ({element['text']})"
+                    return element["url"]
             else:
-                return element["url"]
+                return format_url(element["url"], element.get("text"))
         elif element["type"] == "emoji":
             return get_emoji(element["name"], element.get("skin_tone"))
         elif element["type"] == "color":
