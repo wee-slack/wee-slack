@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, List
 
 import pytest
 
+from slack.shared import shared
 from slack.slack_message import SlackMessage
 from tests.conftest import (
     color_reset,
@@ -128,7 +129,7 @@ cases: List[Case] = [
             "normal <[color:bold]>*bold*<[color:-bold]> <[color:italic]>_italic_"
             "<[color:-italic]> ~strikethrough~ <[color:bold]><[color:italic]>"
             "*_~bold-italic-strikethrough~_*<[color:-italic]><[color:-bold]> "
-            "https://vg.no (link)",
+            "link (https://vg.no)",
             "1. number",
             "2. list",
             "> some quote",
@@ -447,7 +448,8 @@ cases: List[Case] = [
 
 
 @pytest.mark.parametrize("case", cases)
-def test_unfurl_refs(case: Case, message1_in_channel_public: SlackMessage):
+def test_render_blocks(case: Case, message1_in_channel_public: SlackMessage):
+    shared.config.look.render_url_as.value = "${text} (${url})"
     parsed = message1_in_channel_public._render_blocks(  # pyright: ignore [reportPrivateUsage]
         case["blocks"]
     )

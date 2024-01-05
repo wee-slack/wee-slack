@@ -116,6 +116,17 @@ def info_get(info_name: str, arguments: str):
         return ""
 
 
+def string_eval_expression(
+    expr: str,
+    pointers: Dict[str, str],
+    extra_vars: Dict[str, str],
+    options: Dict[str, str],
+) -> str:
+    for key, value in extra_vars.items():
+        expr = expr.replace(f"${{{key}}}", value)
+    return expr
+
+
 weechat.config_new_option = config_new_option
 weechat.config_option_set = config_option_set
 weechat.config_boolean = config_boolean
@@ -124,6 +135,7 @@ weechat.config_string = config_string
 weechat.config_color = config_color
 weechat.color = color
 weechat.info_get = info_get
+weechat.string_eval_expression = string_eval_expression
 
 shared.weechat_version = 0x03080000
 shared.weechat_callbacks = {}

@@ -210,6 +210,13 @@ class SlackConfigSectionLook:
             string_values=["emoji", "name", "both"],
         )
 
+        self.render_url_as = WeeChatOption(
+            self._section,
+            "render_url_as",
+            "format to render URLs (note: content is evaluated, see /help eval; ${url} is replaced by the URL link and ${text} is replaced by the URL text); the default format renders only the URL if the text is empty or is contained in the URL, otherwise it renders the text first and then the URL in parentheses",
+            "${if: ${text} == || ${url} =- ${text} ?${url}:${text} (${url})}",
+        )
+
         self.replace_space_in_nicks_with = WeeChatOption(
             self._section,
             "replace_space_in_nicks_with",

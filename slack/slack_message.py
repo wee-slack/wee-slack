@@ -76,13 +76,12 @@ def format_date(timestamp: int, token_string: str, link: Optional[str] = None) -
 
 
 def format_url(url: str, text: Optional[str]) -> str:
-    if text is not None:
-        if url.endswith(text):
-            return text
-        else:
-            return f"{url} ({text})"
-    else:
-        return url
+    return weechat.string_eval_expression(
+        shared.config.look.render_url_as.value,
+        {},
+        {"url": url, "text": text or ""},
+        {},
+    )
 
 
 def convert_int_to_letter(num: int) -> str:
