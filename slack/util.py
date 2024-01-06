@@ -12,6 +12,7 @@ from typing import (
     TypeVar,
     Union,
 )
+from urllib.parse import quote, unquote
 
 import weechat
 
@@ -43,6 +44,22 @@ def htmlescape(text: str) -> str:
 
 def unhtmlescape(text: str) -> str:
     return text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+
+
+def url_encode_if_not_encoded(value: str) -> str:
+    is_encoded = value != unquote(value)
+    if is_encoded:
+        return value
+    else:
+        return quote(value)
+
+
+def get_cookies(cookie_config: str) -> str:
+    cookie_pairs = [cookie.split("=", 1) for cookie in cookie_config.split(";")]
+    for cookie_pair in cookie_pairs:
+        cookie_pair[0] = cookie_pair[0].strip()
+        cookie_pair[1] = url_encode_if_not_encoded(cookie_pair[1].strip())
+    return "; ".join("=".join(cookie_pair) for cookie_pair in cookie_pairs)
 
 
 # From https://github.com/more-itertools/more-itertools/blob/v10.1.0/more_itertools/recipes.py#L93-L106
