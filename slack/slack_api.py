@@ -10,7 +10,7 @@ from slack.http import http_request
 from slack.shared import shared
 from slack.slack_message import SlackTs
 from slack.task import gather
-from slack.util import chunked
+from slack.util import chunked, get_cookies
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfoResponse, SlackBotsInfoResponse
@@ -48,7 +48,7 @@ class SlackApiCommon:
         return {
             "useragent": f"wee_slack {shared.SCRIPT_VERSION}",
             "httpheader": f"Authorization: Bearer {self.workspace.config.api_token.value}",
-            "cookie": self.workspace.config.api_cookies.value,  # TODO: url_encode_if_not_encoded
+            "cookie": get_cookies(self.workspace.config.api_cookies.value),
         }
 
 

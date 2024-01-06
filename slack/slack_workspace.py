@@ -42,7 +42,7 @@ from slack.slack_message import SlackMessage, SlackTs
 from slack.slack_thread import SlackThread
 from slack.slack_user import SlackBot, SlackUser, SlackUsergroup
 from slack.task import Future, Task, create_task, gather, run_async
-from slack.util import get_callback_name
+from slack.util import get_callback_name, get_cookies
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfo
@@ -382,7 +382,7 @@ class SlackWorkspace:
         self._ws = create_connection(
             url,
             self.config.network_timeout.value,
-            cookie=self.config.api_cookies.value,
+            cookie=get_cookies(self.config.api_cookies.value),
             proxy_type=proxy.type,
             http_proxy_host=proxy.address,
             http_proxy_port=proxy.port,
