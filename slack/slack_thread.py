@@ -141,5 +141,10 @@ class SlackThread(SlackBuffer):
                 self.parent.conversation, self.parent.ts, last_read_line_ts
             )
 
-    async def post_message(self, text: str, broadcast: bool = False) -> None:
-        await self._api.chat_post_message(self.conversation, text, self.parent.ts)
+    async def post_message(
+        self,
+        text: str,
+        thread_ts: Optional[SlackTs] = None,
+        broadcast: bool = False,
+    ):
+        await super().post_message(text, thread_ts or self.parent.ts, broadcast)

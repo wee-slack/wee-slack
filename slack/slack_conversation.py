@@ -749,9 +749,6 @@ class SlackConversation(SlackBuffer):
         if last_read_line_ts and last_read_line_ts != self.last_read:
             await self._api.conversations_mark(self, last_read_line_ts)
 
-    async def post_message(self, text: str) -> None:
-        await self._api.chat_post_message(self.conversation, text)
-
     async def _buffer_closed(self):
         if self.id in self.workspace.open_conversations:
             del self.workspace.open_conversations[self.id]
