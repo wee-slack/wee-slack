@@ -140,7 +140,7 @@ class SlackConfigSectionLook:
             self._section,
             "thread_broadcast_prefix",
             "prefix to distinguish thread messages that were also sent to the channel, when thread_messages_in_channel is enabled",
-            "+ ",
+            "+",
         )
 
         self.color_nicks_in_nicklist = WeeChatOption(

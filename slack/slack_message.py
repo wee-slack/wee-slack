@@ -733,11 +733,9 @@ class SlackMessage:
         rerender: bool = False,
     ) -> str:
         text = await self._render_message(rerender=rerender)
-        if context == "thread":
-            return text
-        thread_prefix = self._create_thread_prefix()
-        thread = self._create_thread_string()
-        return thread_prefix + text + thread
+        thread_prefix = self._create_thread_prefix(context)
+        thread_info = self._create_thread_string() if context == "conversation" else ""
+        return thread_prefix + text + thread_info
 
     def _resolve_ref(
         self, item_id: str, fallback_name: Optional[str]
@@ -844,7 +842,7 @@ class SlackMessage:
         else:
             return ""
 
-    def _create_thread_prefix(self) -> str:
+    def _create_thread_prefix(self, context: Literal["conversation", "thread"]) -> str:
         if not self.is_reply or self.thread_ts is None:
             return ""
         thread_hash = self.conversation.message_hashes[self.thread_ts]
@@ -852,10 +850,13 @@ class SlackMessage:
         broadcast_text = (
             shared.config.look.thread_broadcast_prefix.value
             if self.is_thread_broadcast
-            else ""
+            else None
         )
-        text = f"[{broadcast_text}{thread_hash}]"
-        return with_color(nick_color(thread_hash), text) + " "
+        thread_text = thread_hash if context == "conversation" else None
+        text = " ".join(x for x in [broadcast_text, thread_text] if x)
+        if not text:
+            return ""
+        return with_color(nick_color(thread_hash), f"[{text}]") + " "
 
     def _create_thread_string(self) -> str:
         if "reply_count" not in self._message_json:
