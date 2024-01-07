@@ -386,9 +386,16 @@ class SlackBuffer(ABC):
         else:
             return self.ts_from_hash(hash_or_index)
 
-    @abstractmethod
-    async def post_message(self, text: str) -> None:
-        raise NotImplementedError()
+    async def post_message(
+        self,
+        text: str,
+        thread_ts: Optional[SlackTs] = None,
+        broadcast: bool = False,
+    ):
+        linkified_text = await self.linkify_text(text)
+        await self._api.chat_post_message(
+            self.conversation, linkified_text, thread_ts, broadcast
+        )
 
     async def send_change_reaction(
         self, ts: SlackTs, emoji_char: str, change_type: Literal["+", "-"]
@@ -476,8 +483,7 @@ class SlackBuffer(ABC):
         else:
             if input_data.startswith(("//", " ")):
                 input_data = input_data[1:]
-            text = await self.linkify_text(input_data)
-            await self.post_message(text)
+            await self.post_message(input_data)
 
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
         run_async(self.process_input(input_data))
