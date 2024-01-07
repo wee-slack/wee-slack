@@ -291,6 +291,13 @@ class SlackWorkspace:
         client_counts = await client_counts_task
 
         self.id = team_info["team"]["id"]
+        self.enterprise_id = (
+            self.id
+            if self.team_is_org_level
+            else team_info["team"]["enterprise_id"]
+            if "enterprise_id" in team_info["team"]
+            else None
+        )
         my_user_id = user_boot["self"]["id"]
         # self.users.initialize_items(my_user_id, {my_user_id: user_boot["self"]})
         self.my_user = await self.users[my_user_id]

@@ -70,7 +70,11 @@ class SlackUser:
 
     @property
     def is_external(self) -> bool:
-        return self._info["profile"]["team"] != self.workspace.id
+        return self._info["profile"]["team"] != self.workspace.id and (
+            "enterprise_user" not in self._info
+            or self._info["enterprise_user"]["enterprise_id"]
+            != self.workspace.enterprise_id
+        )
 
     @property
     def status_text(self) -> str:
