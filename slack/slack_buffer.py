@@ -62,6 +62,9 @@ def tags_set_notify_none(tags: List[str]) -> List[str]:
 
 
 def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
+    if not buffer_pointer:
+        return
+
     own_lines = weechat.hdata_pointer(
         weechat.hdata_get("buffer"), buffer_pointer, "own_lines"
     )
@@ -297,6 +300,9 @@ class SlackBuffer(ABC):
             self.workspace.send_typing(self)
 
     async def print_message(self, message: SlackMessage):
+        if not self.buffer_pointer:
+            return
+
         rendered = await message.render(self.context)
         backlog = self.last_read is not None and message.ts <= self.last_read
         tags = await message.tags(backlog)
