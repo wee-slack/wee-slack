@@ -233,6 +233,10 @@ class SlackWorkspace:
             return "unknown"
 
     @property
+    def team_is_org_level(self) -> bool:
+        return self.id.startswith("E")
+
+    @property
     def is_connected(self):
         return self._is_connected
 
@@ -279,12 +283,14 @@ class SlackWorkspace:
         return conversations_to_open
 
     async def _connect_session(self) -> List[SlackConversation]:
+        team_info_task = create_task(self.api.fetch_team_info())
         user_boot_task = create_task(self.api.fetch_client_userboot())
         client_counts_task = create_task(self.api.fetch_client_counts())
+        team_info = await team_info_task
         user_boot = await user_boot_task
         client_counts = await client_counts_task
 
-        self.id = user_boot["team"]["id"]
+        self.id = team_info["team"]["id"]
         my_user_id = user_boot["self"]["id"]
         # self.users.initialize_items(my_user_id, {my_user_id: user_boot["self"]})
         self.my_user = await self.users[my_user_id]
@@ -303,10 +309,26 @@ class SlackWorkspace:
                 channel["id"]
                 for channel in user_boot["channels"]
                 if not channel["is_mpim"]
+                and (
+                    self.team_is_org_level
+                    or "internal_team_ids" not in channel
+                    or self.id in channel["internal_team_ids"]
+                )
             ]
             + user_boot["is_open"]
             + [count["id"] for count in conversation_counts if count["has_unreads"]]
         )
+
+        conversation_counts_ids = set(count["id"] for count in conversation_counts)
+        if not conversation_ids.issubset(conversation_counts_ids):
+            raise SlackError(
+                self,
+                "Unexpectedly missing some conversations in client.counts",
+                {
+                    "conversation_ids": list(conversation_ids),
+                    "conversation_counts_ids": list(conversation_counts_ids),
+                },
+            )
 
         channel_infos: Dict[str, SlackConversationsInfoInternal] = {
             channel["id"]: channel for channel in user_boot["channels"]
