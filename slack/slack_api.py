@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from slack_api.slack_conversations_replies import SlackConversationsRepliesResponse
     from slack_api.slack_emoji import SlackEmojiListResponse
     from slack_api.slack_rtm_connect import SlackRtmConnectResponse
+    from slack_api.slack_team_info import SlackTeamInfoResponse
     from slack_api.slack_usergroups_info import SlackUsergroupsInfoResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
     from slack_api.slack_users_info import SlackUserInfoResponse, SlackUsersInfoResponse
@@ -127,6 +128,13 @@ class SlackApi(SlackApiCommon):
             next_pages = await self._fetch_list(method, list_key, new_params, remaining)
             response[list_key].extend(next_pages[list_key])
             return response
+        return response
+
+    async def fetch_team_info(self):
+        method = "team.info"
+        response: SlackTeamInfoResponse = await self._fetch(method)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response)
         return response
 
     async def fetch_rtm_connect(self):
