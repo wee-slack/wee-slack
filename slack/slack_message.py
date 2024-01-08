@@ -1123,11 +1123,16 @@ class SlackMessage:
                     shared.config.color.deleted_message.value,
                     "(This file was not found)",
                 )
-            elif file.get("mimetype") == "application/vnd.slack-docs":
+            elif (
+                file.get("mimetype") == "application/vnd.slack-docs"
+                and "permalink" in file
+            ):
                 url = f"{file['permalink']}?origin_team={self.workspace.id}&origin_channel={self.conversation.id}"
-                text = format_url(url, file["title"])
-            elif file.get("url_private"):
-                text = format_url(file["url_private"], file.get("title"))
+                title = unhtmlescape(file.get("title", ""))
+                text = format_url(url, title)
+            elif "url_private" in file:
+                title = unhtmlescape(file.get("title", ""))
+                text = format_url(file["url_private"], title)
             else:
                 error = SlackError(self.workspace, "Unsupported file", file)
                 uncaught_error = UncaughtError(error)
