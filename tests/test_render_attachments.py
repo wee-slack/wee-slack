@@ -92,7 +92,7 @@ cases: List[Case] = [
         "output": "\n".join(
             [
                 "| Title (http://title.link)",
-                "| http://from.url",
+                "|  (http://from.url)",
                 "| Attachment text",
             ]
         ),
@@ -114,7 +114,7 @@ cases: List[Case] = [
             [
                 "| Title (http://title.link)",
                 "| Attachment text",
-                "| http://image.url",
+                "|  (http://image.url)",
             ]
         ),
     },
@@ -174,7 +174,7 @@ cases: List[Case] = [
         "output": "\n".join(
             [
                 "| Title",
-                "| http://link",
+                "|  (http://link)",
                 "| Attachment text",
             ]
         ),
@@ -215,7 +215,7 @@ cases: List[Case] = [
             [
                 "| Pretext",
                 "| Author: Title (http://title.link)",
-                "| http://from.url",
+                "|  (http://from.url)",
                 "| Attachment text",
             ]
         ),
@@ -234,7 +234,7 @@ cases: List[Case] = [
         "input_text_before": "",
         "output": "\n".join(
             [
-                "| http://from.url",
+                "|  (http://from.url)",
                 "| Author: Attachment text",
             ]
         ),
@@ -352,7 +352,7 @@ cases: List[Case] = [
         "output": "\n".join(
             [
                 "| Original message",
-                "| http://link (File)",
+                "| File (http://link)",
             ]
         ),
     },
@@ -404,10 +404,10 @@ cases: List[Case] = [
         "output": "\n".join(
             [
                 "| First attachment title (http://title.link.1)",
-                "| http://from.url.1",
+                "|  (http://from.url.1)",
                 "| First attachment text",
                 "| Second attachment title (http://title.link.2)",
-                "| http://from.url.2",
+                "|  (http://from.url.2)",
                 "| Second attachment text",
             ]
         ),
@@ -555,9 +555,9 @@ cases: List[Case] = [
             [
                 "| pretext & <asd>",
                 "| author_name & <asd>: title & <asd> (https://title.link/?x=<x>&z=z)",
-                "| https://from.url/?x=<x>&z=z",
+                "|  (https://from.url/?x=<x>&z=z)",
                 "| text & <asd>",
-                "| https://image.url/?x=<x>&z=z",
+                "|  (https://image.url/?x=<x>&z=z)",
                 "| field title & <asd>: field value & <asd>",
                 f"| field title mention <@{user_test1_id}>: field value mention {color_user_mention}@Test_1{color_reset}",
                 "| footer & <asd> | Oct 16, 2023",
@@ -592,7 +592,7 @@ cases: List[Case] = [
         "input_text_before": "",
         "output": "\n".join(
             [
-                "| https://from.url",
+                "|  (https://from.url)",
                 "| Author name: text",
                 "| Posted in <[color:chat_channel]>#channel1<[color:reset]> | Oct 15, 2023",
             ]
@@ -622,7 +622,7 @@ cases: List[Case] = [
         "input_text_before": "",
         "output": "\n".join(
             [
-                "| https://from.url",
+                "|  (https://from.url)",
                 "| Author name: text",
                 "| From a thread in <[color:chat_channel]>#channel1<[color:reset]> | Oct 15, 2023",
             ]
@@ -633,6 +633,7 @@ cases: List[Case] = [
 
 @pytest.mark.parametrize("case", cases)
 def test_render_attachments(case: Case, message1_in_channel_public: SlackMessage):
+    shared.config.look.render_url_as.value = "${text} (${url})"
     shared.config.look.display_link_previews.value = case.get("link_previews", True)
     message1_in_channel_public.update_message_json(case["input_message"])
     parsed = message1_in_channel_public._render_attachments(  # pyright: ignore [reportPrivateUsage]

@@ -46,7 +46,6 @@ if TYPE_CHECKING:
 
 def format_date(timestamp: int, token_string: str, link: Optional[str] = None) -> str:
     ref_datetime = datetime.fromtimestamp(timestamp)
-    link_suffix = f" ({link})" if link else ""
     token_to_format = {
         "date_num": "%Y-%m-%d",
         "date": "%B %d, %Y",
@@ -72,10 +71,14 @@ def format_date(timestamp: int, token_string: str, link: Optional[str] = None) -
         else:
             return match.group(0)
 
-    return re.sub(r"{([^}]+)}", replace_token, token_string) + link_suffix
+    formatted_date = re.sub(r"{([^}]+)}", replace_token, token_string)
+    if link is not None:
+        return format_url(link, formatted_date)
+    else:
+        return formatted_date
 
 
-def format_url(url: str, text: Optional[str]) -> str:
+def format_url(url: str, text: Optional[str] = None) -> str:
     return weechat.string_eval_expression(
         shared.config.look.render_url_as.value,
         {},
@@ -890,7 +893,7 @@ class SlackMessage:
                         if element["type"] == "button":
                             items.extend(self._render_block_element(element["text"]))
                             if "url" in element:
-                                items.append(element["url"])
+                                items.append(format_url(element["url"]))
                         else:
                             text = (
                                 f'<Unsupported block action type "{element["type"]}">'
@@ -901,7 +904,7 @@ class SlackMessage:
                     block_lines.append(intersperse(items, " | "))
                 elif block["type"] == "call":
                     url = block["call"]["v1"]["join_url"]
-                    block_lines.append(["Join via " + url])
+                    block_lines.append(["Join via " + format_url(url)])
                 elif block["type"] == "divider":
                     block_lines.append(["---"])
                 elif block["type"] == "context":
@@ -947,7 +950,9 @@ class SlackMessage:
                             block_lines.append(items)
                         elif element["type"] == "rich_text_preformatted":
                             texts: List[str] = [
-                                sub_element.get("text", sub_element.get("url", ""))
+                                sub_element["text"]
+                                if "text" in sub_element
+                                else sub_element["url"]
                                 for sub_element in element["elements"]
                             ]
                             if texts:
@@ -1077,10 +1082,7 @@ class SlackMessage:
                 unhtmlescape(item) if isinstance(item, str) else item for item in items
             ]
         elif element["type"] == "image":
-            if element.get("alt_text"):
-                return [f"{element['image_url']} ({element['alt_text']})"]
-            else:
-                return [element["image_url"]]
+            return [format_url(element["image_url"], element.get("alt_text"))]
         else:
             text = f'<Unsupported block element type "{element["type"]}">'
             return [with_color(shared.config.color.render_error.value, text)]
@@ -1118,12 +1120,9 @@ class SlackMessage:
                 )
             elif file.get("mimetype") == "application/vnd.slack-docs":
                 url = f"{file['permalink']}?origin_team={self.workspace.id}&origin_channel={self.conversation.id}"
-                text = f"{url} ({file['title']})"
+                text = format_url(url, file["title"])
             elif file.get("url_private"):
-                if file.get("title"):
-                    text = f"{file['url_private']} ({file['title']})"
-                else:
-                    text = file["url_private"]
+                text = format_url(file["url_private"], file.get("title"))
             else:
                 error = SlackError(self.workspace, "Unsupported file", file)
                 uncaught_error = UncaughtError(error)
@@ -1177,7 +1176,7 @@ class SlackMessage:
                 link_shown = True
             if title and title_link:
                 lines.append(
-                    [f"{prepend_title_text}{title} ({htmlescape(title_link)})"]
+                    [f"{prepend_title_text}{format_url(htmlescape(title_link), title)}"]
                 )
                 prepend_title_text = ""
             elif title and not title_link:
@@ -1190,7 +1189,7 @@ class SlackMessage:
                 )
                 and from_url != title_link
             ):
-                lines.append([htmlescape(from_url)])
+                lines.append([format_url(htmlescape(from_url))])
             elif from_url:
                 link_shown = True
 
@@ -1208,7 +1207,7 @@ class SlackMessage:
                 and image_url != from_url
                 and image_url != title_link
             ):
-                lines.append([htmlescape(image_url)])
+                lines.append([format_url(htmlescape(image_url))])
             elif image_url:
                 link_shown = True
 
