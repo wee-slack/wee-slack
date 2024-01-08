@@ -1118,6 +1118,11 @@ class SlackMessage:
                     shared.config.color.deleted_message.value,
                     "(This file is not available because the workspace has passed its storage limit)",
                 )
+            if file.get("file_access") == "file_not_found":
+                text = with_color(
+                    shared.config.color.deleted_message.value,
+                    "(This file was not found)",
+                )
             elif file.get("mimetype") == "application/vnd.slack-docs":
                 url = f"{file['permalink']}?origin_team={self.workspace.id}&origin_channel={self.conversation.id}"
                 text = format_url(url, file["title"])
