@@ -273,35 +273,35 @@ class SlackMessageFile(TypedDict):
     id: str
     created: int
     timestamp: int
-    name: str
-    title: str
-    mimetype: str
+    name: NotRequired[str]
+    title: NotRequired[str]
+    mimetype: NotRequired[str]
     filetype: str
-    pretty_type: str
+    pretty_type: NotRequired[str]
     user: str
-    user_team: str
-    editable: bool
-    size: int
-    mode: str
-    is_external: bool
-    external_type: str
-    is_public: bool
-    public_url_shared: bool
-    display_as_bot: bool
-    username: str
-    url_private: str
-    url_private_download: str
-    permalink: str
-    permalink_public: str
-    preview: str
-    editor: None
-    last_editor: str
-    non_owner_editable: bool
-    updated: int
-    is_starred: bool
-    has_rich_preview: bool
+    user_team: NotRequired[str]
+    editable: NotRequired[bool]
+    size: NotRequired[int]
+    mode: NotRequired[str]
+    is_external: NotRequired[bool]
+    external_type: NotRequired[str]
+    is_public: NotRequired[bool]
+    public_url_shared: NotRequired[bool]
+    display_as_bot: NotRequired[bool]
+    username: NotRequired[str]
+    url_private: NotRequired[str]
+    url_private_download: NotRequired[str]
+    permalink: NotRequired[str]
+    permalink_public: NotRequired[str]
+    preview: NotRequired[str]
+    editor: NotRequired[None]
+    last_editor: NotRequired[str]
+    non_owner_editable: NotRequired[bool]
+    updated: NotRequired[int]
+    is_starred: NotRequired[bool]
+    has_rich_preview: NotRequired[bool]
     file_access: str
-    media_progress: None
+    media_progress: NotRequired[None]
 
 class SlackMessageCommon(TypedDict):
     type: Literal["message"]
