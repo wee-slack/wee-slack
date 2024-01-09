@@ -735,10 +735,11 @@ class SlackConversation(SlackBuffer):
         nick = await message.nick(colorize=False, only_nick=True)
         try:
             sender = await message.sender
-            if message.subtype in ["channel_leave", "group_leave"]:
-                self.nicklist_remove_user(sender)
-            else:
-                self.nicklist_add_user(sender, nick)
+            if sender is not None:
+                if message.subtype in ["channel_leave", "group_leave"]:
+                    self.nicklist_remove_user(sender)
+                else:
+                    self.nicklist_add_user(sender, nick)
         except Exception as e:
             self.nicklist_add_user(None, nick)
             if isinstance(e, SlackApiError) and e.response["error"] != "bots_not_found":
