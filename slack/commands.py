@@ -17,7 +17,7 @@ from slack.shared import MESSAGE_ID_REGEX_STRING, REACTION_CHANGE_REGEX_STRING, 
 from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation
 from slack.slack_thread import SlackThread
-from slack.slack_user import name_from_user_info_without_spaces
+from slack.slack_user import format_user_nick, name_from_user_info
 from slack.slack_workspace import SlackWorkspace
 from slack.task import run_async, sleep
 from slack.util import get_callback_name, with_color
@@ -608,7 +608,7 @@ async def complete_user_next(
         slack_buffer.completion_context = "ACTIVE_COMPLETION"
         suffix = nick_suffix() if is_first_word else " "
         slack_buffer.completion_values = [
-            name_from_user_info_without_spaces(slack_buffer.workspace, user) + suffix
+            format_user_nick(name_from_user_info(slack_buffer.workspace, user)) + suffix
             for user in search["results"]
         ]
         slack_buffer.completion_index = 0

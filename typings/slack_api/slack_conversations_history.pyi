@@ -303,6 +303,18 @@ class SlackMessageFile(TypedDict):
     file_access: str
     media_progress: NotRequired[None]
 
+@final
+class SlackMessageUserProfile(TypedDict):
+    avatar_hash: str
+    image_72: str
+    first_name: str
+    real_name: str
+    display_name: str
+    team: str
+    name: str
+    is_restricted: bool
+    is_ultra_restricted: bool
+
 class SlackMessageCommon(TypedDict):
     type: Literal["message"]
     text: str
@@ -311,7 +323,8 @@ class SlackMessageCommon(TypedDict):
 
 class SlackMessageStandardCommon(SlackMessageCommon):
     client_msg_id: NotRequired[str]
-    user: str
+    user: NotRequired[str]
+    user_profile: NotRequired[SlackMessageUserProfile]
     blocks: List[SlackMessageBlock]
     attachments: NotRequired[List[SlackMessageAttachment]]
     team: NotRequired[str]
@@ -361,7 +374,8 @@ class SlackMessageThreadBroadcastFinal(SlackMessageThreadBroadcast):
     pass
 
 class SlackMessageWithFiles(SlackMessageCommon):
-    user: str
+    user: NotRequired[str]
+    user_profile: NotRequired[SlackMessageUserProfile]
     files: List[SlackMessageFile]
     upload: bool
     display_as_bot: bool
@@ -427,7 +441,8 @@ class SlackMessageSubtypeBotMessageFinal(SlackMessageSubtypeBotMessage):
 
 class SlackMessageSubtypeBotRemove(SlackMessageCommon):
     subtype: Literal["bot_remove"]
-    user: str
+    user: NotRequired[str]
+    user_profile: NotRequired[SlackMessageUserProfile]
     bot_id: str
     bot_link: str
 
@@ -437,7 +452,8 @@ class SlackMessageSubtypeBotRemoveFinal(SlackMessageSubtypeBotRemove):
 
 class SlackMessageSubtypeBotAdd(SlackMessageCommon):
     subtype: Literal["bot_add"]
-    user: str
+    user: NotRequired[str]
+    user_profile: NotRequired[SlackMessageUserProfile]
     bot_id: str
     bot_link: str
 
@@ -447,7 +463,8 @@ class SlackMessageSubtypeBotAddFinal(SlackMessageSubtypeBotAdd):
 
 class SlackMessageSubtypeChannelJoin(SlackMessageCommon):
     subtype: Literal["channel_join", "group_join"]
-    user: str
+    user: NotRequired[str]
+    user_profile: NotRequired[SlackMessageUserProfile]
     inviter: NotRequired[str]
 
 @final
@@ -456,7 +473,8 @@ class SlackMessageSubtypeChannelJoinFinal(SlackMessageSubtypeChannelJoin):
 
 class SlackMessageSubtypeChannelLeave(SlackMessageCommon):
     subtype: Literal["channel_leave", "group_leave"]
-    user: str
+    user: NotRequired[str]
+    user_profile: NotRequired[SlackMessageUserProfile]
 
 @final
 class SlackMessageSubtypeChannelLeaveFinal(SlackMessageSubtypeChannelLeave):
@@ -465,7 +483,8 @@ class SlackMessageSubtypeChannelLeaveFinal(SlackMessageSubtypeChannelLeave):
 class SlackMessageSubtypeChannelTopic(SlackMessageCommon):
     subtype: Literal["channel_topic"]
     topic: str
-    user: str
+    user: NotRequired[str]
+    user_profile: NotRequired[SlackMessageUserProfile]
 
 @final
 class SlackMessageSubtypeChannelTopicFinal(SlackMessageSubtypeChannelTopic):

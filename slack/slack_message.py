@@ -19,7 +19,14 @@ from slack.log import print_error
 from slack.python_compatibility import removeprefix, removesuffix
 from slack.shared import shared
 from slack.slack_emoji import get_emoji
-from slack.slack_user import SlackBot, SlackUser, format_bot_nick, nick_color
+from slack.slack_user import (
+    SlackBot,
+    SlackUser,
+    format_bot_nick,
+    format_user_nick,
+    name_from_user_profile,
+    nick_color,
+)
 from slack.task import gather
 from slack.util import htmlescape, intersperse, unhtmlescape, with_color
 
@@ -389,10 +396,10 @@ class SlackMessage:
         return self._message_json.get("bot_id")
 
     @property
-    async def sender(self) -> Union[SlackUser, SlackBot]:
+    async def sender(self) -> Union[SlackUser, SlackBot, None]:
         if "user" in self._message_json:
             return await self.workspace.users[self._message_json["user"]]
-        else:
+        elif "bot_id" in self._message_json:
             return await self.workspace.bots[self._message_json["bot_id"]]
 
     @property
@@ -586,13 +593,23 @@ class SlackMessage:
         if "user" in self._message_json:
             user = await self.workspace.users[self._message_json["user"]]
             return user.nick(colorize=colorize, only_nick=only_nick)
+        elif "user_profile" in self._message_json:
+            # TODO: is_external
+            nick = name_from_user_profile(
+                self.workspace,
+                self._message_json["user_profile"],
+                fallback_name=self._message_json["user_profile"]["name"],
+            )
+            return format_user_nick(nick, colorize=colorize, only_nick=only_nick)
         else:
             username = self._message_json.get("username")
             if username:
                 return format_bot_nick(username, colorize=colorize, only_nick=only_nick)
-            else:
+            elif "bot_id" in self._message_json:
                 bot = await self.workspace.bots[self._message_json["bot_id"]]
                 return bot.nick(colorize=colorize, only_nick=only_nick)
+            else:
+                return "Unknown"
 
     async def _render_prefix(
         self, colorize: bool = True, only_nick: bool = False
