@@ -1192,7 +1192,7 @@ class SlackMessage:
             elif title and not title_link:
                 lines.append([f"{prepend_title_text}{title}"])
                 prepend_title_text = ""
-            from_url = attachment.get("from_url", "")
+            from_url = unhtmlescape(attachment.get("from_url", ""))
             if (
                 not any(
                     isinstance(text, str) and from_url in text for text in items_before
