@@ -3,10 +3,9 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING, Dict, Generator, Mapping, Optional, Set, Tuple
 
-from slack.log import print_exception_once
 from slack.slack_buffer import SlackBuffer
 from slack.slack_message import SlackMessage, SlackTs
-from slack.slack_user import SlackUser
+from slack.slack_user import Nick
 from slack.task import gather
 
 if TYPE_CHECKING:
@@ -20,7 +19,7 @@ class SlackThread(SlackBuffer):
     def __init__(self, parent: SlackMessage) -> None:
         super().__init__()
         self.parent = parent
-        self._reply_users: Set[SlackUser] = set()
+        self._reply_nicks: Set[Nick] = set()
 
     @property
     def workspace(self) -> SlackWorkspace:
@@ -35,9 +34,10 @@ class SlackThread(SlackBuffer):
         return "thread"
 
     @property
-    def members(self) -> Generator[SlackUser, None, None]:
-        for user in self._reply_users:
-            yield user
+    def members(self) -> Generator[Nick, None, None]:
+        for nick in self._reply_nicks:
+            if nick.type == "user":
+                yield nick
 
     @property
     def messages(self) -> Mapping[SlackTs, SlackMessage]:
@@ -118,13 +118,8 @@ class SlackThread(SlackBuffer):
 
     async def print_message(self, message: SlackMessage):
         await super().print_message(message)
-        sender_user_id = message.sender_user_id
-        if sender_user_id is not None:
-            try:
-                sender_user = await self.workspace.users[sender_user_id]
-                self._reply_users.add(sender_user)
-            except Exception as e:
-                print_exception_once(e)
+        nick = await message.nick()
+        self._reply_nicks.add(nick)
 
     async def mark_read(self):
         # subscriptions.thread.mark is only available for session tokens

@@ -21,8 +21,6 @@ from slack.shared import shared
 from slack.slack_emoji import get_emoji
 from slack.slack_user import (
     Nick,
-    SlackBot,
-    SlackUser,
     get_bot_nick,
     get_user_nick,
     name_from_user_profile,
@@ -398,13 +396,6 @@ class SlackMessage:
         return self._message_json.get("bot_id")
 
     @property
-    async def sender(self) -> Union[SlackUser, SlackBot, None]:
-        if "user" in self._message_json:
-            return await self.workspace.users[self._message_json["user"]]
-        elif "bot_id" in self._message_json:
-            return await self.workspace.bots[self._message_json["bot_id"]]
-
-    @property
     def reactions(self) -> List[SlackMessageReaction]:
         return self._message_json.get("reactions", [])
 
@@ -539,12 +530,6 @@ class SlackMessage:
         if self.sender_bot_id:
             tags.append(f"slack_bot_id_{self.sender_bot_id}")
 
-        user = (
-            await self.workspace.users[self.sender_user_id]
-            if self.sender_user_id
-            else None
-        )
-
         if self._message_json.get("subtype") in ["channel_join", "group_join"]:
             tags.append("slack_join")
             log_tags = ["log4"]
@@ -560,12 +545,9 @@ class SlackMessage:
                 tags.append("slack_action")
             else:
                 if shared.weechat_version >= 0x04000000:
-                    if user:
-                        tags.append(f"prefix_nick_{user.nick.color}")
-                    else:
-                        tags.append(f"prefix_nick_{nick.color}")
+                    tags.append(f"prefix_nick_{nick.color}")
 
-            if user and user.is_self:
+            if self.sender_user_id == self.workspace.my_user.id:
                 tags.append("self_msg")
                 log_tags = ["notify_none", "no_highlight", "log1"]
             else:
@@ -611,7 +593,7 @@ class SlackMessage:
                 bot = await self.workspace.bots[self._message_json["bot_id"]]
                 return bot.nick
             else:
-                return Nick("", "Unknown", "")
+                return Nick("", "Unknown", "", "unknown")
 
     async def _render_prefix(self) -> str:
         if self._message_json.get("subtype") in ["channel_join", "group_join"]:

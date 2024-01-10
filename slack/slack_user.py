@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from slack_api.slack_conversations_history import SlackMessageUserProfile
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_info import SlackProfile, SlackUserInfo
+    from typing_extensions import Literal
 
     from slack.slack_workspace import SlackWorkspace
 
@@ -24,6 +25,10 @@ class Nick:
     color: str
     raw_nick: str
     suffix: str
+    type: Literal["user", "bot", "unknown"]
+
+    def __hash__(self) -> int:
+        return hash(self.raw_nick)
 
     def format(self, colorize: bool = False) -> str:
         color = self.color if colorize else ""
@@ -67,6 +72,7 @@ def get_user_nick(
         nick_color(nick, is_self),
         nick,
         suffix,
+        "user",
     )
 
 
@@ -76,6 +82,7 @@ def get_bot_nick(nick: str) -> Nick:
         nick_color(nick),
         nick,
         shared.config.look.bot_user_suffix.value,
+        "bot",
     )
 
 

@@ -19,7 +19,6 @@ from typing import (
 import weechat
 
 from slack.error import SlackApiError, SlackError
-from slack.log import print_exception_once
 from slack.python_compatibility import removeprefix
 from slack.shared import shared
 from slack.slack_buffer import SlackBuffer
@@ -30,7 +29,7 @@ from slack.slack_message import (
     SlackTs,
 )
 from slack.slack_thread import SlackThread
-from slack.slack_user import SlackBot, SlackUser, nick_color
+from slack.slack_user import Nick, SlackUser
 from slack.task import Task, gather, run_async
 from slack.util import unhtmlescape, with_color
 
@@ -155,7 +154,7 @@ class SlackConversation(SlackBuffer):
         self._im_user: Optional[SlackUser] = None
         self._mpim_users: Optional[List[SlackUser]] = None
         self._messages: OrderedDict[SlackTs, SlackMessage] = OrderedDict()
-        self._nicklist: Dict[Union[SlackUser, SlackBot], str] = {}
+        self._nicklist: Dict[Nick, str] = {}
         self.nicklist_needs_refresh = True
         self.message_hashes = SlackConversationMessageHashes(self)
 
@@ -219,10 +218,10 @@ class SlackConversation(SlackBuffer):
         return "conversation"
 
     @property
-    def members(self) -> Generator[SlackUser, None, None]:
-        for user_or_bot in self._nicklist:
-            if isinstance(user_or_bot, SlackUser):
-                yield user_or_bot
+    def members(self) -> Generator[Nick, None, None]:
+        for nick in self._nicklist:
+            if nick.type == "user":
+                yield nick
 
     @property
     def messages(self) -> Mapping[SlackTs, SlackMessage]:
@@ -553,44 +552,25 @@ class SlackConversation(SlackBuffer):
                     *(self.workspace.users[user_id] for user_id in members)
                 )
                 for user in users:
-                    self.nicklist_add_user(user)
+                    self.nicklist_add_nick(user.nick)
 
-    def nicklist_add_user(
-        self, user: Optional[Union[SlackUser, SlackBot]], nick: Optional[str] = None
-    ):
-        if user in self._nicklist or self.type == "im":
-            return
-
-        nicklist_nick = nick if nick else user.nick.raw_nick if user else None
-        if nicklist_nick is None:
+    def nicklist_add_nick(self, nick: Nick):
+        if nick in self._nicklist or self.type == "im":
             return
 
         # TODO: weechat.color.nicklist_away
-        color = (
-            ""
-            if not shared.config.look.color_nicks_in_nicklist
-            else nick_color(nicklist_nick)
-            if user is None
-            or nick
-            and (not isinstance(user, SlackUser) or not user.is_self)
-            else user.nick.color
-        )
-        prefix = (
-            shared.config.look.external_user_suffix.value
-            if isinstance(user, SlackUser) and user.is_external
-            else ""
-        )
-        visible = 1 if isinstance(user, SlackUser) else 0
-        nick_pointer = weechat.nicklist_add_nick(
-            self.buffer_pointer, "", nicklist_nick, color, prefix, "", visible
-        )
-        if user is not None:
-            self._nicklist[user] = nick_pointer
+        color = nick.color if shared.config.look.color_nicks_in_nicklist else ""
+        visible = 1 if nick.type == "user" else 0
 
-    def nicklist_remove_user(self, user: Union[SlackUser, SlackBot]):
+        nick_pointer = weechat.nicklist_add_nick(
+            self.buffer_pointer, "", nick.raw_nick, color, nick.suffix, "", visible
+        )
+        self._nicklist[nick] = nick_pointer
+
+    def nicklist_remove_nick(self, nick: Nick):
         if self.type == "im":
             return
-        nick_pointer = self._nicklist.pop(user)
+        nick_pointer = self._nicklist.pop(nick)
         weechat.nicklist_remove_nick(self.buffer_pointer, nick_pointer)
 
     def display_thread_replies(self) -> bool:
@@ -732,18 +712,12 @@ class SlackConversation(SlackBuffer):
 
     async def print_message(self, message: SlackMessage):
         await super().print_message(message)
+
         nick = await message.nick()
-        try:
-            sender = await message.sender
-            if sender is not None:
-                if message.subtype in ["channel_leave", "group_leave"]:
-                    self.nicklist_remove_user(sender)
-                else:
-                    self.nicklist_add_user(sender, nick.raw_nick)
-        except Exception as e:
-            self.nicklist_add_user(None, nick.raw_nick)
-            if isinstance(e, SlackApiError) and e.response["error"] != "bots_not_found":
-                print_exception_once(e)
+        if message.subtype in ["channel_leave", "group_leave"]:
+            self.nicklist_remove_nick(nick)
+        else:
+            self.nicklist_add_nick(nick)
 
     async def mark_read(self):
         last_read_line_ts = self.last_read_line_ts()
