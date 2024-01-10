@@ -573,13 +573,13 @@ def completion_thread_hashes_cb(
     return weechat.WEECHAT_RC_OK
 
 
-def complete_input(slack_buffer: SlackBuffer, query: str):
+def complete_input(buffer: str, slack_buffer: SlackBuffer, query: str):
     if (
         slack_buffer.completion_context == "ACTIVE_COMPLETION"
         and slack_buffer.completion_values
     ):
-        input_value = weechat.buffer_get_string(slack_buffer.buffer_pointer, "input")
-        input_pos = weechat.buffer_get_integer(slack_buffer.buffer_pointer, "input_pos")
+        input_value = weechat.buffer_get_string(buffer, "input")
+        input_pos = weechat.buffer_get_integer(buffer, "input_pos")
         result = slack_buffer.completion_values[slack_buffer.completion_index]
         input_before = removesuffix(input_value[:input_pos], query)
         input_after = input_value[input_pos:]
@@ -587,8 +587,8 @@ def complete_input(slack_buffer: SlackBuffer, query: str):
         new_pos = input_pos - len(query) + len(result)
 
         with slack_buffer.completing():
-            weechat.buffer_set(slack_buffer.buffer_pointer, "input", new_input)
-            weechat.buffer_set(slack_buffer.buffer_pointer, "input_pos", str(new_pos))
+            weechat.buffer_set(buffer, "input", new_input)
+            weechat.buffer_set(buffer, "input_pos", str(new_pos))
 
 
 def nick_suffix():
@@ -598,7 +598,7 @@ def nick_suffix():
 
 
 async def complete_user_next(
-    slack_buffer: SlackBuffer, query: str, is_first_word: bool
+    buffer: str, slack_buffer: SlackBuffer, query: str, is_first_word: bool
 ):
     if slack_buffer.completion_context == "NO_COMPLETION":
         slack_buffer.completion_context = "PENDING_COMPLETION"
@@ -618,15 +618,15 @@ async def complete_user_next(
         if slack_buffer.completion_index >= len(slack_buffer.completion_values):
             slack_buffer.completion_index = 0
 
-    complete_input(slack_buffer, query)
+    complete_input(buffer, slack_buffer, query)
 
 
-def complete_previous(slack_buffer: SlackBuffer, query: str) -> int:
+def complete_previous(buffer: str, slack_buffer: SlackBuffer, query: str) -> int:
     if slack_buffer.completion_context == "ACTIVE_COMPLETION":
         slack_buffer.completion_index -= 1
         if slack_buffer.completion_index < 0:
             slack_buffer.completion_index = len(slack_buffer.completion_values) - 1
-        complete_input(slack_buffer, query)
+        complete_input(buffer, slack_buffer, query)
         return weechat.WEECHAT_RC_OK_EAT
     return weechat.WEECHAT_RC_OK
 
@@ -661,10 +661,12 @@ def input_complete_cb(data: str, buffer: str, command: str) -> int:
             is_first_word = word_until_cursor == input_before_cursor
 
             if command == "/input complete_next":
-                run_async(complete_user_next(slack_buffer, query, is_first_word))
+                run_async(
+                    complete_user_next(buffer, slack_buffer, query, is_first_word)
+                )
                 return weechat.WEECHAT_RC_OK_EAT
             else:
-                return complete_previous(slack_buffer, query)
+                return complete_previous(buffer, slack_buffer, query)
     return weechat.WEECHAT_RC_OK
 
 

@@ -555,7 +555,7 @@ class SlackConversation(SlackBuffer):
                     self.nicklist_add_nick(user.nick)
 
     def nicklist_add_nick(self, nick: Nick):
-        if nick in self._nicklist or self.type == "im":
+        if nick in self._nicklist or self.type == "im" or self.buffer_pointer is None:
             return
 
         # TODO: weechat.color.nicklist_away
@@ -568,25 +568,27 @@ class SlackConversation(SlackBuffer):
         self._nicklist[nick] = nick_pointer
 
     def nicklist_remove_nick(self, nick: Nick):
-        if self.type == "im":
+        if self.type == "im" or self.buffer_pointer is None:
             return
         nick_pointer = self._nicklist.pop(nick)
         weechat.nicklist_remove_nick(self.buffer_pointer, nick_pointer)
 
     def display_thread_replies(self) -> bool:
-        buffer_value = weechat.buffer_get_string(
-            self.buffer_pointer, "localvar_display_thread_replies_in_channel"
-        )
-        if buffer_value:
-            return bool(weechat.config_string_to_boolean(buffer_value))
+        if self.buffer_pointer is not None:
+            buffer_value = weechat.buffer_get_string(
+                self.buffer_pointer, "localvar_display_thread_replies_in_channel"
+            )
+            if buffer_value:
+                return bool(weechat.config_string_to_boolean(buffer_value))
         return shared.config.look.display_thread_replies_in_channel.value
 
     def display_reaction_nicks(self) -> bool:
-        buffer_value = weechat.buffer_get_string(
-            self.buffer_pointer, "localvar_display_reaction_nicks"
-        )
-        if buffer_value:
-            return bool(weechat.config_string_to_boolean(buffer_value))
+        if self.buffer_pointer is not None:
+            buffer_value = weechat.buffer_get_string(
+                self.buffer_pointer, "localvar_display_reaction_nicks"
+            )
+            if buffer_value:
+                return bool(weechat.config_string_to_boolean(buffer_value))
         return shared.config.look.display_reaction_nicks.value
 
     def should_display_message(self, message: SlackMessage) -> bool:
@@ -605,7 +607,7 @@ class SlackConversation(SlackBuffer):
                 self.history_pending_messages.append(message)
             elif self.last_printed_ts is not None:
                 await self.print_message(message)
-            else:
+            elif self.buffer_pointer is not None:
                 weechat.buffer_set(
                     self.buffer_pointer, "hotlist", message.priority.value
                 )
