@@ -489,7 +489,7 @@ def completion_nicks_cb(
     if slack_buffer is None:
         return weechat.WEECHAT_RC_OK
 
-    buffer_nicks = [user.nick.format() for user in slack_buffer.members]
+    buffer_nicks = [user.nick.raw_nick for user in slack_buffer.members]
     for nick in buffer_nicks:
         weechat.completion_list_add(
             completion,
@@ -516,7 +516,7 @@ def completion_nicks_cb(
     sender_users = [
         future.result() for future in sender_user_futures if future.done_with_result()
     ]
-    nicks = [user.nick.format() for user in sender_users]
+    nicks = [user.nick.raw_nick for user in sender_users]
     for nick in nicks:
         weechat.completion_list_add(
             completion,
@@ -531,7 +531,7 @@ def completion_nicks_cb(
             weechat.WEECHAT_LIST_POS_BEGINNING,
         )
 
-    my_user_nick = slack_buffer.workspace.my_user.nick.format()
+    my_user_nick = slack_buffer.workspace.my_user.nick.raw_nick
     weechat.completion_list_add(
         completion,
         my_user_nick,
@@ -608,7 +608,7 @@ async def complete_user_next(
         slack_buffer.completion_context = "ACTIVE_COMPLETION"
         suffix = nick_suffix() if is_first_word else " "
         slack_buffer.completion_values = [
-            get_user_nick(name_from_user_info(slack_buffer.workspace, user)).format()
+            get_user_nick(name_from_user_info(slack_buffer.workspace, user)).raw_nick
             + suffix
             for user in search["results"]
         ]
