@@ -58,7 +58,7 @@ class SlackThread(SlackBuffer):
             "input_multiline": "1",
             "localvar_set_type": self.parent.conversation.buffer_type,
             "localvar_set_slack_type": "thread",
-            "localvar_set_nick": self.workspace.my_user.nick(),
+            "localvar_set_nick": self.workspace.my_user.nick.raw_nick,
             "localvar_set_channel": name,
             "localvar_set_server": self.workspace.name,
             "localvar_set_completion_default_template": "${weechat.completion.default_template}|%(slack_channels)|%(slack_emojis)",

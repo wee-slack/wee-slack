@@ -440,7 +440,7 @@ class SlackBuffer(ABC):
 
         users = await gather(*self.workspace.users.values(), return_exceptions=True)
         nick_to_user_id = {
-            user.nick(only_nick=True): user.id
+            user.nick.raw_nick: user.id
             for user in users
             if not isinstance(user, BaseException)
         }
