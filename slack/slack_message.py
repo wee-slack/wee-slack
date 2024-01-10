@@ -20,10 +20,11 @@ from slack.python_compatibility import removeprefix, removesuffix
 from slack.shared import shared
 from slack.slack_emoji import get_emoji
 from slack.slack_user import (
+    Nick,
     SlackBot,
     SlackUser,
-    format_bot_nick,
-    format_user_nick,
+    get_bot_nick,
+    get_user_nick,
     name_from_user_profile,
     nick_color,
 )
@@ -249,10 +250,10 @@ class PendingMessageItem:
                     raise e
 
             if self.display_type == "mention":
-                name = f"@{user.nick()}"
+                name = f"@{user.nick.format()}"
                 return with_color(shared.config.color.user_mention.value, name)
             elif self.display_type == "chat":
-                return user.nick(colorize=True)
+                return user.nick.format(colorize=True)
             else:
                 assert_never(self.display_type)
 
@@ -282,7 +283,8 @@ class PendingMessageItem:
             return with_color(shared.config.color.usergroup_mention.value, name)
 
         elif self.item_type == "message_nick":
-            return await self.message.nick()
+            nick = await self.message.nick()
+            return nick.format(colorize=True)
 
         else:
             assert_never(self.item_type)
@@ -529,8 +531,8 @@ class SlackMessage:
         return False
 
     async def tags(self, backlog: bool) -> str:
-        nick = await self.nick(colorize=False, only_nick=True)
-        tags = [f"slack_ts_{self.ts}", f"nick_{nick}"]
+        nick = await self.nick()
+        tags = [f"slack_ts_{self.ts}", f"nick_{nick.raw_nick}"]
 
         if self.sender_user_id:
             tags.append(f"slack_user_id_{self.sender_user_id}")
@@ -559,9 +561,9 @@ class SlackMessage:
             else:
                 if shared.weechat_version >= 0x04000000:
                     if user:
-                        tags.append(f"prefix_nick_{user.nick_color()}")
+                        tags.append(f"prefix_nick_{user.nick.color}")
                     else:
-                        tags.append(f"prefix_nick_{nick_color(nick)}")
+                        tags.append(f"prefix_nick_{nick.color}")
 
             if user and user.is_self:
                 tags.append("self_msg")
@@ -589,10 +591,10 @@ class SlackMessage:
         self._rendered = f"{prefix}\t{message}"
         return self._rendered
 
-    async def nick(self, colorize: bool = True, only_nick: bool = False) -> str:
+    async def nick(self) -> Nick:
         if "user" in self._message_json:
             user = await self.workspace.users[self._message_json["user"]]
-            return user.nick(colorize=colorize, only_nick=only_nick)
+            return user.nick
         elif "user_profile" in self._message_json:
             # TODO: is_external
             nick = name_from_user_profile(
@@ -600,20 +602,18 @@ class SlackMessage:
                 self._message_json["user_profile"],
                 fallback_name=self._message_json["user_profile"]["name"],
             )
-            return format_user_nick(nick, colorize=colorize, only_nick=only_nick)
+            return get_user_nick(nick)
         else:
             username = self._message_json.get("username")
             if username:
-                return format_bot_nick(username, colorize=colorize, only_nick=only_nick)
+                return get_bot_nick(username)
             elif "bot_id" in self._message_json:
                 bot = await self.workspace.bots[self._message_json["bot_id"]]
-                return bot.nick(colorize=colorize, only_nick=only_nick)
+                return bot.nick
             else:
-                return "Unknown"
+                return Nick("", "Unknown", "")
 
-    async def _render_prefix(
-        self, colorize: bool = True, only_nick: bool = False
-    ) -> str:
+    async def _render_prefix(self) -> str:
         if self._message_json.get("subtype") in ["channel_join", "group_join"]:
             return removesuffix(weechat.prefix("join"), "\t")
         elif self._message_json.get("subtype") in ["channel_leave", "group_leave"]:
@@ -621,7 +621,8 @@ class SlackMessage:
         elif self._message_json.get("subtype") == "me_message":
             return removesuffix(weechat.prefix("action"), "\t")
         else:
-            return await self.nick(colorize=colorize, only_nick=only_nick)
+            nick = await self.nick()
+            return nick.format(colorize=True)
 
     async def render_prefix(self) -> str:
         if self._rendered_prefix is not None:
@@ -717,8 +718,9 @@ class SlackMessage:
             return self._rendered_message
 
         try:
+            nick = await self.nick()
             me_prefix = (
-                f"{await self.nick()} "
+                f"{nick.format(colorize=True)} "
                 if self._message_json.get("subtype") == "me_message"
                 else ""
             )
@@ -825,7 +827,7 @@ class SlackMessage:
             users = await gather(
                 *(self.workspace.users[user_id] for user_id in reaction["users"])
             )
-            nicks = ",".join(user.nick() for user in users)
+            nicks = ",".join(user.nick.format() for user in users)
             users_str = f"({nicks})"
         else:
             users_str = ""

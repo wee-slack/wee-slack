@@ -272,11 +272,11 @@ class SlackConversation(SlackBuffer):
 
     def name(self) -> str:
         if self._im_user is not None:
-            return self._im_user.nick()
+            return self._im_user.nick.format()
         elif self._info["is_im"] is True:
             raise SlackError(self.workspace, "IM conversation without _im_user set")
         elif self._mpim_users is not None:
-            return ",".join(sorted(user.nick() for user in self._mpim_users))
+            return ",".join(sorted(user.nick.format() for user in self._mpim_users))
         else:
             return self._info["name"]
 
@@ -342,7 +342,7 @@ class SlackConversation(SlackBuffer):
             "nicklist_display_groups": "0",
             "localvar_set_type": self.buffer_type,
             "localvar_set_slack_type": self.type,
-            "localvar_set_nick": self.workspace.my_user.nick(),
+            "localvar_set_nick": self.workspace.my_user.nick.raw_nick,
             "localvar_set_channel": name,
             "localvar_set_server": self.workspace.name,
             "localvar_set_completion_default_template": "${weechat.completion.default_template}|%(slack_channels)|%(slack_emojis)",
@@ -561,7 +561,7 @@ class SlackConversation(SlackBuffer):
         if user in self._nicklist or self.type == "im":
             return
 
-        nicklist_nick = nick if nick else user.nick(only_nick=True) if user else None
+        nicklist_nick = nick if nick else user.nick.raw_nick if user else None
         if nicklist_nick is None:
             return
 
@@ -573,7 +573,7 @@ class SlackConversation(SlackBuffer):
             if user is None
             or nick
             and (not isinstance(user, SlackUser) or not user.is_self)
-            else user.nick_color()
+            else user.nick.color
         )
         prefix = (
             shared.config.look.external_user_suffix.value
@@ -650,13 +650,13 @@ class SlackConversation(SlackBuffer):
                     weechat.hook_signal_send(
                         "typing_set_nick",
                         weechat.WEECHAT_HOOK_SIGNAL_STRING,
-                        f"{parent_message.thread_buffer.buffer_pointer};off;{user.nick()}",
+                        f"{parent_message.thread_buffer.buffer_pointer};off;{user.nick.format()}",
                     )
             else:
                 weechat.hook_signal_send(
                     "typing_set_nick",
                     weechat.WEECHAT_HOOK_SIGNAL_STRING,
-                    f"{self.buffer_pointer};off;{user.nick()}",
+                    f"{self.buffer_pointer};off;{user.nick.format()}",
                 )
 
     async def change_message(
@@ -707,7 +707,7 @@ class SlackConversation(SlackBuffer):
             weechat.hook_signal_send(
                 "typing_set_nick",
                 weechat.WEECHAT_HOOK_SIGNAL_STRING,
-                f"{self.buffer_pointer};typing;{user.nick()}",
+                f"{self.buffer_pointer};typing;{user.nick.format()}",
             )
         else:
             thread_ts = SlackTs(data["thread_ts"])
@@ -716,7 +716,7 @@ class SlackConversation(SlackBuffer):
                 weechat.hook_signal_send(
                     "typing_set_nick",
                     weechat.WEECHAT_HOOK_SIGNAL_STRING,
-                    f"{parent_message.thread_buffer.buffer_pointer};typing;{user.nick()}",
+                    f"{parent_message.thread_buffer.buffer_pointer};typing;{user.nick.format()}",
                 )
 
     async def open_thread(self, thread_hash: str, switch: bool = False):
@@ -732,16 +732,16 @@ class SlackConversation(SlackBuffer):
 
     async def print_message(self, message: SlackMessage):
         await super().print_message(message)
-        nick = await message.nick(colorize=False, only_nick=True)
+        nick = await message.nick()
         try:
             sender = await message.sender
             if sender is not None:
                 if message.subtype in ["channel_leave", "group_leave"]:
                     self.nicklist_remove_user(sender)
                 else:
-                    self.nicklist_add_user(sender, nick)
+                    self.nicklist_add_user(sender, nick.raw_nick)
         except Exception as e:
-            self.nicklist_add_user(None, nick)
+            self.nicklist_add_user(None, nick.raw_nick)
             if isinstance(e, SlackApiError) and e.response["error"] != "bots_not_found":
                 print_exception_once(e)
 

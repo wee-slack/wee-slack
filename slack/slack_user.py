@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Union
 
 import weechat
@@ -16,6 +17,17 @@ if TYPE_CHECKING:
     from slack_api.slack_users_info import SlackProfile, SlackUserInfo
 
     from slack.slack_workspace import SlackWorkspace
+
+
+@dataclass
+class Nick:
+    color: str
+    raw_nick: str
+    suffix: str
+
+    def format(self, colorize: bool = False) -> str:
+        color = self.color if colorize else ""
+        return with_color(color, self.raw_nick) + self.suffix
 
 
 def nick_color(nick: str, is_self: bool = False) -> str:
@@ -44,34 +56,27 @@ def name_from_user_info(workspace: SlackWorkspace, info: SlackUserInfo) -> str:
     )
 
 
-def format_user_nick(
+def get_user_nick(
     nick: str,
-    colorize: bool = False,
-    only_nick: bool = False,
     is_external: bool = False,
     is_self: bool = False,
-) -> str:
+) -> Nick:
     nick = nick.replace(" ", shared.config.look.replace_space_in_nicks_with.value)
-
-    if colorize:
-        nick = with_color(nick_color(nick, is_self), nick)
-
-    if not only_nick and is_external:
-        nick += shared.config.look.external_user_suffix.value
-
-    return nick
+    suffix = shared.config.look.external_user_suffix.value if is_external else ""
+    return Nick(
+        nick_color(nick, is_self),
+        nick,
+        suffix,
+    )
 
 
-def format_bot_nick(nick: str, colorize: bool = False, only_nick: bool = False) -> str:
+def get_bot_nick(nick: str) -> Nick:
     nick = nick.replace(" ", shared.config.look.replace_space_in_nicks_with.value)
-
-    if colorize:
-        nick = with_color(nick_color(nick), nick)
-
-    if not only_nick:
-        nick += shared.config.look.bot_user_suffix.value
-
-    return nick
+    return Nick(
+        nick_color(nick),
+        nick,
+        shared.config.look.bot_user_suffix.value,
+    )
 
 
 class SlackUser:
@@ -111,14 +116,10 @@ class SlackUser:
             return ""
         return get_emoji(status_emoji.strip(":"))
 
-    def nick(self, colorize: bool = False, only_nick: bool = False) -> str:
+    @property
+    def nick(self) -> Nick:
         nick = name_from_user_info(self.workspace, self._info)
-        return format_user_nick(
-            nick, colorize, only_nick, self.is_external, self.is_self
-        )
-
-    def nick_color(self) -> str:
-        return nick_color(self.nick(colorize=False, only_nick=True), self.is_self)
+        return get_user_nick(nick, self.is_external, self.is_self)
 
     def update_info_json(self, info_json: SlackUserInfo):
         self._info.update(info_json)  # pyright: ignore [reportGeneralTypeIssues]
@@ -137,13 +138,9 @@ class SlackBot:
         info_response = await workspace.api.fetch_bot_info(id)
         return cls(workspace, info_response["bot"])
 
-    def nick(self, colorize: bool = False, only_nick: bool = False) -> str:
-        return format_bot_nick(
-            self._info["name"], colorize=colorize, only_nick=only_nick
-        )
-
-    def nick_color(self):
-        return nick_color(self.nick(colorize=False, only_nick=True))
+    @property
+    def nick(self) -> Nick:
+        return get_bot_nick(self._info["name"])
 
 
 class SlackUsergroup:

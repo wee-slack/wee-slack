@@ -17,7 +17,7 @@ from slack.shared import MESSAGE_ID_REGEX_STRING, REACTION_CHANGE_REGEX_STRING, 
 from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation
 from slack.slack_thread import SlackThread
-from slack.slack_user import format_user_nick, name_from_user_info
+from slack.slack_user import get_user_nick, name_from_user_info
 from slack.slack_workspace import SlackWorkspace
 from slack.task import run_async, sleep
 from slack.util import get_callback_name, with_color
@@ -112,7 +112,7 @@ def display_workspace(workspace: SlackWorkspace, detailed_list: bool):
             f"{with_color('chat_delimiters', '[')}"
             f"connected"
             f"{with_color('chat_delimiters', ']')}"
-            f", nick: {workspace.my_user.nick()}"
+            f", nick: {workspace.my_user.nick.format()}"
             f", 0 channel(s), 0 pv",
         )
     else:
@@ -489,7 +489,7 @@ def completion_nicks_cb(
     if slack_buffer is None:
         return weechat.WEECHAT_RC_OK
 
-    buffer_nicks = [user.nick() for user in slack_buffer.members]
+    buffer_nicks = [user.nick.format() for user in slack_buffer.members]
     for nick in buffer_nicks:
         weechat.completion_list_add(
             completion,
@@ -516,7 +516,7 @@ def completion_nicks_cb(
     sender_users = [
         future.result() for future in sender_user_futures if future.done_with_result()
     ]
-    nicks = [user.nick() for user in sender_users]
+    nicks = [user.nick.format() for user in sender_users]
     for nick in nicks:
         weechat.completion_list_add(
             completion,
@@ -531,7 +531,7 @@ def completion_nicks_cb(
             weechat.WEECHAT_LIST_POS_BEGINNING,
         )
 
-    my_user_nick = slack_buffer.workspace.my_user.nick()
+    my_user_nick = slack_buffer.workspace.my_user.nick.format()
     weechat.completion_list_add(
         completion,
         my_user_nick,
@@ -608,7 +608,8 @@ async def complete_user_next(
         slack_buffer.completion_context = "ACTIVE_COMPLETION"
         suffix = nick_suffix() if is_first_word else " "
         slack_buffer.completion_values = [
-            format_user_nick(name_from_user_info(slack_buffer.workspace, user)) + suffix
+            get_user_nick(name_from_user_info(slack_buffer.workspace, user)).format()
+            + suffix
             for user in search["results"]
         ]
         slack_buffer.completion_index = 0
