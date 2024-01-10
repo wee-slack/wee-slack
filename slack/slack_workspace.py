@@ -549,7 +549,8 @@ class SlackWorkspace:
                 or data["type"] == "channel_left"
                 or data["type"] == "group_left"
             ):
-                weechat.buffer_close(channel.buffer_pointer)
+                if channel.buffer_pointer is not None:
+                    weechat.buffer_close(channel.buffer_pointer)
             elif data["type"] == "reaction_added" and data["item"]["type"] == "message":
                 await channel.reaction_add(
                     SlackTs(data["item"]["ts"]), data["reaction"], data["user"]

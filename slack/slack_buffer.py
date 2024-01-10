@@ -151,7 +151,7 @@ class SlackBuffer(ABC):
     def __init__(self):
         self._typing_self_last_sent = 0
         # TODO: buffer_pointer may be accessed by buffer_switch before it's initialized
-        self.buffer_pointer: str = ""
+        self.buffer_pointer: Optional[str] = None
         self.is_loading = False
         self.history_pending = False
         self.history_pending_messages: List[SlackMessage] = []
@@ -273,6 +273,9 @@ class SlackBuffer(ABC):
             await self.buffer_switched_to()
 
     def update_buffer_props(self) -> None:
+        if self.buffer_pointer is None:
+            return
+
         name, buffer_props = self.get_name_and_buffer_props()
         buffer_props["name"] = self.get_full_name(name)
         for key, value in buffer_props.items():
@@ -283,6 +286,9 @@ class SlackBuffer(ABC):
         raise NotImplementedError()
 
     async def rerender_message(self, message: SlackMessage):
+        if self.buffer_pointer is None:
+            return
+
         modify_buffer_line(
             self.buffer_pointer,
             message.ts,
@@ -349,7 +355,7 @@ class SlackBuffer(ABC):
     def ts_from_index(
         self, index: int, message_filter: Optional[Literal["sender_self"]] = None
     ) -> Optional[SlackTs]:
-        if index < 0:
+        if index < 0 or self.buffer_pointer is None:
             return
 
         lines = weechat.hdata_pointer(
@@ -498,7 +504,7 @@ class SlackBuffer(ABC):
     def _buffer_close_cb(self, data: str, buffer: str) -> int:
         if self.buffer_pointer in shared.buffers:
             del shared.buffers[self.buffer_pointer]
-        self.buffer_pointer = ""
+        self.buffer_pointer = None
         self.last_printed_ts = None
         self.hotlist_tss.clear()
         return weechat.WEECHAT_RC_OK
