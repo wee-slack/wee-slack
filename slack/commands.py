@@ -489,7 +489,7 @@ def completion_nicks_cb(
     if slack_buffer is None:
         return weechat.WEECHAT_RC_OK
 
-    buffer_nicks = [user.nick.raw_nick for user in slack_buffer.members]
+    buffer_nicks = [nick.raw_nick for nick in slack_buffer.members]
     for nick in buffer_nicks:
         weechat.completion_list_add(
             completion,

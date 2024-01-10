@@ -21,7 +21,7 @@ import weechat
 from slack.log import print_error
 from slack.shared import MESSAGE_ID_REGEX_STRING, REACTION_CHANGE_REGEX_STRING, shared
 from slack.slack_message import SlackMessage, SlackTs
-from slack.slack_user import SlackUser
+from slack.slack_user import Nick
 from slack.task import gather, run_async
 from slack.util import get_callback_name, htmlescape
 
@@ -207,7 +207,7 @@ class SlackBuffer(ABC):
 
     @property
     @abstractmethod
-    def members(self) -> Generator[SlackUser, None, None]:
+    def members(self) -> Generator[Nick, None, None]:
         raise NotImplementedError()
 
     @property
