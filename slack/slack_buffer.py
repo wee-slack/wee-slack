@@ -289,15 +289,40 @@ class SlackBuffer(ABC):
         if self.buffer_pointer is None:
             return
 
-        modify_buffer_line(
-            self.buffer_pointer,
-            message.ts,
-            await message.render_message(context=self.context, rerender=True),
-        )
+        new_text = await message.render_message(context=self.context, rerender=True)
+        modify_buffer_line(self.buffer_pointer, message.ts, new_text)
 
     async def rerender_history(self):
-        for message in self.messages.values():
-            await self.rerender_message(message)
+        if self.buffer_pointer is None:
+            return
+
+        if shared.weechat_version >= 0x04000000:
+            own_lines = weechat.hdata_pointer(
+                weechat.hdata_get("buffer"), self.buffer_pointer, "own_lines"
+            )
+            line_pointer = weechat.hdata_pointer(
+                weechat.hdata_get("lines"), own_lines, "last_line"
+            )
+
+            while line_pointer:
+                ts = hdata_line_ts(line_pointer)
+                if ts:
+                    message = self.messages[ts]
+                    new_text = await message.render_message(
+                        context=self.context, rerender=True
+                    )
+                    data = weechat.hdata_pointer(
+                        weechat.hdata_get("line"), line_pointer, "data"
+                    )
+                    weechat.hdata_update(
+                        weechat.hdata_get("line_data"), data, {"message": new_text}
+                    )
+                    line_pointer = weechat.hdata_move(
+                        weechat.hdata_get("line"), line_pointer, -1
+                    )
+        else:
+            for message in self.messages.values():
+                await self.rerender_message(message)
 
     def set_typing_self(self):
         now = time.time()
