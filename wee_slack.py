@@ -1479,7 +1479,7 @@ class SlackRequest(object):
         self.channel = channel
         self.metadata = metadata if metadata else {}
         self.retries = retries
-        self.retry_time = 0
+        self.retry_time = 1000
         self.token = token if token else team.token
         self.cookies = cookies or {}
         if ":" in self.token:
