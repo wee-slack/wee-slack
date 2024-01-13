@@ -287,6 +287,20 @@ def command_slack_reply(buffer: str, args: List[str], options: Options):
         run_async(slack_buffer.post_message(split_args[1], thread_ts, broadcast))
 
 
+@weechat_command("away|active")
+def command_slack_presence(buffer: str, args: List[str], options: Options):
+    slack_buffer = shared.buffers.get(buffer)
+    if slack_buffer is None:
+        return
+    new_presence = args[0]
+    if new_presence not in ("active", "away"):
+        print_error(
+            f'Error with command "/slack presence {args[0]}" (help on command: /help slack presence)'
+        )
+        return
+    run_async(slack_buffer.workspace.api.set_presence(new_presence))
+
+
 def print_uncaught_error(error: UncaughtError, detailed: bool, options: Options):
     weechat.prnt("", f"  {error.id} ({error.time}): {error.exception}")
     if detailed:
