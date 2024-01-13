@@ -13,6 +13,21 @@ class SlackProfileField(TypedDict):
     alt: str
 
 @final
+class SlackSetProfile(TypedDict):
+    display_name: NotRequired[Optional[str]]
+    email: NotRequired[Optional[str]]
+    first_name: NotRequired[Optional[str]]
+    last_name: NotRequired[Optional[str]]
+    phone: NotRequired[Optional[str]]
+    pronouns: NotRequired[Optional[str]]
+    real_name: NotRequired[Optional[str]]
+    start_date: NotRequired[Optional[str]]
+    title: NotRequired[Optional[str]]
+    status_emoji: NotRequired[Optional[str]]
+    status_expiration: NotRequired[Optional[int]]
+    status_text: NotRequired[Optional[str]]
+
+@final
 class SlackProfileStatusEmojiDisplayInfo(TypedDict):
     emoji_name: str
     display_url: str

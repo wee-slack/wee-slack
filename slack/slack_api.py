@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import json
 from itertools import chain
-from typing import TYPE_CHECKING, Iterable, Mapping, Optional, Sequence, Union
+from typing import (
+    TYPE_CHECKING,
+    Iterable,
+    Mapping,
+    Optional,
+    Sequence,
+    Union,
+)
 from urllib.parse import urlencode
 
 from slack.error import SlackApiError
@@ -26,7 +33,12 @@ if TYPE_CHECKING:
     from slack_api.slack_team_info import SlackTeamInfoResponse
     from slack_api.slack_usergroups_info import SlackUsergroupsInfoResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
-    from slack_api.slack_users_info import SlackUserInfoResponse, SlackUsersInfoResponse
+    from slack_api.slack_users_info import (
+        SlackProfile,
+        SlackSetProfile,
+        SlackUserInfoResponse,
+        SlackUsersInfoResponse,
+    )
     from slack_api.slack_users_prefs import SlackUsersPrefsGetResponse
     from slack_edgeapi.slack_usergroups_info import SlackEdgeUsergroupsInfoResponse
     from slack_edgeapi.slack_users_search import SlackUsersSearchResponse
@@ -241,6 +253,20 @@ class SlackApi(SlackApiCommon):
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
         return response
+
+    async def _set_user_profile(self, profile: SlackSetProfile):
+        method = "users.profile.set"
+        params: Params = {"profile": dict(profile)}
+        response: SlackProfile = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def set_user_status(self, status: str):
+        return await self._set_user_profile({"status_text": status})
+
+    async def clear_user_status(self):
+        return await self._set_user_profile({"status_emoji": "", "status_text": ""})
 
     async def _fetch_users_info_without_splitting(self, user_ids: Iterable[str]):
         method = "users.info"
