@@ -366,6 +366,23 @@ def command_slack_debug(buffer: str, args: List[str], options: Options):
         print_uncaught_error(error, True, options)
 
 
+@weechat_command("-clean")
+def command_slack_status(buffer: str, args: List[str], options: Options):
+    status = args[0]
+    slack_buffer = shared.buffers.get(buffer)
+    if slack_buffer is not None:
+        if options.get("clean"):
+            run_async(slack_buffer.workspace.api.clear_user_status())
+        elif slack_buffer and len(status) > 0:
+            run_async(slack_buffer.workspace.api.set_user_status(status))
+        else:
+            print_error(
+                'Too few arguments for command "/slack status" (help on command: /help slack status)'
+            )
+    else:
+        print_error("Run the command in a slack buffer")
+
+
 def completion_slack_workspaces_cb(
     data: str, completion_item: str, buffer: str, completion: str
 ) -> int:
