@@ -28,6 +28,20 @@ class SlackRtmHello(TypedDict):
     start: bool
     host_id: str
 
+class SlackRtmErrorError(TypedDict):
+    msg: str
+    code: int
+    source: str
+    retry_after: NotRequired[int]  # Only with msg Ratelimited, code 17
+
+class SlackRtmError(TypedDict):
+    type: Literal["error"]
+    error: SlackRtmErrorError
+
+class SlackRtmReconnectUrl(TypedDict):
+    type: Literal["reconnect_url"]
+    url: str
+
 @final
 class SlackMessageStandardRtm(SlackMessageStandardCommon):
     channel: str
@@ -331,6 +345,8 @@ SlackMessageRtm = (
 
 SlackRtmMessage = (
     SlackRtmHello
+    | SlackRtmError
+    | SlackRtmReconnectUrl
     | SlackMessageRtm
     | SlackMessageChanged
     | SlackMessageDeleted
