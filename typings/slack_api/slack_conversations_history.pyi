@@ -4,6 +4,7 @@ from typing import Dict, List
 
 from slack_api.slack_common import SlackErrorResponse
 from slack_api.slack_conversations_replies import SlackMessageThreadCommon
+from slack_api.slack_files_info import SlackFile
 from slack_rtm.slack_rtm_message import SlackMessageRtm
 from typing_extensions import Literal, NotRequired, TypedDict, final
 
@@ -269,41 +270,6 @@ class SlackMessageEdited(TypedDict):
     ts: str
 
 @final
-class SlackMessageFile(TypedDict):
-    id: str
-    created: int
-    timestamp: int
-    name: NotRequired[str]
-    title: NotRequired[str]
-    mimetype: NotRequired[str]
-    filetype: str
-    pretty_type: NotRequired[str]
-    user: str
-    user_team: NotRequired[str]
-    editable: NotRequired[bool]
-    size: NotRequired[int]
-    mode: NotRequired[str]
-    is_external: NotRequired[bool]
-    external_type: NotRequired[str]
-    is_public: NotRequired[bool]
-    public_url_shared: NotRequired[bool]
-    display_as_bot: NotRequired[bool]
-    username: NotRequired[str]
-    url_private: NotRequired[str]
-    url_private_download: NotRequired[str]
-    permalink: NotRequired[str]
-    permalink_public: NotRequired[str]
-    preview: NotRequired[str]
-    editor: NotRequired[None]
-    last_editor: NotRequired[str]
-    non_owner_editable: NotRequired[bool]
-    updated: NotRequired[int]
-    is_starred: NotRequired[bool]
-    has_rich_preview: NotRequired[bool]
-    file_access: str
-    media_progress: NotRequired[None]
-
-@final
 class SlackMessageUserProfile(TypedDict):
     avatar_hash: str
     image_72: str
@@ -376,7 +342,7 @@ class SlackMessageThreadBroadcastFinal(SlackMessageThreadBroadcast):
 class SlackMessageWithFiles(SlackMessageCommon):
     user: NotRequired[str]
     user_profile: NotRequired[SlackMessageUserProfile]
-    files: List[SlackMessageFile]
+    files: List[SlackFile]
     upload: bool
     display_as_bot: bool
 

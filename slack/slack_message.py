@@ -38,10 +38,10 @@ if TYPE_CHECKING:
         SlackMessageBlockRichTextElement,
         SlackMessageBlockRichTextList,
         SlackMessageBlockRichTextSection,
-        SlackMessageFile,
         SlackMessageReaction,
         SlackMessageSubtypeHuddleThreadRoom,
     )
+    from slack_api.slack_files_info import SlackFile
     from slack_rtm.slack_rtm_message import SlackThreadSubscription
     from typing_extensions import Literal, assert_never
 
@@ -184,19 +184,21 @@ class PendingMessageItem:
         self,
         message: SlackMessage,
         item_type: Literal[
-            "conversation", "user", "usergroup", "broadcast", "message_nick"
+            "conversation", "user", "usergroup", "broadcast", "message_nick", "file"
         ],
         item_id: str,
         display_type: Literal["mention", "chat"] = "mention",
         fallback_name: Optional[str] = None,
+        file: Optional[SlackFile] = None,
     ):
         self.message = message
         self.item_type: Literal[
-            "conversation", "user", "usergroup", "broadcast", "message_nick"
+            "conversation", "user", "usergroup", "broadcast", "message_nick", "file"
         ] = item_type
         self.item_id = item_id
         self.display_type: Literal["mention", "chat"] = display_type
         self.fallback_name = fallback_name
+        self.file = file
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.message}, {self.item_type}, {self.item_id}, {self.display_type})"
@@ -284,6 +286,49 @@ class PendingMessageItem:
             nick = await self.message.nick()
             return nick.format(colorize=True)
 
+        elif self.item_type == "file":
+            if self.file is None or self.file.get("file_access") == "check_file_info":
+                file_response = await self.message.workspace.api.fetch_files_info(
+                    self.item_id
+                )
+                file = file_response["file"]
+            else:
+                file = self.file
+
+            if file.get("mode") == "tombstone":
+                return with_color(
+                    shared.config.color.deleted_message.value,
+                    "(This file was deleted)",
+                )
+            elif file.get("mode") == "hidden_by_limit":
+                return with_color(
+                    shared.config.color.deleted_message.value,
+                    "(This file is not available because the workspace has passed its storage limit)",
+                )
+            elif file.get("file_access") == "file_not_found":
+                return with_color(
+                    shared.config.color.deleted_message.value,
+                    "(This file was not found)",
+                )
+            elif (
+                file.get("mimetype") == "application/vnd.slack-docs"
+                and "permalink" in file
+            ):
+                url = f"{file['permalink']}?origin_team={self.message.workspace.id}&origin_channel={self.message.conversation.id}"
+                title = unhtmlescape(file.get("title", ""))
+                return format_url(url, title)
+            elif "url_private" in file:
+                title = unhtmlescape(file.get("title", ""))
+                return format_url(file["url_private"], title)
+            else:
+                error = SlackError(self.message.workspace, "Unsupported file", file)
+                uncaught_error = UncaughtError(error)
+                store_uncaught_error(uncaught_error)
+                return with_color(
+                    shared.config.color.render_error.value,
+                    f"<Unsupported file, error id: {uncaught_error.id}>",
+                )
+
         else:
             assert_never(self.item_type)
 
@@ -299,6 +344,8 @@ class PendingMessageItem:
             # TODO: figure out how to handle here broadcast
             return not only_personal
         elif self.item_type == "message_nick":
+            return False
+        elif self.item_type == "file":
             return False
         else:
             assert_never(self.item_type)
@@ -686,12 +733,9 @@ class SlackMessage:
                     for item in items
                 ]
 
-            files_text = self._render_files(self._message_json.get("files", []))
-            if files_text:
-                texts.extend(["\n", files_text])
-
+            files = self._render_files(self._message_json.get("files", []), bool(texts))
             attachment_items = self._render_attachments(texts)
-            self._parsed_message = texts + attachment_items
+            self._parsed_message = texts + files + attachment_items
 
         return self._parsed_message
 
@@ -1107,44 +1151,14 @@ class SlackMessage:
             else:
                 return "▪︎"
 
-    def _render_files(self, files: List[SlackMessageFile]) -> str:
-        lines: List[str] = []
-        for file in files:
-            if file.get("mode") == "tombstone":
-                text = with_color(
-                    shared.config.color.deleted_message.value, "(This file was deleted)"
-                )
-            elif file.get("mode") == "hidden_by_limit":
-                text = with_color(
-                    shared.config.color.deleted_message.value,
-                    "(This file is not available because the workspace has passed its storage limit)",
-                )
-            if file.get("file_access") == "file_not_found":
-                text = with_color(
-                    shared.config.color.deleted_message.value,
-                    "(This file was not found)",
-                )
-            elif (
-                file.get("mimetype") == "application/vnd.slack-docs"
-                and "permalink" in file
-            ):
-                url = f"{file['permalink']}?origin_team={self.workspace.id}&origin_channel={self.conversation.id}"
-                title = unhtmlescape(file.get("title", ""))
-                text = format_url(url, title)
-            elif "url_private" in file:
-                title = unhtmlescape(file.get("title", ""))
-                text = format_url(file["url_private"], title)
-            else:
-                error = SlackError(self.workspace, "Unsupported file", file)
-                uncaught_error = UncaughtError(error)
-                store_uncaught_error(uncaught_error)
-                text = with_color(
-                    shared.config.color.render_error.value,
-                    f"<Unsupported file, error id: {uncaught_error.id}>",
-                )
-            lines.append(text)
-
-        return "\n".join(lines)
+    def _render_files(
+        self, files: List[SlackFile], has_items_before: bool
+    ) -> List[Union[str, PendingMessageItem]]:
+        items = [
+            PendingMessageItem(self, "file", file["id"], file=file) for file in files
+        ]
+        before = ["\n"] if has_items_before and items else []
+        return before + intersperse(items, "\n")
 
     # TODO: Check if mentions in attachments should highlight
     def _render_attachments(
@@ -1232,9 +1246,9 @@ class SlackMessage:
                 [item for item in self._unfurl_and_unescape(line)] for line in lines
             ]
 
-            files = self._render_files(attachment.get("files", []))
+            files = self._render_files(attachment.get("files", []), False)
             if files:
-                lines.append([files])
+                lines.append(files)
 
             # TODO: Don't render both text and blocks
             blocks_items = self._render_blocks(attachment.get("blocks", []))
