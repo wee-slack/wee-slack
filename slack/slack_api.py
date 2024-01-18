@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from slack_api.slack_conversations_members import SlackConversationsMembersResponse
     from slack_api.slack_conversations_replies import SlackConversationsRepliesResponse
     from slack_api.slack_emoji import SlackEmojiListResponse
+    from slack_api.slack_files_info import SlackFilesInfoResponse
     from slack_api.slack_profile import SlackSetProfile, SlackUsersProfileSetResponse
     from slack_api.slack_rtm_connect import SlackRtmConnectResponse
     from slack_api.slack_team_info import SlackTeamInfoResponse
@@ -317,6 +318,14 @@ class SlackApi(SlackApiCommon):
     async def fetch_usergroups_list(self):
         method = "usergroups.list"
         response: SlackUsergroupsInfoResponse = await self._fetch(method)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response)
+        return response
+
+    async def fetch_files_info(self, file_id: str):
+        method = "files.info"
+        params: Params = {"file": file_id}
+        response: SlackFilesInfoResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response)
         return response

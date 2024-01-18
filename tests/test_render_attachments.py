@@ -341,6 +341,7 @@ cases: List[Case] = [
                     "text": "Original message",
                     "files": [
                         {
+                            "id": "F12345678",
                             "title": "File",
                             "url_private": "http://link",
                         }
