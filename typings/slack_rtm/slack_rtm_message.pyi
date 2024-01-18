@@ -28,6 +28,10 @@ class SlackRtmHello(TypedDict):
     start: bool
     host_id: str
 
+class SlackRtmReconnectUrl(TypedDict):
+    type: Literal["reconnect_url"]
+    url: str
+
 @final
 class SlackMessageStandardRtm(SlackMessageStandardCommon):
     channel: str
@@ -322,6 +326,7 @@ SlackMessageRtm = (
 
 SlackRtmMessage = (
     SlackRtmHello
+    | SlackRtmReconnectUrl
     | SlackMessageRtm
     | SlackMessageChanged
     | SlackMessageDeleted

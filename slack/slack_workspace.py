@@ -27,7 +27,6 @@ from websocket import (
 )
 
 from slack.error import (
-    SlackApiError,
     SlackError,
     SlackRtmError,
     store_and_format_exception,
@@ -208,10 +207,11 @@ class SlackWorkspace:
         self.config = shared.config.create_workspace_config(self.name)
         self.api = SlackApi(self)
         self._is_connected = False
-        self._connect_task: Optional[Task[None]] = None
+        self._connect_task: Optional[Task[bool]] = None
         self._ws: Optional[WebSocket] = None
         self._hook_ws_fd: Optional[str] = None
         self._debug_ws_buffer_pointer: Optional[str] = None
+        self._reconnect_url: Optional[str] = None
         self.conversations = SlackConversations(self)
         self.open_conversations: Dict[str, SlackConversation] = {}
         self.users = SlackUsers(self)
@@ -254,17 +254,46 @@ class SlackWorkspace:
             return
         weechat.prnt("", f"Connecting to workspace {self.name}")
         self._connect_task = create_task(self._connect())
-        await self._connect_task
-        weechat.prnt("", f"Connected to workspace {self.name}")
+        self.is_connected = await self._connect_task
         self._connect_task = None
 
-    async def _connect_oauth(self) -> List[SlackConversation]:
-        rtm_connect = await self.api.fetch_rtm_connect()
-        self.id = rtm_connect["team"]["id"]
-        self.my_user = await self.users[rtm_connect["self"]["id"]]
+    async def _connect(self) -> bool:
+        if self._reconnect_url is not None:
+            try:
+                await self._connect_ws(self._reconnect_url)
+                return True
+            except Exception:
+                pass
 
-        await self._connect_ws(rtm_connect["url"])
+        try:
+            if self.token_type == "session":
+                team_info = await self.api.fetch_team_info()
+                self.id = team_info["team"]["id"]
+                self.enterprise_id = (
+                    self.id
+                    if self.team_is_org_level
+                    else team_info["team"]["enterprise_id"]
+                    if "enterprise_id" in team_info["team"]
+                    else None
+                )
+                await self._connect_ws(
+                    f"wss://wss-primary.slack.com/?token={self.config.api_token.value}&gateway_server={self.id}-1&batch_presence_aware=1"
+                )
+            else:
+                rtm_connect = await self.api.fetch_rtm_connect()
+                self.id = rtm_connect["team"]["id"]
+                self.enterprise_id = rtm_connect["team"].get("enterprise_id")
+                self.my_user = await self.users[rtm_connect["self"]["id"]]
+                await self._connect_ws(rtm_connect["url"])
+        except Exception as e:
+            print_error(
+                f'Failed connecting to workspace "{self.name}": {store_and_format_exception(e)}'
+            )
+            return False
 
+        return True
+
+    async def _initialize_oauth(self) -> List[SlackConversation]:
         prefs = await self.api.fetch_users_get_prefs("muted_channels")
         self.muted_channels = set(prefs["prefs"]["muted_channels"].split(","))
 
@@ -282,30 +311,16 @@ class SlackWorkspace:
         ]
         return conversations_to_open
 
-    async def _connect_session(self) -> List[SlackConversation]:
-        team_info_task = create_task(self.api.fetch_team_info())
+    async def _initialize_session(self) -> List[SlackConversation]:
         user_boot_task = create_task(self.api.fetch_client_userboot())
         client_counts_task = create_task(self.api.fetch_client_counts())
-        team_info = await team_info_task
         user_boot = await user_boot_task
         client_counts = await client_counts_task
 
-        self.id = team_info["team"]["id"]
-        self.enterprise_id = (
-            self.id
-            if self.team_is_org_level
-            else team_info["team"]["enterprise_id"]
-            if "enterprise_id" in team_info["team"]
-            else None
-        )
         my_user_id = user_boot["self"]["id"]
         # self.users.initialize_items(my_user_id, {my_user_id: user_boot["self"]})
         self.my_user = await self.users[my_user_id]
         self.muted_channels = set(user_boot["prefs"]["muted_channels"].split(","))
-
-        await self._connect_ws(
-            f"wss://wss-primary.slack.com/?token={self.config.api_token.value}&batch_presence_aware=1"
-        )
 
         conversation_counts = (
             client_counts["channels"] + client_counts["mpims"] + client_counts["ims"]
@@ -355,16 +370,17 @@ class SlackWorkspace:
 
         return list(conversations.values())
 
-    async def _connect(self) -> None:
+    async def _initialize(self):
         try:
             if self.token_type == "session":
-                conversations_to_open = await self._connect_session()
+                conversations_to_open = await self._initialize_session()
             else:
-                conversations_to_open = await self._connect_oauth()
-        except SlackApiError as e:
+                conversations_to_open = await self._initialize_oauth()
+        except Exception as e:
             print_error(
-                f'failed connecting to workspace "{self.name}": {e.response["error"]}'
+                f'Failed connecting to workspace "{self.name}": {store_and_format_exception(e)}'
             )
+            self.disconnect()
             return
 
         custom_emojis_response = await self.api.fetch_emoji_list()
@@ -385,8 +401,6 @@ class SlackWorkspace:
         await gather(
             *(slack_buffer.set_hotlist() for slack_buffer in shared.buffers.values())
         )
-
-        self.is_connected = True
 
     async def _conversation_if_should_open(self, info: SlackUsersConversations):
         conversation = await self.conversations[info["id"]]
@@ -457,13 +471,21 @@ class SlackWorkspace:
         log(LogLevel.DEBUG, DebugMessageType.WEBSOCKET_RECV, json.dumps(data))
 
         try:
-            if data["type"] in [
-                "hello",
+            if data["type"] == "hello":
+                if not data["fast_reconnect"]:
+                    await self._initialize()
+                if self.is_connected:
+                    weechat.prnt("", f"Connected to workspace {self.name}")
+                return
+            elif data["type"] in [
                 "file_public",
                 "file_shared",
                 "file_deleted",
                 "dnd_updated_user",
             ]:
+                return
+            if data["type"] == "reconnect_url":
+                self._reconnect_url = data["url"]
                 return
             elif data["type"] == "pref_change":
                 if data["name"] == "muted_channels":
