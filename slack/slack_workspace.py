@@ -637,6 +637,7 @@ class SlackWorkspace:
 
         if self._connect_task:
             self._connect_task.cancel()
+            self._connect_task = None
 
         if self._hook_ws_fd:
             weechat.unhook(self._hook_ws_fd)
