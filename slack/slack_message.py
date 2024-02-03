@@ -853,14 +853,15 @@ class SlackMessage:
             users = await gather(
                 *(self.workspace.users[user_id] for user_id in reaction["users"])
             )
-            nicks = ",".join(user.nick.format() for user in users)
-            users_str = f"({nicks})"
+            nicks = [user.nick.format() for user in users]
+            nicks_extra = (
+                ["and others"] if len(reaction["users"]) < reaction["count"] else []
+            )
+            users_str = f"({', '.join(nicks + nicks_extra)})"
         else:
             users_str = ""
 
-        reaction_string = (
-            f"{get_emoji(reaction['name'])}{len(reaction['users'])}{users_str}"
-        )
+        reaction_string = f"{get_emoji(reaction['name'])}{reaction['count']}{users_str}"
 
         if self.workspace.my_user.id in reaction["users"]:
             return with_color(
@@ -874,7 +875,7 @@ class SlackMessage:
     async def _create_reactions_string(self) -> str:
         reactions = self._message_json.get("reactions", [])
         reactions_with_users = [
-            reaction for reaction in reactions if len(reaction["users"]) > 0
+            reaction for reaction in reactions if reaction["count"] > 0
         ]
         reaction_strings = await gather(
             *(

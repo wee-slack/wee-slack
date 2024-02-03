@@ -148,12 +148,19 @@ color_reset = "<[color:reset]>"
 
 workspace_id = "T0FC8BFQR"
 
-with open("mock_data/slack_users_info_person.json") as f:
+with open("mock_data/slack_users_info_person_1.json") as f:
     user_test1_info_response: SlackUserInfoSuccessResponse[SlackUserInfo] = json.loads(
         f.read()
     )
     user_test1_info = user_test1_info_response["user"]
     user_test1_id = user_test1_info["id"]
+
+with open("mock_data/slack_users_info_person_2.json") as f:
+    user_test2_info_response: SlackUserInfoSuccessResponse[SlackUserInfo] = json.loads(
+        f.read()
+    )
+    user_test2_info = user_test2_info_response["user"]
+    user_test2_id = user_test2_info["id"]
 
 with open("mock_data/slack_conversations_info_channel_public.json") as f:
     channel_public_info_response: SlackConversationsInfoSuccessResponse[
@@ -172,8 +179,14 @@ def workspace():
     user_test1 = SlackUser(w, user_test1_info)
     user_test1_future = Future[SlackUser]()
     user_test1_future.set_result(user_test1)
-    w.my_user = user_test1
     w.users[user_test1_id] = user_test1_future
+
+    user_test2 = SlackUser(w, user_test2_info)
+    user_test2_future = Future[SlackUser]()
+    user_test2_future.set_result(user_test2)
+    w.users[user_test2_id] = user_test2_future
+
+    w.my_user = user_test1
 
     channel_public_future = Future[SlackConversation]()
     w.conversations[channel_public_id] = channel_public_future
