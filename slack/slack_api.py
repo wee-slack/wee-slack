@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from slack_api.slack_conversations_history import SlackConversationsHistoryResponse
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
     from slack_api.slack_conversations_members import SlackConversationsMembersResponse
+    from slack_api.slack_conversations_open import SlackConversationsOpenResponse
     from slack_api.slack_conversations_replies import SlackConversationsRepliesResponse
     from slack_api.slack_emoji import SlackEmojiListResponse
     from slack_api.slack_files_info import SlackFilesInfoResponse
@@ -349,6 +350,14 @@ class SlackApi(SlackApiCommon):
         response: SlackClientCountsResponse = await self._fetch(method)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response)
+        return response
+
+    async def conversations_open(self, user_ids: Iterable[str]):
+        method = "conversations.open"
+        params: Params = {"users": ",".join(user_ids), "return_im": True}
+        response: SlackConversationsOpenResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
         return response
 
     async def conversations_close(self, conversation: SlackConversation):

@@ -6,7 +6,17 @@ import re
 from dataclasses import dataclass
 from functools import wraps
 from itertools import chain
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import weechat
 
@@ -17,9 +27,9 @@ from slack.shared import MESSAGE_ID_REGEX_STRING, REACTION_CHANGE_REGEX_STRING, 
 from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation
 from slack.slack_thread import SlackThread
-from slack.slack_user import get_user_nick, name_from_user_info
+from slack.slack_user import SlackUser, get_user_nick, name_from_user_info
 from slack.slack_workspace import SlackWorkspace
-from slack.task import run_async, sleep
+from slack.task import Future, run_async, sleep
 from slack.util import get_callback_name, with_color
 from slack.weechat_config import WeeChatOption, WeeChatOptionTypes
 
@@ -28,11 +38,17 @@ if TYPE_CHECKING:
 
     Options = Dict[str, Union[str, Literal[True]]]
 
+T = TypeVar("T")
+
 REACTION_PREFIX_REGEX_STRING = (
     rf"{MESSAGE_ID_REGEX_STRING}?{REACTION_CHANGE_REGEX_STRING}"
 )
 
 commands: Dict[str, Command] = {}
+
+
+def get_resolved_futures(futures: Iterable[Future[T]]) -> List[T]:
+    return [future.result() for future in futures if future.done_with_result()]
 
 
 # def parse_help_docstring(cmd):
@@ -263,6 +279,50 @@ def command_slack_workspace_del(buffer: str, args: List[str], options: Options):
     )
 
 
+async def create_conversation_for_users(
+    workspace: SlackWorkspace, users: Iterable[SlackUser]
+):
+    user_ids = [user.id for user in users]
+    conversation_open_response = await workspace.api.conversations_open(user_ids)
+    conversation_id = conversation_open_response["channel"]["id"]
+    workspace.conversations.initialize_items(
+        [conversation_id], {conversation_id: conversation_open_response["channel"]}
+    )
+    conversation = await workspace.conversations[conversation_id]
+    await conversation.open_buffer(switch=True)
+
+
+@weechat_command("%(nicks)", min_args=1, split_all_args=True)
+def command_slack_query(buffer: str, args: List[str], options: Options):
+    slack_buffer = shared.buffers.get(buffer)
+    if slack_buffer is None:
+        return
+
+    nicks = [removeprefix(nick, "@") for nick in args]
+    all_users = get_resolved_futures(slack_buffer.workspace.users.values())
+    users = [user for user in all_users if user.nick.raw_nick in nicks]
+
+    if len(users) != len(nicks):
+        found_nicks = [user.nick.raw_nick for user in users]
+        not_found_nicks = [nick for nick in nicks if nick not in found_nicks]
+        print_error(
+            f"No such nick{'s' if len(not_found_nicks) > 1 else ''}: {', '.join(not_found_nicks)}"
+        )
+        return
+
+    if len(users) == 1:
+        user = users[0]
+        all_conversations = get_resolved_futures(
+            slack_buffer.workspace.conversations.values()
+        )
+        for conversation in all_conversations:
+            if conversation.im_user_id == user.id:
+                run_async(conversation.open_buffer(switch=True))
+                return
+
+    run_async(create_conversation_for_users(slack_buffer.workspace, users))
+
+
 @weechat_command("%(threads)", min_args=1)
 def command_slack_thread(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
@@ -432,6 +492,8 @@ def completion_list_add_expand(
 ):
     if word == "%(slack_workspaces)":
         completion_slack_workspaces_cb("", "slack_workspaces", buffer, completion)
+    elif word == "%(nicks)":
+        completion_nicks_cb("", "nicks", buffer, completion)
     elif word == "%(threads)":
         completion_thread_hashes_cb("", "threads", buffer, completion)
     else:
@@ -541,12 +603,9 @@ def completion_nicks_cb(
         if m.sender_user_id and m.subtype in [None, "me_message", "thread_broadcast"]
     ]
     unique_senders = list(dict.fromkeys(senders))
-    sender_user_futures = [
-        slack_buffer.workspace.users[sender] for sender in unique_senders
-    ]
-    sender_users = [
-        future.result() for future in sender_user_futures if future.done_with_result()
-    ]
+    sender_users = get_resolved_futures(
+        [slack_buffer.workspace.users[sender] for sender in unique_senders]
+    )
     nicks = [user.nick.raw_nick for user in sender_users]
     for nick in nicks:
         weechat.completion_list_add(
