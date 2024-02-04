@@ -582,19 +582,37 @@ def completion_nicks_cb(
     if slack_buffer is None:
         return weechat.WEECHAT_RC_OK
 
-    buffer_nicks = [nick.raw_nick for nick in slack_buffer.members]
+    all_users = get_resolved_futures(slack_buffer.workspace.users.values())
+    all_nicks = sorted([user.nick.raw_nick for user in all_users], key=str.casefold)
+    for nick in all_nicks:
+        weechat.completion_list_add(
+            completion,
+            f"@{nick}",
+            1,
+            weechat.WEECHAT_LIST_POS_END,
+        )
+        weechat.completion_list_add(
+            completion,
+            nick,
+            1,
+            weechat.WEECHAT_LIST_POS_END,
+        )
+
+    buffer_nicks = sorted(
+        [nick.raw_nick for nick in slack_buffer.members], key=str.casefold, reverse=True
+    )
     for nick in buffer_nicks:
         weechat.completion_list_add(
             completion,
             nick,
             1,
-            weechat.WEECHAT_LIST_POS_SORT,
+            weechat.WEECHAT_LIST_POS_BEGINNING,
         )
         weechat.completion_list_add(
             completion,
             f"@{nick}",
             1,
-            weechat.WEECHAT_LIST_POS_SORT,
+            weechat.WEECHAT_LIST_POS_BEGINNING,
         )
 
     senders = [
@@ -624,13 +642,13 @@ def completion_nicks_cb(
     my_user_nick = slack_buffer.workspace.my_user.nick.raw_nick
     weechat.completion_list_add(
         completion,
-        my_user_nick,
+        f"@{my_user_nick}",
         1,
         weechat.WEECHAT_LIST_POS_END,
     )
     weechat.completion_list_add(
         completion,
-        f"@{my_user_nick}",
+        my_user_nick,
         1,
         weechat.WEECHAT_LIST_POS_END,
     )
