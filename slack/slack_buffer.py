@@ -527,6 +527,8 @@ class SlackBuffer(ABC):
         return weechat.WEECHAT_RC_OK
 
     def _buffer_close_cb(self, data: str, buffer: str) -> int:
+        if shared.script_is_unloading:
+            return weechat.WEECHAT_RC_OK
         if self.buffer_pointer in shared.buffers:
             del shared.buffers[self.buffer_pointer]
         self.buffer_pointer = None

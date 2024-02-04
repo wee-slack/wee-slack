@@ -15,6 +15,7 @@ SCRIPT_DESC = "Extends weechat for typing notification/search/etc on slack.com"
 
 
 def shutdown_cb():
+    shared.script_is_unloading = True
     weechat.config_write(shared.config.weechat_config.pointer)
     return weechat.WEECHAT_RC_OK
 

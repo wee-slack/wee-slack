@@ -734,6 +734,8 @@ class SlackConversation(SlackBuffer):
 
     def _buffer_close_cb(self, data: str, buffer: str) -> int:
         super()._buffer_close_cb(data, buffer)
+        if shared.script_is_unloading:
+            return weechat.WEECHAT_RC_OK
         run_async(self._buffer_closed())
         return weechat.WEECHAT_RC_OK
 

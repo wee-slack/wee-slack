@@ -35,6 +35,7 @@ class Shared:
         self.standard_emojis_inverse: Dict[str, Emoji]
         self.highlight_tag = "highlight"
         self.debug_buffer_pointer: Optional[str] = None
+        self.script_is_unloading = False
 
 
 shared = Shared()
