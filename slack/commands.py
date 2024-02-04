@@ -323,6 +323,58 @@ def command_slack_query(buffer: str, args: List[str], options: Options):
     run_async(create_conversation_for_users(slack_buffer.workspace, users))
 
 
+async def conversation_join(
+    workspace: SlackWorkspace, conversation_id: str, switch: bool
+):
+    await workspace.api.conversations_join(conversation_id)
+    conversation = await workspace.conversations[conversation_id]
+    await conversation.open_buffer(switch=switch)
+
+
+@weechat_command("", min_args=1)
+def command_slack_join(buffer: str, args: List[str], options: Options):
+    slack_buffer = shared.buffers.get(buffer)
+
+    workspace_name = options.get("workspace")
+    if workspace_name is True:
+        print_error("No workspace specified")
+        return
+
+    workspace = (
+        shared.workspaces.get(workspace_name)
+        if workspace_name
+        else slack_buffer.workspace
+        if slack_buffer is not None
+        else None
+    )
+
+    if workspace is None:
+        if workspace_name:
+            print_error(f'Workspace "{workspace_name}" not found')
+        else:
+            print_error(
+                "Must be run from a slack buffer unless a workspace is specified"
+            )
+        return
+
+    conversation_name = args[0]
+    all_conversations = get_resolved_futures(workspace.conversations.values())
+    for conversation in all_conversations:
+        if (
+            conversation.name_with_prefix("short_name_without_padding")
+            == conversation_name
+            or conversation.name() == conversation_name
+        ):
+            run_async(
+                conversation_join(
+                    workspace, conversation.id, switch=not options.get("noswitch")
+                )
+            )
+            return
+
+    print_error(f'Conversation "{conversation_name}" not found')
+
+
 @weechat_command("%(threads)", min_args=1)
 def command_slack_thread(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)

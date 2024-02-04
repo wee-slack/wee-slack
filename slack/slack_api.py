@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from slack_api.slack_common import SlackGenericResponse
     from slack_api.slack_conversations_history import SlackConversationsHistoryResponse
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
+    from slack_api.slack_conversations_join import SlackConversationsJoinResponse
     from slack_api.slack_conversations_members import SlackConversationsMembersResponse
     from slack_api.slack_conversations_open import SlackConversationsOpenResponse
     from slack_api.slack_conversations_replies import SlackConversationsRepliesResponse
@@ -356,6 +357,14 @@ class SlackApi(SlackApiCommon):
         method = "conversations.open"
         params: Params = {"users": ",".join(user_ids), "return_im": True}
         response: SlackConversationsOpenResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def conversations_join(self, conversation_id: str):
+        method = "conversations.join"
+        params: Params = {"channel": conversation_id}
+        response: SlackConversationsJoinResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
         return response
