@@ -723,13 +723,16 @@ class SlackConversation(SlackBuffer):
             await thread_message.thread_buffer.open_buffer(switch)
 
     async def print_message(self, message: SlackMessage):
-        await super().print_message(message)
+        did_print = await super().print_message(message)
 
-        nick = await message.nick()
-        if message.subtype in ["channel_leave", "group_leave"]:
-            self.nicklist_remove_nick(nick)
-        else:
-            self.nicklist_add_nick(nick)
+        if did_print:
+            nick = await message.nick()
+            if message.subtype in ["channel_leave", "group_leave"]:
+                self.nicklist_remove_nick(nick)
+            else:
+                self.nicklist_add_nick(nick)
+
+        return did_print
 
     async def mark_read(self):
         if not self._is_joined:

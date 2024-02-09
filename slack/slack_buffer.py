@@ -63,7 +63,7 @@ def tags_set_notify_none(tags: List[str]) -> List[str]:
 
 def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
     if not buffer_pointer:
-        return
+        return False
 
     own_lines = weechat.hdata_pointer(
         weechat.hdata_get("buffer"), buffer_pointer, "own_lines"
@@ -79,14 +79,14 @@ def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
         line_pointer = weechat.hdata_move(weechat.hdata_get("line"), line_pointer, -1)
 
     if not line_pointer:
-        return
+        return False
 
     if shared.weechat_version >= 0x04000000:
         data = weechat.hdata_pointer(weechat.hdata_get("line"), line_pointer, "data")
         weechat.hdata_update(
             weechat.hdata_get("line_data"), data, {"message": new_text}
         )
-        return
+        return True
 
     # Find all lines for the message
     pointers: List[str] = []
@@ -96,7 +96,7 @@ def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
     pointers.reverse()
 
     if not pointers:
-        return
+        return False
 
     if is_last_line:
         lines = new_text.split("\n")
@@ -145,6 +145,7 @@ def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
     for pointer, line in zip(pointers, lines):
         data = weechat.hdata_pointer(weechat.hdata_get("line"), pointer, "data")
         weechat.hdata_update(weechat.hdata_get("line_data"), data, {"message": line})
+    return True
 
 
 class SlackBuffer(ABC):
@@ -335,7 +336,16 @@ class SlackBuffer(ABC):
 
     async def print_message(self, message: SlackMessage):
         if not self.buffer_pointer:
-            return
+            return False
+
+        if self.last_printed_ts is not None and message.ts <= self.last_printed_ts:
+            new_text = await message.render_message(context=self.context, rerender=True)
+            did_update = modify_buffer_line(self.buffer_pointer, message.ts, new_text)
+            if not did_update:
+                print_error(
+                    f"Didn't find message with ts {message.ts} when last_printed_ts is {self.last_printed_ts}, message: {message}"
+                )
+            return False
 
         rendered = await message.render(self.context)
         backlog = self.last_read is not None and message.ts <= self.last_read
@@ -346,6 +356,7 @@ class SlackBuffer(ABC):
         else:
             self.hotlist_tss.add(message.ts)
         self.last_printed_ts = message.ts
+        return True
 
     def last_read_line_ts(self) -> Optional[SlackTs]:
         if self.buffer_pointer:

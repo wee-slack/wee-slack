@@ -117,9 +117,13 @@ class SlackThread(SlackBuffer):
             self.history_pending = False
 
     async def print_message(self, message: SlackMessage):
-        await super().print_message(message)
-        nick = await message.nick()
-        self._reply_nicks.add(nick)
+        did_print = await super().print_message(message)
+
+        if did_print:
+            nick = await message.nick()
+            self._reply_nicks.add(nick)
+
+        return did_print
 
     async def mark_read(self):
         # subscriptions.thread.mark is only available for session tokens
