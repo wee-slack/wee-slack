@@ -272,6 +272,9 @@ class SlackBuffer(ABC):
         if switch:
             await self.buffer_switched_to()
 
+    async def close_buffer(self, update_server: bool = False):
+        await self._buffer_close(call_buffer_close=True, update_server=update_server)
+
     def update_buffer_props(self) -> None:
         if self.buffer_pointer is None:
             return
@@ -527,11 +530,21 @@ class SlackBuffer(ABC):
         return weechat.WEECHAT_RC_OK
 
     def _buffer_close_cb(self, data: str, buffer: str) -> int:
+        run_async(self._buffer_close(update_server=True))
+        return weechat.WEECHAT_RC_OK
+
+    async def _buffer_close(
+        self, call_buffer_close: bool = False, update_server: bool = False
+    ):
         if shared.script_is_unloading:
-            return weechat.WEECHAT_RC_OK
+            return
+
         if self.buffer_pointer in shared.buffers:
             del shared.buffers[self.buffer_pointer]
+
+        if call_buffer_close and self.buffer_pointer is not None:
+            weechat.buffer_close(self.buffer_pointer)
+
         self.buffer_pointer = None
         self.last_printed_ts = None
         self.hotlist_tss.clear()
-        return weechat.WEECHAT_RC_OK

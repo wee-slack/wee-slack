@@ -726,18 +726,20 @@ class SlackConversation(SlackBuffer):
         if last_read_line_ts and last_read_line_ts != self.last_read:
             await self._api.conversations_mark(self, last_read_line_ts)
 
-    async def _buffer_closed(self):
+    async def _buffer_close(
+        self, call_buffer_close: bool = False, update_server: bool = False
+    ):
+        await super()._buffer_close(call_buffer_close, update_server)
+
+        if shared.script_is_unloading:
+            return
+
         if self.id in self.workspace.open_conversations:
             del self.workspace.open_conversations[self.id]
-        if self.type in ["im", "mpim"]:
-            await self._api.conversations_close(self)
 
-    def _buffer_close_cb(self, data: str, buffer: str) -> int:
-        super()._buffer_close_cb(data, buffer)
-        if shared.script_is_unloading:
-            return weechat.WEECHAT_RC_OK
-        run_async(self._buffer_closed())
-        return weechat.WEECHAT_RC_OK
+        if update_server:
+            if self.type in ["im", "mpim"]:
+                await self._api.conversations_close(self)
 
 
 _T = TypeVar("_T", bound=SlackConversation)
