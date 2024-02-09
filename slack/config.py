@@ -190,6 +190,13 @@ class SlackConfigSectionLook:
             "*",
         )
 
+        self.leave_channel_on_buffer_close = WeeChatOption(
+            self._section,
+            "leave_channel_on_buffer_close",
+            "leave channel when a buffer is closed",
+            True,
+        )
+
         self.muted_conversations_notify: WeeChatOption[
             Literal["none", "personal_highlights", "all_highlights", "all"]
         ] = WeeChatOption(

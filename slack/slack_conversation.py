@@ -740,6 +740,8 @@ class SlackConversation(SlackBuffer):
         if update_server:
             if self.type in ["im", "mpim"]:
                 await self._api.conversations_close(self)
+            else:
+                await self._api.conversations_leave(self)
 
 
 _T = TypeVar("_T", bound=SlackConversation)

@@ -530,7 +530,11 @@ class SlackBuffer(ABC):
         return weechat.WEECHAT_RC_OK
 
     def _buffer_close_cb(self, data: str, buffer: str) -> int:
-        run_async(self._buffer_close(update_server=True))
+        run_async(
+            self._buffer_close(
+                update_server=shared.config.look.leave_channel_on_buffer_close.value
+            )
+        )
         return weechat.WEECHAT_RC_OK
 
     async def _buffer_close(
