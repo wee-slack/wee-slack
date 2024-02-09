@@ -549,7 +549,7 @@ class SlackWorkspace:
                 or data["type"] == "channel_left"
                 or data["type"] == "group_left"
             ):
-                if channel.buffer_pointer is not None:
+                if channel.buffer_pointer is not None and channel.is_joined:
                     await channel.close_buffer()
             elif data["type"] == "reaction_added" and data["item"]["type"] == "message":
                 await channel.reaction_add(

@@ -150,6 +150,7 @@ class SlackConversation(SlackBuffer):
         super().__init__()
         self._workspace = workspace
         self._info = info
+        self._is_joined: bool = False
         self._members: Optional[List[str]] = None
         self._im_user: Optional[SlackUser] = None
         self._mpim_users: Optional[List[SlackUser]] = None
@@ -216,6 +217,10 @@ class SlackConversation(SlackBuffer):
     @property
     def context(self) -> Literal["conversation", "thread"]:
         return "conversation"
+
+    @property
+    def is_joined(self) -> bool:
+        return self._is_joined
 
     @property
     def members(self) -> Generator[Nick, None, None]:
@@ -353,6 +358,7 @@ class SlackConversation(SlackBuffer):
 
     async def open_buffer(self, switch: bool = False):
         await super().open_buffer(switch)
+        self._is_joined = True
         self.workspace.open_conversations[self.id] = self
 
     async def rerender_message(self, message: SlackMessage):
@@ -446,11 +452,15 @@ class SlackConversation(SlackBuffer):
                     weechat.buffer_set(self.buffer_pointer, "hotlist", priority.value)
                     self.hotlist_tss.add(message.latest_reply)
 
-    async def fill_history(self):
+    async def fill_history(self, update: bool = False):
         if self.history_pending:
             return
 
-        if self.last_printed_ts is not None and not self.history_needs_refresh:
+        if (
+            self.last_printed_ts is not None
+            and not self.history_needs_refresh
+            and not update
+        ):
             return
 
         with self.loading():
@@ -722,9 +732,20 @@ class SlackConversation(SlackBuffer):
             self.nicklist_add_nick(nick)
 
     async def mark_read(self):
+        if not self._is_joined:
+            return
         last_read_line_ts = self.last_read_line_ts()
         if last_read_line_ts and last_read_line_ts != self.last_read:
             await self._api.conversations_mark(self, last_read_line_ts)
+
+    async def part(self):
+        self._is_joined = False
+        await self._api.conversations_leave(self)
+        if shared.config.look.part_closes_buffer.value:
+            await self.close_buffer()
+        else:
+            # Update history to get the part message
+            await self.fill_history(update=True)
 
     async def _buffer_close(
         self, call_buffer_close: bool = False, update_server: bool = False

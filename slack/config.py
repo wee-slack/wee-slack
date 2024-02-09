@@ -207,6 +207,14 @@ class SlackConfigSectionLook:
             string_values=["none", "personal_highlights", "all_highlights", "all"],
         )
 
+        self.part_closes_buffer = WeeChatOption(
+            self._section,
+            "part_closes_buffer",
+            "close buffer when /slack part is issued on a channel",
+            False,
+            parent_option="irc.look.part_closes_buffer",
+        )
+
         self.render_emoji_as: WeeChatOption[
             Literal["emoji", "name", "both"]
         ] = WeeChatOption(

@@ -331,8 +331,7 @@ async def conversation_join(
     await conversation.open_buffer(switch=switch)
 
 
-@weechat_command("", min_args=1)
-def command_slack_join(buffer: str, args: List[str], options: Options):
+def get_conversation_from_args(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
 
     workspace_name = options.get("workspace")
@@ -357,7 +356,18 @@ def command_slack_join(buffer: str, args: List[str], options: Options):
             )
         return
 
-    conversation_name = args[0]
+    if len(args) == 0 or not args[0]:
+        if workspace_name is not None:
+            print_error(
+                "Must specify conversaton name when workspace name is specified"
+            )
+            return
+        if isinstance(slack_buffer, SlackConversation):
+            return slack_buffer
+        else:
+            return
+
+    conversation_name = args[0].strip()
     all_conversations = get_resolved_futures(workspace.conversations.values())
     for conversation in all_conversations:
         if (
@@ -365,14 +375,29 @@ def command_slack_join(buffer: str, args: List[str], options: Options):
             == conversation_name
             or conversation.name() == conversation_name
         ):
-            run_async(
-                conversation_join(
-                    workspace, conversation.id, switch=not options.get("noswitch")
-                )
-            )
-            return
+            return conversation
 
     print_error(f'Conversation "{conversation_name}" not found')
+
+
+@weechat_command("", min_args=1)
+def command_slack_join(buffer: str, args: List[str], options: Options):
+    conversation = get_conversation_from_args(buffer, args, options)
+    if conversation is not None:
+        run_async(
+            conversation_join(
+                conversation.workspace,
+                conversation.id,
+                switch=not options.get("noswitch"),
+            )
+        )
+
+
+@weechat_command("")
+def command_slack_part(buffer: str, args: List[str], options: Options):
+    conversation = get_conversation_from_args(buffer, args, options)
+    if conversation is not None:
+        run_async(conversation.part())
 
 
 @weechat_command("%(threads)", min_args=1)
