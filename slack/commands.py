@@ -380,7 +380,7 @@ def get_conversation_from_args(buffer: str, args: List[str], options: Options):
     print_error(f'Conversation "{conversation_name}" not found')
 
 
-@weechat_command("", min_args=1)
+@weechat_command("")
 def command_slack_join(buffer: str, args: List[str], options: Options):
     conversation = get_conversation_from_args(buffer, args, options)
     if conversation is not None:
