@@ -294,7 +294,7 @@ class SlackApi(SlackApiCommon):
         responses = await gather(
             *(
                 self._fetch_users_info_without_splitting(user_ids_batch)
-                for user_ids_batch in chunked(user_ids, 1000)
+                for user_ids_batch in chunked(user_ids, 500)
             )
         )
         users = list(chain(*(response["users"] for response in responses)))
