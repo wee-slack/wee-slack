@@ -7,7 +7,7 @@ verify_ssl = true
 websocket-client = "*"
 
 [dev-packages]
-black = "*"
+black = "==23.*"
 mock   = "*"
 pytest = "*"
 flake8 = "*"
