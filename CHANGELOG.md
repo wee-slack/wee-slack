@@ -1,10 +1,27 @@
 # Changelog
 
+## 2.10.2 (2024-02-18)
+
+Note: This will most likely be the last version before version 3.0.0, which is a mostly complete rewrite of the script with some breaking changes. Notably the configuration options have completely changed to be more in line with how the IRC plugin does it with a separate section for each Slack workspace. There will be some new features, but some existing features might also be dropped. Several bugs have been fixed, but of course new ones may have been introduced too.
+
+### Bug fixes
+
+- Fix rendering of text styles for certain messages (regression from version v2.10.0).
+- Only open subscribed threads with `auto_open_threads` enabled (fixes #803, fixes #830).
+- Mark conversation/thread as read when `/buffer set unread` is run.
+- Handle millisecond-level timestamps in attachments (PR #905).
+- Handle Firefox containers in `extract_token_from_browser.py` (PR #909).
+- Properly fix rendering of `<` and `>` (fixes #908). The fix in v2.10.1 only fixed it for normal text, not e.g. code blocks and attachments.
+- Support color rich text elements (fixes #912).
+- Correctly show reactions with more than 50 users.
+- Make /thread work on thread replies.
+- Add no-secretstorage option for `extract_token_from_browser.py`.
+
 ## 2.10.1 (2023-09-22)
 
 ### Slack API changes
 
-- Fix the connection to the websocket when using session (`xoxc-`) tokens. These connections started failing after a change in the Slack API which made wee-slack unable to run at all (issue #901).
+- Fix the connection to the websocket when using session (`xoxc-`) tokens. These connections started failing after a change in the Slack API which made wee-slack unable to run at all (fixes #901).
 
 ### Bug fixes
 
@@ -14,7 +31,7 @@
 - Fix rendering of `<` and `>`. A regression in 2.10.0 made these be removed.
 - Fix rendering of huddles. A regression in 2.10.0 made the text for huddle messages duplicated.
 - Fix rendering of emojis when `render_emoji_as_string` is set to `both`. A regression in 2.10.0 made emojis show twice with this option (PR #902).
-- Print an error message when running the `/reply` command without any arguments (issue #900).
+- Print an error message when running the `/reply` command without any arguments (fixes #900).
 
 ## 2.10.0 (2023-08-24)
 
