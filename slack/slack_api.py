@@ -29,13 +29,12 @@ if TYPE_CHECKING:
     from slack_api.slack_conversations_members import SlackConversationsMembersResponse
     from slack_api.slack_conversations_replies import SlackConversationsRepliesResponse
     from slack_api.slack_emoji import SlackEmojiListResponse
+    from slack_api.slack_profile import SlackSetProfile, SlackUsersProfileSetResponse
     from slack_api.slack_rtm_connect import SlackRtmConnectResponse
     from slack_api.slack_team_info import SlackTeamInfoResponse
     from slack_api.slack_usergroups_info import SlackUsergroupsInfoResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
     from slack_api.slack_users_info import (
-        SlackProfile,
-        SlackSetProfile,
         SlackUserInfoResponse,
         SlackUsersInfoResponse,
     )
@@ -141,6 +140,18 @@ class SlackApi(SlackApiCommon):
             response[list_key].extend(next_pages[list_key])
             return response
         return response
+
+    async def _post(self, method: str, body: Mapping[str, object]):
+        url = f"https://api.slack.com/api/{method}"
+        options = self._get_request_options()
+        options["httpheader"] += "\nContent-Type: application/json"
+        options["postfields"] = json.dumps(body)
+        response = await http_request(
+            url,
+            options,
+            self.workspace.config.network_timeout.value * 1000,
+        )
+        return json.loads(response)
 
     async def fetch_team_info(self):
         method = "team.info"
@@ -256,10 +267,10 @@ class SlackApi(SlackApiCommon):
 
     async def _set_user_profile(self, profile: SlackSetProfile):
         method = "users.profile.set"
-        params: Params = {"profile": dict(profile)}
-        response: SlackProfile = await self._fetch(method, params)
+        body = {"profile": profile}
+        response: SlackUsersProfileSetResponse = await self._post(method, body)
         if response["ok"] is False:
-            raise SlackApiError(self.workspace, method, response, params)
+            raise SlackApiError(self.workspace, method, response, body)
         return response
 
     async def set_user_status(self, status: str):

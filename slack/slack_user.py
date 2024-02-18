@@ -13,8 +13,9 @@ from slack.util import with_color
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfo
     from slack_api.slack_conversations_history import SlackMessageUserProfile
+    from slack_api.slack_profile import SlackProfile
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
-    from slack_api.slack_users_info import SlackProfile, SlackUserInfo
+    from slack_api.slack_users_info import SlackUserInfo
     from typing_extensions import Literal
 
     from slack.slack_workspace import SlackWorkspace

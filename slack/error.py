@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Dict, Mapping, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Dict, Optional
 from uuid import uuid4
 
 from slack.python_compatibility import format_exception_only
@@ -40,16 +40,14 @@ class SlackApiError(Exception):
         workspace: SlackWorkspace,
         method: str,
         response: SlackErrorResponse,
-        params: Mapping[
-            str, Union[str, int, bool, Sequence[str], Sequence[int], Sequence[bool]]
-        ] = {},
+        request: object = None,
     ):
         super().__init__(
-            f"{self.__class__.__name__}: workspace={workspace}, method='{method}', params={params}, response={response}"
+            f"{self.__class__.__name__}: workspace={workspace}, method='{method}', request={request}, response={response}"
         )
         self.workspace = workspace
         self.method = method
-        self.params = params
+        self.request = request
         self.response = response
 
 
@@ -112,7 +110,7 @@ def store_and_format_uncaught_error(uncaught_error: UncaughtError) -> str:
         )
     elif isinstance(e, SlackApiError):
         return (
-            f"Error from Slack API method {e.method} with params {e.params} for workspace "
+            f"Error from Slack API method {e.method} with request {e.request} for workspace "
             f"{e.workspace.name}: {e.response} ({stack_msg})"
         )
     elif isinstance(e, SlackRtmError):
