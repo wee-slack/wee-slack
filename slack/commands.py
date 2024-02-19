@@ -8,7 +8,9 @@ from functools import wraps
 from itertools import chain
 from typing import (
     TYPE_CHECKING,
+    Any,
     Callable,
+    Coroutine,
     Dict,
     Iterable,
     List,
@@ -37,6 +39,10 @@ if TYPE_CHECKING:
     from typing_extensions import Literal
 
     Options = Dict[str, Union[str, Literal[True]]]
+    WeechatCommandCallback = Callable[[str, str], None]
+    InternalCommandCallback = Callable[
+        [str, List[str], Options], Optional[Coroutine[Any, None, None]]
+    ]
 
 T = TypeVar("T")
 
@@ -75,7 +81,7 @@ class Command:
     args: str
     args_description: str
     completion: str
-    cb: Callable[[str, str], None]
+    cb: WeechatCommandCallback
 
 
 def weechat_command(
@@ -84,12 +90,12 @@ def weechat_command(
     split_all_args: bool = False,
     slack_buffer_required: bool = False,
 ) -> Callable[
-    [Callable[[str, List[str], Options], None]],
-    Callable[[str, str], None],
+    [InternalCommandCallback],
+    WeechatCommandCallback,
 ]:
     def decorator(
-        f: Callable[[str, List[str], Options], None],
-    ) -> Callable[[str, str], None]:
+        f: InternalCommandCallback,
+    ) -> WeechatCommandCallback:
         cmd = removeprefix(f.__name__, "command_").replace("_", " ")
         top_level = " " not in cmd
 
@@ -103,7 +109,10 @@ def weechat_command(
                     f'Too few arguments for command "/{cmd}" (help on command: /help {cmd})'
                 )
                 return
-            return f(buffer, split_args, options)
+            result = f(buffer, split_args, options)
+            if result is not None:
+                run_async(result)
+            return
 
         commands[cmd] = Command(cmd, top_level, "", "", "", completion, wrapper)
 
