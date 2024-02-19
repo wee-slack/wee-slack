@@ -24,10 +24,10 @@ import weechat
 from slack.error import SlackError, SlackRtmError, UncaughtError
 from slack.log import open_debug_buffer, print_error
 from slack.python_compatibility import format_exception, removeprefix
-from slack.shared import shared
+from slack.shared import EMOJI_CHAR_OR_NAME_REGEX_STRING, shared
 from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation
-from slack.slack_message import SlackTs
+from slack.slack_message import SlackTs, ts_from_tag
 from slack.slack_thread import SlackThread
 from slack.slack_user import SlackUser
 from slack.slack_workspace import SlackWorkspace
@@ -36,7 +36,7 @@ from slack.util import get_callback_name, get_resolved_futures, with_color
 from slack.weechat_config import WeeChatOption, WeeChatOptionTypes
 
 if TYPE_CHECKING:
-    from typing_extensions import Literal
+    from typing_extensions import Literal, assert_never
 
     Options = Dict[str, Union[str, Literal[True]]]
     WeechatCommandCallback = Callable[[str, str], None]
@@ -45,6 +45,8 @@ if TYPE_CHECKING:
     ]
 
 T = TypeVar("T")
+
+focus_events = ("auto", "message", "delete", "linkarchive", "reply", "thread")
 
 
 def print_message_not_found_error(msg_id: str):
@@ -641,6 +643,53 @@ def buffer_set_unread_cb(data: str, buffer: str, command: str) -> int:
     return weechat.WEECHAT_RC_OK
 
 
+def focus_event_cb(data: str, signal: str, hashtable: Dict[str, str]) -> int:
+    tags = hashtable["_chat_line_tags"].split(",")
+    for tag in tags:
+        ts = ts_from_tag(tag)
+        if ts is not None:
+            break
+    else:
+        return weechat.WEECHAT_RC_OK
+
+    buffer_pointer = hashtable["_buffer"]
+    slack_buffer = shared.buffers.get(buffer_pointer)
+    if slack_buffer is None:
+        return weechat.WEECHAT_RC_OK
+
+    conversation = _get_conversation_from_buffer(slack_buffer)
+    if conversation is None:
+        return weechat.WEECHAT_RC_OK
+
+    message_hash = f"${conversation.message_hashes[ts]}"
+
+    if data not in focus_events:
+        print_error(f"Unknown focus event: {data}")
+        return weechat.WEECHAT_RC_OK
+
+    if data == "auto":
+        emoji_match = re.match(EMOJI_CHAR_OR_NAME_REGEX_STRING, hashtable["_chat_eol"])
+        if emoji_match is not None:
+            emoji = emoji_match.group("emoji_char") or emoji_match.group("emoji_name")
+            run_async(conversation.send_change_reaction(ts, emoji, "toggle"))
+        else:
+            weechat.command(buffer_pointer, f"/input insert {message_hash}")
+    elif data == "message":
+        weechat.command(buffer_pointer, f"/input insert {message_hash}")
+    elif data == "delete":
+        run_async(conversation.api.chat_delete_message(conversation, ts))
+    elif data == "linkarchive":
+        url = _get_linkarchive_url(slack_buffer, ts)
+        weechat.command(buffer_pointer, f"/input insert {url}")
+    elif data == "reply":
+        weechat.command(buffer_pointer, f"/input insert /reply {message_hash}\\x20")
+    elif data == "thread":
+        run_async(conversation.open_thread(message_hash, switch=True))
+    else:
+        assert_never(data)
+    return weechat.WEECHAT_RC_OK
+
+
 def register_commands():
     weechat.hook_command_run(
         "/buffer set unread", get_callback_name(buffer_set_unread_cb), ""
@@ -663,3 +712,27 @@ def register_commands():
                 get_callback_name(command_cb),
                 cmd,
             )
+
+    for focus_event in focus_events:
+        weechat.hook_hsignal(
+            f"slack_focus_{focus_event}",
+            get_callback_name(focus_event_cb),
+            focus_event,
+        )
+
+    weechat.key_bind(
+        "mouse",
+        {
+            "@chat(python.*):button2": "hsignal:slack_focus_auto",
+        },
+    )
+    weechat.key_bind(
+        "cursor",
+        {
+            "@chat(python.*):D": "hsignal:slack_focus_delete",
+            "@chat(python.*):L": "hsignal:slack_focus_linkarchive; /cursor stop",
+            "@chat(python.*):M": "hsignal:slack_focus_message; /cursor stop",
+            "@chat(python.*):R": "hsignal:slack_focus_reply; /cursor stop",
+            "@chat(python.*):T": "hsignal:slack_focus_thread; /cursor stop",
+        },
+    )

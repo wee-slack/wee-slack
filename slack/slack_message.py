@@ -49,6 +49,8 @@ if TYPE_CHECKING:
     from slack.slack_thread import SlackThread
     from slack.slack_workspace import SlackWorkspace
 
+ts_tag_prefix = "slack_ts_"
+
 
 def format_date(timestamp: int, token_string: str, link: Optional[str] = None) -> str:
     ref_datetime = datetime.fromtimestamp(timestamp)
@@ -124,6 +126,12 @@ def convert_int_to_roman(num: int) -> str:
             roman_numeral += symbol
             num -= value
     return roman_numeral
+
+
+def ts_from_tag(tag: str) -> Optional[SlackTs]:
+    if tag.startswith(ts_tag_prefix):
+        return SlackTs(tag[len(ts_tag_prefix) :])
+    return None
 
 
 class MessagePriority(Enum):
@@ -556,6 +564,10 @@ class SlackMessage:
             reaction["count"] -= 1
             self._rendered_message = None
 
+    def has_reacted(self, reaction_name: str) -> bool:
+        reaction = self._get_reaction(reaction_name)
+        return reaction is not None and self.workspace.my_user.id in reaction["users"]
+
     def should_highlight(self, only_personal: bool) -> bool:
         # TODO: Highlight words from user preferences
         parsed_message = self.parse_message_text()
@@ -570,7 +582,7 @@ class SlackMessage:
 
     async def tags(self, backlog: bool) -> str:
         nick = await self.nick()
-        tags = [f"slack_ts_{self.ts}", f"nick_{nick.raw_nick}"]
+        tags = [f"{ts_tag_prefix}{self.ts}", f"nick_{nick.raw_nick}"]
 
         if self.sender_user_id:
             tags.append(f"slack_user_id_{self.sender_user_id}")

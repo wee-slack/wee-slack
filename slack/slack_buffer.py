@@ -19,8 +19,13 @@ from typing import (
 import weechat
 
 from slack.log import print_error
-from slack.shared import MESSAGE_ID_REGEX_STRING, REACTION_CHANGE_REGEX_STRING, shared
-from slack.slack_message import SlackMessage, SlackTs
+from slack.shared import (
+    EMOJI_CHAR_OR_NAME_REGEX_STRING,
+    MESSAGE_ID_REGEX_STRING,
+    REACTION_CHANGE_REGEX_STRING,
+    shared,
+)
+from slack.slack_message import SlackMessage, SlackTs, ts_from_tag
 from slack.slack_user import Nick
 from slack.task import gather, run_async
 from slack.util import get_callback_name, htmlescape
@@ -32,14 +37,6 @@ if TYPE_CHECKING:
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
 
-EMOJI_CHAR_REGEX_STRING = "(?P<emoji_char>[\U00000080-\U0010ffff]+)"
-EMOJI_NAME_REGEX_STRING = (
-    ":(?P<emoji_name>[a-z0-9_+-]+(?:::skin-tone-[2-6](?:-[2-6])?)?):"
-)
-EMOJI_CHAR_OR_NAME_REGEX_STRING = (
-    f"(?:{EMOJI_CHAR_REGEX_STRING}|{EMOJI_NAME_REGEX_STRING})"
-)
-
 
 def hdata_line_ts(line_pointer: str) -> Optional[SlackTs]:
     data = weechat.hdata_pointer(weechat.hdata_get("line"), line_pointer, "data")
@@ -49,8 +46,9 @@ def hdata_line_ts(line_pointer: str) -> Optional[SlackTs]:
         tag = weechat.hdata_string(
             weechat.hdata_get("line_data"), data, f"{i}|tags_array"
         )
-        if tag.startswith("slack_ts_"):
-            return SlackTs(tag[9:])
+        ts = ts_from_tag(tag)
+        if ts is not None:
+            return ts
     return None
 
 
@@ -449,10 +447,16 @@ class SlackBuffer(ABC):
         )
 
     async def send_change_reaction(
-        self, ts: SlackTs, emoji_char: str, change_type: Literal["+", "-"]
+        self, ts: SlackTs, emoji_char: str, change_type: Literal["+", "-", "toggle"]
     ) -> None:
         emoji = shared.standard_emojis_inverse.get(emoji_char)
         emoji_name = emoji["name"] if emoji else emoji_char
+
+        if change_type == "toggle":
+            message = self.messages[ts]
+            has_reacted = message.has_reacted(emoji_name)
+            change_type = "-" if has_reacted else "+"
+
         await self.api.reactions_change(self.conversation, ts, emoji_name, change_type)
 
     async def edit_message(self, ts: SlackTs, old: str, new: str, flags: str):

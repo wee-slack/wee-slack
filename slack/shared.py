@@ -17,6 +17,14 @@ WeechatCallbackReturnType = Union[int, str, Dict[str, str], None]
 MESSAGE_ID_REGEX_STRING = r"(?P<msg_id>\d+|\$[0-9a-z]{3,})"
 REACTION_CHANGE_REGEX_STRING = r"(?P<reaction_change>\+|-)"
 
+EMOJI_CHAR_REGEX_STRING = "(?P<emoji_char>[\U00000080-\U0010ffff]+)"
+EMOJI_NAME_REGEX_STRING = (
+    ":(?P<emoji_name>[a-z0-9_+-]+(?:::skin-tone-[2-6](?:-[2-6])?)?):"
+)
+EMOJI_CHAR_OR_NAME_REGEX_STRING = (
+    f"(?:{EMOJI_CHAR_REGEX_STRING}|{EMOJI_NAME_REGEX_STRING})"
+)
+
 
 class Shared:
     def __init__(self):
