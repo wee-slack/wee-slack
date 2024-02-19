@@ -31,7 +31,7 @@ from slack.slack_conversation import SlackConversation
 from slack.slack_thread import SlackThread
 from slack.slack_user import SlackUser, get_user_nick, name_from_user_info
 from slack.slack_workspace import SlackWorkspace
-from slack.task import Future, run_async, sleep
+from slack.task import Future, gather, run_async, sleep
 from slack.util import get_callback_name, with_color
 from slack.weechat_config import WeeChatOption, WeeChatOptionTypes
 
@@ -432,6 +432,36 @@ async def command_slack_presence(buffer: str, args: List[str], options: Options)
         )
         return
     await slack_buffer.workspace.api.set_presence(new_presence)
+
+
+@weechat_command("list")
+async def command_slack_mute(buffer: str, args: List[str], options: Options):
+    slack_buffer = shared.buffers.get(buffer)
+    if not isinstance(slack_buffer, SlackConversation):
+        return
+
+    if args[0] == "list":
+        conversations = await gather(
+            *[
+                slack_buffer.workspace.conversations[conversation_id]
+                for conversation_id in slack_buffer.workspace.muted_channels
+            ]
+        )
+        conversation_names = sorted(
+            conversation.name_with_prefix("short_name_without_padding")
+            for conversation in conversations
+        )
+        weechat.prnt("", f"Muted conversations: {', '.join(conversation_names)}")
+        return
+
+    muted_channels = set(slack_buffer.workspace.muted_channels)
+    muted_channels ^= {slack_buffer.id}
+    await slack_buffer.workspace.api.set_muted_channels(muted_channels)
+    muted_str = "Muted" if slack_buffer.id in muted_channels else "Unmuted"
+    weechat.prnt(
+        "",
+        f"{muted_str} channel {slack_buffer.name_with_prefix('short_name_without_padding')}",
+    )
 
 
 def print_uncaught_error(error: UncaughtError, detailed: bool, options: Options):

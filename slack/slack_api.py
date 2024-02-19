@@ -479,6 +479,14 @@ class SlackApi(SlackApiCommon):
             raise SlackApiError(self.workspace, method, response, params)
         return response
 
+    async def set_muted_channels(self, channel_ids: Iterable[str]):
+        method = "users.prefs.set"
+        params: Params = {"name": "muted_channels", "value": ",".join(channel_ids)}
+        response: SlackGenericResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
     async def _set_user_profile(self, profile: SlackSetProfile):
         method = "users.profile.set"
         body = {"profile": profile}
