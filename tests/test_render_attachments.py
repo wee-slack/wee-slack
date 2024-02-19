@@ -8,7 +8,7 @@ from slack.shared import shared
 from slack.slack_message import SlackMessage
 from tests.conftest import (
     channel_public_id,
-    color_reset,
+    color_default,
     color_user_mention,
     resolve_pending_message_item,
     user_test1_id,
@@ -425,7 +425,7 @@ cases: List[Case] = [
         "input_text_before": "",
         "output": "\n".join(
             [
-                "<[color:16711680]>|<[color:reset]> Title",
+                f"<[color:16711680]>|{color_default} Title",
             ]
         ),
     },
@@ -441,7 +441,7 @@ cases: List[Case] = [
         "input_text_before": "",
         "output": "\n".join(
             [
-                "<[color:16711680]>|<[color:reset]> Title",
+                f"<[color:16711680]>|{color_default} Title",
             ]
         ),
     },
@@ -560,13 +560,13 @@ cases: List[Case] = [
                 "| text & <asd>",
                 "|  (https://image.url/?x=<x>&z=z)",
                 "| field title & <asd>: field value & <asd>",
-                f"| field title mention <@{user_test1_id}>: field value mention {color_user_mention}@Test_1{color_reset}",
+                f"| field title mention <@{user_test1_id}>: field value mention {color_user_mention}@Test_1{color_default}",
                 "| footer & <asd> | Oct 16, 2023",
                 "| ```",
                 "| block rich_text_preformatted & <asd>",
                 "| ```",
                 "| block rich_text_section & <asd> `https://block.link?x=<x>&z=z`",
-                f"| {color_user_mention}@Test_1{color_reset}: <@ASD>",
+                f"| {color_user_mention}@Test_1{color_default}: <@ASD>",
             ]
         ),
     },
@@ -595,7 +595,7 @@ cases: List[Case] = [
             [
                 "|  (https://from.url)",
                 "| Author name: text",
-                "| Posted in <[color:chat_channel]>#channel1<[color:reset]> | Oct 15, 2023",
+                f"| Posted in <[color:chat_channel]>#channel1{color_default} | Oct 15, 2023",
             ]
         ),
     },
@@ -625,7 +625,7 @@ cases: List[Case] = [
             [
                 "|  (https://from.url)",
                 "| Author name: text",
-                "| From a thread in <[color:chat_channel]>#channel1<[color:reset]> | Oct 15, 2023",
+                f"| From a thread in <[color:chat_channel]>#channel1{color_default} | Oct 15, 2023",
             ]
         ),
     },

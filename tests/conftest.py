@@ -144,7 +144,7 @@ shared.standard_emojis = load_standard_emojis()
 color_channel_mention = "<[color:<[config_color:channel_mention]>]>"
 color_user_mention = "<[color:<[config_color:user_mention]>]>"
 color_usergroup_mention = "<[color:<[config_color:usergroup_mention]>]>"
-color_reset = "<[color:reset]>"
+color_default = "<[color:default]>"
 
 workspace_id = "T0FC8BFQR"
 

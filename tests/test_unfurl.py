@@ -8,7 +8,7 @@ from slack.slack_message import SlackMessage
 from tests.conftest import (
     channel_public_id,
     color_channel_mention,
-    color_reset,
+    color_default,
     color_user_mention,
     color_usergroup_mention,
     resolve_pending_message_item,
@@ -33,19 +33,19 @@ cases: List[Case] = [
     },
     {
         "input": "<!channel>",
-        "output": f"{color_usergroup_mention}@channel{color_reset}",
+        "output": f"{color_usergroup_mention}@channel{color_default}",
     },
     {
         "input": "<!here>",
-        "output": f"{color_usergroup_mention}@here{color_reset}",
+        "output": f"{color_usergroup_mention}@here{color_default}",
     },
     {
         "input": f"<@{user_test1_id}|@othernick>: foo",
-        "output": f"{color_user_mention}@Test_1{color_reset}: foo",
+        "output": f"{color_user_mention}@Test_1{color_default}: foo",
     },
     {
         "input": f"foo <#{channel_public_id}|otherchannel> bar",
-        "output": f"foo {color_channel_mention}#channel1{color_reset} bar",
+        "output": f"foo {color_channel_mention}#channel1{color_default} bar",
     },
 ]
 

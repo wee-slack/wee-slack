@@ -7,7 +7,7 @@ import pytest
 from slack.shared import shared
 from slack.slack_message import SlackMessage
 from tests.conftest import (
-    color_reset,
+    color_default,
     color_user_mention,
     resolve_pending_message_item,
     user_test1_id,
@@ -139,7 +139,7 @@ cases: List[Case] = [
             "block code",
             "more code",
             "```",
-            f"{color_user_mention}@Test_1{color_reset}: 😮",
+            f"{color_user_mention}@Test_1{color_default}: 😮",
         ],
     },
     {
@@ -442,7 +442,7 @@ cases: List[Case] = [
                 ],
             }
         ],
-        "rendered": ["#FFAA00 <[color:16755200]>■<[color:reset]>"],
+        "rendered": [f"#FFAA00 <[color:16755200]>■{color_default}"],
     },
 ]
 

@@ -7,7 +7,7 @@ import pytest
 from slack.shared import shared
 from slack.slack_message import SlackMessage
 from tests.conftest import (
-    color_reset,
+    color_default,
     user_test1_id,
     user_test2_id,
 )
@@ -31,32 +31,32 @@ color_reaction_self_suffix = "<[color:<[config_color:reaction_self_suffix]>]>"
 cases: List[Case] = [
     {
         "reactions": [{"name": "custom", "users": [user_test2_id], "count": 1}],
-        "rendered": f" {color_reaction_suffix}[:custom:1]{color_reset}",
+        "rendered": f" {color_reaction_suffix}[:custom:1]{color_default}",
         "display_reaction_nicks": False,
     },
     {
         "reactions": [{"name": "custom", "users": [user_test1_id], "count": 1}],
-        "rendered": f" {color_reaction_suffix}[{color_reaction_self_suffix}:custom:1{color_reaction_suffix}]{color_reset}",
+        "rendered": f" {color_reaction_suffix}[{color_reaction_self_suffix}:custom:1{color_reaction_suffix}]{color_default}",
         "display_reaction_nicks": False,
     },
     {
         "reactions": [{"name": "custom", "users": [user_test2_id], "count": 1}],
-        "rendered": f" {color_reaction_suffix}[:custom:1(Test_2)]{color_reset}",
+        "rendered": f" {color_reaction_suffix}[:custom:1(Test_2)]{color_default}",
         "display_reaction_nicks": True,
     },
     {
         "reactions": [{"name": "custom", "users": [user_test1_id], "count": 1}],
-        "rendered": f" {color_reaction_suffix}[{color_reaction_self_suffix}:custom:1(Test_1){color_reaction_suffix}]{color_reset}",
+        "rendered": f" {color_reaction_suffix}[{color_reaction_self_suffix}:custom:1(Test_1){color_reaction_suffix}]{color_default}",
         "display_reaction_nicks": True,
     },
     {
         "reactions": [{"name": "custom", "users": [user_test2_id], "count": 2}],
-        "rendered": f" {color_reaction_suffix}[:custom:2]{color_reset}",
+        "rendered": f" {color_reaction_suffix}[:custom:2]{color_default}",
         "display_reaction_nicks": False,
     },
     {
         "reactions": [{"name": "custom", "users": [user_test2_id], "count": 2}],
-        "rendered": f" {color_reaction_suffix}[:custom:2(Test_2, and others)]{color_reset}",
+        "rendered": f" {color_reaction_suffix}[:custom:2(Test_2, and others)]{color_default}",
         "display_reaction_nicks": True,
     },
 ]
