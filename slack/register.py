@@ -3,6 +3,7 @@ from __future__ import annotations
 import weechat
 
 from slack.commands import register_commands
+from slack.completions import register_completions
 from slack.config import SlackConfig
 from slack.shared import shared
 from slack.slack_emoji import load_standard_emojis
@@ -126,6 +127,7 @@ def register():
         shared.workspaces = {}
         shared.config = SlackConfig()
         shared.config.config_read()
+        register_completions()
         register_commands()
 
         weechat.hook_signal(

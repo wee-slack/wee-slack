@@ -2,15 +2,15 @@
 
 from itertools import accumulate
 
-import slack.commands
 from slack.commands import parse_options
+from slack.shared import shared
 
 
 def test_all_parent_commands_exist():
-    for command in slack.commands.commands:
+    for command in shared.commands:
         parents = accumulate(command.split(" "), lambda x, y: f"{x} {y}")
         for parent in parents:
-            assert parent in slack.commands.commands
+            assert parent in shared.commands
 
 
 def test_parse_options_without_options():

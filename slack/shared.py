@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
 
 if TYPE_CHECKING:
+    from slack.commands import Command
     from slack.config import SlackConfig
     from slack.error import UncaughtError
     from slack.slack_buffer import SlackBuffer
@@ -30,6 +31,7 @@ class Shared:
         self.workspaces: Dict[str, SlackWorkspace] = {}
         self.current_buffer_pointer: str
         self.config: SlackConfig
+        self.commands: Dict[str, Command] = {}
         self.uncaught_errors: List[UncaughtError] = []
         self.standard_emojis: Dict[str, Emoji]
         self.standard_emojis_inverse: Dict[str, Emoji]

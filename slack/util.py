@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import partial
 from itertools import islice
 from typing import (
+    TYPE_CHECKING,
     Callable,
     Iterable,
     Iterator,
@@ -18,6 +19,9 @@ import weechat
 
 from slack.shared import WeechatCallbackReturnType, shared
 
+if TYPE_CHECKING:
+    from slack.task import Future
+
 T = TypeVar("T")
 T2 = TypeVar("T2")
 
@@ -26,6 +30,10 @@ def get_callback_name(callback: Callable[..., WeechatCallbackReturnType]) -> str
     callback_id = f"{callback.__name__}-{id(callback)}"
     shared.weechat_callbacks[callback_id] = callback
     return callback_id
+
+
+def get_resolved_futures(futures: Iterable[Future[T]]) -> List[T]:
+    return [future.result() for future in futures if future.done_with_result()]
 
 
 def with_color(color: Optional[str], string: str, reset_color: str = "default"):
