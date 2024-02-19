@@ -27,6 +27,7 @@ from slack.python_compatibility import format_exception, removeprefix
 from slack.shared import shared
 from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation
+from slack.slack_message import SlackTs
 from slack.slack_thread import SlackThread
 from slack.slack_user import SlackUser
 from slack.slack_workspace import SlackWorkspace
@@ -44,6 +45,16 @@ if TYPE_CHECKING:
     ]
 
 T = TypeVar("T")
+
+
+def print_message_not_found_error(msg_id: str):
+    if msg_id:
+        print_error(
+            "Invalid id given, must be an existing id or a number greater "
+            + "than 0 and less than the number of messages in the channel"
+        )
+    else:
+        print_error("No messages found in channel")
 
 
 # def parse_help_docstring(cmd):
@@ -533,6 +544,54 @@ async def command_slack_status(buffer: str, args: List[str], options: Options):
             )
     else:
         print_error("Run the command in a slack buffer")
+
+
+def _get_conversation_from_buffer(
+    slack_buffer: SlackBuffer,
+) -> Optional[SlackConversation]:
+    if isinstance(slack_buffer, SlackConversation):
+        return slack_buffer
+    elif isinstance(slack_buffer, SlackThread):
+        return slack_buffer.parent.conversation
+    return None
+
+
+def _get_linkarchive_url(
+    slack_buffer: SlackBuffer, message_ts: Optional[SlackTs]
+) -> str:
+    url = f"https://{slack_buffer.workspace.domain}.slack.com/"
+    conversation = _get_conversation_from_buffer(slack_buffer)
+    if conversation is not None:
+        url += f"archives/{conversation.id}/"
+        if message_ts is not None:
+            message = conversation.messages[message_ts]
+            url += f"p{message.ts.major}{message.ts.minor:0>6}"
+            if message.thread_ts is not None:
+                url += f"?thread_ts={message.thread_ts}&cid={conversation.id}"
+    return url
+
+
+@weechat_command("%(threads)")
+def command_slack_linkarchive(buffer: str, args: List[str], options: Options):
+    """
+    /slack linkarchive [message_id]
+    Place a link to the conversation or message in the input bar.
+    Use cursor or mouse mode to get the id.
+    """
+    slack_buffer = shared.buffers.get(buffer)
+    if slack_buffer is None:
+        return
+
+    if args[0]:
+        ts = slack_buffer.ts_from_hash_or_index(args[0])
+        if ts is None:
+            print_message_not_found_error(args[0])
+            return
+    else:
+        ts = None
+
+    url = _get_linkarchive_url(slack_buffer, ts)
+    weechat.command(buffer, f"/input insert {url}")
 
 
 def find_command(start_cmd: str, args: str) -> Optional[Tuple[Command, str]]:

@@ -261,6 +261,7 @@ class SlackWorkspace:
     async def _connect_oauth(self) -> List[SlackConversation]:
         rtm_connect = await self.api.fetch_rtm_connect()
         self.id = rtm_connect["team"]["id"]
+        self.domain = rtm_connect["team"]["domain"]
         self.my_user = await self.users[rtm_connect["self"]["id"]]
 
         await self._connect_ws(rtm_connect["url"])
@@ -298,6 +299,7 @@ class SlackWorkspace:
             if "enterprise_id" in team_info["team"]
             else None
         )
+        self.domain = team_info["team"]["domain"]
         my_user_id = user_boot["self"]["id"]
         # self.users.initialize_items(my_user_id, {my_user_id: user_boot["self"]})
         self.my_user = await self.users[my_user_id]
