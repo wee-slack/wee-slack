@@ -170,7 +170,7 @@ class SlackBuffer(ABC):
         self.completion_index = 0
 
     @property
-    def _api(self) -> SlackApi:
+    def api(self) -> SlackApi:
         return self.workspace.api
 
     @contextmanager
@@ -444,7 +444,7 @@ class SlackBuffer(ABC):
         broadcast: bool = False,
     ):
         linkified_text = await self.linkify_text(text)
-        await self._api.chat_post_message(
+        await self.api.chat_post_message(
             self.conversation, linkified_text, thread_ts, broadcast
         )
 
@@ -453,13 +453,13 @@ class SlackBuffer(ABC):
     ) -> None:
         emoji = shared.standard_emojis_inverse.get(emoji_char)
         emoji_name = emoji["name"] if emoji else emoji_char
-        await self._api.reactions_change(self.conversation, ts, emoji_name, change_type)
+        await self.api.reactions_change(self.conversation, ts, emoji_name, change_type)
 
     async def edit_message(self, ts: SlackTs, old: str, new: str, flags: str):
         message = self.messages[ts]
 
         if new == "" and old == "":
-            await self._api.chat_delete_message(self.conversation, message.ts)
+            await self.api.chat_delete_message(self.conversation, message.ts)
         else:
             num_replace = 0 if "g" in flags else 1
             f = re.UNICODE
@@ -469,7 +469,7 @@ class SlackBuffer(ABC):
             old_message_text = message.text
             new_message_text = re.sub(old, new, old_message_text, num_replace, f)
             if new_message_text != old_message_text:
-                await self._api.chat_update_message(
+                await self.api.chat_update_message(
                     self.conversation, message.ts, new_message_text
                 )
             else:

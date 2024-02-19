@@ -369,7 +369,7 @@ class SlackConversation(SlackBuffer):
 
     async def load_members(self, load_all: bool = False):
         if self._members is None:
-            members_response = await self._api.fetch_conversations_members(
+            members_response = await self.api.fetch_conversations_members(
                 self, limit=None if load_all else 1000
             )
             self._members = members_response["members"]
@@ -377,7 +377,7 @@ class SlackConversation(SlackBuffer):
         return self._members
 
     async def fetch_replies(self, thread_ts: SlackTs) -> List[SlackMessage]:
-        replies_response = await self._api.fetch_conversations_replies(self, thread_ts)
+        replies_response = await self.api.fetch_conversations_replies(self, thread_ts)
         messages = [
             SlackMessage(self, message) for message in replies_response["messages"]
         ]
@@ -419,11 +419,11 @@ class SlackConversation(SlackBuffer):
                 if self.display_thread_replies()
                 else self.last_printed_ts
             )
-            history = await self._api.fetch_conversations_history_after(
+            history = await self.api.fetch_conversations_history_after(
                 self, history_after_ts
             )
         else:
-            history = await self._api.fetch_conversations_history(self)
+            history = await self.api.fetch_conversations_history(self)
 
         if self.buffer_pointer and shared.current_buffer_pointer != self.buffer_pointer:
             for message_json in history["messages"]:
@@ -472,11 +472,11 @@ class SlackConversation(SlackBuffer):
                 else self.last_printed_ts
             )
             if history_after_ts:
-                history = await self._api.fetch_conversations_history_after(
+                history = await self.api.fetch_conversations_history_after(
                     self, history_after_ts
                 )
             else:
-                history = await self._api.fetch_conversations_history(self)
+                history = await self.api.fetch_conversations_history(self)
 
             conversation_messages = [
                 SlackMessage(self, message) for message in history["messages"]
@@ -739,11 +739,11 @@ class SlackConversation(SlackBuffer):
             return
         last_read_line_ts = self.last_read_line_ts()
         if last_read_line_ts and last_read_line_ts != self.last_read:
-            await self._api.conversations_mark(self, last_read_line_ts)
+            await self.api.conversations_mark(self, last_read_line_ts)
 
     async def part(self):
         self._is_joined = False
-        await self._api.conversations_leave(self)
+        await self.api.conversations_leave(self)
         if shared.config.look.part_closes_buffer.value:
             await self.close_buffer()
         else:
@@ -763,9 +763,9 @@ class SlackConversation(SlackBuffer):
 
         if update_server:
             if self.type in ["im", "mpim"]:
-                await self._api.conversations_close(self)
+                await self.api.conversations_close(self)
             else:
-                await self._api.conversations_leave(self)
+                await self.api.conversations_leave(self)
 
 
 _T = TypeVar("_T", bound=SlackConversation)

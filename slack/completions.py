@@ -252,7 +252,7 @@ async def complete_user_next(
 ):
     if slack_buffer.completion_context == "NO_COMPLETION":
         slack_buffer.completion_context = "PENDING_COMPLETION"
-        search = await slack_buffer.workspace.api.edgeapi.fetch_users_search(query)
+        search = await slack_buffer.api.edgeapi.fetch_users_search(query)
         if slack_buffer.completion_context != "PENDING_COMPLETION":
             return
         slack_buffer.completion_context = "ACTIVE_COMPLETION"

@@ -136,7 +136,7 @@ class SlackThread(SlackBuffer):
 
         last_read_line_ts = self.last_read_line_ts()
         if last_read_line_ts and last_read_line_ts != self.last_read:
-            await self._api.subscriptions_thread_mark(
+            await self.api.subscriptions_thread_mark(
                 self.parent.conversation, self.parent.ts, last_read_line_ts
             )
 

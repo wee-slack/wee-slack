@@ -374,7 +374,7 @@ def get_conversation_from_args(buffer: str, args: List[str], options: Options):
 async def command_slack_join(buffer: str, args: List[str], options: Options):
     conversation = get_conversation_from_args(buffer, args, options)
     if conversation is not None:
-        await conversation.workspace.api.conversations_join(conversation.id)
+        await conversation.api.conversations_join(conversation.id)
         await conversation.open_buffer(switch=not options.get("noswitch"))
 
 
@@ -420,7 +420,7 @@ async def command_slack_presence(buffer: str, args: List[str], options: Options)
             f'Error with command "/slack presence {args[0]}" (help on command: /help slack presence)'
         )
         return
-    await slack_buffer.workspace.api.set_presence(new_presence)
+    await slack_buffer.api.set_presence(new_presence)
 
 
 @weechat_command("list")
@@ -445,7 +445,7 @@ async def command_slack_mute(buffer: str, args: List[str], options: Options):
 
     muted_channels = set(slack_buffer.workspace.muted_channels)
     muted_channels ^= {slack_buffer.id}
-    await slack_buffer.workspace.api.set_muted_channels(muted_channels)
+    await slack_buffer.api.set_muted_channels(muted_channels)
     muted_str = "Muted" if slack_buffer.id in muted_channels else "Unmuted"
     weechat.prnt(
         "",
@@ -524,9 +524,9 @@ async def command_slack_status(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
     if slack_buffer is not None:
         if options.get("clear"):
-            await slack_buffer.workspace.api.clear_user_status()
+            await slack_buffer.api.clear_user_status()
         elif slack_buffer and len(status) > 0:
-            await slack_buffer.workspace.api.set_user_status(status)
+            await slack_buffer.api.set_user_status(status)
         else:
             print_error(
                 'Too few arguments for command "/slack status" (help on command: /help slack status)'
