@@ -498,7 +498,7 @@ class SlackBuffer(ABC):
             word = match.group(0)
             nick = match.group(1)
             if nick in nick_to_user_id:
-                return "<@{}>".format(nick_to_user_id[nick])
+                return f"<@{nick_to_user_id[nick]}>"
             return word
 
         linkify_regex = r"(?:^|(?<=\s))@([\w\(\)\'.-]+)"
