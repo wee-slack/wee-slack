@@ -44,6 +44,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: abatilo/actions-poetry@v3
+      - run: poetry install
+
       - name: Install WeeChat, tmux and python3-websocket
         run: |
           sudo apt-get update

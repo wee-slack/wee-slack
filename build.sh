@@ -16,3 +16,10 @@ contents="$(cat slack/python_compatibility.py slack/util.py slack/shared.py slac
   echo "$contents" | grep -v '^from __future__' | grep -E '^(import|from) ' | sort -u
   echo "$contents" | grep -Ev '^(import|from) ' | sed 's/^\( \+\)\(import\|from\) .*/\1pass/'
 ) > build/slack.py
+
+ruff_cmd="$(poetry run sh -c 'command -v ruff' 2>/dev/null || command -v ruff)"
+
+if [ -x "$ruff_cmd" ]; then
+  "$ruff_cmd" check -q --fix-only --target-version py37 build/slack.py
+  "$ruff_cmd" format -q --target-version py37 build/slack.py
+fi
