@@ -130,7 +130,7 @@ class SlackUser:
         return get_user_nick(nick, self.is_external, self.is_self)
 
     def update_info_json(self, info_json: SlackUserInfo):
-        self._info.update(info_json)  # pyright: ignore [reportGeneralTypeIssues]
+        self._info.update(info_json)  # pyright: ignore [reportArgumentType, reportCallIssue]
         self._rendered_prefix = None
         self._rendered_message = None
         self._parsed_message = None

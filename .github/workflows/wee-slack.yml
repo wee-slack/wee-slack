@@ -17,10 +17,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: abatilo/actions-poetry@v2
+      - uses: abatilo/actions-poetry@v3
 
       - run: poetry install
 
@@ -59,7 +59,7 @@ jobs:
           cat $WEECHAT_DIR/logs/core.weechat.weechatlog
           grep -q 'python: registered script "slack"' $WEECHAT_DIR/logs/core.weechat.weechatlog
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: slack.py
           path: build/slack.py

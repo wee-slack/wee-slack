@@ -57,7 +57,6 @@ class SlackProfileBot(SlackProfileCommon):
     api_app_id: NotRequired[Optional[str]]
     always_active: NotRequired[Optional[bool]]
     bot_id: NotRequired[Optional[str]]
-    image_1024: str
 
 SlackProfile = SlackProfilePerson | SlackProfileBot
 

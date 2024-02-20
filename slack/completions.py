@@ -310,10 +310,10 @@ def input_complete_cb(data: str, buffer: str, command: str) -> int:
 def register_completions():
     if shared.weechat_version < 0x02090000:
         weechat.completion_get_string = (
-            weechat.hook_completion_get_string  # pyright: ignore [reportUnknownMemberType, reportGeneralTypeIssues]
+            weechat.hook_completion_get_string  # pyright: ignore [reportAttributeAccessIssue, reportUnknownMemberType]
         )
         weechat.completion_list_add = (
-            weechat.hook_completion_list_add  # pyright: ignore [reportUnknownMemberType, reportGeneralTypeIssues]
+            weechat.hook_completion_list_add  # pyright: ignore [reportAttributeAccessIssue, reportUnknownMemberType]
         )
 
     # Disable until working properly

@@ -518,9 +518,7 @@ class SlackMessage:
         self._parsed_message = None
 
     def update_message_json(self, message_json: SlackMessageDict):
-        self._message_json.update(
-            message_json  # pyright: ignore [reportGeneralTypeIssues]
-        )
+        self._message_json.update(message_json)  # pyright: ignore [reportArgumentType, reportCallIssue]
         self._rendered_prefix = None
         self._rendered_message = None
         self._parsed_message = None
