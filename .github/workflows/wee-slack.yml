@@ -63,3 +63,11 @@ jobs:
         with:
           name: slack.py
           path: build/slack.py
+
+      - uses: pyTooling/Actions/releaser@r1
+        if: github.ref == 'refs/heads/master'
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: nightly
+          files: |
+            build/slack.py
