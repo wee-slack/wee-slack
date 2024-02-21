@@ -1111,6 +1111,8 @@ class SlackMessage:
             rgb_int = int(element["value"].lstrip("#"), 16)
             weechat_color = weechat.info_get("color_rgb2term", str(rgb_int))
             return f"{element['value']} {with_color(weechat_color, '■')}"
+        elif element["type"] == "date":
+            return format_date(element["timestamp"], element["format"])
         elif element["type"] == "channel":
             return PendingMessageItem(self, "conversation", element["channel_id"])
         elif element["type"] == "user":

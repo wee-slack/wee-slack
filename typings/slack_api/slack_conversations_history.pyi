@@ -41,6 +41,12 @@ class SlackMessageBlockRichTextElementColor(TypedDict):
     value: str
 
 @final
+class SlackMessageBlockRichTextElementDate(TypedDict):
+    type: Literal["date"]
+    timestamp: int
+    format: str
+
+@final
 class SlackMessageBlockRichTextElementChannel(TypedDict):
     type: Literal["channel"]
     channel_id: str
@@ -65,6 +71,7 @@ SlackMessageBlockRichTextElement = (
     | SlackMessageBlockRichTextElementLink
     | SlackMessageBlockRichTextElementEmoji
     | SlackMessageBlockRichTextElementColor
+    | SlackMessageBlockRichTextElementDate
     | SlackMessageBlockRichTextElementChannel
     | SlackMessageBlockRichTextElementUser
     | SlackMessageBlockRichTextElementUsergroup
