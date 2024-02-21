@@ -4,6 +4,7 @@
 from __future__ import print_function, unicode_literals
 
 from textwrap import dedent
+
 import wee_slack
 
 cmds = wee_slack.EventRouter().cmds

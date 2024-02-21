@@ -47,7 +47,7 @@ strict = ["**"]
 reportMissingModuleSource = false
 
 [tool.ruff]
-extend-exclude = ["typings/weechat.pyi"]
+extend-exclude = ["typings/weechat.pyi", "wee_slack.py", "_pytest"]
 
 [tool.ruff.lint]
 extend-select = ["I"]
