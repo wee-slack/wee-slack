@@ -20,6 +20,6 @@ contents="$(cat slack/python_compatibility.py slack/util.py slack/shared.py slac
 ruff_cmd="$(poetry run sh -c 'command -v ruff' 2>/dev/null || command -v ruff)"
 
 if [ -x "$ruff_cmd" ]; then
-  "$ruff_cmd" check -q --fix-only --target-version py37 build/slack.py
-  "$ruff_cmd" format -q --target-version py37 build/slack.py
+  "$ruff_cmd" check -q --fix-only build/slack.py
+  "$ruff_cmd" format -q build/slack.py
 fi

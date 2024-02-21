@@ -30,7 +30,7 @@ The code is formatted with [`ruff`](https://docs.astral.sh/ruff/). To format
 all the files, first navigate to the project root, and then execute:
 
 ```
-$ ruff format --target-version py37
+$ ruff format
 ```
 
 ## Linting

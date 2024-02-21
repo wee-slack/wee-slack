@@ -24,11 +24,11 @@ jobs:
 
       - run: poetry install
 
-      - run: poetry run ruff format --check --target-version py37
+      - run: poetry run ruff format --check
 
-      - run: poetry run ruff check --target-version py37 main.py slack tests typings
+      - run: poetry run ruff check main.py slack tests typings
 
-      - run: poetry run pyright --pythonversion 3.7 main.py slack tests typings
+      - run: poetry run pyright main.py slack tests typings
 
       - run: poetry run pytest tests
 
