@@ -45,6 +45,7 @@ disable = [
 pythonVersion = "3.7"
 strict = ["**"]
 reportMissingModuleSource = false
+include = ["main.py", "slack", "tests", "typings"]
 
 [tool.ruff]
 extend-exclude = ["typings/weechat.pyi", "wee_slack.py", "_pytest"]

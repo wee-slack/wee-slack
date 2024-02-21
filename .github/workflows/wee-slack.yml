@@ -28,7 +28,7 @@ jobs:
 
       - run: poetry run ruff check
 
-      - run: poetry run pyright main.py slack tests typings
+      - run: poetry run pyright
 
       - run: poetry run pytest tests
 
