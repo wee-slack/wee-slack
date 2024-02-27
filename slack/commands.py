@@ -419,6 +419,9 @@ async def command_slack_reply(buffer: str, args: List[str], options: Options):
             )
             return
         thread_ts = slack_buffer.ts_from_hash_or_index(split_args[0])
+        if thread_ts is None:
+            print_message_not_found_error(split_args[0])
+            return
         await slack_buffer.post_message(split_args[1], thread_ts, broadcast)
 
 
