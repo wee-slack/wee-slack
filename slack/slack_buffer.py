@@ -430,10 +430,13 @@ class SlackBuffer(ABC):
     ) -> Optional[SlackTs]:
         if not hash_or_index:
             return self.ts_from_index(1, message_filter)
+        ts_from_hash = self.ts_from_hash(hash_or_index)
+        if ts_from_hash is not None:
+            return ts_from_hash
         elif hash_or_index.isdigit():
             return self.ts_from_index(int(hash_or_index), message_filter)
         else:
-            return self.ts_from_hash(hash_or_index)
+            return None
 
     async def post_message(
         self,
