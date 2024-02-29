@@ -5917,7 +5917,9 @@ def subscribe_helper(current_buffer, args, usage, api):
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     team = channel.team
 
-    if isinstance(channel, SlackThreadChannel) and not args:
+    if isinstance(channel, SlackChannelCommon) and args:
+        message = channel.message_from_hash(args)
+    elif isinstance(channel, SlackThreadChannel) and not args:
         message = channel.parent_message
     else:
         message_filter = lambda message: message.number_of_replies()
@@ -5942,7 +5944,7 @@ def subscribe_helper(current_buffer, args, usage, api):
 @utf8_decode
 def command_subscribe(data, current_buffer, args):
     """
-    /slack subscribe <thread>
+    /slack subscribe [thread/message_id]
     Subscribe to a thread, so that you are alerted to new messages. When in a
     thread buffer, you can omit the thread id.
 
@@ -5951,7 +5953,7 @@ def command_subscribe(data, current_buffer, args):
     return subscribe_helper(
         current_buffer,
         args,
-        "Usage: /slack subscribe <thread>",
+        "Usage: /slack subscribe [thread/message_id]",
         "subscriptions.thread.add",
     )
 
@@ -5963,7 +5965,7 @@ command_subscribe.completion = "%(threads) %-"
 @utf8_decode
 def command_unsubscribe(data, current_buffer, args):
     """
-    /slack unsubscribe <thread>
+    /slack unsubscribe [thread/message_id]
     Unsubscribe from a thread that has been previously subscribed to, so that
     you are not alerted to new messages. When in a thread buffer, you can omit
     the thread id.
@@ -5973,7 +5975,7 @@ def command_unsubscribe(data, current_buffer, args):
     return subscribe_helper(
         current_buffer,
         args,
-        "Usage: /slack unsubscribe <thread>",
+        "Usage: /slack unsubscribe [thread/message_id]",
         "subscriptions.thread.remove",
     )
 
