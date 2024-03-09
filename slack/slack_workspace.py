@@ -454,9 +454,9 @@ class SlackWorkspace:
             elif opcode != ABNF.OPCODE_TEXT:
                 return weechat.WEECHAT_RC_OK
 
-            run_async(self._ws_recv(json.loads(recv_data.decode())))
+            run_async(self.ws_recv(json.loads(recv_data.decode())))
 
-    async def _ws_recv(self, data: SlackRtmMessage):
+    async def ws_recv(self, data: SlackRtmMessage):
         # TODO: Remove old messages
         log(LogLevel.DEBUG, DebugMessageType.WEBSOCKET_RECV, json.dumps(data))
 

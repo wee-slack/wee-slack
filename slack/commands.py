@@ -503,8 +503,10 @@ def print_uncaught_error(error: UncaughtError, detailed: bool, options: Options)
             print_error("This error does not have any data")
 
 
-@weechat_command("tasks|buffer|open_buffer|errors|error", split_all_args=True)
-def command_slack_debug(buffer: str, args: List[str], options: Options):
+@weechat_command(
+    "tasks|buffer|open_buffer|replay_events|errors|error", split_all_args=True
+)
+async def command_slack_debug(buffer: str, args: List[str], options: Options):
     # TODO: Add message info (message_json)
     if args[0] == "tasks":
         weechat.prnt("", "Active tasks:")
@@ -522,6 +524,18 @@ def command_slack_debug(buffer: str, args: List[str], options: Options):
             )
     elif args[0] == "open_buffer":
         open_debug_buffer()
+    elif args[0] == "replay_events":
+        slack_buffer = shared.buffers.get(buffer)
+        if slack_buffer is None:
+            print_error("Must be run from a slack buffer")
+            return
+        with open(args[1]) as f:
+            for line in f:
+                first_brace_pos = line.find("{")
+                if first_brace_pos == -1:
+                    continue
+                event = json.loads(line[first_brace_pos:])
+                await slack_buffer.workspace.ws_recv(event)
     elif args[0] == "errors":
         num_arg = int(args[1]) if len(args) > 1 and args[1].isdecimal() else 5
         num = min(num_arg, len(shared.uncaught_errors))
