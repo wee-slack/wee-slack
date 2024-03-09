@@ -754,9 +754,8 @@ class SlackMessage:
             return self._rendered_message
 
         try:
-            nick = await self.nick()
             me_prefix = (
-                f"{nick.format(colorize=True)} "
+                f"{(await self.nick()).format(colorize=True)} "
                 if self._message_json.get("subtype") == "me_message"
                 else ""
             )
