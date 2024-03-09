@@ -73,7 +73,8 @@ class SlackEdgeApi(SlackApiCommon):
         return self.workspace.token_type == "session"
 
     async def _fetch_edgeapi(self, method: str, params: EdgeParams = {}):
-        url = f"https://edgeapi.slack.com/cache/{self.workspace.id}/{method}"
+        id_for_path = self.workspace.enterprise_id or self.workspace.id
+        url = f"https://edgeapi.slack.com/cache/{id_for_path}/{method}"
         options = self._get_request_options()
         options["postfields"] = json.dumps(params)
         options["httpheader"] += "\nContent-Type: application/json"
