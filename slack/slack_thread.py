@@ -15,10 +15,29 @@ if TYPE_CHECKING:
     from slack.slack_workspace import SlackWorkspace
 
 
+class SlackThreadMessages(Mapping[SlackTs, SlackMessage]):
+    def __init__(self, parent: SlackMessage):
+        super().__init__()
+        self._parent = parent
+
+    def __getitem__(self, key: SlackTs) -> SlackMessage:
+        if key == self._parent.ts:
+            return self._parent
+        return self._parent.replies[key]
+
+    def __iter__(self) -> Generator[SlackTs, None, None]:
+        yield self._parent.ts
+        yield from self._parent.replies
+
+    def __len__(self) -> int:
+        return 1 + len(self._parent.replies)
+
+
 class SlackThread(SlackBuffer):
     def __init__(self, parent: SlackMessage) -> None:
         super().__init__()
         self.parent = parent
+        self._messages = SlackThreadMessages(parent)
         self._reply_nicks: Set[Nick] = set()
 
     @property
@@ -41,7 +60,7 @@ class SlackThread(SlackBuffer):
 
     @property
     def messages(self) -> Mapping[SlackTs, SlackMessage]:
-        return self.parent.replies
+        return self._messages
 
     @property
     def last_read(self) -> Optional[SlackTs]:
