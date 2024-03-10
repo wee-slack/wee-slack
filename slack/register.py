@@ -74,9 +74,10 @@ def modifier_input_text_display_with_cursor_cb(
                 f"{input_delim_end} "
             )
         if slack_buffer.is_loading or slack_buffer.workspace.is_connecting:
+            text = "connecting" if slack_buffer.workspace.is_connecting else "loading"
             prefix += (
                 f"{input_delim_start}"
-                f"{with_color(shared.config.color.loading.value, 'loading')}"
+                f"{with_color(shared.config.color.loading.value, text)}"
                 f"{input_delim_end} "
             )
     return prefix + string
