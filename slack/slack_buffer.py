@@ -152,7 +152,6 @@ class SlackBuffer(ABC):
         # TODO: buffer_pointer may be accessed by buffer_switch before it's initialized
         self.buffer_pointer: Optional[str] = None
         self.is_loading = False
-        self.history_pending = False
         self.history_pending_messages: List[SlackMessage] = []
         self.history_needs_refresh = False
         self.last_printed_ts: Optional[SlackTs] = None
