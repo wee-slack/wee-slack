@@ -76,6 +76,7 @@ def hash_from_ts(ts: SlackTs) -> str:
 
 class SlackConversationMessageHashes(Dict[SlackTs, str]):
     def __init__(self, conversation: SlackConversation):
+        super().__init__()
         self._conversation = conversation
         self._inverse_map: Dict[str, SlackTs] = {}
 
