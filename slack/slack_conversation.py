@@ -455,7 +455,7 @@ class SlackConversation(SlackBuffer):
                     self.hotlist_tss.add(message.latest_reply)
 
     async def fill_history(self, update: bool = False):
-        if self.history_pending:
+        if self.is_loading:
             return
 
         if (
@@ -466,8 +466,6 @@ class SlackConversation(SlackBuffer):
             return
 
         with self.loading():
-            self.history_pending = True
-
             history_after_ts = (
                 next(iter(self._messages), None)
                 if self.history_needs_refresh
@@ -548,7 +546,6 @@ class SlackConversation(SlackBuffer):
                 await self.print_message(message)
 
             self.history_needs_refresh = False
-            self.history_pending = False
 
     async def nicklist_update(self):
         if self.nicklist_needs_refresh and self.type != "im":
@@ -615,7 +612,7 @@ class SlackConversation(SlackBuffer):
         self._messages[message.ts] = message
 
         if self.should_display_message(message):
-            if self.history_pending:
+            if self.is_loading:
                 self.history_pending_messages.append(message)
             elif self.last_printed_ts is not None:
                 await self.print_message(message)
@@ -630,7 +627,7 @@ class SlackConversation(SlackBuffer):
             parent_message.replies[message.ts] = message
             thread_buffer = parent_message.thread_buffer
             if thread_buffer:
-                if thread_buffer.history_pending:
+                if thread_buffer.is_loading:
                     thread_buffer.history_pending_messages.append(message)
                 else:
                     await thread_buffer.print_message(message)
