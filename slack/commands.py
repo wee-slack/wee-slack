@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import pprint
 import re
@@ -727,6 +728,21 @@ def focus_event_cb(data: str, signal: str, hashtable: Dict[str, str]) -> int:
     return weechat.WEECHAT_RC_OK
 
 
+def python_eval_slack_cb(data: str, buffer: str, command: str) -> int:
+    slack_buffer = shared.buffers.get(buffer)
+    if slack_buffer is None:
+        print_error("Must be run from a slack buffer")
+        return weechat.WEECHAT_RC_OK_EAT
+    args = command.split(" ", 2)
+    code = compile(
+        args[2], "<string>", "exec", flags=getattr(ast, "PyCF_ALLOW_TOP_LEVEL_AWAIT", 0)
+    )
+    coroutine = eval(code)
+    if coroutine is not None:
+        run_async(coroutine)
+    return weechat.WEECHAT_RC_OK_EAT
+
+
 def register_commands():
     weechat.hook_command_run(
         "/buffer set unread", get_callback_name(buffer_set_unread_cb), ""
@@ -736,6 +752,9 @@ def register_commands():
     )
     weechat.hook_command_run(
         "/input set_unread_current_buffer", get_callback_name(buffer_set_unread_cb), ""
+    )
+    weechat.hook_command_run(
+        "/python eval_slack *", get_callback_name(python_eval_slack_cb), ""
     )
 
     for cmd, command in shared.commands.items():
