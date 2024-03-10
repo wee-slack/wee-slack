@@ -151,6 +151,14 @@ def display_workspace(workspace: SlackWorkspace, detailed_list: bool):
             f", nick: {workspace.my_user.nick.format()}"
             f", {num_channels} channel(s), {num_pvs} pv",
         )
+    elif workspace.is_connecting:
+        weechat.prnt(
+            "",
+            f"   {with_color('chat_server', workspace.name)} "
+            f"{with_color('chat_delimiters', '[')}"
+            f"connecting"
+            f"{with_color('chat_delimiters', ']')}",
+        )
     else:
         weechat.prnt("", f"   {with_color('chat_server', workspace.name)}")
 
