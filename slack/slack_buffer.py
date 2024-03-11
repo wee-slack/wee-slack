@@ -348,6 +348,8 @@ class SlackBuffer(ABC):
         rendered = await message.render(self.context)
         backlog = self.last_read is not None and message.ts <= self.last_read
         tags = await message.tags(backlog)
+        if message.ts in self.hotlist_tss:
+            tags += ",notify_none"
         weechat.prnt_date_tags(self.buffer_pointer, message.ts.major, tags, rendered)
         if backlog:
             weechat.buffer_set(self.buffer_pointer, "unread", "")

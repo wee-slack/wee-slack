@@ -40,7 +40,7 @@ from slack.slack_conversation import SlackConversation
 from slack.slack_message import SlackMessage, SlackTs
 from slack.slack_thread import SlackThread
 from slack.slack_user import SlackBot, SlackUser, SlackUsergroup
-from slack.task import Future, Task, create_task, gather, run_async
+from slack.task import Future, Task, create_task, gather, run_async, sleep
 from slack.util import get_callback_name, get_cookies
 
 if TYPE_CHECKING:
@@ -422,6 +422,13 @@ class SlackWorkspace:
 
         return conversation
 
+    async def _load_unread_conversations(self):
+        for conversation in self.open_conversations.values():
+            if conversation.hotlist_tss:
+                await conversation.fill_history()
+                sleep_duration = 5000 if conversation.display_thread_replies() else 1000
+                await sleep(sleep_duration)
+
     async def _connect_ws(self, url: str):
         proxy = Proxy()
         # TODO: Handle errors
@@ -479,6 +486,8 @@ class SlackWorkspace:
                     await self._initialize()
                 if self.is_connected:
                     weechat.prnt("", f"Connected to workspace {self.name}")
+                if not data["fast_reconnect"]:
+                    await self._load_unread_conversations()
                 return
             elif data["type"] == "error":
                 if data["error"]["code"] == 1:  # Socket URL has expired

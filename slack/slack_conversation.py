@@ -632,6 +632,8 @@ class SlackConversation(SlackBuffer):
                     self.buffer_pointer, "hotlist", message.priority.value
                 )
                 self.hotlist_tss.add(message.ts)
+                if not self.muted:
+                    await self.fill_history()
 
         parent_message = message.parent_message
         if parent_message:
