@@ -139,7 +139,7 @@ class SlackConfigSectionLook:
         self.thread_broadcast_prefix = WeeChatOption(
             self._section,
             "thread_broadcast_prefix",
-            "prefix to distinguish thread messages that were also sent to the channel, when thread_messages_in_channel is enabled",
+            "prefix to distinguish thread messages that were also sent to the channel, when display_thread_replies_in_channel is enabled",
             "+",
         )
 
