@@ -210,6 +210,7 @@ class SlackWorkspace:
         self._connect_task: Optional[Task[bool]] = None
         self._ws: Optional[WebSocket] = None
         self._hook_ws_fd: Optional[str] = None
+        self._last_ws_received_time = time.time()
         self._debug_ws_buffer_pointer: Optional[str] = None
         self._reconnect_url: Optional[str] = None
         self.conversations = SlackConversations(self)
@@ -423,10 +424,18 @@ class SlackWorkspace:
         return conversation
 
     async def _load_unread_conversations(self):
-        for conversation in self.open_conversations.values():
-            if conversation.hotlist_tss:
+        open_conversations = list(self.open_conversations.values())
+        for conversation in open_conversations:
+            if (
+                conversation.hotlist_tss
+                and not conversation.muted
+                and self.is_connected
+            ):
                 await conversation.fill_history()
-                sleep_duration = 5000 if conversation.display_thread_replies() else 1000
+                # TODO: Better sleep heuristic
+                sleep_duration = (
+                    20000 if conversation.display_thread_replies() else 1000
+                )
                 await sleep(sleep_duration)
 
     async def _connect_ws(self, url: str):
@@ -452,6 +461,7 @@ class SlackWorkspace:
             "",
         )
         self._ws.sock.setblocking(False)
+        self._last_ws_received_time = time.time()
 
     def _ws_read_cb(self, data: str, fd: int) -> int:
         if self._ws is None:
@@ -467,9 +477,9 @@ class SlackWorkspace:
                 run_async(self.reconnect())
                 return weechat.WEECHAT_RC_OK
 
+            self._last_ws_received_time = time.time()
+
             if opcode == ABNF.OPCODE_PONG:
-                # TODO: Maybe record last time anything was received instead
-                self.last_pong_time = time.time()
                 return weechat.WEECHAT_RC_OK
             elif opcode != ABNF.OPCODE_TEXT:
                 return weechat.WEECHAT_RC_OK
@@ -654,6 +664,12 @@ class SlackWorkspace:
             raise SlackError(self, "Can't ping when not connected")
         if self._ws is None:
             raise SlackError(self, "is_connected is True while _ws is None")
+
+        time_since_last_msg = time.time() - self._last_ws_received_time
+        if time_since_last_msg > self.config.network_timeout.value:
+            run_async(self.reconnect())
+            return
+
         try:
             self._ws.ping()
             # workspace.last_ping_time = time.time()
