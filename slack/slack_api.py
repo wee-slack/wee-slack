@@ -12,7 +12,7 @@ from typing import (
 )
 from urllib.parse import urlencode
 
-from slack.error import SlackApiError
+from slack.error import HttpError, SlackApiError
 from slack.http import http_request
 from slack.shared import shared
 from slack.slack_message import SlackTs
@@ -38,8 +38,10 @@ if TYPE_CHECKING:
     from slack_api.slack_usergroups_info import SlackUsergroupsInfoResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
     from slack_api.slack_users_info import (
+        SlackUserInfo,
         SlackUserInfoResponse,
         SlackUsersInfoResponse,
+        SlackUsersInfoSuccessResponse,
     )
     from slack_api.slack_users_prefs import SlackUsersPrefsGetResponse
     from slack_edgeapi.slack_usergroups_info import SlackEdgeUsergroupsInfoResponse
@@ -277,14 +279,40 @@ class SlackApi(SlackApiCommon):
             raise SlackApiError(self.workspace, method, response, params)
         return response
 
-    async def fetch_users_info(self, user_ids: Iterable[str]):
+    async def fetch_users_info(
+        self, user_ids: Iterable[str]
+    ) -> SlackUsersInfoSuccessResponse[SlackUserInfo]:
         responses = await gather(
             *(
                 self._fetch_users_info_without_splitting(user_ids_batch)
-                for user_ids_batch in chunked(user_ids, 500)
-            )
+                for user_ids_batch in chunked(
+                    user_ids, self.workspace.max_users_per_fetch_request
+                )
+            ),
+            return_exceptions=True,
         )
-        users = list(chain(*(response["users"] for response in responses)))
+
+        errors = [r for r in responses if isinstance(r, BaseException)]
+        if errors:
+            if (
+                any(
+                    # The users.info method may respond with 500 if we request too many users in one request
+                    (isinstance(e, HttpError) and e.http_status_code == 500)
+                    or (
+                        isinstance(e, SlackApiError)
+                        and e.response["error"] == "too_many_users"
+                    )
+                    for e in errors
+                )
+                and self.workspace.max_users_per_fetch_request > 1
+            ):
+                self.workspace.max_users_per_fetch_request //= 2
+                return await self.fetch_users_info(user_ids)
+            else:
+                raise errors[0]
+
+        success_responses = [r for r in responses if not isinstance(r, BaseException)]
+        users = list(chain(*(response["users"] for response in success_responses)))
         response: SlackUsersInfoResponse = {"ok": True, "users": users}
         return response
 

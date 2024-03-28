@@ -219,6 +219,7 @@ class SlackWorkspace:
         self.usergroups = SlackUsergroups(self)
         self.muted_channels: Set[str] = set()
         self.custom_emojis: Dict[str, str] = {}
+        self.max_users_per_fetch_request = 512
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name})"
