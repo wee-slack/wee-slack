@@ -67,7 +67,7 @@ See [docs/contributing.md](./docs/contributing.md).
 
 Dependencies
 ------------
-  * WeeChat 1.3+ http://weechat.org/
+  * WeeChat 2.2+ http://weechat.org/
   * websocket-client https://pypi.python.org/pypi/websocket-client/
     * Since WeeChat 2.6, Python 3 modules are required, see https://weechat.org/blog/post/2019/07/02/Python-3-by-default
   * Some distributions package WeeChat's plugin functionalities in separate packages.
