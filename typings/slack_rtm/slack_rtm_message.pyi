@@ -303,6 +303,15 @@ class SlackUserStatusChanged(TypedDict):
     cache_ts: str
     event_ts: str
 
+class SlackUserInvalidatedUser(TypedDict):
+    id: str
+
+@final
+class SlackUserInvalidated(TypedDict):
+    type: Literal["user_invalidated"]
+    user: SlackUserInvalidatedUser
+    event_ts: str
+
 SlackMessageRtm = (
     SlackMessageStandardRtm
     | SlackMessageMeRtm
@@ -346,4 +355,5 @@ SlackRtmMessage = (
     | SlackUserTyping
     | SlackPrefChange
     | SlackUserStatusChanged
+    | SlackUserInvalidated
 )

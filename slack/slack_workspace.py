@@ -308,7 +308,7 @@ class SlackWorkspace:
         self.muted_channels = set(user_boot["prefs"]["muted_channels"].split(","))
 
         await self._connect_ws(
-            f"wss://wss-primary.slack.com/?token={self.config.api_token.value}&batch_presence_aware=1"
+            f"wss://wss-primary.slack.com/?token={self.config.api_token.value}&slack_client=desktop&batch_presence_aware=1"
         )
 
         conversation_counts = (
@@ -480,11 +480,22 @@ class SlackWorkspace:
                             channel.update_buffer_props()
                 return
             elif data["type"] == "user_status_changed":
-                user = await self.users[data["user"]["id"]]
-                user.update_info_json(data["user"])
-                for conversation in self.open_conversations.values():
-                    if conversation.im_user_id == user.id:
-                        conversation.update_buffer_props()
+                user_id = data["user"]["id"]
+                if user_id in self.users:
+                    user = await self.users[user_id]
+                    user.update_info_json(data["user"])
+                return
+            elif data["type"] == "user_invalidated":
+                user_id = data["user"]["id"]
+                if user_id in self.users:
+                    has_dm_conversation = any(
+                        conversation.im_user_id == user_id
+                        for conversation in self.open_conversations.values()
+                    )
+                    if has_dm_conversation:
+                        user = await self.users[user_id]
+                        user_info = await self.api.fetch_user_info(user_id)
+                        user.update_info_json(user_info["user"])
                 return
             elif data["type"] == "channel_joined" or data["type"] == "group_joined":
                 channel_id = data["channel"]["id"]

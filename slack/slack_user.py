@@ -135,6 +135,10 @@ class SlackUser:
         self._rendered_message = None
         self._parsed_message = None
 
+        for conversation in self.workspace.open_conversations.values():
+            if conversation.im_user_id == self.id:
+                conversation.update_buffer_props()
+
 
 class SlackBot:
     def __init__(self, workspace: SlackWorkspace, info: SlackBotInfo):
