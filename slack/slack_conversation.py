@@ -579,8 +579,9 @@ class SlackConversation(SlackBuffer):
     def nicklist_remove_nick(self, nick: Nick):
         if self.type == "im" or self.buffer_pointer is None:
             return
-        nick_pointer = self._nicklist.pop(nick)
-        weechat.nicklist_remove_nick(self.buffer_pointer, nick_pointer)
+        if nick in self._nicklist:
+            nick_pointer = self._nicklist.pop(nick)
+            weechat.nicklist_remove_nick(self.buffer_pointer, nick_pointer)
 
     def display_thread_replies(self) -> bool:
         if self.buffer_pointer is not None:
