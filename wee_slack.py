@@ -2887,12 +2887,12 @@ class SlackDMChannel(SlackChannel):
     has some important differences.
     """
 
-    def __init__(self, eventrouter, users, **kwargs):
+    def __init__(self, eventrouter, users, myidentifier, **kwargs):
         dmuser = kwargs["user"]
         kwargs["name"] = users[dmuser].name if dmuser in users else dmuser
         super(SlackDMChannel, self).__init__(eventrouter, "im", **kwargs)
         self.update_color()
-        self.members = {self.user}
+        self.members = {myidentifier, self.user}
         if dmuser in users:
             self.set_topic(create_user_status_string(users[dmuser].profile))
 
@@ -3729,7 +3729,9 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
                 channels[item["id"]] = SlackChannel(eventrouter, **item)
 
         for item in login_data["ims"]:
-            channels[item["id"]] = SlackDMChannel(eventrouter, users, **item)
+            channels[item["id"]] = SlackDMChannel(
+                eventrouter, users, login_data["self"]["id"], **item
+            )
 
         for item in login_data["mpims"]:
             channels[item["id"]] = SlackMPDMChannel(
@@ -4123,7 +4125,9 @@ def process_user_change(message_json, eventrouter, team, channel, metadata):
     profile = message_json["user"]["profile"]
     if user:
         user.update_status(profile.get("status_emoji"), profile.get("status_text"))
-        dmchannel = team.find_channel_by_members({user.identifier}, channel_type="im")
+        dmchannel = team.find_channel_by_members(
+            {team.myidentifier, user.identifier}, channel_type="im"
+        )
         if dmchannel:
             dmchannel.set_topic(create_user_status_string(profile))
 
@@ -4384,7 +4388,9 @@ def process_channel_rename(message_json, eventrouter, team, channel, metadata):
 
 def process_im_created(message_json, eventrouter, team, channel, metadata):
     item = message_json["channel"]
-    channel = SlackDMChannel(eventrouter, team=team, users=team.users, **item)
+    channel = SlackDMChannel(
+        eventrouter, team.users, team.myidentifier, team=team, **item
+    )
     team.channels[item["id"]] = channel
     team.buffer_prnt("IM channel created: {}".format(channel.name))
 
@@ -7259,7 +7265,9 @@ def initiate_connection(token):
 
 def create_channel_from_info(eventrouter, channel_info, team, myidentifier, users):
     if channel_info.get("is_im"):
-        return SlackDMChannel(eventrouter, users, team=team, **channel_info)
+        return SlackDMChannel(
+            eventrouter, users, myidentifier, team=team, **channel_info
+        )
     elif channel_info.get("is_mpim"):
         return SlackMPDMChannel(
             eventrouter, users, myidentifier, team=team, **channel_info
