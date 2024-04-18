@@ -339,6 +339,15 @@ class SlackConversation(SlackBuffer):
                 shared.config.color.buflist_muted_conversation.value, short_name
             )
 
+        im_localvars = (
+            {
+                "localvar_set_user_status_emoji": self._im_user.status_emoji,
+                "localvar_set_user_status_text": self._im_user.status_text,
+            }
+            if self._im_user
+            else {}
+        )
+
         return name, {
             "short_name": short_name,
             "title": self.buffer_title(),
@@ -352,6 +361,7 @@ class SlackConversation(SlackBuffer):
             "localvar_set_server": self.workspace.name,
             "localvar_set_slack_muted": "1" if self.muted else "0",
             "localvar_set_completion_default_template": "${weechat.completion.default_template}|%(slack_channels)|%(slack_emojis)",
+            **im_localvars,
         }
 
     async def buffer_switched_to(self):
