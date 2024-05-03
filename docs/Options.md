@@ -136,6 +136,12 @@ slack` after changing it to take effect.
 
 **Description:** Show previews of website content linked by teammates.
 
+### log_channel_created
+
+**Default:** `true`
+
+**Description:** Log "Channel created" in the Server buffer.
+
 ### map_underline_to
 
 **Default:** `_`
