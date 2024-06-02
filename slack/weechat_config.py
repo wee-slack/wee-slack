@@ -82,6 +82,7 @@ class WeeChatOption(Generic[WeeChatOptionType]):
     callback_change: Optional[
         Callable[[WeeChatOption[WeeChatOptionType], bool], None]
     ] = None
+    evaluate_func: Optional[Callable[[WeeChatOptionType], WeeChatOptionType]] = None
 
     def __post_init__(self):
         self._pointer = self._create_weechat_option()
@@ -89,16 +90,22 @@ class WeeChatOption(Generic[WeeChatOptionType]):
     def __bool__(self) -> bool:
         return bool(self.value)
 
-    @property
-    def value(self) -> WeeChatOptionType:
+    def _raw_value(self) -> WeeChatOptionType:
         if weechat.config_option_is_null(self._pointer):
             if isinstance(self.parent_option, str):
                 parent_option_pointer = weechat.config_get(self.parent_option)
                 return option_get_value(parent_option_pointer, self.default_value)
             elif self.parent_option is not None:
-                return self.parent_option.value
+                return self.parent_option._raw_value()
             return self.default_value
         return option_get_value(self._pointer, self.default_value)
+
+    @property
+    def value(self) -> WeeChatOptionType:
+        value = self._raw_value()
+        if self.evaluate_func is not None:
+            return self.evaluate_func(value)
+        return value
 
     @value.setter
     def value(self, value: WeeChatOptionType):

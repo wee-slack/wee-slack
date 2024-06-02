@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 import weechat
 
@@ -287,14 +287,16 @@ class SlackConfigSectionWorkspace:
 
         self.api_token = self._create_option(
             "api_token",
+            "The token (note: content is evaluated, see /help eval; workspace options are evaluated with ${workspace} replaced by the workspace name)",
             "",
-            "",
+            evaluate_func=self._evaluate_with_workspace_name,
         )
 
         self.api_cookies = self._create_option(
             "api_cookies",
+            "The cookies (note: content is evaluated, see /help eval; workspace options are evaluated with ${workspace} replaced by the workspace name)",
             "",
-            "",
+            evaluate_func=self._evaluate_with_workspace_name,
         )
 
         self.autoconnect = self._create_option(
@@ -317,6 +319,11 @@ class SlackConfigSectionWorkspace:
             False,
         )
 
+    def _evaluate_with_workspace_name(self, value: str) -> str:
+        return weechat.string_eval_expression(
+            value, {}, {"workspace": self._workspace_name or ""}, {}
+        )
+
     def _create_option(
         self,
         name: str,
@@ -325,6 +332,9 @@ class SlackConfigSectionWorkspace:
         min_value: Optional[int] = None,
         max_value: Optional[int] = None,
         string_values: Optional[list[WeeChatOptionType]] = None,
+        evaluate_func: Optional[
+            Callable[[WeeChatOptionType], WeeChatOptionType]
+        ] = None,
     ) -> WeeChatOption[WeeChatOptionType]:
         if self._workspace_name:
             option_name = f"{self._workspace_name}.{name}"
@@ -345,6 +355,7 @@ class SlackConfigSectionWorkspace:
             max_value,
             string_values,
             parent_option,
+            evaluate_func=evaluate_func,
         )
 
 
