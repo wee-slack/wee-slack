@@ -646,6 +646,8 @@ class SlackMessage:
             username = self._message_json.get("username")
             if username:
                 return get_bot_nick(username)
+            elif "bot_profile" in self._message_json:
+                return get_bot_nick(self._message_json["bot_profile"]["name"])
             elif "bot_id" in self._message_json:
                 bot = await self.workspace.bots[self._message_json["bot_id"]]
                 return bot.nick
