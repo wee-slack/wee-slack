@@ -645,7 +645,7 @@ class SlackConversation(SlackBuffer):
         elif message.thread_ts is not None:
             await self.fetch_replies(message.thread_ts)
 
-        if message.sender_user_id:
+        if message.sender_user_id and message.sender_bot_id is None:
             user = await self.workspace.users[message.sender_user_id]
             if message.is_reply:
                 if parent_message and parent_message.thread_buffer:

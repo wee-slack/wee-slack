@@ -631,7 +631,9 @@ class SlackMessage:
         return self._rendered
 
     async def nick(self) -> Nick:
-        if "user" in self._message_json:
+        if "bot_profile" in self._message_json:
+            return get_bot_nick(self._message_json["bot_profile"]["name"])
+        elif "user" in self._message_json:
             user = await self.workspace.users[self._message_json["user"]]
             return user.nick
         elif "user_profile" in self._message_json:
