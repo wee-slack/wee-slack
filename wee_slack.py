@@ -4377,7 +4377,8 @@ def process_channel_created(message_json, eventrouter, team, channel, metadata):
     item["is_member"] = False
     channel = SlackChannel(eventrouter, team=team, **item)
     team.channels[item["id"]] = channel
-    team.buffer_prnt("Channel created: {}".format(channel.name))
+    if config.log_channel_created:
+        team.buffer_prnt("Channel created: {}".format(channel.name))
 
 
 def process_channel_rename(message_json, eventrouter, team, channel, metadata):
@@ -6948,6 +6949,10 @@ class PluginConfig(object):
             desc="Use full names as the nicks for all users. When this is"
             " false (the default), display names will be used if set, with a"
             " fallback to the full name if display name is not set.",
+        ),
+        "log_channel_created": Setting(
+            default="false",
+            desc="Log \"Channel created\" in the Server buffer.",
         ),
     }
 
