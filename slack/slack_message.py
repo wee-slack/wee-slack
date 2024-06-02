@@ -134,6 +134,16 @@ def ts_from_tag(tag: str) -> Optional[SlackTs]:
     return None
 
 
+def is_not_found_error(e: Union[SlackApiError, SlackError]) -> bool:
+    return (
+        isinstance(e, SlackApiError)
+        and e.response["error"]
+        in ["channel_not_found", "user_not_found", "bot_not_found"]
+        or isinstance(e, SlackError)
+        and e.error in ["item_not_found", "usergroup_not_found"]
+    )
+
+
 class MessagePriority(Enum):
     NONE = "none"
     LOW = weechat.WEECHAT_HOTLIST_LOW
@@ -217,12 +227,7 @@ class PendingMessageItem:
                 conversation = await self.message.workspace.conversations[self.item_id]
                 name = conversation.name_with_prefix("short_name_without_padding")
             except (SlackApiError, SlackError) as e:
-                if (
-                    isinstance(e, SlackApiError)
-                    and e.response["error"] == "channel_not_found"
-                    or isinstance(e, SlackError)
-                    and e.error == "item_not_found"
-                ):
+                if is_not_found_error(e):
                     name = (
                         f"#{self.fallback_name}"
                         if self.fallback_name
@@ -242,12 +247,7 @@ class PendingMessageItem:
             try:
                 user = await self.message.workspace.users[self.item_id]
             except (SlackApiError, SlackError) as e:
-                if (
-                    isinstance(e, SlackApiError)
-                    and e.response["error"] == "user_not_found"
-                    or isinstance(e, SlackError)
-                    and e.error == "item_not_found"
-                ):
+                if is_not_found_error(e):
                     name = (
                         f"@{self.fallback_name}"
                         if self.fallback_name
@@ -273,10 +273,7 @@ class PendingMessageItem:
                 if (
                     isinstance(e, SlackApiError)
                     and e.response["error"] == "invalid_auth"
-                    or isinstance(e, SlackError)
-                    and (
-                        e.error == "usergroup_not_found" or e.error == "item_not_found"
-                    )
+                    or is_not_found_error(e)
                 ):
                     name = (
                         self.fallback_name if self.fallback_name else f"@{self.item_id}"
@@ -631,12 +628,19 @@ class SlackMessage:
         return self._rendered
 
     async def nick(self) -> Nick:
+        username = self._message_json.get("username")
+        if username:
+            return get_bot_nick(username)
         if "bot_profile" in self._message_json:
             return get_bot_nick(self._message_json["bot_profile"]["name"])
-        elif "user" in self._message_json:
-            user = await self.workspace.users[self._message_json["user"]]
-            return user.nick
-        elif "user_profile" in self._message_json:
+        if "bot_id" in self._message_json:
+            try:
+                bot = await self.workspace.bots[self._message_json["bot_id"]]
+                return bot.nick
+            except (SlackApiError, SlackError) as e:
+                if not is_not_found_error(e):
+                    raise e
+        if "user_profile" in self._message_json:
             # TODO: is_external
             nick = name_from_user_profile(
                 self.workspace,
@@ -644,15 +648,14 @@ class SlackMessage:
                 fallback_name=self._message_json["user_profile"]["name"],
             )
             return get_user_nick(nick)
-        else:
-            username = self._message_json.get("username")
-            if username:
-                return get_bot_nick(username)
-            elif "bot_id" in self._message_json:
-                bot = await self.workspace.bots[self._message_json["bot_id"]]
-                return bot.nick
-            else:
-                return Nick("", "Unknown", "", "unknown")
+        if "user" in self._message_json:
+            try:
+                user = await self.workspace.users[self._message_json["user"]]
+                return user.nick
+            except (SlackApiError, SlackError) as e:
+                if not is_not_found_error(e):
+                    raise e
+        return Nick("", "Unknown", "", "unknown")
 
     async def _render_prefix(self) -> str:
         if self._message_json.get("subtype") in ["channel_join", "group_join"]:
