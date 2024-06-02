@@ -12,6 +12,8 @@ from typing import (
 )
 from urllib.parse import urlencode
 
+import weechat
+
 from slack.error import HttpError, SlackApiError
 from slack.http import http_request
 from slack.shared import shared
@@ -273,7 +275,9 @@ class SlackApi(SlackApiCommon):
 
     async def _fetch_users_info_without_splitting(self, user_ids: Iterable[str]):
         method = "users.info"
+        user_ids = list(user_ids)
         params: Params = {"users": ",".join(user_ids)}
+        weechat.prnt("", f"Fetching batch of {len(user_ids)} users.")
         response: SlackUsersInfoResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
@@ -282,6 +286,11 @@ class SlackApi(SlackApiCommon):
     async def fetch_users_info(
         self, user_ids: Iterable[str]
     ) -> SlackUsersInfoSuccessResponse[SlackUserInfo]:
+        user_ids = list(user_ids)
+        weechat.prnt(
+            "",
+            f"Fetching {len(user_ids)} users, splitting into batches of {self.workspace.max_users_per_fetch_request} users.",
+        )
         responses = await gather(
             *(
                 self._fetch_users_info_without_splitting(user_ids_batch)
@@ -313,6 +322,9 @@ class SlackApi(SlackApiCommon):
 
         success_responses = [r for r in responses if not isinstance(r, BaseException)]
         users = list(chain(*(response["users"] for response in success_responses)))
+        weechat.prnt("", f"Requested {len(user_ids)} users, got {len(users)} users.")
+        for user_id in set(user_ids) - {user["id"] for user in users}:
+            weechat.prnt("", f"User {user_id} is missing.")
         response: SlackUsersInfoResponse = {"ok": True, "users": users}
         return response
 
