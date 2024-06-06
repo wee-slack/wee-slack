@@ -351,6 +351,7 @@ class SlackConversation(SlackBuffer):
         return name, {
             "short_name": short_name,
             "title": self.buffer_title(),
+            "input_prompt": self.workspace.my_user.nick.raw_nick,
             "input_multiline": "1",
             "nicklist": "0" if self.type == "im" else "1",
             "nicklist_display_groups": "0",

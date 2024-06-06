@@ -74,6 +74,7 @@ class SlackThread(SlackBuffer):
         return name, {
             "short_name": short_name,
             "title": "topic",
+            "input_prompt": self.workspace.my_user.nick.raw_nick,
             "input_multiline": "1",
             "localvar_set_type": self.parent.conversation.buffer_type,
             "localvar_set_slack_type": "thread",

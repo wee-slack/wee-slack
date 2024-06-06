@@ -1691,6 +1691,7 @@ class SlackTeam(object):
             self.eventrouter.weechat_controller.register_buffer(
                 self.channel_buffer, self
             )
+            w.buffer_set(self.channel_buffer, "input_prompt", self.nick)
             w.buffer_set(self.channel_buffer, "input_multiline", "1")
             w.buffer_set(self.channel_buffer, "localvar_set_type", "server")
             w.buffer_set(self.channel_buffer, "localvar_set_slack_type", self.type)
@@ -2421,6 +2422,7 @@ class SlackChannel(SlackChannelCommon):
             self.eventrouter.weechat_controller.register_buffer(
                 self.channel_buffer, self
             )
+            w.buffer_set(self.channel_buffer, "input_prompt", self.team.nick)
             w.buffer_set(self.channel_buffer, "input_multiline", "1")
             w.buffer_set(
                 self.channel_buffer, "localvar_set_type", get_localvar_type(self.type)
@@ -3210,6 +3212,7 @@ class SlackThreadChannel(SlackChannelCommon):
             self.eventrouter.weechat_controller.register_buffer(
                 self.channel_buffer, self
             )
+            w.buffer_set(self.channel_buffer, "input_prompt", self.team.nick)
             w.buffer_set(self.channel_buffer, "input_multiline", "1")
             w.buffer_set(
                 self.channel_buffer,
