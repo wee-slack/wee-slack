@@ -7348,6 +7348,28 @@ def create_team(token, initial_data):
                 "away" if initial_data["presence"]["manual_away"] else "active"
             )
 
+            try:
+                all_notifications_prefs = json.loads(
+                    initial_data["prefs"].get("all_notifications_prefs")
+                )
+                global_keywords = all_notifications_prefs.get("global", {}).get(
+                    "global_keywords"
+                )
+            except json.decoder.JSONDecodeError:
+                global_keywords = None
+
+            if global_keywords is None:
+                print_error(
+                    "global_keywords not found in users.prefs.get", warning=True
+                )
+                dbg(
+                    "global_keywords not found in users.prefs.get. Response of users.prefs.get: {}".format(
+                        json.dumps(initial_data["prefs"])
+                    ),
+                    level=5,
+                )
+                global_keywords = ""
+
             team_info = {
                 "id": team_id,
                 "name": response_json["team"]["id"],
@@ -7372,7 +7394,7 @@ def create_team(token, initial_data):
                     bots,
                     channels,
                     muted_channels=initial_data["prefs"]["muted_channels"],
-                    highlight_words=initial_data["prefs"]["highlight_words"],
+                    highlight_words=global_keywords,
                 )
                 eventrouter.register_team(team)
                 team.connect()
