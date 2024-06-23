@@ -215,14 +215,14 @@ class SlackConfigSectionLook:
             parent_option="irc.look.part_closes_buffer",
         )
 
-        self.render_emoji_as: WeeChatOption[
-            Literal["emoji", "name", "both"]
-        ] = WeeChatOption(
-            self._section,
-            "render_emoji_as",
-            "show emojis as: emoji = the emoji unicode character, name = the emoji name, both = both the emoji name and the emoji character",
-            "emoji",
-            string_values=["emoji", "name", "both"],
+        self.render_emoji_as: WeeChatOption[Literal["emoji", "name", "both"]] = (
+            WeeChatOption(
+                self._section,
+                "render_emoji_as",
+                "show emojis as: emoji = the emoji unicode character, name = the emoji name, both = both the emoji name and the emoji character",
+                "emoji",
+                string_values=["emoji", "name", "both"],
+            )
         )
 
         self.render_url_as = WeeChatOption(

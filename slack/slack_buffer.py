@@ -486,7 +486,7 @@ class SlackBuffer(ABC):
             htmlescape(text)
             # Replace some WeeChat formatting chars with Slack formatting chars
             .replace("\x02", "*")
-            .replace("\x1D", "_")
+            .replace("\x1d", "_")
         )
 
         users = await gather(*self.workspace.users.values(), return_exceptions=True)

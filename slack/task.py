@@ -247,16 +247,14 @@ def run_async(coroutine: Coroutine[Future[Any], None, Any]) -> None:
 async def gather(
     *requests: Union[Future[T], Coroutine[Any, None, T]],
     return_exceptions: Literal[False] = False,
-) -> List[T]:
-    ...
+) -> List[T]: ...
 
 
 @overload
 async def gather(
     *requests: Union[Future[T], Coroutine[Any, None, T]],
     return_exceptions: Literal[True],
-) -> List[Union[T, BaseException]]:
-    ...
+) -> List[Union[T, BaseException]]: ...
 
 
 async def gather(
