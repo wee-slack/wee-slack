@@ -1,5 +1,5 @@
 [project]
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 
 [tool.poetry]
 name = "wee-slack"
@@ -13,7 +13,7 @@ repository = "https://github.com/wee-slack/wee-slack"
 # packages = [{ include = "." }]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 websocket-client = ">= 0.37.0"
 
 [tool.poetry.group.dev.dependencies]
@@ -42,7 +42,7 @@ disable = [
 ]
 
 [tool.pyright]
-pythonVersion = "3.7"
+pythonVersion = "3.8"
 strict = ["**"]
 reportMissingModuleSource = false
 include = ["main.py", "slack", "tests", "typings"]
