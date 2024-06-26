@@ -14,6 +14,7 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Union,
 )
 
 import weechat
@@ -424,15 +425,15 @@ class SlackBuffer(ABC):
 
     def ts_from_hash_or_index(
         self,
-        hash_or_index: str,
+        hash_or_index: Union[str, int],
         message_filter: Optional[Literal["sender_self"]] = None,
     ) -> Optional[SlackTs]:
-        if not hash_or_index:
-            return self.ts_from_index(1, message_filter)
-        ts_from_hash = self.ts_from_hash(hash_or_index)
+        ts_from_hash = (
+            self.ts_from_hash(hash_or_index) if isinstance(hash_or_index, str) else None
+        )
         if ts_from_hash is not None:
             return ts_from_hash
-        elif hash_or_index.isdigit():
+        elif isinstance(hash_or_index, int) or hash_or_index.isdigit():
             return self.ts_from_index(int(hash_or_index), message_filter)
         else:
             return None
@@ -512,7 +513,7 @@ class SlackBuffer(ABC):
             input_data,
         )
         if special:
-            msg_id = special.group("msg_id")
+            msg_id = special.group("msg_id") or 1
             emoji = special.group("emoji_char") or special.group("emoji_name")
             reaction_change_type = special.group("reaction_change")
 
