@@ -513,8 +513,7 @@ class SlackConversation(SlackBuffer):
                 message
                 for message in self._messages.values()
                 if self.should_display_message(message)
-                and self.last_printed_ts is None
-                or message.ts > self.last_printed_ts
+                and (self.last_printed_ts is None or message.ts > self.last_printed_ts)
             ]
 
             user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
