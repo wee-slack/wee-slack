@@ -68,7 +68,7 @@ def print_message_not_found_error(msg_id: str):
 
 def parse_options(args: str):
     regex = re.compile("(?:^| )+-([^ =]+)(?:=([^ ]+))?")
-    pos_args = regex.sub("", args)
+    pos_args = regex.sub("", args).strip()
     options: Options = {
         match.group(1): match.group(2) or True for match in regex.finditer(args)
     }
@@ -104,8 +104,12 @@ def weechat_command(
         @wraps(f)
         def wrapper(buffer: str, args: str):
             pos_args, options = parse_options(args)
-            maxsplit = -1 if split_all_args else 0 if min_args == 0 else min_args - 1
-            split_args = pos_args.split(" ", maxsplit)
+            maxsplit = 0 if split_all_args else min_args - 1
+            split_args = (
+                re.split(r"\s+", pos_args, maxsplit)
+                if split_all_args or min_args > 1
+                else [pos_args]
+            )
             if min_args and not pos_args or len(split_args) < min_args:
                 print_error(
                     f'Too few arguments for command "/{cmd}" (help on command: /help {cmd})'
@@ -428,7 +432,7 @@ async def command_slack_reply(buffer: str, args: List[str], options: Options):
     if isinstance(slack_buffer, SlackThread):
         await slack_buffer.post_message(args[0], broadcast=broadcast)
     elif isinstance(slack_buffer, SlackConversation):
-        split_args = args[0].split(" ", 1)
+        split_args = re.split(r"\s+", args[0], 1)
         if len(split_args) < 2:
             print_error(
                 'Too few arguments for command "/slack reply" (help on command: /help slack reply)'
