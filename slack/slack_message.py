@@ -632,18 +632,6 @@ class SlackMessage:
         return self._rendered
 
     async def nick(self) -> Nick:
-        username = self._message_json.get("username")
-        if username:
-            return get_bot_nick(username)
-        if "bot_profile" in self._message_json:
-            return get_bot_nick(self._message_json["bot_profile"]["name"])
-        if "bot_id" in self._message_json:
-            try:
-                bot = await self.workspace.bots[self._message_json["bot_id"]]
-                return bot.nick
-            except (SlackApiError, SlackError) as e:
-                if not is_not_found_error(e):
-                    raise e
         if "user_profile" in self._message_json:
             # TODO: is_external
             nick = name_from_user_profile(
@@ -656,6 +644,18 @@ class SlackMessage:
             try:
                 user = await self.workspace.users[self._message_json["user"]]
                 return user.nick
+            except (SlackApiError, SlackError) as e:
+                if not is_not_found_error(e):
+                    raise e
+        username = self._message_json.get("username")
+        if username:
+            return get_bot_nick(username)
+        if "bot_profile" in self._message_json:
+            return get_bot_nick(self._message_json["bot_profile"]["name"])
+        if "bot_id" in self._message_json:
+            try:
+                bot = await self.workspace.bots[self._message_json["bot_id"]]
+                return bot.nick
             except (SlackApiError, SlackError) as e:
                 if not is_not_found_error(e):
                     raise e
