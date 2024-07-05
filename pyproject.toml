@@ -48,9 +48,10 @@ reportMissingModuleSource = false
 include = ["main.py", "slack", "tests", "typings"]
 
 [tool.ruff]
-extend-exclude = ["typings/weechat.pyi", "wee_slack.py", "_pytest"]
+extend-exclude = ["typings/weechat.pyi"]
 
 [tool.ruff.lint]
+exclude = ["wee_slack.py", "_pytest/*"]
 extend-select = ["I"]
 
 [build-system]

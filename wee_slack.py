@@ -754,9 +754,9 @@ class EventRouter(object):
                     j = json.loads(body)
 
                     try:
-                        j[
-                            "wee_slack_process_method"
-                        ] = request_metadata.request_normalized
+                        j["wee_slack_process_method"] = (
+                            request_metadata.request_normalized
+                        )
                         if self.recording:
                             self.record_event(
                                 j,
@@ -4568,8 +4568,8 @@ def linkify_text(message, team, only_users=False, escape_characters=True):
             message
             # Replace IRC formatting chars with Slack formatting chars.
             .replace("\x02", "*")
-            .replace("\x1D", "_")
-            .replace("\x1F", config.map_underline_to)
+            .replace("\x1d", "_")
+            .replace("\x1f", config.map_underline_to)
             # Escape chars that have special meaning to Slack. Note that we do not
             # (and should not) perform full HTML entity-encoding here.
             # See https://api.slack.com/docs/message-formatting for details.

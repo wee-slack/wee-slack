@@ -26,7 +26,7 @@ def test_linkifytext_names_with_accents(team):
 
 
 def test_linkifytext_formatting_characters(team):
-    text = linkify_text("\x02\x1Dmy test message\x1D\x02", team)
+    text = linkify_text("\x02\x1dmy test message\x1d\x02", team)
 
     assert text == "*_my test message_*"
 
