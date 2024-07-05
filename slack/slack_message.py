@@ -448,6 +448,10 @@ class SlackMessage:
         return self._message_json.get("bot_id")
 
     @property
+    def is_self_msg(self) -> bool:
+        return self.sender_user_id == self.workspace.my_user.id
+
+    @property
     def reactions(self) -> List[SlackMessageReaction]:
         return self._message_json.get("reactions", [])
 
@@ -601,7 +605,7 @@ class SlackMessage:
                 if shared.weechat_version >= 0x04000000:
                     tags.append(f"prefix_nick_{nick.color}")
 
-            if self.sender_user_id == self.workspace.my_user.id:
+            if self.is_self_msg:
                 tags.append("self_msg")
                 log_tags = ["notify_none", "no_highlight", "log1"]
             else:
@@ -647,7 +651,7 @@ class SlackMessage:
                 self._message_json["user_profile"],
                 fallback_name=self._message_json["user_profile"]["name"],
             )
-            return get_user_nick(nick)
+            return get_user_nick(nick, is_self=self.is_self_msg)
         if "user" in self._message_json:
             try:
                 user = await self.workspace.users[self._message_json["user"]]
