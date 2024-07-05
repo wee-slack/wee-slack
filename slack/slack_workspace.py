@@ -509,12 +509,15 @@ class SlackWorkspace:
             elif data["type"] == "pref_change":
                 if data["name"] == "muted_channels":
                     new_muted_channels = set(data["value"].split(","))
-                    changed_channels = self.muted_channels ^ new_muted_channels
-                    self.muted_channels = new_muted_channels
-                    for channel_id in changed_channels:
-                        channel = self.open_conversations.get(channel_id)
-                        if channel:
-                            channel.update_buffer_props()
+                    self._set_muted_channels(new_muted_channels)
+                elif data["name"] == "all_notifications_prefs":
+                    new_prefs = json.loads(data["value"])
+                    new_muted_channels = set(
+                        channel_id
+                        for channel_id, prefs in new_prefs["channels"].items()
+                        if prefs["muted"]
+                    )
+                    self._set_muted_channels(new_muted_channels)
                 return
             elif data["type"] == "user_status_changed":
                 user_id = data["user"]["id"]
@@ -658,6 +661,14 @@ class SlackWorkspace:
         except Exception as e:
             slack_error = SlackRtmError(self, e, data)
             print_error(store_and_format_exception(slack_error))
+
+    def _set_muted_channels(self, muted_channels: Set[str]):
+        changed_channels = self.muted_channels ^ muted_channels
+        self.muted_channels = muted_channels
+        for channel_id in changed_channels:
+            channel = self.open_conversations.get(channel_id)
+            if channel:
+                channel.update_buffer_props()
 
     def ping(self):
         if not self.is_connected:

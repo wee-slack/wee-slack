@@ -4118,6 +4118,12 @@ def process_pref_change(message_json, eventrouter, team, channel, metadata):
         team.set_highlight_words(message_json["value"])
     elif message_json["name"] == "all_notifications_prefs":
         new_prefs = json.loads(message_json["value"])
+        new_muted_channels = set(
+            channel_id
+            for channel_id, prefs in new_prefs["channels"].items()
+            if prefs["muted"]
+        )
+        team.set_muted_channels(",".join(new_muted_channels))
         global_keywords = new_prefs["global"]["global_keywords"]
         team.set_highlight_words(global_keywords)
     else:
