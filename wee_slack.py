@@ -4116,6 +4116,10 @@ def process_pref_change(message_json, eventrouter, team, channel, metadata):
         team.set_muted_channels(message_json["value"])
     elif message_json["name"] == "highlight_words":
         team.set_highlight_words(message_json["value"])
+    elif message_json["name"] == "all_notifications_prefs":
+        new_prefs = json.loads(message_json["value"])
+        global_keywords = new_prefs["global"]["global_keywords"]
+        team.set_highlight_words(global_keywords)
     else:
         dbg("Preference change not implemented: {}\n".format(message_json["name"]))
 
