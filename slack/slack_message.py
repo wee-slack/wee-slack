@@ -568,14 +568,15 @@ class SlackMessage:
         return reaction is not None and self.workspace.my_user.id in reaction["users"]
 
     def should_highlight(self, only_personal: bool) -> bool:
-        # TODO: Highlight words from user preferences
         parsed_message = self.parse_message_text()
 
         for item in parsed_message:
-            if isinstance(item, PendingMessageItem) and item.should_highlight(
-                only_personal
-            ):
-                return True
+            if isinstance(item, PendingMessageItem):
+                if item.should_highlight(only_personal):
+                    return True
+            else:
+                if self.workspace.global_keywords_regex.search(item):
+                    return True
 
         return False
 

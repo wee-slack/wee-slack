@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import socket
 import ssl
 import time
@@ -48,6 +49,7 @@ if TYPE_CHECKING:
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_conversations import SlackUsersConversations
     from slack_api.slack_users_info import SlackUserInfo
+    from slack_api.slack_users_prefs import AllNotificationsPrefs
     from slack_rtm.slack_rtm_message import SlackRtmMessage
     from typing_extensions import Literal
 
@@ -219,6 +221,7 @@ class SlackWorkspace:
         self.bots = SlackBots(self)
         self.usergroups = SlackUsergroups(self)
         self.muted_channels: Set[str] = set()
+        self.global_keywords_regex: re.Pattern[str]
         self.custom_emojis: Dict[str, str] = {}
         self.max_users_per_fetch_request = 512
 
@@ -297,9 +300,22 @@ class SlackWorkspace:
 
         return True
 
+    def _set_global_keywords(self, all_notifications_prefs: AllNotificationsPrefs):
+        global_keywords = set(
+            all_notifications_prefs["global"]["global_keywords"].split(",")
+        )
+        regex_words = "|".join(re.escape(keyword) for keyword in global_keywords)
+        self.global_keywords_regex = re.compile(
+            rf"\b(?:{regex_words})\b", re.IGNORECASE
+        )
+
     async def _initialize_oauth(self) -> List[SlackConversation]:
-        prefs = await self.api.fetch_users_get_prefs("muted_channels")
+        prefs = await self.api.fetch_users_get_prefs(
+            "muted_channels,all_notifications_prefs"
+        )
         self.muted_channels = set(prefs["prefs"]["muted_channels"].split(","))
+        all_notifications_prefs = json.loads(prefs["prefs"]["all_notifications_prefs"])
+        self._set_global_keywords(all_notifications_prefs)
 
         users_conversations_response = await self.api.fetch_users_conversations(
             "public_channel,private_channel,mpim,im"
@@ -325,6 +341,10 @@ class SlackWorkspace:
         # self.users.initialize_items(my_user_id, {my_user_id: user_boot["self"]})
         self.my_user = await self.users[my_user_id]
         self.muted_channels = set(user_boot["prefs"]["muted_channels"].split(","))
+        all_notifications_prefs = json.loads(
+            user_boot["prefs"]["all_notifications_prefs"]
+        )
+        self._set_global_keywords(all_notifications_prefs)
 
         conversation_counts = (
             client_counts["channels"] + client_counts["mpims"] + client_counts["ims"]
@@ -518,6 +538,7 @@ class SlackWorkspace:
                         if prefs["muted"]
                     )
                     self._set_muted_channels(new_muted_channels)
+                    self._set_global_keywords(new_prefs)
                 return
             elif data["type"] == "user_status_changed":
                 user_id = data["user"]["id"]
