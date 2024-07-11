@@ -366,16 +366,14 @@ class SlackMessage:
         self.replies: OrderedDict[SlackTs, SlackMessage] = OrderedDict()
         self.reply_history_filled = False
         self.thread_buffer: Optional[SlackThread] = None
-        self._subscribed: bool = message_json.get("subscribed", False)
-        self._last_read = (
-            SlackTs(self._message_json["last_read"])
-            if "last_read" in self._message_json
-            else None
-        )
         self._deleted = False
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.conversation}, {self.ts})"
+
+    @property
+    def message_json(self) -> SlackMessageDict:
+        return self._message_json
 
     @property
     def workspace(self) -> SlackWorkspace:
@@ -417,12 +415,20 @@ class SlackMessage:
         return self.conversation.messages.get(self.thread_ts)
 
     @property
+    def subscribed(self) -> bool:
+        return self._message_json.get("subscribed", False)
+
+    @property
     def last_read(self) -> Optional[SlackTs]:
-        return self._last_read
+        return (
+            SlackTs(self._message_json["last_read"])
+            if "last_read" in self._message_json
+            else None
+        )
 
     @last_read.setter
     def last_read(self, value: SlackTs):
-        self._last_read = value
+        self._message_json["last_read"] = value  # pyright: ignore [reportGeneralTypeIssues]
         if self.thread_buffer:
             self.thread_buffer.set_unread_and_hotlist()
 
@@ -532,7 +538,7 @@ class SlackMessage:
     async def update_subscribed(
         self, subscribed: bool, subscription: SlackThreadSubscription
     ):
-        self._subscribed = subscribed
+        self._message_json["subscribed"] = subscribed  # pyright: ignore [reportGeneralTypeIssues]
         self.last_read = SlackTs(subscription["last_read"])
         await self.conversation.rerender_message(self)
 
@@ -933,7 +939,7 @@ class SlackMessage:
         if not reply_count:
             return ""
 
-        subscribed_text = " Subscribed" if self._subscribed else ""
+        subscribed_text = " Subscribed" if self.subscribed else ""
         text = f"[ Thread: {self.hash} Replies: {reply_count}{subscribed_text} ]"
         return " " + with_color(nick_color(str(self.hash)), text)
 

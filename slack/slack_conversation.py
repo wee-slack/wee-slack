@@ -266,6 +266,12 @@ class SlackConversation(SlackBuffer):
         if self.type == "im":
             return self._info.get("user")
 
+    def _add_or_update_message(self, message: SlackMessage):
+        if message.ts in self._messages:
+            self._messages[message.ts].update_message_json(message.message_json)
+        else:
+            self._messages[message.ts] = message
+
     def sort_key(self) -> str:
         type_sort_key = {
             "channel": 0,
@@ -402,15 +408,13 @@ class SlackConversation(SlackBuffer):
                 replies_response,
             )
 
-        if thread_ts not in self._messages:
-            self._messages[thread_ts] = messages[0]
-
+        self._add_or_update_message(messages[0])
         parent_message = self._messages[thread_ts]
 
         replies = messages[1:]
         for reply in replies:
             parent_message.replies[reply.ts] = reply
-            self._messages[reply.ts] = reply
+            self._add_or_update_message(reply)
 
         parent_message.replies = OrderedDict(sorted(parent_message.replies.items()))
         self._messages = OrderedDict(sorted(self._messages.items()))
@@ -493,7 +497,7 @@ class SlackConversation(SlackBuffer):
                 SlackMessage(self, message) for message in history["messages"]
             ]
             for message in reversed(conversation_messages):
-                self._messages[message.ts] = message
+                self._add_or_update_message(message)
 
             if self.display_thread_replies():
                 await gather(
@@ -620,7 +624,7 @@ class SlackConversation(SlackBuffer):
 
     async def add_new_message(self, message: SlackMessage):
         # TODO: Remove old messages
-        self._messages[message.ts] = message
+        self._add_or_update_message(message)
 
         if self.should_display_message(message):
             if self.is_loading:
