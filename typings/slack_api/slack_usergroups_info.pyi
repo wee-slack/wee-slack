@@ -7,7 +7,7 @@ class SlackUsergroupPrefs(TypedDict):
     channels: List[str]
     groups: List[str]
 
-class SlackUsergroupInfo(TypedDict):
+class SlackUsergroupInfoCommon(TypedDict):
     id: str
     team_id: str
     is_usergroup: bool
@@ -26,9 +26,11 @@ class SlackUsergroupInfo(TypedDict):
     updated_by: str
     deleted_by: None
     prefs: SlackUsergroupPrefs
-    users: NotRequired[List[str]]
     user_count: int
     channel_count: int
+
+class SlackUsergroupInfo(SlackUsergroupInfoCommon):
+    users: NotRequired[List[str]]
 
 @final
 class SlackUsergroupsInfoSuccessResponse(TypedDict):

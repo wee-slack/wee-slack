@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from slack_api.slack_profile import SlackProfile
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_info import SlackUserInfo
+    from slack_rtm.slack_rtm_message import SlackSubteam
     from typing_extensions import Literal
 
     from slack.slack_workspace import SlackWorkspace
@@ -153,7 +154,9 @@ class SlackBot:
 
 
 class SlackUsergroup:
-    def __init__(self, workspace: SlackWorkspace, info: SlackUsergroupInfo):
+    def __init__(
+        self, workspace: SlackWorkspace, info: Union[SlackUsergroupInfo, SlackSubteam]
+    ):
         self.workspace = workspace
         self._info = info
 
@@ -166,3 +169,6 @@ class SlackUsergroup:
 
     def handle(self) -> str:
         return self._info["handle"]
+
+    def update_info_json(self, info_json: Union[SlackUsergroupInfo, SlackSubteam]):
+        self._info.update(info_json)

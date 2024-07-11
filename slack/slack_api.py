@@ -332,9 +332,10 @@ class SlackApi(SlackApiCommon):
             raise SlackApiError(self.workspace, method, response, params)
         return response
 
-    async def fetch_usergroups_list(self):
+    async def fetch_usergroups_list(self, include_users: bool):
         method = "usergroups.list"
-        response: SlackUsergroupsInfoResponse = await self._fetch(method)
+        params: Params = {"include_users": include_users}
+        response: SlackUsergroupsInfoResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response)
         return response

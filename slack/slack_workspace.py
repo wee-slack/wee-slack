@@ -17,6 +17,7 @@ from typing import (
     Set,
     Type,
     TypeVar,
+    Union,
 )
 
 import weechat
@@ -50,7 +51,7 @@ if TYPE_CHECKING:
     from slack_api.slack_users_conversations import SlackUsersConversations
     from slack_api.slack_users_info import SlackUserInfo
     from slack_api.slack_users_prefs import AllNotificationsPrefs
-    from slack_rtm.slack_rtm_message import SlackRtmMessage
+    from slack_rtm.slack_rtm_message import SlackRtmMessage, SlackSubteam
     from typing_extensions import Literal
 
     from slack.slack_conversation import SlackConversationsInfoInternal
@@ -59,6 +60,7 @@ else:
     SlackConversationsInfoInternal = object
     SlackUsergroupInfo = object
     SlackUserInfo = object
+    SlackSubteam = object
 
 SlackItemClass = TypeVar(
     "SlackItemClass", SlackConversation, SlackUser, SlackBot, SlackUsergroup
@@ -68,7 +70,7 @@ SlackItemInfo = TypeVar(
     SlackConversationsInfoInternal,
     SlackUserInfo,
     SlackBotInfo,
-    SlackUsergroupInfo,
+    Union[SlackUsergroupInfo, SlackSubteam],
 )
 
 
@@ -185,20 +187,22 @@ class SlackBots(SlackItem[SlackBot, SlackBotInfo]):
         return self._item_class(self.workspace, item_info)
 
 
-class SlackUsergroups(SlackItem[SlackUsergroup, SlackUsergroupInfo]):
+class SlackUsergroups(
+    SlackItem[SlackUsergroup, Union[SlackUsergroupInfo, SlackSubteam]]
+):
     def __init__(self, workspace: SlackWorkspace):
         super().__init__(workspace, SlackUsergroup)
 
     async def _fetch_items_info(
         self, item_ids: Iterable[str]
-    ) -> Dict[str, SlackUsergroupInfo]:
+    ) -> Dict[str, Union[SlackUsergroupInfo, SlackSubteam]]:
         response = await self.workspace.api.edgeapi.fetch_usergroups_info(
             list(item_ids)
         )
         return {info["id"]: info for info in response["results"]}
 
     async def _create_item_from_info(
-        self, item_info: SlackUsergroupInfo
+        self, item_info: Union[SlackUsergroupInfo, SlackSubteam]
     ) -> SlackUsergroup:
         return self._item_class(self.workspace, item_info)
 
@@ -220,6 +224,7 @@ class SlackWorkspace:
         self.users = SlackUsers(self)
         self.bots = SlackBots(self)
         self.usergroups = SlackUsergroups(self)
+        self.usergroups_member: Set[str] = set()
         self.muted_channels: Set[str] = set()
         self.global_keywords_regex: re.Pattern[str]
         self.custom_emojis: Dict[str, str] = {}
@@ -317,6 +322,17 @@ class SlackWorkspace:
         all_notifications_prefs = json.loads(prefs["prefs"]["all_notifications_prefs"])
         self._set_global_keywords(all_notifications_prefs)
 
+        usergroups = await self.api.fetch_usergroups_list(include_users=True)
+        for usergroup in usergroups["usergroups"]:
+            future = Future[SlackUsergroup]()
+            future.set_result(SlackUsergroup(self, usergroup))
+            self.usergroups[usergroup["id"]] = future
+        self.usergroups_member = set(
+            u["id"]
+            for u in usergroups["usergroups"]
+            if self.my_user.id in u.get("users", [])
+        )
+
         users_conversations_response = await self.api.fetch_users_conversations(
             "public_channel,private_channel,mpim,im"
         )
@@ -345,6 +361,8 @@ class SlackWorkspace:
             user_boot["prefs"]["all_notifications_prefs"]
         )
         self._set_global_keywords(all_notifications_prefs)
+
+        self.usergroups_member = set(user_boot["subteams"]["self"])
 
         conversation_counts = (
             client_counts["channels"] + client_counts["mpims"] + client_counts["ims"]
@@ -409,13 +427,6 @@ class SlackWorkspace:
 
         custom_emojis_response = await self.api.fetch_emoji_list()
         self.custom_emojis = custom_emojis_response["emoji"]
-
-        if not self.api.edgeapi.is_available:
-            usergroups = await self.api.fetch_usergroups_list()
-            for usergroup in usergroups["usergroups"]:
-                future = Future[SlackUsergroup]()
-                future.set_result(SlackUsergroup(self, usergroup))
-                self.usergroups[usergroup["id"]] = future
 
         for conversation in sorted(
             conversations_to_open, key=lambda conversation: conversation.sort_key()
@@ -557,6 +568,27 @@ class SlackWorkspace:
                         user = await self.users[user_id]
                         user_info = await self.api.fetch_user_info(user_id)
                         user.update_info_json(user_info["user"])
+                return
+            elif data["type"] == "subteam_created":
+                subteam_id = data["subteam"]["id"]
+                self.usergroups.initialize_items(
+                    [subteam_id], {subteam_id: data["subteam"]}
+                )
+                return
+            elif data["type"] == "subteam_updated":
+                subteam_id = data["subteam"]["id"]
+                if subteam_id in self.usergroups:
+                    usergroup = await self.usergroups[subteam_id]
+                    usergroup.update_info_json(data["subteam"])
+                return
+            elif data["type"] == "subteam_members_changed":
+                # Handling subteam_updated should be enough
+                return
+            elif data["type"] == "subteam_self_added":
+                self.usergroups_member.add(data["subteam_id"])
+                return
+            elif data["type"] == "subteam_self_removed":
+                self.usergroups_member.remove(data["subteam_id"])
                 return
             elif data["type"] == "channel_joined" or data["type"] == "group_joined":
                 channel_id = data["channel"]["id"]

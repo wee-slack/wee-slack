@@ -343,8 +343,7 @@ class PendingMessageItem:
         elif self.item_type == "user":
             return self.item_id == self.message.workspace.my_user.id
         elif self.item_type == "usergroup":
-            # TODO
-            return False
+            return self.item_id in self.message.workspace.usergroups_member
         elif self.item_type == "broadcast":
             # TODO: figure out how to handle here broadcast
             return not only_personal
