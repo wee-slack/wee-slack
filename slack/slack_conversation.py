@@ -412,11 +412,10 @@ class SlackConversation(SlackBuffer):
         parent_message = self._messages[thread_ts]
 
         replies = messages[1:]
+        parent_message.replies_tss = [message.ts for message in replies]
         for reply in replies:
-            parent_message.replies[reply.ts] = reply
             self._add_or_update_message(reply)
 
-        parent_message.replies = OrderedDict(sorted(parent_message.replies.items()))
         self._messages = OrderedDict(sorted(self._messages.items()))
 
         parent_message.reply_history_filled = True
@@ -641,7 +640,8 @@ class SlackConversation(SlackBuffer):
 
         parent_message = message.parent_message
         if parent_message:
-            parent_message.replies[message.ts] = message
+            if message.ts not in parent_message.replies_tss:
+                parent_message.replies_tss.append(message.ts)
             thread_buffer = parent_message.thread_buffer
             if thread_buffer:
                 if thread_buffer.is_loading:

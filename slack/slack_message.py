@@ -1,10 +1,18 @@
 from __future__ import annotations
 
 import re
-from collections import OrderedDict
 from datetime import date, datetime, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING, Generator, Iterable, List, Match, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Generator,
+    Iterable,
+    List,
+    Mapping,
+    Match,
+    Optional,
+    Union,
+)
 
 import weechat
 
@@ -363,7 +371,8 @@ class SlackMessage:
         self._parsed_message: Optional[List[Union[str, PendingMessageItem]]] = None
         self.conversation = conversation
         self.ts = SlackTs(message_json["ts"])
-        self.replies: OrderedDict[SlackTs, SlackMessage] = OrderedDict()
+        self.replies_tss: List[SlackTs] = []
+        self._replies = SlackMessageReplies(self)
         self.reply_history_filled = False
         self.thread_buffer: Optional[SlackThread] = None
         self._deleted = False
@@ -436,6 +445,10 @@ class SlackMessage:
     def latest_reply(self) -> Optional[SlackTs]:
         if "latest_reply" in self._message_json:
             return SlackTs(self._message_json["latest_reply"])
+
+    @property
+    def replies(self) -> Mapping[SlackTs, SlackMessage]:
+        return self._replies
 
     @property
     def is_bot_message(self) -> bool:
@@ -1362,3 +1375,22 @@ class SlackMessage:
                 attachments.append(attachment_texts)
 
         return [item for items in intersperse(attachments, ["\n"]) for item in items]
+
+
+class SlackMessageReplies(Mapping[SlackTs, SlackMessage]):
+    def __init__(self, parent: SlackMessage):
+        super().__init__()
+        self._parent = parent
+
+    def __getitem__(self, key: SlackTs) -> SlackMessage:
+        if key == self._parent.ts:
+            return self._parent
+        return self._parent.conversation.messages[key]
+
+    def __iter__(self) -> Generator[SlackTs, None, None]:
+        yield self._parent.ts
+        for ts in self._parent.replies_tss:
+            yield ts
+
+    def __len__(self) -> int:
+        return 1 + len(self._parent.replies_tss)
