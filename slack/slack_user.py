@@ -131,9 +131,6 @@ class SlackUser:
 
     def update_info_json(self, info_json: SlackUserInfo):
         self._info.update(info_json)  # pyright: ignore [reportArgumentType, reportCallIssue]
-        self._rendered_prefix = None
-        self._rendered_message = None
-        self._parsed_message = None
 
         for conversation in self.workspace.open_conversations.values():
             if conversation.im_user_id == self.id:
