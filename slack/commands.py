@@ -355,7 +355,7 @@ async def command_slack_query(buffer: str, args: List[str], options: Options):
     await create_conversation_for_users(slack_buffer.workspace, users)
 
 
-def get_conversation_from_args(buffer: str, args: List[str], options: Options):
+async def get_conversation_from_args(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
 
     workspace_name = options.get("workspace")
@@ -391,22 +391,24 @@ def get_conversation_from_args(buffer: str, args: List[str], options: Options):
         else:
             return
 
-    conversation_name = args[0].strip()
+    conversation_name = removeprefix(args[0].strip(), "#")
     all_conversations = get_resolved_futures(workspace.conversations.values())
     for conversation in all_conversations:
-        if (
-            conversation.name_with_prefix("short_name_without_padding")
-            == conversation_name
-            or conversation.name() == conversation_name
-        ):
+        if conversation.name() == conversation_name:
             return conversation
+
+    if workspace.api.edgeapi.is_available:
+        results = await workspace.api.edgeapi.fetch_channels_search(conversation_name)
+        for channel_info in results["results"]:
+            if channel_info["name"] == conversation_name:
+                return await workspace.conversations[channel_info["id"]]
 
     print_error(f'Conversation "{conversation_name}" not found')
 
 
 @weechat_command("")
 async def command_slack_join(buffer: str, args: List[str], options: Options):
-    conversation = get_conversation_from_args(buffer, args, options)
+    conversation = await get_conversation_from_args(buffer, args, options)
     if conversation is not None:
         await conversation.api.conversations_join(conversation.id)
         await conversation.open_buffer(switch=not options.get("noswitch"))
@@ -414,7 +416,7 @@ async def command_slack_join(buffer: str, args: List[str], options: Options):
 
 @weechat_command("")
 async def command_slack_part(buffer: str, args: List[str], options: Options):
-    conversation = get_conversation_from_args(buffer, args, options)
+    conversation = await get_conversation_from_args(buffer, args, options)
     if conversation is not None:
         await conversation.part()
 

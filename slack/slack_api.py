@@ -44,6 +44,7 @@ if TYPE_CHECKING:
         SlackUsersInfoSuccessResponse,
     )
     from slack_api.slack_users_prefs import SlackUsersPrefsGetResponse
+    from slack_edgeapi.slack_channels_search import SlackChannelsSearchResponse
     from slack_edgeapi.slack_usergroups_info import SlackEdgeUsergroupsInfoResponse
     from slack_edgeapi.slack_users_search import SlackUsersSearchResponse
     from typing_extensions import Literal, assert_never
@@ -108,6 +109,24 @@ class SlackEdgeApi(SlackApiCommon):
             "filter": "NOT deactivated",
         }
         response: SlackUsersSearchResponse = await self._fetch_edgeapi(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def fetch_channels_search(self, query: str):
+        method = "channels/search"
+        params: EdgeParams = {
+            "query": query,
+            "count": 25,
+            "fuzz": 1,
+            "uax29_tokenizer": False,
+            "filter": "xws",
+            "include_record_channels": True,
+            "check_membership": True,
+        }
+        response: SlackChannelsSearchResponse = await self._fetch_edgeapi(
+            method, params
+        )
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
         return response
