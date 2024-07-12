@@ -345,6 +345,15 @@ class SlackWorkspace:
         conversations_to_open = [
             c for c in conversations_if_should_open if c is not None
         ]
+
+        # Load the first 1000 chanels to be able to look them up by name, since
+        # we can't look up a channel id from channel name with OAuth tokens
+        first_channels = await self.api.fetch_conversations_list_public(limit=1000)
+        self.conversations.initialize_items(
+            [channel["id"] for channel in first_channels["channels"]],
+            {channel["id"]: channel for channel in first_channels["channels"]},
+        )
+
         return conversations_to_open
 
     async def _initialize_session(self) -> List[SlackConversation]:

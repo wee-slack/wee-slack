@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from slack_api.slack_conversations_history import SlackConversationsHistoryResponse
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
     from slack_api.slack_conversations_join import SlackConversationsJoinResponse
+    from slack_api.slack_conversations_list import SlackConversationsListPublicResponse
     from slack_api.slack_conversations_members import SlackConversationsMembersResponse
     from slack_api.slack_conversations_open import SlackConversationsOpenResponse
     from slack_api.slack_conversations_replies import SlackConversationsRepliesResponse
@@ -256,6 +257,23 @@ class SlackApi(SlackApiCommon):
         params: Params = {"channel": conversation.id}
         response: SlackConversationsMembersResponse = await self._fetch_list(
             method, "members", params, limit
+        )
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def fetch_conversations_list_public(
+        self,
+        exclude_archived: bool = True,
+        limit: Optional[int] = 1000,
+    ):
+        method = "conversations.list"
+        params: Params = {
+            "exclude_archived": exclude_archived,
+            "types": "public_channel",
+        }
+        response: SlackConversationsListPublicResponse = await self._fetch_list(
+            method, "chanels", params, limit
         )
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
