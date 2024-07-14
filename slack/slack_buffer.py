@@ -26,7 +26,7 @@ from slack.shared import (
     REACTION_CHANGE_REGEX_STRING,
     shared,
 )
-from slack.slack_message import SlackMessage, SlackTs, ts_from_tag
+from slack.slack_message import MessageContext, SlackMessage, SlackTs, ts_from_tag
 from slack.slack_user import Nick
 from slack.task import gather, run_async
 from slack.util import get_callback_name, htmlescape
@@ -201,7 +201,7 @@ class SlackBuffer(ABC):
 
     @property
     @abstractmethod
-    def context(self) -> Literal["conversation", "thread"]:
+    def context(self) -> MessageContext:
         raise NotImplementedError()
 
     @property
@@ -347,7 +347,7 @@ class SlackBuffer(ABC):
 
         rendered = await message.render(self.context)
         backlog = self.last_read is not None and message.ts <= self.last_read
-        tags = await message.tags(backlog)
+        tags = await message.tags(self.context, backlog)
         if message.ts in self.hotlist_tss:
             tags += ",notify_none"
         weechat.prnt_date_tags(self.buffer_pointer, message.ts.major, tags, rendered)

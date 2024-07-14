@@ -23,6 +23,7 @@ from slack.python_compatibility import removeprefix
 from slack.shared import shared
 from slack.slack_buffer import SlackBuffer
 from slack.slack_message import (
+    MessageContext,
     MessagePriority,
     PendingMessageItem,
     SlackMessage,
@@ -216,7 +217,7 @@ class SlackConversation(SlackBuffer):
         return self
 
     @property
-    def context(self) -> Literal["conversation", "thread"]:
+    def context(self) -> MessageContext:
         return "conversation"
 
     @property
@@ -445,9 +446,8 @@ class SlackConversation(SlackBuffer):
             for message_json in history["messages"]:
                 message = SlackMessage(self, message_json)
                 if message.ts > self.last_read and message.ts not in self.hotlist_tss:
-                    weechat.buffer_set(
-                        self.buffer_pointer, "hotlist", message.priority.value
-                    )
+                    priority = message.priority(self.context).value
+                    weechat.buffer_set(self.buffer_pointer, "hotlist", priority)
                     self.hotlist_tss.add(message.ts)
                 if (
                     self.display_thread_replies()
@@ -644,9 +644,8 @@ class SlackConversation(SlackBuffer):
             elif self.last_printed_ts is not None:
                 await self.print_message(message)
             elif self.buffer_pointer is not None:
-                weechat.buffer_set(
-                    self.buffer_pointer, "hotlist", message.priority.value
-                )
+                priority = message.priority(self.context).value
+                weechat.buffer_set(self.buffer_pointer, "hotlist", priority)
                 self.hotlist_tss.add(message.ts)
                 if not message.muted:
                     await self.fill_history()

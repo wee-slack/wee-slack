@@ -4,13 +4,11 @@ from itertools import chain
 from typing import TYPE_CHECKING, Dict, Generator, Mapping, Optional, Set, Tuple
 
 from slack.slack_buffer import SlackBuffer
-from slack.slack_message import SlackMessage, SlackTs
+from slack.slack_message import MessageContext, SlackMessage, SlackTs
 from slack.slack_user import Nick
 from slack.task import gather
 
 if TYPE_CHECKING:
-    from typing_extensions import Literal
-
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
 
@@ -30,7 +28,7 @@ class SlackThread(SlackBuffer):
         return self.parent.conversation
 
     @property
-    def context(self) -> Literal["conversation", "thread"]:
+    def context(self) -> MessageContext:
         return "thread"
 
     @property

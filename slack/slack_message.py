@@ -57,6 +57,10 @@ if TYPE_CHECKING:
     from slack.slack_thread import SlackThread
     from slack.slack_workspace import SlackWorkspace
 
+    MessageContext = Literal["conversation", "thread"]
+else:
+    MessageContext = str
+
 ts_tag_prefix = "slack_ts_"
 
 
@@ -481,51 +485,6 @@ class SlackMessage:
         return self.conversation.muted and not self.subscribed and not parent_subscribed
 
     @property
-    def priority(self) -> MessagePriority:
-        if self.muted and shared.config.look.muted_conversations_notify.value == "none":
-            return MessagePriority.NONE
-        elif self.should_highlight(
-            self.muted
-            and shared.config.look.muted_conversations_notify.value
-            == "personal_highlights"
-        ):
-            return MessagePriority.HIGHLIGHT
-        elif (
-            self.muted and shared.config.look.muted_conversations_notify.value != "all"
-        ):
-            return MessagePriority.NONE
-        elif self.subtype in [
-            "channel_join",
-            "group_join",
-            "channel_leave",
-            "group_leave",
-        ]:
-            return MessagePriority.LOW
-        elif self.conversation.buffer_type == "private":
-            return MessagePriority.PRIVATE
-        else:
-            return MessagePriority.MESSAGE
-
-    @property
-    def priority_notify_tag(self) -> Optional[str]:
-        priority = self.priority
-        if priority == MessagePriority.HIGHLIGHT:
-            return "notify_highlight"
-        elif priority == MessagePriority.PRIVATE:
-            return "notify_private"
-        elif priority == MessagePriority.MESSAGE:
-            return "notify_message"
-        elif priority == MessagePriority.LOW:
-            return None
-        elif priority == MessagePriority.NONE:
-            tags = ["notify_none"]
-            if self.should_highlight(False):
-                tags.append(shared.highlight_tag)
-            return ",".join(tags)
-        else:
-            assert_never(priority)
-
-    @property
     def text(self) -> str:
         return self._message_json["text"]
 
@@ -601,7 +560,56 @@ class SlackMessage:
 
         return False
 
-    async def tags(self, backlog: bool) -> str:
+    def priority(self, context: MessageContext) -> MessagePriority:
+        if (
+            context != "thread"
+            and self.muted
+            and shared.config.look.muted_conversations_notify.value == "none"
+        ):
+            return MessagePriority.NONE
+        elif self.should_highlight(
+            self.muted
+            and shared.config.look.muted_conversations_notify.value
+            == "personal_highlights"
+        ):
+            return MessagePriority.HIGHLIGHT
+        elif (
+            context != "thread"
+            and self.muted
+            and shared.config.look.muted_conversations_notify.value != "all"
+        ):
+            return MessagePriority.NONE
+        elif self.subtype in [
+            "channel_join",
+            "group_join",
+            "channel_leave",
+            "group_leave",
+        ]:
+            return MessagePriority.LOW
+        elif self.conversation.buffer_type == "private":
+            return MessagePriority.PRIVATE
+        else:
+            return MessagePriority.MESSAGE
+
+    def priority_notify_tag(self, context: MessageContext) -> Optional[str]:
+        priority = self.priority(context)
+        if priority == MessagePriority.HIGHLIGHT:
+            return "notify_highlight"
+        elif priority == MessagePriority.PRIVATE:
+            return "notify_private"
+        elif priority == MessagePriority.MESSAGE:
+            return "notify_message"
+        elif priority == MessagePriority.LOW:
+            return None
+        elif priority == MessagePriority.NONE:
+            tags = ["notify_none"]
+            if self.should_highlight(False):
+                tags.append(shared.highlight_tag)
+            return ",".join(tags)
+        else:
+            assert_never(priority)
+
+    async def tags(self, context: MessageContext, backlog: bool) -> str:
         nick = await self.nick()
         tags = [f"{ts_tag_prefix}{self.ts}", f"nick_{nick.raw_nick}"]
 
@@ -632,7 +640,7 @@ class SlackMessage:
                 log_tags = ["notify_none", "no_highlight", "log1"]
             else:
                 log_tags = ["log1"]
-                notify_tag = self.priority_notify_tag
+                notify_tag = self.priority_notify_tag(context)
                 if notify_tag:
                     log_tags.append(notify_tag)
 
@@ -645,7 +653,7 @@ class SlackMessage:
 
     async def render(
         self,
-        context: Literal["conversation", "thread"],
+        context: MessageContext,
     ) -> str:
         prefix_coro = self.render_prefix()
         message_coro = self.render_message(context)
@@ -817,7 +825,7 @@ class SlackMessage:
 
     async def render_message(
         self,
-        context: Literal["conversation", "thread"],
+        context: MessageContext,
         rerender: bool = False,
     ) -> str:
         text = await self._render_message(rerender=rerender)
@@ -931,7 +939,7 @@ class SlackMessage:
         else:
             return ""
 
-    def _create_thread_prefix(self, context: Literal["conversation", "thread"]) -> str:
+    def _create_thread_prefix(self, context: MessageContext) -> str:
         if not self.is_reply or self.thread_ts is None:
             return ""
         thread_hash = self.conversation.message_hashes[self.thread_ts]
