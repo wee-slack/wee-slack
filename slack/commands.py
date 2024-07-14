@@ -29,6 +29,7 @@ from slack.shared import EMOJI_CHAR_OR_NAME_REGEX_STRING, shared
 from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation
 from slack.slack_message import SlackTs, ts_from_tag
+from slack.slack_search_buffer import SlackSearchBuffer
 from slack.slack_thread import SlackThread
 from slack.slack_user import SlackUser
 from slack.slack_workspace import SlackWorkspace
@@ -90,7 +91,7 @@ class Command:
 def weechat_command(
     completion: str = "",
     min_args: int = 0,
-    split_all_args: bool = False,
+    max_split: Optional[int] = None,
     slack_buffer_required: bool = False,
 ) -> Callable[
     [InternalCommandCallback],
@@ -105,10 +106,16 @@ def weechat_command(
         @wraps(f)
         def wrapper(buffer: str, args: str):
             pos_args, options = parse_options(args)
-            maxsplit = 0 if split_all_args else min_args - 1
+            re_maxsplit = (
+                max_split
+                if max_split is not None
+                else -1
+                if min_args == 1
+                else min_args - 1
+            )
             split_args = (
-                re.split(r"\s+", pos_args, maxsplit)
-                if split_all_args or min_args > 1
+                re.split(r"\s+", pos_args, re_maxsplit)
+                if re_maxsplit >= 0
                 else [pos_args]
             )
             if min_args and not pos_args or len(split_args) < min_args:
@@ -185,7 +192,7 @@ async def workspace_connect(workspace: SlackWorkspace):
     await workspace.connect()
 
 
-@weechat_command("%(slack_workspaces)|-all", split_all_args=True)
+@weechat_command("%(slack_workspaces)|-all", max_split=0)
 async def command_slack_connect(buffer: str, args: List[str], options: Options):
     if options.get("all"):
         for workspace in shared.workspaces.values():
@@ -210,7 +217,7 @@ def workspace_disconnect(workspace: SlackWorkspace):
     workspace.disconnect()
 
 
-@weechat_command("%(slack_workspaces)|-all", split_all_args=True)
+@weechat_command("%(slack_workspaces)|-all", max_split=0)
 def command_slack_disconnect(buffer: str, args: List[str], options: Options):
     if options.get("all"):
         for workspace in shared.workspaces.values():
@@ -324,7 +331,7 @@ async def create_conversation_for_users(
     await conversation.open_buffer(switch=True)
 
 
-@weechat_command("%(nicks)", min_args=1, split_all_args=True)
+@weechat_command("%(nicks)", min_args=1, max_split=0)
 async def command_slack_query(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
     if slack_buffer is None:
@@ -492,6 +499,40 @@ async def command_slack_mute(buffer: str, args: List[str], options: Options):
     )
 
 
+@weechat_command("channels", max_split=1)
+async def command_slack_search(buffer: str, args: List[str], options: Options):
+    if (
+        args[0] == ""
+        and shared.search_buffer is not None
+        and buffer == shared.search_buffer.buffer_pointer
+    ):
+        if options.get("up"):
+            shared.search_buffer.selected_line -= 1
+        elif options.get("down"):
+            shared.search_buffer.selected_line += 1
+        elif options.get("join_channel"):
+            await shared.search_buffer.join_channel()
+        else:
+            print_error("No search action specified")
+    else:
+        slack_buffer = shared.buffers.get(buffer)
+        if slack_buffer is None:
+            return
+
+        if args[0] == "channels":
+            query = args[1] if len(args) > 1 else None
+            if shared.search_buffer is not None:
+                shared.search_buffer.switch_to_buffer()
+                if query is not None:
+                    await shared.search_buffer.search(query)
+            else:
+                shared.search_buffer = SlackSearchBuffer(
+                    slack_buffer.workspace, args[0], query
+                )
+        else:
+            print_error(f"Unknown search type: {args[0]}")
+
+
 def print_uncaught_error(error: UncaughtError, detailed: bool, options: Options):
     weechat.prnt("", f"  {error.id} ({error.time}): {error.exception}")
     if detailed:
@@ -506,9 +547,7 @@ def print_uncaught_error(error: UncaughtError, detailed: bool, options: Options)
             print_error("This error does not have any data")
 
 
-@weechat_command(
-    "tasks|buffer|open_buffer|replay_events|errors|error", split_all_args=True
-)
+@weechat_command("tasks|buffer|open_buffer|replay_events|errors|error", max_split=0)
 async def command_slack_debug(buffer: str, args: List[str], options: Options):
     # TODO: Add message info (message_json)
     if args[0] == "tasks":

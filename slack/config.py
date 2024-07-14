@@ -105,6 +105,13 @@ class SlackConfigSectionColor:
             WeeChatColor("red"),
         )
 
+        self.search_line_selected_bg = WeeChatOption(
+            self._section,
+            "search_line_selected_bg",
+            "background color for the selected line in search buffers",
+            WeeChatColor("24"),
+        )
+
         self.user_mention = WeeChatOption(
             self._section,
             "user_mention",
