@@ -6,6 +6,7 @@ from typing import (
     TYPE_CHECKING,
     Dict,
     Generator,
+    Iterable,
     List,
     Mapping,
     NoReturn,
@@ -65,6 +66,18 @@ def invalidate_nicklists():
     for workspace in shared.workspaces.values():
         for conversation in workspace.open_conversations.values():
             conversation.nicklist_needs_refresh = True
+
+
+async def create_conversation_for_users(
+    workspace: SlackWorkspace, user_ids: Iterable[str]
+):
+    conversation_open_response = await workspace.api.conversations_open(user_ids)
+    conversation_id = conversation_open_response["channel"]["id"]
+    workspace.conversations.initialize_items(
+        [conversation_id], {conversation_id: conversation_open_response["channel"]}
+    )
+    conversation = await workspace.conversations[conversation_id]
+    await conversation.open_buffer(switch=True)
 
 
 def sha1_hex(string: str) -> str:

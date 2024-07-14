@@ -12,7 +12,6 @@ from typing import (
     Callable,
     Coroutine,
     Dict,
-    Iterable,
     List,
     Optional,
     Tuple,
@@ -27,11 +26,10 @@ from slack.log import open_debug_buffer, print_error
 from slack.python_compatibility import format_exception, removeprefix
 from slack.shared import EMOJI_CHAR_OR_NAME_REGEX_STRING, shared
 from slack.slack_buffer import SlackBuffer
-from slack.slack_conversation import SlackConversation
+from slack.slack_conversation import SlackConversation, create_conversation_for_users
 from slack.slack_message import SlackTs, ts_from_tag
 from slack.slack_search_buffer import SlackSearchBuffer
 from slack.slack_thread import SlackThread
-from slack.slack_user import SlackUser
 from slack.slack_workspace import SlackWorkspace
 from slack.task import gather, run_async, sleep
 from slack.util import get_callback_name, get_resolved_futures, with_color
@@ -318,19 +316,6 @@ def command_slack_workspace_del(buffer: str, args: List[str], options: Options):
     )
 
 
-async def create_conversation_for_users(
-    workspace: SlackWorkspace, users: Iterable[SlackUser]
-):
-    user_ids = [user.id for user in users]
-    conversation_open_response = await workspace.api.conversations_open(user_ids)
-    conversation_id = conversation_open_response["channel"]["id"]
-    workspace.conversations.initialize_items(
-        [conversation_id], {conversation_id: conversation_open_response["channel"]}
-    )
-    conversation = await workspace.conversations[conversation_id]
-    await conversation.open_buffer(switch=True)
-
-
 @weechat_command("%(nicks)", min_args=1, max_split=0)
 async def command_slack_query(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
@@ -359,7 +344,8 @@ async def command_slack_query(buffer: str, args: List[str], options: Options):
                 await conversation.open_buffer(switch=True)
                 return
 
-    await create_conversation_for_users(slack_buffer.workspace, users)
+    user_ids = [user.id for user in users]
+    await create_conversation_for_users(slack_buffer.workspace, user_ids)
 
 
 async def get_conversation_from_args(buffer: str, args: List[str], options: Options):
@@ -499,34 +485,36 @@ async def command_slack_mute(buffer: str, args: List[str], options: Options):
     )
 
 
-@weechat_command("channels", max_split=1)
+@weechat_command("channels|users", max_split=1)
 async def command_slack_search(buffer: str, args: List[str], options: Options):
-    if (
-        args[0] == ""
-        and shared.search_buffer is not None
-        and buffer == shared.search_buffer.buffer_pointer
-    ):
-        if options.get("up"):
-            shared.search_buffer.selected_line -= 1
-        elif options.get("down"):
-            shared.search_buffer.selected_line += 1
-        elif options.get("join_channel"):
-            await shared.search_buffer.join_channel()
-        else:
-            print_error("No search action specified")
+    if args[0] == "":
+        search_buffer = next(
+            (x for x in shared.search_buffers.values() if x.buffer_pointer == buffer),
+            None,
+        )
+        if search_buffer is not None:
+            if options.get("up"):
+                search_buffer.selected_line -= 1
+            elif options.get("down"):
+                search_buffer.selected_line += 1
+            elif options.get("join_channel"):
+                await search_buffer.join_channel()
+            else:
+                print_error("No search action specified")
     else:
         slack_buffer = shared.buffers.get(buffer)
         if slack_buffer is None:
             return
 
-        if args[0] == "channels":
+        if args[0] == "channels" or args[0] == "users":
+            search_buffer = shared.search_buffers.get(args[0])
             query = args[1] if len(args) > 1 else None
-            if shared.search_buffer is not None:
-                shared.search_buffer.switch_to_buffer()
+            if search_buffer is not None:
+                search_buffer.switch_to_buffer()
                 if query is not None:
-                    await shared.search_buffer.search(query)
+                    await search_buffer.search(query)
             else:
-                shared.search_buffer = SlackSearchBuffer(
+                shared.search_buffers[args[0]] = SlackSearchBuffer(
                     slack_buffer.workspace, args[0], query
                 )
         else:

@@ -6,15 +6,19 @@ from typing import TYPE_CHECKING, List, Optional
 import weechat
 
 from slack.shared import shared
+from slack.slack_conversation import create_conversation_for_users
+from slack.slack_emoji import get_emoji
+from slack.slack_user import name_from_user_info
 from slack.slack_workspace import SlackWorkspace
 from slack.task import run_async
 from slack.util import get_callback_name, with_color
 
 if TYPE_CHECKING:
     from slack_api.slack_conversations_info import SlackConversationsInfoPublic
+    from slack_api.slack_users_info import SlackUserInfo
     from typing_extensions import Literal, assert_never
 
-    SearchType = Literal["channels"]
+    SearchType = Literal["channels", "users"]
 
 
 @dataclass
@@ -36,7 +40,7 @@ class SlackSearchBuffer:
         self._lines: List[BufferLine] = []
         self._selected_line = 0
 
-        buffer_name = f"{shared.SCRIPT_NAME}.search"
+        buffer_name = f"{shared.SCRIPT_NAME}.search.{search_type}"
         buffer_props = {
             "type": "free",
             "display": "1",
@@ -109,20 +113,47 @@ class SlackSearchBuffer:
         description = f" - Description: {purpose}" if purpose else ""
         return f"{name}{joined}{description}"
 
+    def format_user(self, user_info: SlackUserInfo) -> str:
+        name = name_from_user_info(self.workspace, user_info)
+        real_name = user_info["profile"].get("real_name", "")
+        real_name_str = f" - {real_name}" if real_name else ""
+
+        title = user_info["profile"].get("title", "")
+        title_str = f" - Title: {title}" if title else ""
+
+        status_emoji_name = user_info["profile"].get("status_emoji", "")
+        status_emoji = (
+            get_emoji(status_emoji_name.strip(":")) if status_emoji_name else ""
+        )
+        status_text = user_info["profile"].get("status_text", "") or ""
+        status = f"{status_emoji} {status_text}".strip()
+        status_str = f" - Status: {status}" if status else ""
+
+        return f"{name}{real_name_str}{title_str}{status_str}"
+
     async def search(self, query: str):
         weechat.buffer_clear(self.buffer_pointer)
         self._selected_line = 0
         weechat.prnt_y(self.buffer_pointer, 0, f'Searching for "{query}"...')
-        results = await self.workspace.api.edgeapi.fetch_channels_search(query)
 
-        self._lines = [
-            BufferLine(
-                "channels",
-                self.format_channel(channel, results.get("member_channels", [])),
-                channel["id"],
-            )
-            for channel in results["results"]
-        ]
+        if self.search_type == "channels":
+            results = await self.workspace.api.edgeapi.fetch_channels_search(query)
+            self._lines = [
+                BufferLine(
+                    "channels",
+                    self.format_channel(channel, results.get("member_channels", [])),
+                    channel["id"],
+                )
+                for channel in results["results"]
+            ]
+        elif self.search_type == "users":
+            results = await self.workspace.api.edgeapi.fetch_users_search(query)
+            self._lines = [
+                BufferLine("users", self.format_user(user), user["id"])
+                for user in results["results"]
+            ]
+        else:
+            assert_never(self.search_type)
 
         if not self._lines:
             weechat.prnt_y(self.buffer_pointer, 0, "No results found.")
@@ -137,6 +168,9 @@ class SlackSearchBuffer:
             conversation = await self.workspace.conversations[channel_id]
             await conversation.api.conversations_join(conversation.id)
             await conversation.open_buffer(switch=True)
+        elif self.search_type == "users":
+            user_ids = [self._lines[self.selected_line].content_id]
+            await create_conversation_for_users(self.workspace, user_ids)
         else:
             assert_never(self.search_type)
 
@@ -145,5 +179,5 @@ class SlackSearchBuffer:
         return weechat.WEECHAT_RC_OK
 
     def _buffer_close_cb(self, data: str, buffer: str) -> int:
-        shared.search_buffer = None
+        del shared.search_buffers[self.search_type]
         return weechat.WEECHAT_RC_OK
