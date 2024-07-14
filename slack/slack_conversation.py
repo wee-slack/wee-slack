@@ -452,7 +452,7 @@ class SlackConversation(SlackBuffer):
                 if (
                     self.display_thread_replies()
                     and (
-                        not self.muted
+                        not message.muted
                         or shared.config.look.muted_conversations_notify.value == "all"
                     )
                     and message.latest_reply
@@ -625,19 +625,6 @@ class SlackConversation(SlackBuffer):
         # TODO: Remove old messages
         self._add_or_update_message(message)
 
-        if self.should_display_message(message):
-            if self.is_loading:
-                self.history_pending_messages.append(message)
-            elif self.last_printed_ts is not None:
-                await self.print_message(message)
-            elif self.buffer_pointer is not None:
-                weechat.buffer_set(
-                    self.buffer_pointer, "hotlist", message.priority.value
-                )
-                self.hotlist_tss.add(message.ts)
-                if not self.muted:
-                    await self.fill_history()
-
         parent_message = message.parent_message
         if parent_message:
             if message.ts not in parent_message.replies_tss:
@@ -650,6 +637,19 @@ class SlackConversation(SlackBuffer):
                     await thread_buffer.print_message(message)
         elif message.thread_ts is not None:
             await self.fetch_replies(message.thread_ts)
+
+        if self.should_display_message(message):
+            if self.is_loading:
+                self.history_pending_messages.append(message)
+            elif self.last_printed_ts is not None:
+                await self.print_message(message)
+            elif self.buffer_pointer is not None:
+                weechat.buffer_set(
+                    self.buffer_pointer, "hotlist", message.priority.value
+                )
+                self.hotlist_tss.add(message.ts)
+                if not message.muted:
+                    await self.fill_history()
 
         if message.sender_user_id and message.sender_bot_id is None:
             user = await self.workspace.users[message.sender_user_id]

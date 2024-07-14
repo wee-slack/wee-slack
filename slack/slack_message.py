@@ -474,21 +474,24 @@ class SlackMessage:
         return self._message_json.get("reactions", [])
 
     @property
+    def muted(self) -> bool:
+        parent_subscribed = (
+            self.parent_message.subscribed if self.parent_message else False
+        )
+        return self.conversation.muted and not self.subscribed and not parent_subscribed
+
+    @property
     def priority(self) -> MessagePriority:
-        if (
-            self.conversation.muted
-            and shared.config.look.muted_conversations_notify.value == "none"
-        ):
+        if self.muted and shared.config.look.muted_conversations_notify.value == "none":
             return MessagePriority.NONE
         elif self.should_highlight(
-            self.conversation.muted
+            self.muted
             and shared.config.look.muted_conversations_notify.value
             == "personal_highlights"
         ):
             return MessagePriority.HIGHLIGHT
         elif (
-            self.conversation.muted
-            and shared.config.look.muted_conversations_notify.value != "all"
+            self.muted and shared.config.look.muted_conversations_notify.value != "all"
         ):
             return MessagePriority.NONE
         elif self.subtype in [
