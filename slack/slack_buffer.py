@@ -151,6 +151,7 @@ def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
 class SlackBuffer(ABC):
     def __init__(self):
         self._typing_self_last_sent = 0
+        self._should_update_server_on_buffer_close = None
         self.buffer_pointer: Optional[str] = None
         self.is_loading = False
         self.history_pending_messages: List[SlackMessage] = []
@@ -537,11 +538,13 @@ class SlackBuffer(ABC):
         return weechat.WEECHAT_RC_OK
 
     def _buffer_close_cb(self, data: str, buffer: str) -> int:
-        run_async(
-            self._buffer_close(
-                update_server=shared.config.look.leave_channel_on_buffer_close.value
-            )
+        update_server = (
+            self._should_update_server_on_buffer_close
+            if self._should_update_server_on_buffer_close is not None
+            else shared.config.look.leave_channel_on_buffer_close.value
         )
+        run_async(self._buffer_close(update_server=update_server))
+        self._should_update_server_on_buffer_close = None
         return weechat.WEECHAT_RC_OK
 
     async def _buffer_close(
@@ -549,6 +552,8 @@ class SlackBuffer(ABC):
     ):
         if shared.script_is_unloading:
             return
+
+        self._should_update_server_on_buffer_close = update_server
 
         if self.buffer_pointer in shared.buffers:
             del shared.buffers[self.buffer_pointer]
