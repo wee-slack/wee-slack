@@ -38,6 +38,7 @@ class SlackSearchBuffer:
     ):
         self.workspace = workspace
         self.search_type: SearchType = search_type
+        self._query = query or ""
         self._lines: List[BufferLine] = []
         self._marked_lines: Set[int] = set()
         self._selected_line = 0
@@ -61,7 +62,7 @@ class SlackSearchBuffer:
             self._buffer_close_cb,
         )
 
-        run_async(self.search(query or ""))
+        run_async(self.search())
 
     @property
     def selected_line(self) -> int:
@@ -78,6 +79,15 @@ class SlackSearchBuffer:
             self._selected_line = value
         self.print(old_line)
         self.print(self._selected_line)
+
+    def update_title(self, searching: bool = False):
+        matches = (
+            "Searching"
+            if searching
+            else f"First {len(self._lines)} matching {self.search_type}"
+        )
+        title = f"{matches} | Filter: {self._query or '*'} | Key(input): ctrl+j=join channel, (q)=close buffer"
+        weechat.buffer_set(self.buffer_pointer, "title", title)
 
     def switch_to_buffer(self):
         weechat.buffer_set(self.buffer_pointer, "display", "1")
@@ -146,15 +156,22 @@ class SlackSearchBuffer:
 
         return f"{name}{real_name_str}{title_str}{status_str}"
 
-    async def search(self, query: str):
+    async def search(self, query: Optional[str] = None):
+        if query is not None:
+            self._query = query
+
+        self.update_title(searching=True)
+
         marked_lines = [self._lines[line] for line in self._marked_lines]
         marked_lines_ids = {line.content_id for line in marked_lines}
         weechat.buffer_clear(self.buffer_pointer)
         self._selected_line = 0
-        weechat.prnt_y(self.buffer_pointer, 0, f'Searching for "{query}"...')
+        weechat.prnt_y(self.buffer_pointer, 0, f'Searching for "{self._query}"...')
 
         if self.search_type == "channels":
-            results = await self.workspace.api.edgeapi.fetch_channels_search(query)
+            results = await self.workspace.api.edgeapi.fetch_channels_search(
+                self._query
+            )
             self._lines = marked_lines + [
                 BufferLine(
                     "channels",
@@ -165,7 +182,7 @@ class SlackSearchBuffer:
                 if channel["id"] not in marked_lines_ids
             ]
         elif self.search_type == "users":
-            results = await self.workspace.api.edgeapi.fetch_users_search(query)
+            results = await self.workspace.api.edgeapi.fetch_users_search(self._query)
             self._lines = marked_lines + [
                 BufferLine("users", self.format_user(user), user["id"])
                 for user in results["results"]
@@ -174,6 +191,8 @@ class SlackSearchBuffer:
         else:
             assert_never(self.search_type)
         self._marked_lines = set(range(len(marked_lines)))
+
+        self.update_title()
 
         if not self._lines:
             weechat.prnt_y(self.buffer_pointer, 0, "No results found.")
