@@ -199,6 +199,10 @@ class SlackSearchBuffer:
             assert_never(self.search_type)
 
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
+        if input_data == "q":
+            weechat.buffer_close(buffer)
+            return weechat.WEECHAT_RC_OK
+
         query = "" if input_data == "*" else input_data
         run_async(self.search(query))
         return weechat.WEECHAT_RC_OK
