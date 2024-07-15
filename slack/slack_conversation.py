@@ -343,7 +343,8 @@ class SlackConversation(SlackMessageBuffer):
         topic = unhtmlescape(self._topic["value"])
         if self._im_user:
             status = f"{self._im_user.status_emoji} {self._im_user.status_text}".strip()
-            return " | ".join(part for part in [status, topic] if part)
+            parts = [self._im_user.real_name, status, topic]
+            return " | ".join(part for part in parts if part)
         return topic
 
     def set_topic(self, title: str):
