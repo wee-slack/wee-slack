@@ -126,6 +126,12 @@ class SlackUser:
         return get_emoji(status_emoji.strip(":"))
 
     @property
+    def real_name(self) -> str:
+        return self._info["profile"].get("real_name") or name_from_user_info(
+            self.workspace, self._info
+        )
+
+    @property
     def nick(self) -> Nick:
         nick = name_from_user_info(self.workspace, self._info)
         return get_user_nick(nick, self.is_external, self.is_self)
