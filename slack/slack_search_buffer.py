@@ -48,7 +48,7 @@ class SlackSearchBuffer:
             "display": "1",
             "key_bind_up": "/slack search -up",
             "key_bind_down": "/slack search -down",
-            "key_bind_meta-j": "/slack search -join_channel",
+            "key_bind_ctrl-j": "/slack search -join_channel",
             "key_bind_meta-comma": "/slack search -mark",
             "key_bind_shift-up": "/slack search -up; /slack search -mark",
             "key_bind_shift-down": "/slack search -mark; /slack search -down",
