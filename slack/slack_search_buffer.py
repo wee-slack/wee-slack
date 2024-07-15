@@ -61,8 +61,7 @@ class SlackSearchBuffer:
             self._buffer_close_cb,
         )
 
-        if query is not None:
-            run_async(self.search(query))
+        run_async(self.search(query or ""))
 
     @property
     def selected_line(self) -> int:
