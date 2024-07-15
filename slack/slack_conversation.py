@@ -22,7 +22,6 @@ import weechat
 from slack.error import SlackApiError, SlackError
 from slack.python_compatibility import removeprefix
 from slack.shared import shared
-from slack.slack_buffer import SlackBuffer
 from slack.slack_message import (
     MessageContext,
     MessagePriority,
@@ -30,6 +29,7 @@ from slack.slack_message import (
     SlackMessage,
     SlackTs,
 )
+from slack.slack_message_buffer import SlackMessageBuffer
 from slack.slack_thread import SlackThread
 from slack.slack_user import Nick, SlackUser
 from slack.task import Task, gather, run_async
@@ -147,7 +147,7 @@ class SlackConversationMessageHashes(Dict[SlackTs, str]):
         return self._inverse_map.get(hash_without_prefix)
 
 
-class SlackConversation(SlackBuffer):
+class SlackConversation(SlackMessageBuffer):
     async def __new__(
         cls,
         workspace: SlackWorkspace,

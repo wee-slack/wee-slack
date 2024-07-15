@@ -3,8 +3,8 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING, Dict, Generator, Mapping, Optional, Set, Tuple
 
-from slack.slack_buffer import SlackBuffer
 from slack.slack_message import MessageContext, SlackMessage, SlackTs
+from slack.slack_message_buffer import SlackMessageBuffer
 from slack.slack_user import Nick
 from slack.task import gather
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from slack.slack_workspace import SlackWorkspace
 
 
-class SlackThread(SlackBuffer):
+class SlackThread(SlackMessageBuffer):
     def __init__(self, parent: SlackMessage) -> None:
         super().__init__()
         self.parent = parent

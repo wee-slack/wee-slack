@@ -148,7 +148,7 @@ def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
     return True
 
 
-class SlackBuffer(ABC):
+class SlackMessageBuffer(ABC):
     def __init__(self):
         self._typing_self_last_sent = 0
         self._should_update_server_on_buffer_close = None

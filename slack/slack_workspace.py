@@ -37,9 +37,9 @@ from slack.log import DebugMessageType, LogLevel, log, print_error
 from slack.proxy import Proxy
 from slack.shared import shared
 from slack.slack_api import SlackApi
-from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation
 from slack.slack_message import SlackMessage, SlackTs
+from slack.slack_message_buffer import SlackMessageBuffer
 from slack.slack_thread import SlackThread
 from slack.slack_user import SlackBot, SlackUser, SlackUsergroup
 from slack.task import Future, Task, create_task, gather, run_async, sleep
@@ -538,7 +538,7 @@ class SlackWorkspace:
             *(
                 slack_buffer.set_hotlist()
                 for slack_buffer in shared.buffers.values()
-                if isinstance(slack_buffer, SlackBuffer)
+                if isinstance(slack_buffer, SlackMessageBuffer)
             )
         )
 
@@ -847,7 +847,7 @@ class SlackWorkspace:
             print("lost connection on ping, reconnecting")
             run_async(self.reconnect())
 
-    def send_typing(self, buffer: SlackBuffer):
+    def send_typing(self, buffer: SlackMessageBuffer):
         if not self.is_connected:
             raise SlackError(self, "Can't send typing when not connected")
         if self._ws is None:
@@ -900,7 +900,10 @@ class SlackWorkspace:
 
         conversations = list(shared.buffers.values())
         for conversation in conversations:
-            if isinstance(conversation, SlackBuffer) and conversation.workspace == self:
+            if (
+                isinstance(conversation, SlackMessageBuffer)
+                and conversation.workspace == self
+            ):
                 await conversation.close_buffer()
 
         if self.buffer_pointer in shared.buffers:

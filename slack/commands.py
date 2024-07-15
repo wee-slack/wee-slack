@@ -25,9 +25,9 @@ from slack.error import SlackError, SlackRtmError, UncaughtError
 from slack.log import open_debug_buffer, print_error
 from slack.python_compatibility import format_exception, removeprefix
 from slack.shared import EMOJI_CHAR_OR_NAME_REGEX_STRING, shared
-from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation, create_conversation_for_users
 from slack.slack_message import SlackTs, ts_from_tag
+from slack.slack_message_buffer import SlackMessageBuffer
 from slack.slack_search_buffer import SlackSearchBuffer
 from slack.slack_thread import SlackThread
 from slack.slack_workspace import SlackWorkspace
@@ -236,7 +236,7 @@ def command_slack_disconnect(buffer: str, args: List[str], options: Options):
 @weechat_command()
 async def command_slack_rehistory(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
-    if isinstance(slack_buffer, SlackBuffer):
+    if isinstance(slack_buffer, SlackMessageBuffer):
         await slack_buffer.rerender_history()
 
 
@@ -624,7 +624,7 @@ async def command_slack_status(buffer: str, args: List[str], options: Options):
 
 
 def _get_conversation_from_buffer(
-    slack_buffer: Union[SlackWorkspace, SlackBuffer],
+    slack_buffer: Union[SlackWorkspace, SlackMessageBuffer],
 ) -> Optional[SlackConversation]:
     if isinstance(slack_buffer, SlackConversation):
         return slack_buffer
@@ -634,7 +634,7 @@ def _get_conversation_from_buffer(
 
 
 def _get_linkarchive_url(
-    slack_buffer: Union[SlackWorkspace, SlackBuffer],
+    slack_buffer: Union[SlackWorkspace, SlackMessageBuffer],
     message_ts: Optional[SlackTs],
 ) -> str:
     url = f"https://{slack_buffer.workspace.domain}.slack.com/"
@@ -660,7 +660,7 @@ def command_slack_linkarchive(buffer: str, args: List[str], options: Options):
     if slack_buffer is None:
         return
 
-    if isinstance(slack_buffer, SlackBuffer) and args[0]:
+    if isinstance(slack_buffer, SlackMessageBuffer) and args[0]:
         ts = slack_buffer.ts_from_hash_or_index(args[0])
         if ts is None:
             print_message_not_found_error(args[0])
@@ -706,7 +706,7 @@ def command_cb(data: str, buffer: str, args: str) -> int:
     return weechat.WEECHAT_RC_OK
 
 
-async def mark_read(slack_buffer: SlackBuffer):
+async def mark_read(slack_buffer: SlackMessageBuffer):
     # Sleep so the read marker is updated before we run slack_buffer.mark_read
     await sleep(1)
     await slack_buffer.mark_read()
@@ -714,7 +714,7 @@ async def mark_read(slack_buffer: SlackBuffer):
 
 def buffer_set_unread_cb(data: str, buffer: str, command: str) -> int:
     slack_buffer = shared.buffers.get(buffer)
-    if isinstance(slack_buffer, SlackBuffer):
+    if isinstance(slack_buffer, SlackMessageBuffer):
         run_async(mark_read(slack_buffer))
     return weechat.WEECHAT_RC_OK
 
@@ -730,7 +730,7 @@ def focus_event_cb(data: str, signal: str, hashtable: Dict[str, str]) -> int:
 
     buffer_pointer = hashtable["_buffer"]
     slack_buffer = shared.buffers.get(buffer_pointer)
-    if not isinstance(slack_buffer, SlackBuffer):
+    if not isinstance(slack_buffer, SlackMessageBuffer):
         return weechat.WEECHAT_RC_OK
 
     conversation = _get_conversation_from_buffer(slack_buffer)
