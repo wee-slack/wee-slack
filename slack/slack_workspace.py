@@ -472,6 +472,7 @@ class SlackWorkspace:
                 channel["id"]
                 for channel in user_boot["channels"]
                 if not channel["is_mpim"]
+                and not channel["is_archived"]
                 and (
                     self.team_is_org_level
                     or "internal_team_ids" not in channel
