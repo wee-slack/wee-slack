@@ -236,7 +236,7 @@ def command_slack_disconnect(buffer: str, args: List[str], options: Options):
 @weechat_command()
 async def command_slack_rehistory(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
-    if slack_buffer:
+    if isinstance(slack_buffer, SlackBuffer):
         await slack_buffer.rerender_history()
 
 
@@ -472,15 +472,16 @@ async def command_slack_mute(buffer: str, args: List[str], options: Options):
             conversation.name_with_prefix("short_name_without_padding")
             for conversation in conversations
         )
-        weechat.prnt("", f"Muted conversations: {', '.join(conversation_names)}")
+        slack_buffer.workspace.print(
+            f"Muted conversations: {', '.join(conversation_names)}"
+        )
         return
 
     muted_channels = set(slack_buffer.workspace.muted_channels)
     muted_channels ^= {slack_buffer.id}
     await slack_buffer.api.set_muted_channels(muted_channels)
     muted_str = "Muted" if slack_buffer.id in muted_channels else "Unmuted"
-    weechat.prnt(
-        "",
+    slack_buffer.workspace.print(
         f"{muted_str} channel {slack_buffer.name_with_prefix('short_name_without_padding')}",
     )
 
@@ -618,7 +619,7 @@ async def command_slack_status(buffer: str, args: List[str], options: Options):
 
 
 def _get_conversation_from_buffer(
-    slack_buffer: SlackBuffer,
+    slack_buffer: Union[SlackWorkspace, SlackBuffer],
 ) -> Optional[SlackConversation]:
     if isinstance(slack_buffer, SlackConversation):
         return slack_buffer
@@ -628,7 +629,8 @@ def _get_conversation_from_buffer(
 
 
 def _get_linkarchive_url(
-    slack_buffer: SlackBuffer, message_ts: Optional[SlackTs]
+    slack_buffer: Union[SlackWorkspace, SlackBuffer],
+    message_ts: Optional[SlackTs],
 ) -> str:
     url = f"https://{slack_buffer.workspace.domain}.slack.com/"
     conversation = _get_conversation_from_buffer(slack_buffer)
@@ -653,7 +655,7 @@ def command_slack_linkarchive(buffer: str, args: List[str], options: Options):
     if slack_buffer is None:
         return
 
-    if args[0]:
+    if isinstance(slack_buffer, SlackBuffer) and args[0]:
         ts = slack_buffer.ts_from_hash_or_index(args[0])
         if ts is None:
             print_message_not_found_error(args[0])
@@ -707,7 +709,7 @@ async def mark_read(slack_buffer: SlackBuffer):
 
 def buffer_set_unread_cb(data: str, buffer: str, command: str) -> int:
     slack_buffer = shared.buffers.get(buffer)
-    if slack_buffer:
+    if isinstance(slack_buffer, SlackBuffer):
         run_async(mark_read(slack_buffer))
     return weechat.WEECHAT_RC_OK
 
@@ -723,7 +725,7 @@ def focus_event_cb(data: str, signal: str, hashtable: Dict[str, str]) -> int:
 
     buffer_pointer = hashtable["_buffer"]
     slack_buffer = shared.buffers.get(buffer_pointer)
-    if slack_buffer is None:
+    if not isinstance(slack_buffer, SlackBuffer):
         return weechat.WEECHAT_RC_OK
 
     conversation = _get_conversation_from_buffer(slack_buffer)

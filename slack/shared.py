@@ -36,7 +36,7 @@ class Shared:
         self.weechat_callbacks: Dict[str, Callable[..., WeechatCallbackReturnType]]
         self.active_tasks: Dict[str, List[Task[object]]] = defaultdict(list)
         self.active_futures: Dict[str, Future[object]] = {}
-        self.buffers: Dict[str, SlackBuffer] = {}
+        self.buffers: Dict[str, Union[SlackWorkspace, SlackBuffer]] = {}
         self.search_buffers: Dict[SearchType, SlackSearchBuffer] = {}
         self.workspaces: Dict[str, SlackWorkspace] = {}
         self.current_buffer_pointer: str

@@ -380,6 +380,7 @@ class SlackConversation(SlackBuffer):
             "localvar_set_nick": self.workspace.my_user.nick.raw_nick,
             "localvar_set_channel": name,
             "localvar_set_server": self.workspace.name,
+            "localvar_set_workspace": self.workspace.name,
             "localvar_set_slack_muted": "1" if self.muted else "0",
             "localvar_set_completion_default_template": "${weechat.completion.default_template}|%(slack_channels)|%(slack_emojis)",
             **im_localvars,
@@ -794,6 +795,8 @@ class SlackConversation(SlackBuffer):
                 await self.api.conversations_close(self)
             else:
                 await self.api.conversations_leave(self)
+
+        self._nicklist = {}
 
 
 _T = TypeVar("_T", bound=SlackConversation)

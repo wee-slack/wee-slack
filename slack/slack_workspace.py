@@ -44,6 +44,7 @@ from slack.slack_thread import SlackThread
 from slack.slack_user import SlackBot, SlackUser, SlackUsergroup
 from slack.task import Future, Task, create_task, gather, run_async, sleep
 from slack.util import get_callback_name, get_cookies
+from slack.weechat_buffer import buffer_new
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfo
@@ -61,6 +62,23 @@ else:
     SlackUsergroupInfo = object
     SlackUserInfo = object
     SlackSubteam = object
+
+
+def workspace_get_buffer_to_merge_with() -> Optional[str]:
+    if shared.config.look.workspace_buffer.value == "merge_with_core":
+        return weechat.buffer_search_main()
+    elif shared.config.look.workspace_buffer.value == "merge_without_core":
+        workspace_buffers_by_number = {
+            weechat.buffer_get_integer(
+                workspace.buffer_pointer, "number"
+            ): workspace.buffer_pointer
+            for workspace in shared.workspaces.values()
+            if workspace.buffer_pointer is not None
+        }
+        if workspace_buffers_by_number:
+            lowest_number = min(workspace_buffers_by_number.keys())
+            return workspace_buffers_by_number[lowest_number]
+
 
 SlackItemClass = TypeVar(
     "SlackItemClass", SlackConversation, SlackUser, SlackBot, SlackUsergroup
@@ -210,8 +228,10 @@ class SlackUsergroups(
 class SlackWorkspace:
     def __init__(self, name: str):
         self.name = name
+        self.buffer_pointer: Optional[str] = None
         self.config = shared.config.create_workspace_config(self.name)
         self.api = SlackApi(self)
+        self._initial_connect = True
         self._is_connected = False
         self._connect_task: Optional[Task[bool]] = None
         self._ws: Optional[WebSocket] = None
@@ -219,6 +239,7 @@ class SlackWorkspace:
         self._last_ws_received_time = time.time()
         self._debug_ws_buffer_pointer: Optional[str] = None
         self._reconnect_url: Optional[str] = None
+        self.my_user: SlackUser
         self.conversations = SlackConversations(self)
         self.open_conversations: Dict[str, SlackConversation] = {}
         self.users = SlackUsers(self)
@@ -232,6 +253,10 @@ class SlackWorkspace:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name})"
+
+    @property
+    def workspace(self) -> SlackWorkspace:
+        return self
 
     @property
     def token_type(self) -> Literal["oauth", "session", "unknown"]:
@@ -259,10 +284,73 @@ class SlackWorkspace:
         self._is_connected = value
         weechat.bar_item_update("input_text")
 
+    def get_full_name(self) -> str:
+        return f"{shared.SCRIPT_NAME}.workspace.{self.name}"
+
+    def get_buffer_props(self) -> Dict[str, str]:
+        buffer_props = {
+            "short_name": self.name,
+            "title": "",
+            "input_multiline": "1",
+            "localvar_set_type": "server",
+            "localvar_set_slack_type": "workspace",
+            "localvar_set_channel": self.name,
+            "localvar_set_server": self.name,
+            "localvar_set_workspace": self.name,
+            "localvar_set_completion_default_template": "${weechat.completion.default_template}|%(slack_channels)|%(slack_emojis)",
+        }
+        if hasattr(self, "my_user"):
+            buffer_props["input_prompt"] = self.my_user.nick.raw_nick
+            buffer_props["localvar_set_nick"] = self.my_user.nick.raw_nick
+        return buffer_props
+
+    def open_buffer(self, switch: bool = False):
+        if self.buffer_pointer:
+            if switch:
+                weechat.buffer_set(self.buffer_pointer, "display", "1")
+            return
+
+        buffer_props = self.get_buffer_props()
+
+        if switch:
+            buffer_props["display"] = "1"
+
+        self.buffer_pointer = buffer_new(
+            self.get_full_name(),
+            buffer_props,
+            self._buffer_input_cb,
+            self._buffer_close_cb,
+        )
+
+        buffer_to_merge_with = workspace_get_buffer_to_merge_with()
+        if (
+            buffer_to_merge_with
+            and weechat.buffer_get_integer(self.buffer_pointer, "layout_number") < 1
+        ):
+            weechat.buffer_merge(self.buffer_pointer, buffer_to_merge_with)
+
+        shared.buffers[self.buffer_pointer] = self
+
+    def update_buffer_props(self) -> None:
+        if self.buffer_pointer is None:
+            return
+
+        buffer_props = self.get_buffer_props()
+        buffer_props["name"] = self.get_full_name()
+        for key, value in buffer_props.items():
+            weechat.buffer_set(self.buffer_pointer, key, value)
+
+    def print(self, message: str) -> bool:
+        if not self.buffer_pointer:
+            return False
+        weechat.prnt(self.buffer_pointer, message)
+        return True
+
     async def connect(self) -> None:
         if self.is_connected:
             return
-        weechat.prnt("", f"Connecting to workspace {self.name}")
+        self.open_buffer()
+        self.print(f"Connecting to workspace {self.name}")
         self._connect_task = create_task(self._connect())
         self.is_connected = await self._connect_task
         self._connect_task = None
@@ -434,6 +522,8 @@ class SlackWorkspace:
             self.disconnect()
             return
 
+        self.update_buffer_props()
+
         custom_emojis_response = await self.api.fetch_emoji_list()
         self.custom_emojis = custom_emojis_response["emoji"]
 
@@ -443,7 +533,11 @@ class SlackWorkspace:
             await conversation.open_buffer()
 
         await gather(
-            *(slack_buffer.set_hotlist() for slack_buffer in shared.buffers.values())
+            *(
+                slack_buffer.set_hotlist()
+                for slack_buffer in shared.buffers.values()
+                if isinstance(slack_buffer, SlackBuffer)
+            )
         )
 
     async def _conversation_if_should_open(self, info: SlackUsersConversations):
@@ -532,12 +626,13 @@ class SlackWorkspace:
 
         try:
             if data["type"] == "hello":
-                if not data["fast_reconnect"]:
+                if self._initial_connect or not data["fast_reconnect"]:
                     await self._initialize()
                 if self.is_connected:
-                    weechat.prnt("", f"Connected to workspace {self.name}")
-                if not data["fast_reconnect"]:
+                    self.print(f"Connected to workspace {self.name}")
+                if self._initial_connect or not data["fast_reconnect"]:
                     await self._load_unread_conversations()
+                self._initial_connect = False
                 return
             elif data["type"] == "error":
                 if data["error"]["code"] == 1:  # Socket URL has expired
@@ -770,7 +865,7 @@ class SlackWorkspace:
 
     def disconnect(self):
         self.is_connected = False
-        weechat.prnt("", f"Disconnected from workspace {self.name}")
+        self.print(f"Disconnected from workspace {self.name}")
 
         if self._connect_task:
             self._connect_task.cancel()
@@ -783,3 +878,31 @@ class SlackWorkspace:
         if self._ws:
             self._ws.close()
             self._ws = None
+
+    def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
+        self.print(
+            f"{weechat.prefix('error')}{shared.SCRIPT_NAME}: this buffer is not a channel!"
+        )
+        return weechat.WEECHAT_RC_OK
+
+    def _buffer_close_cb(self, data: str, buffer: str) -> int:
+        run_async(self._buffer_close())
+        return weechat.WEECHAT_RC_OK
+
+    async def _buffer_close(self):
+        if shared.script_is_unloading:
+            return
+
+        if self.is_connected:
+            self.disconnect()
+
+        conversations = list(shared.buffers.values())
+        for conversation in conversations:
+            if isinstance(conversation, SlackBuffer) and conversation.workspace == self:
+                await conversation.close_buffer()
+
+        if self.buffer_pointer in shared.buffers:
+            del shared.buffers[self.buffer_pointer]
+
+        self.buffer_pointer = None
+        self._initial_connect = True

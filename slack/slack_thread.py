@@ -60,6 +60,7 @@ class SlackThread(SlackBuffer):
             "localvar_set_nick": self.workspace.my_user.nick.raw_nick,
             "localvar_set_channel": name,
             "localvar_set_server": self.workspace.name,
+            "localvar_set_workspace": self.workspace.name,
             "localvar_set_completion_default_template": "${weechat.completion.default_template}|%(slack_channels)|%(slack_emojis)",
         }
 

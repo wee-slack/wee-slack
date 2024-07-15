@@ -7,7 +7,7 @@ import weechat
 from slack.log import print_error
 from slack.shared import shared
 from slack.slack_conversation import invalidate_nicklists, update_buffer_props
-from slack.slack_workspace import SlackWorkspace
+from slack.slack_workspace import SlackWorkspace, workspace_get_buffer_to_merge_with
 from slack.util import get_callback_name
 from slack.weechat_config import (
     WeeChatColor,
@@ -267,6 +267,18 @@ class SlackConfigSectionLook:
             "",
         )
 
+        self.workspace_buffer: WeeChatOption[
+            Literal["merge_with_core", "merge_without_core", "independent"]
+        ] = WeeChatOption(
+            self._section,
+            "workspace_buffer",
+            "merge workspace buffers; this option has no effect if a layout is saved and is conflicting with this value (see /help layout)",
+            "merge_with_core",
+            string_values=["merge_with_core", "merge_without_core", "independent"],
+            parent_option="irc.look.server_buffer",
+            callback_change=self.config_change_workspace_buffer_cb,
+        )
+
         self.typing_status_nicks = WeeChatOption(
             self._section,
             "typing_status_nicks",
@@ -296,6 +308,22 @@ class SlackConfigSectionLook:
         self, option: WeeChatOption[WeeChatOptionType], parent_changed: bool
     ):
         invalidate_nicklists()
+
+    def config_change_workspace_buffer_cb(
+        self, option: WeeChatOption[WeeChatOptionType], parent_changed: bool
+    ):
+        for workspace in shared.workspaces.values():
+            if workspace.buffer_pointer:
+                weechat.buffer_unmerge(workspace.buffer_pointer, -1)
+
+        buffer_to_merge_with = workspace_get_buffer_to_merge_with()
+        if buffer_to_merge_with:
+            for workspace in shared.workspaces.values():
+                if (
+                    workspace.buffer_pointer
+                    and workspace.buffer_pointer != buffer_to_merge_with
+                ):
+                    weechat.buffer_merge(workspace.buffer_pointer, buffer_to_merge_with)
 
     def config_change_nick_colors_cb(self, data: str, option: str, value: str):
         invalidate_nicklists()
