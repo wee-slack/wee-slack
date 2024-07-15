@@ -497,6 +497,8 @@ async def command_slack_search(buffer: str, args: List[str], options: Options):
                 search_buffer.selected_line -= 1
             elif options.get("down"):
                 search_buffer.selected_line += 1
+            elif options.get("mark"):
+                search_buffer.mark_line(search_buffer.selected_line)
             elif options.get("join_channel"):
                 await search_buffer.join_channel()
             else:
