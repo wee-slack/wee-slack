@@ -151,7 +151,6 @@ def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
 class SlackBuffer(ABC):
     def __init__(self):
         self._typing_self_last_sent = 0
-        # TODO: buffer_pointer may be accessed by buffer_switch before it's initialized
         self.buffer_pointer: Optional[str] = None
         self.is_loading = False
         self.history_pending_messages: List[SlackMessage] = []
