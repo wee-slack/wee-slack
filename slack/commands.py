@@ -490,7 +490,12 @@ async def command_slack_mute(buffer: str, args: List[str], options: Options):
 async def command_slack_search(buffer: str, args: List[str], options: Options):
     if args[0] == "":
         search_buffer = next(
-            (x for x in shared.search_buffers.values() if x.buffer_pointer == buffer),
+            (
+                search_buffer
+                for workspace in shared.workspaces.values()
+                for search_buffer in workspace.search_buffers.values()
+                if search_buffer.buffer_pointer == buffer
+            ),
             None,
         )
         if search_buffer is not None:
@@ -510,14 +515,14 @@ async def command_slack_search(buffer: str, args: List[str], options: Options):
             return
 
         if args[0] == "channels" or args[0] == "users":
-            search_buffer = shared.search_buffers.get(args[0])
+            search_buffer = slack_buffer.workspace.search_buffers.get(args[0])
             query = args[1] if len(args) > 1 else None
             if search_buffer is not None:
                 search_buffer.switch_to_buffer()
                 if query is not None:
                     await search_buffer.search(query)
             else:
-                shared.search_buffers[args[0]] = SlackSearchBuffer(
+                slack_buffer.workspace.search_buffers[args[0]] = SlackSearchBuffer(
                     slack_buffer.workspace, args[0], query
                 )
         else:

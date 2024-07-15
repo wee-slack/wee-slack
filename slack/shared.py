@@ -9,7 +9,6 @@ if TYPE_CHECKING:
     from slack.error import UncaughtError
     from slack.slack_buffer import SlackBuffer
     from slack.slack_emoji import Emoji
-    from slack.slack_search_buffer import SearchType, SlackSearchBuffer
     from slack.slack_workspace import SlackWorkspace
     from slack.task import Future, Task
 
@@ -37,7 +36,6 @@ class Shared:
         self.active_tasks: Dict[str, List[Task[object]]] = defaultdict(list)
         self.active_futures: Dict[str, Future[object]] = {}
         self.buffers: Dict[str, Union[SlackWorkspace, SlackBuffer]] = {}
-        self.search_buffers: Dict[SearchType, SlackSearchBuffer] = {}
         self.workspaces: Dict[str, SlackWorkspace] = {}
         self.current_buffer_pointer: str
         self.config: SlackConfig

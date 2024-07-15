@@ -42,7 +42,7 @@ class SlackSearchBuffer:
         self._marked_lines: Set[int] = set()
         self._selected_line = 0
 
-        buffer_name = f"{shared.SCRIPT_NAME}.search.{search_type}"
+        buffer_name = f"{shared.SCRIPT_NAME}.search.{self.workspace.name}.{search_type}"
         buffer_props = {
             "type": "free",
             "display": "1",
@@ -204,5 +204,5 @@ class SlackSearchBuffer:
         return weechat.WEECHAT_RC_OK
 
     def _buffer_close_cb(self, data: str, buffer: str) -> int:
-        del shared.search_buffers[self.search_type]
+        del self.workspace.search_buffers[self.search_type]
         return weechat.WEECHAT_RC_OK

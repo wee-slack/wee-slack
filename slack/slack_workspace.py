@@ -56,6 +56,7 @@ if TYPE_CHECKING:
     from typing_extensions import Literal
 
     from slack.slack_conversation import SlackConversationsInfoInternal
+    from slack.slack_search_buffer import SearchType, SlackSearchBuffer
 else:
     SlackBotInfo = object
     SlackConversationsInfoInternal = object
@@ -242,6 +243,7 @@ class SlackWorkspace:
         self.my_user: SlackUser
         self.conversations = SlackConversations(self)
         self.open_conversations: Dict[str, SlackConversation] = {}
+        self.search_buffers: Dict[SearchType, SlackSearchBuffer] = {}
         self.users = SlackUsers(self)
         self.bots = SlackBots(self)
         self.usergroups = SlackUsergroups(self)
