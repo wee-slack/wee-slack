@@ -11,7 +11,8 @@ from slack.slack_emoji import get_emoji
 from slack.slack_user import name_from_user_info
 from slack.slack_workspace import SlackWorkspace
 from slack.task import run_async
-from slack.util import get_callback_name, with_color
+from slack.util import with_color
+from slack.weechat_buffer import buffer_new
 
 if TYPE_CHECKING:
     from slack_api.slack_conversations_info import SlackConversationsInfoPublic
@@ -53,25 +54,12 @@ class SlackSearchBuffer:
             "key_bind_shift-down": "/slack search -mark; /slack search -down",
         }
 
-        if shared.weechat_version >= 0x03050000:
-            self.buffer_pointer = weechat.buffer_new_props(
-                buffer_name,
-                buffer_props,
-                get_callback_name(self._buffer_input_cb),
-                "",
-                get_callback_name(self._buffer_close_cb),
-                "",
-            )
-        else:
-            self.buffer_pointer = weechat.buffer_new(
-                buffer_name,
-                get_callback_name(self._buffer_input_cb),
-                "",
-                get_callback_name(self._buffer_close_cb),
-                "",
-            )
-            for prop_name, value in buffer_props.items():
-                weechat.buffer_set(self.buffer_pointer, prop_name, value)
+        self.buffer_pointer = buffer_new(
+            buffer_name,
+            buffer_props,
+            self._buffer_input_cb,
+            self._buffer_close_cb,
+        )
 
         if query is not None:
             run_async(self.search(query))

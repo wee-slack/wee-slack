@@ -29,7 +29,8 @@ from slack.shared import (
 from slack.slack_message import MessageContext, SlackMessage, SlackTs, ts_from_tag
 from slack.slack_user import Nick
 from slack.task import gather, run_async
-from slack.util import get_callback_name, htmlescape
+from slack.util import htmlescape
+from slack.weechat_buffer import buffer_new
 
 if TYPE_CHECKING:
     from typing_extensions import Literal, assert_never
@@ -247,25 +248,12 @@ class SlackBuffer(ABC):
         if switch:
             buffer_props["display"] = "1"
 
-        if shared.weechat_version >= 0x03050000:
-            self.buffer_pointer = weechat.buffer_new_props(
-                full_name,
-                buffer_props,
-                get_callback_name(self._buffer_input_cb),
-                "",
-                get_callback_name(self._buffer_close_cb),
-                "",
-            )
-        else:
-            self.buffer_pointer = weechat.buffer_new(
-                full_name,
-                get_callback_name(self._buffer_input_cb),
-                "",
-                get_callback_name(self._buffer_close_cb),
-                "",
-            )
-            for prop_name, value in buffer_props.items():
-                weechat.buffer_set(self.buffer_pointer, prop_name, value)
+        self.buffer_pointer = buffer_new(
+            full_name,
+            buffer_props,
+            self._buffer_input_cb,
+            self._buffer_close_cb,
+        )
 
         shared.buffers[self.buffer_pointer] = self
         if switch:
