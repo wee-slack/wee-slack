@@ -86,7 +86,7 @@ class SlackSearchBuffer:
             if searching
             else f"First {len(self._lines)} matching {self.search_type}"
         )
-        title = f"{matches} | Filter: {self._query or '*'} | Key(input): ctrl+j=join channel, (q)=close buffer"
+        title = f"{matches} | Filter: {self._query or '*'} | Key(input): ctrl+j=join channel, ($)=refresh, (q)=close buffer"
         weechat.buffer_set(self.buffer_pointer, "title", title)
 
     def switch_to_buffer(self):
@@ -220,6 +220,9 @@ class SlackSearchBuffer:
     def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
         if input_data == "q":
             weechat.buffer_close(buffer)
+            return weechat.WEECHAT_RC_OK
+        elif input_data == "$":
+            run_async(self.search())
             return weechat.WEECHAT_RC_OK
 
         query = "" if input_data == "*" else input_data
