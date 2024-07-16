@@ -190,11 +190,14 @@ class SlackConfigSectionLook:
             string_values=["prefix", "all", "none"],
         )
 
-        self.display_link_previews = WeeChatOption(
+        self.display_link_previews: WeeChatOption[
+            Literal["always", "only_internal", "never"]
+        ] = WeeChatOption(
             self._section,
             "display_link_previews",
-            "display previews of URLs in messages",
-            True,
+            "display previews of URLs in messages: always = always display, only_internal = only display for URLs to messages in the workspace, never = never display",
+            "always",
+            string_values=["always", "only_internal", "never"],
         )
 
         self.display_reaction_nicks = WeeChatOption(
