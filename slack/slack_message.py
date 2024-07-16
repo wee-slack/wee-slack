@@ -555,7 +555,10 @@ class SlackMessage:
                 if item.should_highlight(only_personal):
                     return True
             else:
-                if self.workspace.global_keywords_regex.search(item):
+                if (
+                    self.workspace.global_keywords_regex is not None
+                    and self.workspace.global_keywords_regex.search(item)
+                ):
                     return True
 
         return False

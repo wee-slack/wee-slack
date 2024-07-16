@@ -249,7 +249,7 @@ class SlackWorkspace:
         self.usergroups = SlackUsergroups(self)
         self.usergroups_member: Set[str] = set()
         self.muted_channels: Set[str] = set()
-        self.global_keywords_regex: re.Pattern[str]
+        self.global_keywords_regex: Optional[re.Pattern[str]] = None
         self.custom_emojis: Dict[str, str] = {}
         self.max_users_per_fetch_request = 512
 
@@ -400,9 +400,12 @@ class SlackWorkspace:
             all_notifications_prefs["global"]["global_keywords"].split(",")
         )
         regex_words = "|".join(re.escape(keyword) for keyword in global_keywords)
-        self.global_keywords_regex = re.compile(
-            rf"\b(?:{regex_words})\b", re.IGNORECASE
-        )
+        if regex_words:
+            self.global_keywords_regex = re.compile(
+                rf"\b(?:{regex_words})\b", re.IGNORECASE
+            )
+        else:
+            self.global_keywords_regex = None
 
     async def _initialize_oauth(self) -> List[SlackConversation]:
         prefs = await self.api.fetch_users_get_prefs(
