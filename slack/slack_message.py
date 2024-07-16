@@ -1233,9 +1233,8 @@ class SlackMessage:
             # $author: (if no $author on previous line) $text
             # $fields
 
-            if (
-                attachment.get("is_app_unfurl")
-                and not shared.config.look.display_link_previews.value
+            if not shared.config.look.display_link_previews.value and (
+                "original_url" in attachment or attachment.get("is_app_unfurl")
             ):
                 continue
 
