@@ -287,7 +287,7 @@ class SlackWorkspace:
         weechat.bar_item_update("input_text")
 
     def get_full_name(self) -> str:
-        return f"{shared.SCRIPT_NAME}.workspace.{self.name}"
+        return f"{shared.SCRIPT_NAME}.server.{self.name}"
 
     def get_buffer_props(self) -> Dict[str, str]:
         buffer_props = {
