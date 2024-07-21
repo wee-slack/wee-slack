@@ -441,6 +441,13 @@ async def command_slack_reply(buffer: str, args: List[str], options: Options):
         await slack_buffer.post_message(split_args[1], thread_ts, broadcast)
 
 
+@weechat_command("", min_args=1)
+async def command_slack_memessage(buffer: str, args: List[str], options: Options):
+    slack_buffer = shared.buffers.get(buffer)
+    if isinstance(slack_buffer, SlackMessageBuffer):
+        await slack_buffer.post_message(args[0], me_message=True)
+
+
 @weechat_command("away|active")
 async def command_slack_presence(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
