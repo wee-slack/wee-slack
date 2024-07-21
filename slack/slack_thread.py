@@ -141,5 +141,11 @@ class SlackThread(SlackMessageBuffer):
         text: str,
         thread_ts: Optional[SlackTs] = None,
         broadcast: bool = False,
+        me_message: bool = False,
     ):
-        await super().post_message(text, thread_ts or self.parent.ts, broadcast)
+        await super().post_message(
+            text=text,
+            thread_ts=thread_ts or self.parent.ts,
+            broadcast=broadcast,
+            me_message=me_message,
+        )
