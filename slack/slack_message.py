@@ -1,10 +1,18 @@
 from __future__ import annotations
 
 import re
-from collections import OrderedDict
 from datetime import date, datetime, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING, Generator, Iterable, List, Match, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Generator,
+    Iterable,
+    List,
+    Mapping,
+    Match,
+    Optional,
+    Union,
+)
 
 import weechat
 
@@ -48,6 +56,10 @@ if TYPE_CHECKING:
     from slack.slack_conversation import SlackConversation
     from slack.slack_thread import SlackThread
     from slack.slack_workspace import SlackWorkspace
+
+    MessageContext = Literal["conversation", "thread"]
+else:
+    MessageContext = str
 
 ts_tag_prefix = "slack_ts_"
 
@@ -343,8 +355,7 @@ class PendingMessageItem:
         elif self.item_type == "user":
             return self.item_id == self.message.workspace.my_user.id
         elif self.item_type == "usergroup":
-            # TODO
-            return False
+            return self.item_id in self.message.workspace.usergroups_member
         elif self.item_type == "broadcast":
             # TODO: figure out how to handle here broadcast
             return not only_personal
@@ -364,19 +375,18 @@ class SlackMessage:
         self._parsed_message: Optional[List[Union[str, PendingMessageItem]]] = None
         self.conversation = conversation
         self.ts = SlackTs(message_json["ts"])
-        self.replies: OrderedDict[SlackTs, SlackMessage] = OrderedDict()
+        self.replies_tss: List[SlackTs] = []
+        self._replies = SlackMessageReplies(self)
         self.reply_history_filled = False
         self.thread_buffer: Optional[SlackThread] = None
-        self._subscribed: bool = message_json.get("subscribed", False)
-        self._last_read = (
-            SlackTs(self._message_json["last_read"])
-            if "last_read" in self._message_json
-            else None
-        )
         self._deleted = False
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.conversation}, {self.ts})"
+
+    @property
+    def message_json(self) -> SlackMessageDict:
+        return self._message_json
 
     @property
     def workspace(self) -> SlackWorkspace:
@@ -418,12 +428,20 @@ class SlackMessage:
         return self.conversation.messages.get(self.thread_ts)
 
     @property
+    def subscribed(self) -> bool:
+        return self._message_json.get("subscribed", False)
+
+    @property
     def last_read(self) -> Optional[SlackTs]:
-        return self._last_read
+        return (
+            SlackTs(self._message_json["last_read"])
+            if "last_read" in self._message_json
+            else None
+        )
 
     @last_read.setter
     def last_read(self, value: SlackTs):
-        self._last_read = value
+        self._message_json["last_read"] = value  # pyright: ignore [reportGeneralTypeIssues]
         if self.thread_buffer:
             self.thread_buffer.set_unread_and_hotlist()
 
@@ -431,6 +449,10 @@ class SlackMessage:
     def latest_reply(self) -> Optional[SlackTs]:
         if "latest_reply" in self._message_json:
             return SlackTs(self._message_json["latest_reply"])
+
+    @property
+    def replies(self) -> Mapping[SlackTs, SlackMessage]:
+        return self._replies
 
     @property
     def is_bot_message(self) -> bool:
@@ -448,57 +470,19 @@ class SlackMessage:
         return self._message_json.get("bot_id")
 
     @property
+    def is_self_msg(self) -> bool:
+        return self.sender_user_id == self.workspace.my_user.id
+
+    @property
     def reactions(self) -> List[SlackMessageReaction]:
         return self._message_json.get("reactions", [])
 
     @property
-    def priority(self) -> MessagePriority:
-        if (
-            self.conversation.muted
-            and shared.config.look.muted_conversations_notify.value == "none"
-        ):
-            return MessagePriority.NONE
-        elif self.should_highlight(
-            self.conversation.muted
-            and shared.config.look.muted_conversations_notify.value
-            == "personal_highlights"
-        ):
-            return MessagePriority.HIGHLIGHT
-        elif (
-            self.conversation.muted
-            and shared.config.look.muted_conversations_notify.value != "all"
-        ):
-            return MessagePriority.NONE
-        elif self.subtype in [
-            "channel_join",
-            "group_join",
-            "channel_leave",
-            "group_leave",
-        ]:
-            return MessagePriority.LOW
-        elif self.conversation.buffer_type == "private":
-            return MessagePriority.PRIVATE
-        else:
-            return MessagePriority.MESSAGE
-
-    @property
-    def priority_notify_tag(self) -> Optional[str]:
-        priority = self.priority
-        if priority == MessagePriority.HIGHLIGHT:
-            return "notify_highlight"
-        elif priority == MessagePriority.PRIVATE:
-            return "notify_private"
-        elif priority == MessagePriority.MESSAGE:
-            return "notify_message"
-        elif priority == MessagePriority.LOW:
-            return None
-        elif priority == MessagePriority.NONE:
-            tags = ["notify_none"]
-            if self.should_highlight(False):
-                tags.append(shared.highlight_tag)
-            return ",".join(tags)
-        else:
-            assert_never(priority)
+    def muted(self) -> bool:
+        parent_subscribed = (
+            self.parent_message.subscribed if self.parent_message else False
+        )
+        return self.conversation.muted and not self.subscribed and not parent_subscribed
 
     @property
     def text(self) -> str:
@@ -529,7 +513,7 @@ class SlackMessage:
     async def update_subscribed(
         self, subscribed: bool, subscription: SlackThreadSubscription
     ):
-        self._subscribed = subscribed
+        self._message_json["subscribed"] = subscribed  # pyright: ignore [reportGeneralTypeIssues]
         self.last_read = SlackTs(subscription["last_read"])
         await self.conversation.rerender_message(self)
 
@@ -564,18 +548,71 @@ class SlackMessage:
         return reaction is not None and self.workspace.my_user.id in reaction["users"]
 
     def should_highlight(self, only_personal: bool) -> bool:
-        # TODO: Highlight words from user preferences
         parsed_message = self.parse_message_text()
 
         for item in parsed_message:
-            if isinstance(item, PendingMessageItem) and item.should_highlight(
-                only_personal
-            ):
-                return True
+            if isinstance(item, PendingMessageItem):
+                if item.should_highlight(only_personal):
+                    return True
+            else:
+                if (
+                    self.workspace.global_keywords_regex is not None
+                    and self.workspace.global_keywords_regex.search(item)
+                ):
+                    return True
 
         return False
 
-    async def tags(self, backlog: bool) -> str:
+    def priority(self, context: MessageContext) -> MessagePriority:
+        if (
+            context != "thread"
+            and self.muted
+            and shared.config.look.muted_conversations_notify.value == "none"
+        ):
+            return MessagePriority.NONE
+        elif self.should_highlight(
+            self.muted
+            and shared.config.look.muted_conversations_notify.value
+            == "personal_highlights"
+        ):
+            return MessagePriority.HIGHLIGHT
+        elif (
+            context != "thread"
+            and self.muted
+            and shared.config.look.muted_conversations_notify.value != "all"
+        ):
+            return MessagePriority.NONE
+        elif self.subtype in [
+            "channel_join",
+            "group_join",
+            "channel_leave",
+            "group_leave",
+        ]:
+            return MessagePriority.LOW
+        elif self.conversation.buffer_type == "private":
+            return MessagePriority.PRIVATE
+        else:
+            return MessagePriority.MESSAGE
+
+    def priority_notify_tag(self, context: MessageContext) -> Optional[str]:
+        priority = self.priority(context)
+        if priority == MessagePriority.HIGHLIGHT:
+            return "notify_highlight"
+        elif priority == MessagePriority.PRIVATE:
+            return "notify_private"
+        elif priority == MessagePriority.MESSAGE:
+            return "notify_message"
+        elif priority == MessagePriority.LOW:
+            return None
+        elif priority == MessagePriority.NONE:
+            tags = ["notify_none"]
+            if self.should_highlight(False):
+                tags.append(shared.highlight_tag)
+            return ",".join(tags)
+        else:
+            assert_never(priority)
+
+    async def tags(self, context: MessageContext, backlog: bool) -> str:
         nick = await self.nick()
         tags = [f"{ts_tag_prefix}{self.ts}", f"nick_{nick.raw_nick}"]
 
@@ -601,12 +638,12 @@ class SlackMessage:
                 if shared.weechat_version >= 0x04000000:
                     tags.append(f"prefix_nick_{nick.color}")
 
-            if self.sender_user_id == self.workspace.my_user.id:
+            if self.is_self_msg:
                 tags.append("self_msg")
                 log_tags = ["notify_none", "no_highlight", "log1"]
             else:
                 log_tags = ["log1"]
-                notify_tag = self.priority_notify_tag
+                notify_tag = self.priority_notify_tag(context)
                 if notify_tag:
                     log_tags.append(notify_tag)
 
@@ -619,7 +656,7 @@ class SlackMessage:
 
     async def render(
         self,
-        context: Literal["conversation", "thread"],
+        context: MessageContext,
     ) -> str:
         prefix_coro = self.render_prefix()
         message_coro = self.render_message(context)
@@ -628,6 +665,21 @@ class SlackMessage:
         return self._rendered
 
     async def nick(self) -> Nick:
+        if "user_profile" in self._message_json:
+            # TODO: is_external
+            nick = name_from_user_profile(
+                self.workspace,
+                self._message_json["user_profile"],
+                fallback_name=self._message_json["user_profile"]["name"],
+            )
+            return get_user_nick(nick, is_self=self.is_self_msg)
+        if "user" in self._message_json:
+            try:
+                user = await self.workspace.users[self._message_json["user"]]
+                return user.nick
+            except (SlackApiError, SlackError) as e:
+                if not is_not_found_error(e):
+                    raise e
         username = self._message_json.get("username")
         if username:
             return get_bot_nick(username)
@@ -637,21 +689,6 @@ class SlackMessage:
             try:
                 bot = await self.workspace.bots[self._message_json["bot_id"]]
                 return bot.nick
-            except (SlackApiError, SlackError) as e:
-                if not is_not_found_error(e):
-                    raise e
-        if "user_profile" in self._message_json:
-            # TODO: is_external
-            nick = name_from_user_profile(
-                self.workspace,
-                self._message_json["user_profile"],
-                fallback_name=self._message_json["user_profile"]["name"],
-            )
-            return get_user_nick(nick)
-        if "user" in self._message_json:
-            try:
-                user = await self.workspace.users[self._message_json["user"]]
-                return user.nick
             except (SlackApiError, SlackError) as e:
                 if not is_not_found_error(e):
                     raise e
@@ -791,7 +828,7 @@ class SlackMessage:
 
     async def render_message(
         self,
-        context: Literal["conversation", "thread"],
+        context: MessageContext,
         rerender: bool = False,
     ) -> str:
         text = await self._render_message(rerender=rerender)
@@ -905,7 +942,7 @@ class SlackMessage:
         else:
             return ""
 
-    def _create_thread_prefix(self, context: Literal["conversation", "thread"]) -> str:
+    def _create_thread_prefix(self, context: MessageContext) -> str:
         if not self.is_reply or self.thread_ts is None:
             return ""
         thread_hash = self.conversation.message_hashes[self.thread_ts]
@@ -929,7 +966,7 @@ class SlackMessage:
         if not reply_count:
             return ""
 
-        subscribed_text = " Subscribed" if self._subscribed else ""
+        subscribed_text = " Subscribed" if self.subscribed else ""
         text = f"[ Thread: {self.hash} Replies: {reply_count}{subscribed_text} ]"
         return " " + with_color(nick_color(str(self.hash)), text)
 
@@ -1197,8 +1234,15 @@ class SlackMessage:
             # $fields
 
             if (
-                attachment.get("is_app_unfurl")
-                and not shared.config.look.display_link_previews.value
+                shared.config.look.display_link_previews.value != "always"
+                and ("original_url" in attachment or attachment.get("is_app_unfurl"))
+                and not attachment.get("is_msg_unfurl")
+            ):
+                continue
+
+            if (
+                shared.config.look.display_link_previews.value == "never"
+                and attachment.get("is_msg_unfurl")
             ):
                 continue
 
@@ -1352,3 +1396,22 @@ class SlackMessage:
                 attachments.append(attachment_texts)
 
         return [item for items in intersperse(attachments, ["\n"]) for item in items]
+
+
+class SlackMessageReplies(Mapping[SlackTs, SlackMessage]):
+    def __init__(self, parent: SlackMessage):
+        super().__init__()
+        self._parent = parent
+
+    def __getitem__(self, key: SlackTs) -> SlackMessage:
+        if key == self._parent.ts:
+            return self._parent
+        return self._parent.conversation.messages[key]
+
+    def __iter__(self) -> Generator[SlackTs, None, None]:
+        yield self._parent.ts
+        for ts in self._parent.replies_tss:
+            yield ts
+
+    def __len__(self) -> int:
+        return 1 + len(self._parent.replies_tss)

@@ -754,9 +754,9 @@ class EventRouter(object):
                     j = json.loads(body)
 
                     try:
-                        j[
-                            "wee_slack_process_method"
-                        ] = request_metadata.request_normalized
+                        j["wee_slack_process_method"] = (
+                            request_metadata.request_normalized
+                        )
                         if self.recording:
                             self.record_event(
                                 j,
@@ -4116,6 +4116,16 @@ def process_pref_change(message_json, eventrouter, team, channel, metadata):
         team.set_muted_channels(message_json["value"])
     elif message_json["name"] == "highlight_words":
         team.set_highlight_words(message_json["value"])
+    elif message_json["name"] == "all_notifications_prefs":
+        new_prefs = json.loads(message_json["value"])
+        new_muted_channels = set(
+            channel_id
+            for channel_id, prefs in new_prefs["channels"].items()
+            if prefs["muted"]
+        )
+        team.set_muted_channels(",".join(new_muted_channels))
+        global_keywords = new_prefs["global"]["global_keywords"]
+        team.set_highlight_words(global_keywords)
     else:
         dbg("Preference change not implemented: {}\n".format(message_json["name"]))
 
@@ -4558,8 +4568,8 @@ def linkify_text(message, team, only_users=False, escape_characters=True):
             message
             # Replace IRC formatting chars with Slack formatting chars.
             .replace("\x02", "*")
-            .replace("\x1D", "_")
-            .replace("\x1F", config.map_underline_to)
+            .replace("\x1d", "_")
+            .replace("\x1f", config.map_underline_to)
             # Escape chars that have special meaning to Slack. Note that we do not
             # (and should not) perform full HTML entity-encoding here.
             # See https://api.slack.com/docs/message-formatting for details.

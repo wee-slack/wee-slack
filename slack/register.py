@@ -7,6 +7,7 @@ from slack.completions import register_completions
 from slack.config import SlackConfig
 from slack.shared import shared
 from slack.slack_emoji import load_standard_emojis
+from slack.slack_message_buffer import SlackMessageBuffer
 from slack.task import run_async, sleep
 from slack.util import get_callback_name, with_color
 
@@ -27,11 +28,11 @@ def signal_buffer_switch_cb(data: str, signal: str, buffer_pointer: str) -> int:
 
     if prev_buffer_pointer != buffer_pointer:
         prev_slack_buffer = shared.buffers.get(prev_buffer_pointer)
-        if prev_slack_buffer:
+        if isinstance(prev_slack_buffer, SlackMessageBuffer):
             run_async(prev_slack_buffer.mark_read())
 
     slack_buffer = shared.buffers.get(buffer_pointer)
-    if slack_buffer:
+    if isinstance(slack_buffer, SlackMessageBuffer):
         run_async(slack_buffer.buffer_switched_to())
 
     return weechat.WEECHAT_RC_OK
@@ -49,7 +50,10 @@ def input_text_cursor_moved_cb(data: str, signal: str, buffer_pointer: str) -> i
 
 def reset_completion_context_on_input(buffer_pointer: str):
     slack_buffer = shared.buffers.get(buffer_pointer)
-    if slack_buffer and slack_buffer.completion_context != "IN_PROGRESS_COMPLETION":
+    if (
+        isinstance(slack_buffer, SlackMessageBuffer)
+        and slack_buffer.completion_context != "IN_PROGRESS_COMPLETION"
+    ):
         slack_buffer.completion_context = "NO_COMPLETION"
 
 
@@ -73,7 +77,11 @@ def modifier_input_text_display_with_cursor_cb(
                 f"{with_color(shared.config.color.disconnected.value, 'disconnected')}"
                 f"{input_delim_end} "
             )
-        if slack_buffer.is_loading or slack_buffer.workspace.is_connecting:
+        if (
+            slack_buffer.workspace.is_connecting
+            or isinstance(slack_buffer, SlackMessageBuffer)
+            and slack_buffer.is_loading
+        ):
             text = "connecting" if slack_buffer.workspace.is_connecting else "loading"
             prefix += (
                 f"{input_delim_start}"
@@ -88,7 +96,7 @@ def typing_self_cb(data: str, signal: str, signal_data: str) -> int:
         return weechat.WEECHAT_RC_OK
 
     slack_buffer = shared.buffers.get(signal_data)
-    if slack_buffer:
+    if isinstance(slack_buffer, SlackMessageBuffer):
         slack_buffer.set_typing_self()
     return weechat.WEECHAT_RC_OK
 

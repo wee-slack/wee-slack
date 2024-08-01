@@ -7,7 +7,7 @@ import weechat
 from slack.log import print_error
 from slack.shared import shared
 from slack.slack_conversation import invalidate_nicklists, update_buffer_props
-from slack.slack_workspace import SlackWorkspace
+from slack.slack_workspace import SlackWorkspace, workspace_get_buffer_to_merge_with
 from slack.util import get_callback_name
 from slack.weechat_config import (
     WeeChatColor,
@@ -105,6 +105,34 @@ class SlackConfigSectionColor:
             WeeChatColor("red"),
         )
 
+        self.search_line_marked_bg = WeeChatOption(
+            self._section,
+            "search_line_marked_bg",
+            "background color for a marked line in search buffers",
+            WeeChatColor("17"),
+        )
+
+        self.search_line_selected_bg = WeeChatOption(
+            self._section,
+            "search_line_selected_bg",
+            "background color for the selected line in search buffers",
+            WeeChatColor("24"),
+        )
+
+        self.search_marked = WeeChatOption(
+            self._section,
+            "search_marked",
+            "color for mark indicator in search buffers",
+            WeeChatColor("brown"),
+        )
+
+        self.search_marked_selected = WeeChatOption(
+            self._section,
+            "search_marked_selected",
+            "color for mark indicator on the selected line in search buffers",
+            WeeChatColor("yellow"),
+        )
+
         self.user_mention = WeeChatOption(
             self._section,
             "user_mention",
@@ -162,11 +190,14 @@ class SlackConfigSectionLook:
             string_values=["prefix", "all", "none"],
         )
 
-        self.display_link_previews = WeeChatOption(
+        self.display_link_previews: WeeChatOption[
+            Literal["always", "only_internal", "never"]
+        ] = WeeChatOption(
             self._section,
             "display_link_previews",
-            "display previews of URLs in messages",
-            True,
+            "display previews of URLs in messages: always = always display, only_internal = only display for URLs to messages in the workspace, never = never display",
+            "always",
+            string_values=["always", "only_internal", "never"],
         )
 
         self.display_reaction_nicks = WeeChatOption(
@@ -215,14 +246,14 @@ class SlackConfigSectionLook:
             parent_option="irc.look.part_closes_buffer",
         )
 
-        self.render_emoji_as: WeeChatOption[
-            Literal["emoji", "name", "both"]
-        ] = WeeChatOption(
-            self._section,
-            "render_emoji_as",
-            "show emojis as: emoji = the emoji unicode character, name = the emoji name, both = both the emoji name and the emoji character",
-            "emoji",
-            string_values=["emoji", "name", "both"],
+        self.render_emoji_as: WeeChatOption[Literal["emoji", "name", "both"]] = (
+            WeeChatOption(
+                self._section,
+                "render_emoji_as",
+                "show emojis as: emoji = the emoji unicode character, name = the emoji name, both = both the emoji name and the emoji character",
+                "emoji",
+                string_values=["emoji", "name", "both"],
+            )
         )
 
         self.render_url_as = WeeChatOption(
@@ -237,6 +268,18 @@ class SlackConfigSectionLook:
             "replace_space_in_nicks_with",
             "",
             "",
+        )
+
+        self.workspace_buffer: WeeChatOption[
+            Literal["merge_with_core", "merge_without_core", "independent"]
+        ] = WeeChatOption(
+            self._section,
+            "workspace_buffer",
+            "merge workspace buffers; this option has no effect if a layout is saved and is conflicting with this value (see /help layout)",
+            "merge_with_core",
+            string_values=["merge_with_core", "merge_without_core", "independent"],
+            parent_option="irc.look.server_buffer",
+            callback_change=self.config_change_workspace_buffer_cb,
         )
 
         self.typing_status_nicks = WeeChatOption(
@@ -268,6 +311,22 @@ class SlackConfigSectionLook:
         self, option: WeeChatOption[WeeChatOptionType], parent_changed: bool
     ):
         invalidate_nicklists()
+
+    def config_change_workspace_buffer_cb(
+        self, option: WeeChatOption[WeeChatOptionType], parent_changed: bool
+    ):
+        for workspace in shared.workspaces.values():
+            if workspace.buffer_pointer:
+                weechat.buffer_unmerge(workspace.buffer_pointer, -1)
+
+        buffer_to_merge_with = workspace_get_buffer_to_merge_with()
+        if buffer_to_merge_with:
+            for workspace in shared.workspaces.values():
+                if (
+                    workspace.buffer_pointer
+                    and workspace.buffer_pointer != buffer_to_merge_with
+                ):
+                    weechat.buffer_merge(workspace.buffer_pointer, buffer_to_merge_with)
 
     def config_change_nick_colors_cb(self, data: str, option: str, value: str):
         invalidate_nicklists()

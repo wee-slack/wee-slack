@@ -6,6 +6,7 @@ from typing import (
     TYPE_CHECKING,
     Dict,
     Generator,
+    Iterable,
     List,
     Mapping,
     NoReturn,
@@ -21,13 +22,14 @@ import weechat
 from slack.error import SlackApiError, SlackError
 from slack.python_compatibility import removeprefix
 from slack.shared import shared
-from slack.slack_buffer import SlackBuffer
 from slack.slack_message import (
+    MessageContext,
     MessagePriority,
     PendingMessageItem,
     SlackMessage,
     SlackTs,
 )
+from slack.slack_message_buffer import SlackMessageBuffer
 from slack.slack_thread import SlackThread
 from slack.slack_user import Nick, SlackUser
 from slack.task import Task, gather, run_async
@@ -64,6 +66,18 @@ def invalidate_nicklists():
     for workspace in shared.workspaces.values():
         for conversation in workspace.open_conversations.values():
             conversation.nicklist_needs_refresh = True
+
+
+async def create_conversation_for_users(
+    workspace: SlackWorkspace, user_ids: Iterable[str]
+):
+    conversation_open_response = await workspace.api.conversations_open(user_ids)
+    conversation_id = conversation_open_response["channel"]["id"]
+    workspace.conversations.initialize_items(
+        [conversation_id], {conversation_id: conversation_open_response["channel"]}
+    )
+    conversation = await workspace.conversations[conversation_id]
+    await conversation.open_buffer(switch=True)
 
 
 def sha1_hex(string: str) -> str:
@@ -133,7 +147,7 @@ class SlackConversationMessageHashes(Dict[SlackTs, str]):
         return self._inverse_map.get(hash_without_prefix)
 
 
-class SlackConversation(SlackBuffer):
+class SlackConversation(SlackMessageBuffer):
     async def __new__(
         cls,
         workspace: SlackWorkspace,
@@ -216,7 +230,7 @@ class SlackConversation(SlackBuffer):
         return self
 
     @property
-    def context(self) -> Literal["conversation", "thread"]:
+    def context(self) -> MessageContext:
         return "conversation"
 
     @property
@@ -265,6 +279,12 @@ class SlackConversation(SlackBuffer):
     def im_user_id(self) -> Optional[str]:
         if self.type == "im":
             return self._info.get("user")
+
+    def _add_or_update_message(self, message: SlackMessage):
+        if message.ts in self._messages:
+            self._messages[message.ts].update_message_json(message.message_json)
+        else:
+            self._messages[message.ts] = message
 
     def sort_key(self) -> str:
         type_sort_key = {
@@ -323,7 +343,8 @@ class SlackConversation(SlackBuffer):
         topic = unhtmlescape(self._topic["value"])
         if self._im_user:
             status = f"{self._im_user.status_emoji} {self._im_user.status_text}".strip()
-            return " | ".join(part for part in [status, topic] if part)
+            parts = [self._im_user.real_name, status, topic]
+            return " | ".join(part for part in parts if part)
         return topic
 
     def set_topic(self, title: str):
@@ -360,6 +381,7 @@ class SlackConversation(SlackBuffer):
             "localvar_set_nick": self.workspace.my_user.nick.raw_nick,
             "localvar_set_channel": name,
             "localvar_set_server": self.workspace.name,
+            "localvar_set_workspace": self.workspace.name,
             "localvar_set_slack_muted": "1" if self.muted else "0",
             "localvar_set_completion_default_template": "${weechat.completion.default_template}|%(slack_channels)|%(slack_emojis)",
             **im_localvars,
@@ -402,17 +424,14 @@ class SlackConversation(SlackBuffer):
                 replies_response,
             )
 
-        if thread_ts not in self._messages:
-            self._messages[thread_ts] = messages[0]
-
+        self._add_or_update_message(messages[0])
         parent_message = self._messages[thread_ts]
 
         replies = messages[1:]
+        parent_message.replies_tss = [message.ts for message in replies]
         for reply in replies:
-            parent_message.replies[reply.ts] = reply
-            self._messages[reply.ts] = reply
+            self._add_or_update_message(reply)
 
-        parent_message.replies = OrderedDict(sorted(parent_message.replies.items()))
         self._messages = OrderedDict(sorted(self._messages.items()))
 
         parent_message.reply_history_filled = True
@@ -442,14 +461,13 @@ class SlackConversation(SlackBuffer):
             for message_json in history["messages"]:
                 message = SlackMessage(self, message_json)
                 if message.ts > self.last_read and message.ts not in self.hotlist_tss:
-                    weechat.buffer_set(
-                        self.buffer_pointer, "hotlist", message.priority.value
-                    )
+                    priority = message.priority(self.context).value
+                    weechat.buffer_set(self.buffer_pointer, "hotlist", priority)
                     self.hotlist_tss.add(message.ts)
                 if (
                     self.display_thread_replies()
                     and (
-                        not self.muted
+                        not message.muted
                         or shared.config.look.muted_conversations_notify.value == "all"
                     )
                     and message.latest_reply
@@ -493,7 +511,7 @@ class SlackConversation(SlackBuffer):
                 SlackMessage(self, message) for message in history["messages"]
             ]
             for message in reversed(conversation_messages):
-                self._messages[message.ts] = message
+                self._add_or_update_message(message)
 
             if self.display_thread_replies():
                 await gather(
@@ -513,8 +531,7 @@ class SlackConversation(SlackBuffer):
                 message
                 for message in self._messages.values()
                 if self.should_display_message(message)
-                and self.last_printed_ts is None
-                or message.ts > self.last_printed_ts
+                and (self.last_printed_ts is None or message.ts > self.last_printed_ts)
             ]
 
             user_ids = [m.sender_user_id for m in messages if m.sender_user_id]
@@ -621,22 +638,12 @@ class SlackConversation(SlackBuffer):
 
     async def add_new_message(self, message: SlackMessage):
         # TODO: Remove old messages
-        self._messages[message.ts] = message
-
-        if self.should_display_message(message):
-            if self.is_loading:
-                self.history_pending_messages.append(message)
-            elif self.last_printed_ts is not None:
-                await self.print_message(message)
-            elif self.buffer_pointer is not None:
-                weechat.buffer_set(
-                    self.buffer_pointer, "hotlist", message.priority.value
-                )
-                self.hotlist_tss.add(message.ts)
+        self._add_or_update_message(message)
 
         parent_message = message.parent_message
         if parent_message:
-            parent_message.replies[message.ts] = message
+            if message.ts not in parent_message.replies_tss:
+                parent_message.replies_tss.append(message.ts)
             thread_buffer = parent_message.thread_buffer
             if thread_buffer:
                 if thread_buffer.is_loading:
@@ -645,6 +652,18 @@ class SlackConversation(SlackBuffer):
                     await thread_buffer.print_message(message)
         elif message.thread_ts is not None:
             await self.fetch_replies(message.thread_ts)
+
+        if self.should_display_message(message):
+            if self.is_loading:
+                self.history_pending_messages.append(message)
+            elif self.last_printed_ts is not None:
+                await self.print_message(message)
+            elif self.buffer_pointer is not None:
+                priority = message.priority(self.context).value
+                weechat.buffer_set(self.buffer_pointer, "hotlist", priority)
+                self.hotlist_tss.add(message.ts)
+                if not message.muted:
+                    await self.fill_history()
 
         if message.sender_user_id and message.sender_bot_id is None:
             user = await self.workspace.users[message.sender_user_id]
@@ -777,6 +796,8 @@ class SlackConversation(SlackBuffer):
                 await self.api.conversations_close(self)
             else:
                 await self.api.conversations_leave(self)
+
+        self._nicklist = {}
 
 
 _T = TypeVar("_T", bound=SlackConversation)

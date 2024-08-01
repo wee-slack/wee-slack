@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import pprint
 import re
@@ -11,7 +12,6 @@ from typing import (
     Callable,
     Coroutine,
     Dict,
-    Iterable,
     List,
     Optional,
     Tuple,
@@ -25,11 +25,11 @@ from slack.error import SlackError, SlackRtmError, UncaughtError
 from slack.log import open_debug_buffer, print_error
 from slack.python_compatibility import format_exception, removeprefix
 from slack.shared import EMOJI_CHAR_OR_NAME_REGEX_STRING, shared
-from slack.slack_buffer import SlackBuffer
-from slack.slack_conversation import SlackConversation
+from slack.slack_conversation import SlackConversation, create_conversation_for_users
 from slack.slack_message import SlackTs, ts_from_tag
+from slack.slack_message_buffer import SlackMessageBuffer
+from slack.slack_search_buffer import SlackSearchBuffer
 from slack.slack_thread import SlackThread
-from slack.slack_user import SlackUser
 from slack.slack_workspace import SlackWorkspace
 from slack.task import gather, run_async, sleep
 from slack.util import get_callback_name, get_resolved_futures, with_color
@@ -68,7 +68,7 @@ def print_message_not_found_error(msg_id: str):
 
 def parse_options(args: str):
     regex = re.compile("(?:^| )+-([^ =]+)(?:=([^ ]+))?")
-    pos_args = regex.sub("", args)
+    pos_args = regex.sub("", args).strip()
     options: Options = {
         match.group(1): match.group(2) or True for match in regex.finditer(args)
     }
@@ -89,7 +89,7 @@ class Command:
 def weechat_command(
     completion: str = "",
     min_args: int = 0,
-    split_all_args: bool = False,
+    max_split: Optional[int] = None,
     slack_buffer_required: bool = False,
 ) -> Callable[
     [InternalCommandCallback],
@@ -104,8 +104,18 @@ def weechat_command(
         @wraps(f)
         def wrapper(buffer: str, args: str):
             pos_args, options = parse_options(args)
-            maxsplit = -1 if split_all_args else 0 if min_args == 0 else min_args - 1
-            split_args = pos_args.split(" ", maxsplit)
+            re_maxsplit = (
+                max_split
+                if max_split is not None
+                else -1
+                if min_args == 1
+                else min_args - 1
+            )
+            split_args = (
+                re.split(r"\s+", pos_args, re_maxsplit)
+                if re_maxsplit >= 0
+                else [pos_args]
+            )
             if min_args and not pos_args or len(split_args) < min_args:
                 print_error(
                     f'Too few arguments for command "/{cmd}" (help on command: /help {cmd})'
@@ -180,7 +190,7 @@ async def workspace_connect(workspace: SlackWorkspace):
     await workspace.connect()
 
 
-@weechat_command("%(slack_workspaces)|-all", split_all_args=True)
+@weechat_command("%(slack_workspaces)|-all", max_split=0)
 async def command_slack_connect(buffer: str, args: List[str], options: Options):
     if options.get("all"):
         for workspace in shared.workspaces.values():
@@ -205,7 +215,7 @@ def workspace_disconnect(workspace: SlackWorkspace):
     workspace.disconnect()
 
 
-@weechat_command("%(slack_workspaces)|-all", split_all_args=True)
+@weechat_command("%(slack_workspaces)|-all", max_split=0)
 def command_slack_disconnect(buffer: str, args: List[str], options: Options):
     if options.get("all"):
         for workspace in shared.workspaces.values():
@@ -226,7 +236,7 @@ def command_slack_disconnect(buffer: str, args: List[str], options: Options):
 @weechat_command()
 async def command_slack_rehistory(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
-    if slack_buffer:
+    if isinstance(slack_buffer, SlackMessageBuffer):
         await slack_buffer.rerender_history()
 
 
@@ -306,20 +316,7 @@ def command_slack_workspace_del(buffer: str, args: List[str], options: Options):
     )
 
 
-async def create_conversation_for_users(
-    workspace: SlackWorkspace, users: Iterable[SlackUser]
-):
-    user_ids = [user.id for user in users]
-    conversation_open_response = await workspace.api.conversations_open(user_ids)
-    conversation_id = conversation_open_response["channel"]["id"]
-    workspace.conversations.initialize_items(
-        [conversation_id], {conversation_id: conversation_open_response["channel"]}
-    )
-    conversation = await workspace.conversations[conversation_id]
-    await conversation.open_buffer(switch=True)
-
-
-@weechat_command("%(nicks)", min_args=1, split_all_args=True)
+@weechat_command("%(nicks)", min_args=1, max_split=0)
 async def command_slack_query(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
     if slack_buffer is None:
@@ -347,10 +344,11 @@ async def command_slack_query(buffer: str, args: List[str], options: Options):
                 await conversation.open_buffer(switch=True)
                 return
 
-    await create_conversation_for_users(slack_buffer.workspace, users)
+    user_ids = [user.id for user in users]
+    await create_conversation_for_users(slack_buffer.workspace, user_ids)
 
 
-def get_conversation_from_args(buffer: str, args: List[str], options: Options):
+async def get_conversation_from_args(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
 
     workspace_name = options.get("workspace")
@@ -386,22 +384,24 @@ def get_conversation_from_args(buffer: str, args: List[str], options: Options):
         else:
             return
 
-    conversation_name = args[0].strip()
+    conversation_name = removeprefix(args[0].strip(), "#")
     all_conversations = get_resolved_futures(workspace.conversations.values())
     for conversation in all_conversations:
-        if (
-            conversation.name_with_prefix("short_name_without_padding")
-            == conversation_name
-            or conversation.name() == conversation_name
-        ):
+        if conversation.name() == conversation_name:
             return conversation
+
+    if workspace.api.edgeapi.is_available:
+        results = await workspace.api.edgeapi.fetch_channels_search(conversation_name)
+        for channel_info in results["results"]:
+            if channel_info["name"] == conversation_name:
+                return await workspace.conversations[channel_info["id"]]
 
     print_error(f'Conversation "{conversation_name}" not found')
 
 
 @weechat_command("")
 async def command_slack_join(buffer: str, args: List[str], options: Options):
-    conversation = get_conversation_from_args(buffer, args, options)
+    conversation = await get_conversation_from_args(buffer, args, options)
     if conversation is not None:
         await conversation.api.conversations_join(conversation.id)
         await conversation.open_buffer(switch=not options.get("noswitch"))
@@ -409,7 +409,7 @@ async def command_slack_join(buffer: str, args: List[str], options: Options):
 
 @weechat_command("")
 async def command_slack_part(buffer: str, args: List[str], options: Options):
-    conversation = get_conversation_from_args(buffer, args, options)
+    conversation = await get_conversation_from_args(buffer, args, options)
     if conversation is not None:
         await conversation.part()
 
@@ -428,7 +428,7 @@ async def command_slack_reply(buffer: str, args: List[str], options: Options):
     if isinstance(slack_buffer, SlackThread):
         await slack_buffer.post_message(args[0], broadcast=broadcast)
     elif isinstance(slack_buffer, SlackConversation):
-        split_args = args[0].split(" ", 1)
+        split_args = re.split(r"\s+", args[0], 1)
         if len(split_args) < 2:
             print_error(
                 'Too few arguments for command "/slack reply" (help on command: /help slack reply)'
@@ -472,17 +472,61 @@ async def command_slack_mute(buffer: str, args: List[str], options: Options):
             conversation.name_with_prefix("short_name_without_padding")
             for conversation in conversations
         )
-        weechat.prnt("", f"Muted conversations: {', '.join(conversation_names)}")
+        slack_buffer.workspace.print(
+            f"Muted conversations: {', '.join(conversation_names)}"
+        )
         return
 
     muted_channels = set(slack_buffer.workspace.muted_channels)
     muted_channels ^= {slack_buffer.id}
     await slack_buffer.api.set_muted_channels(muted_channels)
     muted_str = "Muted" if slack_buffer.id in muted_channels else "Unmuted"
-    weechat.prnt(
-        "",
+    slack_buffer.workspace.print(
         f"{muted_str} channel {slack_buffer.name_with_prefix('short_name_without_padding')}",
     )
+
+
+@weechat_command("channels|users", max_split=1)
+async def command_slack_search(buffer: str, args: List[str], options: Options):
+    if args[0] == "":
+        search_buffer = next(
+            (
+                search_buffer
+                for workspace in shared.workspaces.values()
+                for search_buffer in workspace.search_buffers.values()
+                if search_buffer.buffer_pointer == buffer
+            ),
+            None,
+        )
+        if search_buffer is not None:
+            if options.get("up"):
+                search_buffer.selected_line -= 1
+            elif options.get("down"):
+                search_buffer.selected_line += 1
+            elif options.get("mark"):
+                search_buffer.mark_line(search_buffer.selected_line)
+            elif options.get("join_channel"):
+                await search_buffer.join_channel()
+            else:
+                print_error("No search action specified")
+    else:
+        slack_buffer = shared.buffers.get(buffer)
+        if slack_buffer is None:
+            return
+
+        if args[0] == "channels" or args[0] == "users":
+            search_buffer = slack_buffer.workspace.search_buffers.get(args[0])
+            query = args[1] if len(args) > 1 else None
+            if search_buffer is not None:
+                search_buffer.switch_to_buffer()
+                if query is not None:
+                    await search_buffer.search(query)
+            else:
+                slack_buffer.workspace.search_buffers[args[0]] = SlackSearchBuffer(
+                    slack_buffer.workspace, args[0], query
+                )
+        else:
+            print_error(f"Unknown search type: {args[0]}")
 
 
 def print_uncaught_error(error: UncaughtError, detailed: bool, options: Options):
@@ -499,8 +543,8 @@ def print_uncaught_error(error: UncaughtError, detailed: bool, options: Options)
             print_error("This error does not have any data")
 
 
-@weechat_command("tasks|buffer|open_buffer|errors|error", split_all_args=True)
-def command_slack_debug(buffer: str, args: List[str], options: Options):
+@weechat_command("tasks|buffer|open_buffer|replay_events|errors|error", max_split=0)
+async def command_slack_debug(buffer: str, args: List[str], options: Options):
     # TODO: Add message info (message_json)
     if args[0] == "tasks":
         weechat.prnt("", "Active tasks:")
@@ -518,6 +562,18 @@ def command_slack_debug(buffer: str, args: List[str], options: Options):
             )
     elif args[0] == "open_buffer":
         open_debug_buffer()
+    elif args[0] == "replay_events":
+        slack_buffer = shared.buffers.get(buffer)
+        if slack_buffer is None:
+            print_error("Must be run from a slack buffer")
+            return
+        with open(args[1]) as f:
+            for line in f:
+                first_brace_pos = line.find("{")
+                if first_brace_pos == -1:
+                    continue
+                event = json.loads(line[first_brace_pos:])
+                await slack_buffer.workspace.ws_recv(event)
     elif args[0] == "errors":
         num_arg = int(args[1]) if len(args) > 1 and args[1].isdecimal() else 5
         num = min(num_arg, len(shared.uncaught_errors))
@@ -568,7 +624,7 @@ async def command_slack_status(buffer: str, args: List[str], options: Options):
 
 
 def _get_conversation_from_buffer(
-    slack_buffer: SlackBuffer,
+    slack_buffer: Union[SlackWorkspace, SlackMessageBuffer],
 ) -> Optional[SlackConversation]:
     if isinstance(slack_buffer, SlackConversation):
         return slack_buffer
@@ -578,7 +634,8 @@ def _get_conversation_from_buffer(
 
 
 def _get_linkarchive_url(
-    slack_buffer: SlackBuffer, message_ts: Optional[SlackTs]
+    slack_buffer: Union[SlackWorkspace, SlackMessageBuffer],
+    message_ts: Optional[SlackTs],
 ) -> str:
     url = f"https://{slack_buffer.workspace.domain}.slack.com/"
     conversation = _get_conversation_from_buffer(slack_buffer)
@@ -603,7 +660,7 @@ def command_slack_linkarchive(buffer: str, args: List[str], options: Options):
     if slack_buffer is None:
         return
 
-    if args[0]:
+    if isinstance(slack_buffer, SlackMessageBuffer) and args[0]:
         ts = slack_buffer.ts_from_hash_or_index(args[0])
         if ts is None:
             print_message_not_found_error(args[0])
@@ -649,7 +706,7 @@ def command_cb(data: str, buffer: str, args: str) -> int:
     return weechat.WEECHAT_RC_OK
 
 
-async def mark_read(slack_buffer: SlackBuffer):
+async def mark_read(slack_buffer: SlackMessageBuffer):
     # Sleep so the read marker is updated before we run slack_buffer.mark_read
     await sleep(1)
     await slack_buffer.mark_read()
@@ -657,7 +714,7 @@ async def mark_read(slack_buffer: SlackBuffer):
 
 def buffer_set_unread_cb(data: str, buffer: str, command: str) -> int:
     slack_buffer = shared.buffers.get(buffer)
-    if slack_buffer:
+    if isinstance(slack_buffer, SlackMessageBuffer):
         run_async(mark_read(slack_buffer))
     return weechat.WEECHAT_RC_OK
 
@@ -673,7 +730,7 @@ def focus_event_cb(data: str, signal: str, hashtable: Dict[str, str]) -> int:
 
     buffer_pointer = hashtable["_buffer"]
     slack_buffer = shared.buffers.get(buffer_pointer)
-    if slack_buffer is None:
+    if not isinstance(slack_buffer, SlackMessageBuffer):
         return weechat.WEECHAT_RC_OK
 
     conversation = _get_conversation_from_buffer(slack_buffer)
@@ -709,6 +766,21 @@ def focus_event_cb(data: str, signal: str, hashtable: Dict[str, str]) -> int:
     return weechat.WEECHAT_RC_OK
 
 
+def python_eval_slack_cb(data: str, buffer: str, command: str) -> int:
+    slack_buffer = shared.buffers.get(buffer)
+    if slack_buffer is None:
+        print_error("Must be run from a slack buffer")
+        return weechat.WEECHAT_RC_OK_EAT
+    args = command.split(" ", 2)
+    code = compile(
+        args[2], "<string>", "exec", flags=getattr(ast, "PyCF_ALLOW_TOP_LEVEL_AWAIT", 0)
+    )
+    coroutine = eval(code)
+    if coroutine is not None:
+        run_async(coroutine)
+    return weechat.WEECHAT_RC_OK_EAT
+
+
 def register_commands():
     weechat.hook_command_run(
         "/buffer set unread", get_callback_name(buffer_set_unread_cb), ""
@@ -718,6 +790,9 @@ def register_commands():
     )
     weechat.hook_command_run(
         "/input set_unread_current_buffer", get_callback_name(buffer_set_unread_cb), ""
+    )
+    weechat.hook_command_run(
+        "/python eval_slack *", get_callback_name(python_eval_slack_cb), ""
     )
 
     for cmd, command in shared.commands.items():

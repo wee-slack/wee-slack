@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from slack_api.slack_profile import SlackProfile
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_info import SlackUserInfo
+    from slack_rtm.slack_rtm_message import SlackSubteam
     from typing_extensions import Literal
 
     from slack.slack_workspace import SlackWorkspace
@@ -125,15 +126,18 @@ class SlackUser:
         return get_emoji(status_emoji.strip(":"))
 
     @property
+    def real_name(self) -> str:
+        return self._info["profile"].get("real_name") or name_from_user_info(
+            self.workspace, self._info
+        )
+
+    @property
     def nick(self) -> Nick:
         nick = name_from_user_info(self.workspace, self._info)
         return get_user_nick(nick, self.is_external, self.is_self)
 
     def update_info_json(self, info_json: SlackUserInfo):
         self._info.update(info_json)  # pyright: ignore [reportArgumentType, reportCallIssue]
-        self._rendered_prefix = None
-        self._rendered_message = None
-        self._parsed_message = None
 
         for conversation in self.workspace.open_conversations.values():
             if conversation.im_user_id == self.id:
@@ -156,7 +160,9 @@ class SlackBot:
 
 
 class SlackUsergroup:
-    def __init__(self, workspace: SlackWorkspace, info: SlackUsergroupInfo):
+    def __init__(
+        self, workspace: SlackWorkspace, info: Union[SlackUsergroupInfo, SlackSubteam]
+    ):
         self.workspace = workspace
         self._info = info
 
@@ -169,3 +175,6 @@ class SlackUsergroup:
 
     def handle(self) -> str:
         return self._info["handle"]
+
+    def update_info_json(self, info_json: Union[SlackUsergroupInfo, SlackSubteam]):
+        self._info.update(info_json)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import socket
 import ssl
 import time
@@ -16,6 +17,7 @@ from typing import (
     Set,
     Type,
     TypeVar,
+    Union,
 )
 
 import weechat
@@ -27,7 +29,6 @@ from websocket import (
 )
 
 from slack.error import (
-    SlackApiError,
     SlackError,
     SlackRtmError,
     store_and_format_exception,
@@ -36,28 +37,49 @@ from slack.log import DebugMessageType, LogLevel, log, print_error
 from slack.proxy import Proxy
 from slack.shared import shared
 from slack.slack_api import SlackApi
-from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation
 from slack.slack_message import SlackMessage, SlackTs
+from slack.slack_message_buffer import SlackMessageBuffer
 from slack.slack_thread import SlackThread
 from slack.slack_user import SlackBot, SlackUser, SlackUsergroup
-from slack.task import Future, Task, create_task, gather, run_async
+from slack.task import Future, Task, create_task, gather, run_async, sleep
 from slack.util import get_callback_name, get_cookies
+from slack.weechat_buffer import buffer_new
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfo
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_conversations import SlackUsersConversations
     from slack_api.slack_users_info import SlackUserInfo
-    from slack_rtm.slack_rtm_message import SlackRtmMessage
+    from slack_api.slack_users_prefs import AllNotificationsPrefs
+    from slack_rtm.slack_rtm_message import SlackRtmMessage, SlackSubteam
     from typing_extensions import Literal
 
     from slack.slack_conversation import SlackConversationsInfoInternal
+    from slack.slack_search_buffer import SearchType, SlackSearchBuffer
 else:
     SlackBotInfo = object
     SlackConversationsInfoInternal = object
     SlackUsergroupInfo = object
     SlackUserInfo = object
+    SlackSubteam = object
+
+
+def workspace_get_buffer_to_merge_with() -> Optional[str]:
+    if shared.config.look.workspace_buffer.value == "merge_with_core":
+        return weechat.buffer_search_main()
+    elif shared.config.look.workspace_buffer.value == "merge_without_core":
+        workspace_buffers_by_number = {
+            weechat.buffer_get_integer(
+                workspace.buffer_pointer, "number"
+            ): workspace.buffer_pointer
+            for workspace in shared.workspaces.values()
+            if workspace.buffer_pointer is not None
+        }
+        if workspace_buffers_by_number:
+            lowest_number = min(workspace_buffers_by_number.keys())
+            return workspace_buffers_by_number[lowest_number]
+
 
 SlackItemClass = TypeVar(
     "SlackItemClass", SlackConversation, SlackUser, SlackBot, SlackUsergroup
@@ -67,7 +89,7 @@ SlackItemInfo = TypeVar(
     SlackConversationsInfoInternal,
     SlackUserInfo,
     SlackBotInfo,
-    SlackUsergroupInfo,
+    Union[SlackUsergroupInfo, SlackSubteam],
 )
 
 
@@ -184,20 +206,22 @@ class SlackBots(SlackItem[SlackBot, SlackBotInfo]):
         return self._item_class(self.workspace, item_info)
 
 
-class SlackUsergroups(SlackItem[SlackUsergroup, SlackUsergroupInfo]):
+class SlackUsergroups(
+    SlackItem[SlackUsergroup, Union[SlackUsergroupInfo, SlackSubteam]]
+):
     def __init__(self, workspace: SlackWorkspace):
         super().__init__(workspace, SlackUsergroup)
 
     async def _fetch_items_info(
         self, item_ids: Iterable[str]
-    ) -> Dict[str, SlackUsergroupInfo]:
+    ) -> Dict[str, Union[SlackUsergroupInfo, SlackSubteam]]:
         response = await self.workspace.api.edgeapi.fetch_usergroups_info(
             list(item_ids)
         )
         return {info["id"]: info for info in response["results"]}
 
     async def _create_item_from_info(
-        self, item_info: SlackUsergroupInfo
+        self, item_info: Union[SlackUsergroupInfo, SlackSubteam]
     ) -> SlackUsergroup:
         return self._item_class(self.workspace, item_info)
 
@@ -205,24 +229,36 @@ class SlackUsergroups(SlackItem[SlackUsergroup, SlackUsergroupInfo]):
 class SlackWorkspace:
     def __init__(self, name: str):
         self.name = name
+        self.buffer_pointer: Optional[str] = None
         self.config = shared.config.create_workspace_config(self.name)
         self.api = SlackApi(self)
+        self._initial_connect = True
         self._is_connected = False
-        self._connect_task: Optional[Task[None]] = None
+        self._connect_task: Optional[Task[bool]] = None
         self._ws: Optional[WebSocket] = None
         self._hook_ws_fd: Optional[str] = None
+        self._last_ws_received_time = time.time()
         self._debug_ws_buffer_pointer: Optional[str] = None
+        self._reconnect_url: Optional[str] = None
+        self.my_user: SlackUser
         self.conversations = SlackConversations(self)
         self.open_conversations: Dict[str, SlackConversation] = {}
+        self.search_buffers: Dict[SearchType, SlackSearchBuffer] = {}
         self.users = SlackUsers(self)
         self.bots = SlackBots(self)
         self.usergroups = SlackUsergroups(self)
+        self.usergroups_member: Set[str] = set()
         self.muted_channels: Set[str] = set()
+        self.global_keywords_regex: Optional[re.Pattern[str]] = None
         self.custom_emojis: Dict[str, str] = {}
         self.max_users_per_fetch_request = 512
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name})"
+
+    @property
+    def workspace(self) -> SlackWorkspace:
+        return self
 
     @property
     def token_type(self) -> Literal["oauth", "session", "unknown"]:
@@ -250,26 +286,145 @@ class SlackWorkspace:
         self._is_connected = value
         weechat.bar_item_update("input_text")
 
+    def get_full_name(self) -> str:
+        return f"{shared.SCRIPT_NAME}.server.{self.name}"
+
+    def get_buffer_props(self) -> Dict[str, str]:
+        buffer_props = {
+            "short_name": self.name,
+            "title": "",
+            "input_multiline": "1",
+            "localvar_set_type": "server",
+            "localvar_set_slack_type": "workspace",
+            "localvar_set_channel": self.name,
+            "localvar_set_server": self.name,
+            "localvar_set_workspace": self.name,
+            "localvar_set_completion_default_template": "${weechat.completion.default_template}|%(slack_channels)|%(slack_emojis)",
+        }
+        if hasattr(self, "my_user"):
+            buffer_props["input_prompt"] = self.my_user.nick.raw_nick
+            buffer_props["localvar_set_nick"] = self.my_user.nick.raw_nick
+        return buffer_props
+
+    def open_buffer(self, switch: bool = False):
+        if self.buffer_pointer:
+            if switch:
+                weechat.buffer_set(self.buffer_pointer, "display", "1")
+            return
+
+        buffer_props = self.get_buffer_props()
+
+        if switch:
+            buffer_props["display"] = "1"
+
+        self.buffer_pointer = buffer_new(
+            self.get_full_name(),
+            buffer_props,
+            self._buffer_input_cb,
+            self._buffer_close_cb,
+        )
+
+        buffer_to_merge_with = workspace_get_buffer_to_merge_with()
+        if (
+            buffer_to_merge_with
+            and weechat.buffer_get_integer(self.buffer_pointer, "layout_number") < 1
+        ):
+            weechat.buffer_merge(self.buffer_pointer, buffer_to_merge_with)
+
+        shared.buffers[self.buffer_pointer] = self
+
+    def update_buffer_props(self) -> None:
+        if self.buffer_pointer is None:
+            return
+
+        buffer_props = self.get_buffer_props()
+        buffer_props["name"] = self.get_full_name()
+        for key, value in buffer_props.items():
+            weechat.buffer_set(self.buffer_pointer, key, value)
+
+    def print(self, message: str) -> bool:
+        if not self.buffer_pointer:
+            return False
+        weechat.prnt(self.buffer_pointer, message)
+        return True
+
     async def connect(self) -> None:
         if self.is_connected:
             return
-        weechat.prnt("", f"Connecting to workspace {self.name}")
+        self.open_buffer()
+        self.print(f"Connecting to workspace {self.name}")
         self._connect_task = create_task(self._connect())
-        await self._connect_task
-        weechat.prnt("", f"Connected to workspace {self.name}")
+        self.is_connected = await self._connect_task
         self._connect_task = None
 
-    async def _connect_oauth(self) -> List[SlackConversation]:
-        rtm_connect = await self.api.fetch_rtm_connect()
-        self.id = rtm_connect["team"]["id"]
-        self.enterprise_id = rtm_connect["team"].get("enterprise_id")
-        self.domain = rtm_connect["team"]["domain"]
-        self.my_user = await self.users[rtm_connect["self"]["id"]]
+    async def _connect(self) -> bool:
+        if self._reconnect_url is not None:
+            try:
+                await self._connect_ws(self._reconnect_url)
+                return True
+            except Exception:
+                self._reconnect_url = None
 
-        await self._connect_ws(rtm_connect["url"])
+        try:
+            if self.token_type == "session":
+                team_info = await self.api.fetch_team_info()
+                self.id = team_info["team"]["id"]
+                self.enterprise_id = (
+                    self.id
+                    if self.team_is_org_level
+                    else team_info["team"]["enterprise_id"]
+                    if "enterprise_id" in team_info["team"]
+                    else None
+                )
+                self.domain = team_info["team"]["domain"]
+                await self._connect_ws(
+                    f"wss://wss-primary.slack.com/?token={self.config.api_token.value}&gateway_server={self.id}-1&slack_client=desktop&batch_presence_aware=1"
+                )
+            else:
+                rtm_connect = await self.api.fetch_rtm_connect()
+                self.id = rtm_connect["team"]["id"]
+                self.enterprise_id = rtm_connect["team"].get("enterprise_id")
+                self.domain = rtm_connect["team"]["domain"]
+                self.my_user = await self.users[rtm_connect["self"]["id"]]
+                await self._connect_ws(rtm_connect["url"])
+        except Exception as e:
+            print_error(
+                f'Failed connecting to workspace "{self.name}": {store_and_format_exception(e)}'
+            )
+            return False
 
-        prefs = await self.api.fetch_users_get_prefs("muted_channels")
+        return True
+
+    def _set_global_keywords(self, all_notifications_prefs: AllNotificationsPrefs):
+        global_keywords = set(
+            all_notifications_prefs["global"]["global_keywords"].split(",")
+        )
+        regex_words = "|".join(re.escape(keyword) for keyword in global_keywords)
+        if regex_words:
+            self.global_keywords_regex = re.compile(
+                rf"\b(?:{regex_words})\b", re.IGNORECASE
+            )
+        else:
+            self.global_keywords_regex = None
+
+    async def _initialize_oauth(self) -> List[SlackConversation]:
+        prefs = await self.api.fetch_users_get_prefs(
+            "muted_channels,all_notifications_prefs"
+        )
         self.muted_channels = set(prefs["prefs"]["muted_channels"].split(","))
+        all_notifications_prefs = json.loads(prefs["prefs"]["all_notifications_prefs"])
+        self._set_global_keywords(all_notifications_prefs)
+
+        usergroups = await self.api.fetch_usergroups_list(include_users=True)
+        for usergroup in usergroups["usergroups"]:
+            future = Future[SlackUsergroup]()
+            future.set_result(SlackUsergroup(self, usergroup))
+            self.usergroups[usergroup["id"]] = future
+        self.usergroups_member = set(
+            u["id"]
+            for u in usergroups["usergroups"]
+            if self.my_user.id in u.get("users", [])
+        )
 
         users_conversations_response = await self.api.fetch_users_conversations(
             "public_channel,private_channel,mpim,im"
@@ -283,33 +438,33 @@ class SlackWorkspace:
         conversations_to_open = [
             c for c in conversations_if_should_open if c is not None
         ]
+
+        # Load the first 1000 chanels to be able to look them up by name, since
+        # we can't look up a channel id from channel name with OAuth tokens
+        first_channels = await self.api.fetch_conversations_list_public(limit=1000)
+        self.conversations.initialize_items(
+            [channel["id"] for channel in first_channels["channels"]],
+            {channel["id"]: channel for channel in first_channels["channels"]},
+        )
+
         return conversations_to_open
 
-    async def _connect_session(self) -> List[SlackConversation]:
-        team_info_task = create_task(self.api.fetch_team_info())
+    async def _initialize_session(self) -> List[SlackConversation]:
         user_boot_task = create_task(self.api.fetch_client_userboot())
         client_counts_task = create_task(self.api.fetch_client_counts())
-        team_info = await team_info_task
         user_boot = await user_boot_task
         client_counts = await client_counts_task
 
-        self.id = team_info["team"]["id"]
-        self.enterprise_id = (
-            self.id
-            if self.team_is_org_level
-            else team_info["team"]["enterprise_id"]
-            if "enterprise_id" in team_info["team"]
-            else None
-        )
-        self.domain = team_info["team"]["domain"]
         my_user_id = user_boot["self"]["id"]
         # self.users.initialize_items(my_user_id, {my_user_id: user_boot["self"]})
         self.my_user = await self.users[my_user_id]
         self.muted_channels = set(user_boot["prefs"]["muted_channels"].split(","))
-
-        await self._connect_ws(
-            f"wss://wss-primary.slack.com/?token={self.config.api_token.value}&slack_client=desktop&batch_presence_aware=1"
+        all_notifications_prefs = json.loads(
+            user_boot["prefs"]["all_notifications_prefs"]
         )
+        self._set_global_keywords(all_notifications_prefs)
+
+        self.usergroups_member = set(user_boot["subteams"]["self"])
 
         conversation_counts = (
             client_counts["channels"] + client_counts["mpims"] + client_counts["ims"]
@@ -320,6 +475,7 @@ class SlackWorkspace:
                 channel["id"]
                 for channel in user_boot["channels"]
                 if not channel["is_mpim"]
+                and not channel["is_archived"]
                 and (
                     self.team_is_org_level
                     or "internal_team_ids" not in channel
@@ -359,27 +515,23 @@ class SlackWorkspace:
 
         return list(conversations.values())
 
-    async def _connect(self) -> None:
+    async def _initialize(self):
         try:
             if self.token_type == "session":
-                conversations_to_open = await self._connect_session()
+                conversations_to_open = await self._initialize_session()
             else:
-                conversations_to_open = await self._connect_oauth()
-        except SlackApiError as e:
+                conversations_to_open = await self._initialize_oauth()
+        except Exception as e:
             print_error(
-                f'failed connecting to workspace "{self.name}": {e.response["error"]}'
+                f'Failed connecting to workspace "{self.name}": {store_and_format_exception(e)}'
             )
+            self.disconnect()
             return
+
+        self.update_buffer_props()
 
         custom_emojis_response = await self.api.fetch_emoji_list()
         self.custom_emojis = custom_emojis_response["emoji"]
-
-        if not self.api.edgeapi.is_available:
-            usergroups = await self.api.fetch_usergroups_list()
-            for usergroup in usergroups["usergroups"]:
-                future = Future[SlackUsergroup]()
-                future.set_result(SlackUsergroup(self, usergroup))
-                self.usergroups[usergroup["id"]] = future
 
         for conversation in sorted(
             conversations_to_open, key=lambda conversation: conversation.sort_key()
@@ -387,10 +539,12 @@ class SlackWorkspace:
             await conversation.open_buffer()
 
         await gather(
-            *(slack_buffer.set_hotlist() for slack_buffer in shared.buffers.values())
+            *(
+                slack_buffer.set_hotlist()
+                for slack_buffer in shared.buffers.values()
+                if isinstance(slack_buffer, SlackMessageBuffer)
+            )
         )
-
-        self.is_connected = True
 
     async def _conversation_if_should_open(self, info: SlackUsersConversations):
         conversation = await self.conversations[info["id"]]
@@ -408,6 +562,21 @@ class SlackWorkspace:
                 return
 
         return conversation
+
+    async def _load_unread_conversations(self):
+        open_conversations = list(self.open_conversations.values())
+        for conversation in open_conversations:
+            if (
+                conversation.hotlist_tss
+                and not conversation.muted
+                and self.is_connected
+            ):
+                await conversation.fill_history()
+                # TODO: Better sleep heuristic
+                sleep_duration = (
+                    20000 if conversation.display_thread_replies() else 1000
+                )
+                await sleep(sleep_duration)
 
     async def _connect_ws(self, url: str):
         proxy = Proxy()
@@ -432,6 +601,7 @@ class SlackWorkspace:
             "",
         )
         self._ws.sock.setblocking(False)
+        self._last_ws_received_time = time.time()
 
     def _ws_read_cb(self, data: str, fd: int) -> int:
         if self._ws is None:
@@ -447,37 +617,49 @@ class SlackWorkspace:
                 run_async(self.reconnect())
                 return weechat.WEECHAT_RC_OK
 
+            self._last_ws_received_time = time.time()
+
             if opcode == ABNF.OPCODE_PONG:
-                # TODO: Maybe record last time anything was received instead
-                self.last_pong_time = time.time()
                 return weechat.WEECHAT_RC_OK
             elif opcode != ABNF.OPCODE_TEXT:
                 return weechat.WEECHAT_RC_OK
 
-            run_async(self._ws_recv(json.loads(recv_data.decode())))
+            run_async(self.ws_recv(json.loads(recv_data.decode())))
 
-    async def _ws_recv(self, data: SlackRtmMessage):
+    async def ws_recv(self, data: SlackRtmMessage):
         # TODO: Remove old messages
         log(LogLevel.DEBUG, DebugMessageType.WEBSOCKET_RECV, json.dumps(data))
 
         try:
-            if data["type"] in [
-                "hello",
-                "file_public",
-                "file_shared",
-                "file_deleted",
-                "dnd_updated_user",
-            ]:
+            if data["type"] == "hello":
+                if self._initial_connect or not data["fast_reconnect"]:
+                    await self._initialize()
+                if self.is_connected:
+                    self.print(f"Connected to workspace {self.name}")
+                if self._initial_connect or not data["fast_reconnect"]:
+                    await self._load_unread_conversations()
+                self._initial_connect = False
+                return
+            elif data["type"] == "error":
+                if data["error"]["code"] == 1:  # Socket URL has expired
+                    self._reconnect_url = None
+                return
+            elif data["type"] == "reconnect_url":
+                self._reconnect_url = data["url"]
                 return
             elif data["type"] == "pref_change":
                 if data["name"] == "muted_channels":
                     new_muted_channels = set(data["value"].split(","))
-                    changed_channels = self.muted_channels ^ new_muted_channels
-                    self.muted_channels = new_muted_channels
-                    for channel_id in changed_channels:
-                        channel = self.open_conversations.get(channel_id)
-                        if channel:
-                            channel.update_buffer_props()
+                    self._set_muted_channels(new_muted_channels)
+                elif data["name"] == "all_notifications_prefs":
+                    new_prefs = json.loads(data["value"])
+                    new_muted_channels = set(
+                        channel_id
+                        for channel_id, prefs in new_prefs["channels"].items()
+                        if prefs["muted"]
+                    )
+                    self._set_muted_channels(new_muted_channels)
+                    self._set_global_keywords(new_prefs)
                 return
             elif data["type"] == "user_status_changed":
                 user_id = data["user"]["id"]
@@ -497,6 +679,27 @@ class SlackWorkspace:
                         user_info = await self.api.fetch_user_info(user_id)
                         user.update_info_json(user_info["user"])
                 return
+            elif data["type"] == "subteam_created":
+                subteam_id = data["subteam"]["id"]
+                self.usergroups.initialize_items(
+                    [subteam_id], {subteam_id: data["subteam"]}
+                )
+                return
+            elif data["type"] == "subteam_updated":
+                subteam_id = data["subteam"]["id"]
+                if subteam_id in self.usergroups:
+                    usergroup = await self.usergroups[subteam_id]
+                    usergroup.update_info_json(data["subteam"])
+                return
+            elif data["type"] == "subteam_members_changed":
+                # Handling subteam_updated should be enough
+                return
+            elif data["type"] == "subteam_self_added":
+                self.usergroups_member.add(data["subteam_id"])
+                return
+            elif data["type"] == "subteam_self_removed":
+                self.usergroups_member.remove(data["subteam_id"])
+                return
             elif data["type"] == "channel_joined" or data["type"] == "group_joined":
                 channel_id = data["channel"]["id"]
             elif data["type"] == "reaction_added" or data["type"] == "reaction_removed":
@@ -512,11 +715,17 @@ class SlackWorkspace:
             elif "channel" in data and isinstance(data["channel"], str):
                 channel_id = data["channel"]
             else:
-                log(
-                    LogLevel.DEBUG,
-                    DebugMessageType.LOG,
-                    f"unknown websocket message type (without channel): {data.get('type')}",
-                )
+                if data["type"] not in [
+                    "file_public",
+                    "file_shared",
+                    "file_deleted",
+                    "dnd_updated_user",
+                ]:
+                    log(
+                        LogLevel.DEBUG,
+                        DebugMessageType.LOG,
+                        f"unknown websocket message type (without channel): {data.get('type')}",
+                    )
                 return
 
             channel = self.open_conversations.get(channel_id)
@@ -616,11 +825,25 @@ class SlackWorkspace:
             slack_error = SlackRtmError(self, e, data)
             print_error(store_and_format_exception(slack_error))
 
+    def _set_muted_channels(self, muted_channels: Set[str]):
+        changed_channels = self.muted_channels ^ muted_channels
+        self.muted_channels = muted_channels
+        for channel_id in changed_channels:
+            channel = self.open_conversations.get(channel_id)
+            if channel:
+                channel.update_buffer_props()
+
     def ping(self):
         if not self.is_connected:
             raise SlackError(self, "Can't ping when not connected")
         if self._ws is None:
             raise SlackError(self, "is_connected is True while _ws is None")
+
+        time_since_last_msg = time.time() - self._last_ws_received_time
+        if time_since_last_msg > self.config.network_timeout.value:
+            run_async(self.reconnect())
+            return
+
         try:
             self._ws.ping()
             # workspace.last_ping_time = time.time()
@@ -628,7 +851,7 @@ class SlackWorkspace:
             print("lost connection on ping, reconnecting")
             run_async(self.reconnect())
 
-    def send_typing(self, buffer: SlackBuffer):
+    def send_typing(self, buffer: SlackMessageBuffer):
         if not self.is_connected:
             raise SlackError(self, "Can't send typing when not connected")
         if self._ws is None:
@@ -648,7 +871,7 @@ class SlackWorkspace:
 
     def disconnect(self):
         self.is_connected = False
-        weechat.prnt("", f"Disconnected from workspace {self.name}")
+        self.print(f"Disconnected from workspace {self.name}")
 
         if self._connect_task:
             self._connect_task.cancel()
@@ -661,3 +884,34 @@ class SlackWorkspace:
         if self._ws:
             self._ws.close()
             self._ws = None
+
+    def _buffer_input_cb(self, data: str, buffer: str, input_data: str) -> int:
+        self.print(
+            f"{weechat.prefix('error')}{shared.SCRIPT_NAME}: this buffer is not a channel!"
+        )
+        return weechat.WEECHAT_RC_OK
+
+    def _buffer_close_cb(self, data: str, buffer: str) -> int:
+        run_async(self._buffer_close())
+        return weechat.WEECHAT_RC_OK
+
+    async def _buffer_close(self):
+        if shared.script_is_unloading:
+            return
+
+        if self.is_connected:
+            self.disconnect()
+
+        conversations = list(shared.buffers.values())
+        for conversation in conversations:
+            if (
+                isinstance(conversation, SlackMessageBuffer)
+                and conversation.workspace == self
+            ):
+                await conversation.close_buffer()
+
+        if self.buffer_pointer in shared.buffers:
+            del shared.buffers[self.buffer_pointer]
+
+        self.buffer_pointer = None
+        self._initial_connect = True

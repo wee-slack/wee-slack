@@ -14,6 +14,7 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Union,
 )
 
 import weechat
@@ -25,10 +26,11 @@ from slack.shared import (
     REACTION_CHANGE_REGEX_STRING,
     shared,
 )
-from slack.slack_message import SlackMessage, SlackTs, ts_from_tag
+from slack.slack_message import MessageContext, SlackMessage, SlackTs, ts_from_tag
 from slack.slack_user import Nick
 from slack.task import gather, run_async
-from slack.util import get_callback_name, htmlescape
+from slack.util import htmlescape
+from slack.weechat_buffer import buffer_new
 
 if TYPE_CHECKING:
     from typing_extensions import Literal, assert_never
@@ -146,10 +148,10 @@ def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
     return True
 
 
-class SlackBuffer(ABC):
+class SlackMessageBuffer(ABC):
     def __init__(self):
         self._typing_self_last_sent = 0
-        # TODO: buffer_pointer may be accessed by buffer_switch before it's initialized
+        self._should_update_server_on_buffer_close = None
         self.buffer_pointer: Optional[str] = None
         self.is_loading = False
         self.history_pending_messages: List[SlackMessage] = []
@@ -200,7 +202,7 @@ class SlackBuffer(ABC):
 
     @property
     @abstractmethod
-    def context(self) -> Literal["conversation", "thread"]:
+    def context(self) -> MessageContext:
         raise NotImplementedError()
 
     @property
@@ -246,25 +248,12 @@ class SlackBuffer(ABC):
         if switch:
             buffer_props["display"] = "1"
 
-        if shared.weechat_version >= 0x03050000:
-            self.buffer_pointer = weechat.buffer_new_props(
-                full_name,
-                buffer_props,
-                get_callback_name(self._buffer_input_cb),
-                "",
-                get_callback_name(self._buffer_close_cb),
-                "",
-            )
-        else:
-            self.buffer_pointer = weechat.buffer_new(
-                full_name,
-                get_callback_name(self._buffer_input_cb),
-                "",
-                get_callback_name(self._buffer_close_cb),
-                "",
-            )
-            for prop_name, value in buffer_props.items():
-                weechat.buffer_set(self.buffer_pointer, prop_name, value)
+        self.buffer_pointer = buffer_new(
+            full_name,
+            buffer_props,
+            self._buffer_input_cb,
+            self._buffer_close_cb,
+        )
 
         shared.buffers[self.buffer_pointer] = self
         if switch:
@@ -346,7 +335,9 @@ class SlackBuffer(ABC):
 
         rendered = await message.render(self.context)
         backlog = self.last_read is not None and message.ts <= self.last_read
-        tags = await message.tags(backlog)
+        tags = await message.tags(self.context, backlog)
+        if message.ts in self.hotlist_tss:
+            tags += ",notify_none"
         weechat.prnt_date_tags(self.buffer_pointer, message.ts.major, tags, rendered)
         if backlog:
             weechat.buffer_set(self.buffer_pointer, "unread", "")
@@ -424,15 +415,15 @@ class SlackBuffer(ABC):
 
     def ts_from_hash_or_index(
         self,
-        hash_or_index: str,
+        hash_or_index: Union[str, int],
         message_filter: Optional[Literal["sender_self"]] = None,
     ) -> Optional[SlackTs]:
-        if not hash_or_index:
-            return self.ts_from_index(1, message_filter)
-        ts_from_hash = self.ts_from_hash(hash_or_index)
+        ts_from_hash = (
+            self.ts_from_hash(hash_or_index) if isinstance(hash_or_index, str) else None
+        )
         if ts_from_hash is not None:
             return ts_from_hash
-        elif hash_or_index.isdigit():
+        elif isinstance(hash_or_index, int) or hash_or_index.isdigit():
             return self.ts_from_index(int(hash_or_index), message_filter)
         else:
             return None
@@ -486,7 +477,7 @@ class SlackBuffer(ABC):
             htmlescape(text)
             # Replace some WeeChat formatting chars with Slack formatting chars
             .replace("\x02", "*")
-            .replace("\x1D", "_")
+            .replace("\x1d", "_")
         )
 
         users = await gather(*self.workspace.users.values(), return_exceptions=True)
@@ -512,7 +503,7 @@ class SlackBuffer(ABC):
             input_data,
         )
         if special:
-            msg_id = special.group("msg_id")
+            msg_id = special.group("msg_id") or 1
             emoji = special.group("emoji_char") or special.group("emoji_name")
             reaction_change_type = special.group("reaction_change")
 
@@ -547,11 +538,13 @@ class SlackBuffer(ABC):
         return weechat.WEECHAT_RC_OK
 
     def _buffer_close_cb(self, data: str, buffer: str) -> int:
-        run_async(
-            self._buffer_close(
-                update_server=shared.config.look.leave_channel_on_buffer_close.value
-            )
+        update_server = (
+            self._should_update_server_on_buffer_close
+            if self._should_update_server_on_buffer_close is not None
+            else shared.config.look.leave_channel_on_buffer_close.value
         )
+        run_async(self._buffer_close(update_server=update_server))
+        self._should_update_server_on_buffer_close = None
         return weechat.WEECHAT_RC_OK
 
     async def _buffer_close(
@@ -559,6 +552,8 @@ class SlackBuffer(ABC):
     ):
         if shared.script_is_unloading:
             return
+
+        self._should_update_server_on_buffer_close = update_server
 
         if self.buffer_pointer in shared.buffers:
             del shared.buffers[self.buffer_pointer]

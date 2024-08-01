@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from slack_api.slack_conversations_history import SlackConversationsHistoryResponse
     from slack_api.slack_conversations_info import SlackConversationsInfoResponse
     from slack_api.slack_conversations_join import SlackConversationsJoinResponse
+    from slack_api.slack_conversations_list import SlackConversationsListPublicResponse
     from slack_api.slack_conversations_members import SlackConversationsMembersResponse
     from slack_api.slack_conversations_open import SlackConversationsOpenResponse
     from slack_api.slack_conversations_replies import SlackConversationsRepliesResponse
@@ -44,6 +45,7 @@ if TYPE_CHECKING:
         SlackUsersInfoSuccessResponse,
     )
     from slack_api.slack_users_prefs import SlackUsersPrefsGetResponse
+    from slack_edgeapi.slack_channels_search import SlackChannelsSearchResponse
     from slack_edgeapi.slack_usergroups_info import SlackEdgeUsergroupsInfoResponse
     from slack_edgeapi.slack_users_search import SlackUsersSearchResponse
     from typing_extensions import Literal, assert_never
@@ -108,6 +110,24 @@ class SlackEdgeApi(SlackApiCommon):
             "filter": "NOT deactivated",
         }
         response: SlackUsersSearchResponse = await self._fetch_edgeapi(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def fetch_channels_search(self, query: str):
+        method = "channels/search"
+        params: EdgeParams = {
+            "query": query,
+            "count": 25,
+            "fuzz": 1,
+            "uax29_tokenizer": False,
+            "filter": "xws",
+            "include_record_channels": True,
+            "check_membership": True,
+        }
+        response: SlackChannelsSearchResponse = await self._fetch_edgeapi(
+            method, params
+        )
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
         return response
@@ -242,6 +262,23 @@ class SlackApi(SlackApiCommon):
             raise SlackApiError(self.workspace, method, response, params)
         return response
 
+    async def fetch_conversations_list_public(
+        self,
+        exclude_archived: bool = True,
+        limit: Optional[int] = 1000,
+    ):
+        method = "conversations.list"
+        params: Params = {
+            "exclude_archived": exclude_archived,
+            "types": "public_channel",
+        }
+        response: SlackConversationsListPublicResponse = await self._fetch_list(
+            method, "chanels", params, limit
+        )
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
     async def fetch_users_conversations(
         self,
         types: str,
@@ -332,9 +369,10 @@ class SlackApi(SlackApiCommon):
             raise SlackApiError(self.workspace, method, response, params)
         return response
 
-    async def fetch_usergroups_list(self):
+    async def fetch_usergroups_list(self, include_users: bool):
         method = "usergroups.list"
-        response: SlackUsergroupsInfoResponse = await self._fetch(method)
+        params: Params = {"include_users": include_users}
+        response: SlackUsergroupsInfoResponse = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response)
         return response

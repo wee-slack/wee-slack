@@ -3,41 +3,20 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING, Dict, Generator, Mapping, Optional, Set, Tuple
 
-from slack.slack_buffer import SlackBuffer
-from slack.slack_message import SlackMessage, SlackTs
+from slack.slack_message import MessageContext, SlackMessage, SlackTs
+from slack.slack_message_buffer import SlackMessageBuffer
 from slack.slack_user import Nick
 from slack.task import gather
 
 if TYPE_CHECKING:
-    from typing_extensions import Literal
-
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
 
 
-class SlackThreadMessages(Mapping[SlackTs, SlackMessage]):
-    def __init__(self, parent: SlackMessage):
-        super().__init__()
-        self._parent = parent
-
-    def __getitem__(self, key: SlackTs) -> SlackMessage:
-        if key == self._parent.ts:
-            return self._parent
-        return self._parent.replies[key]
-
-    def __iter__(self) -> Generator[SlackTs, None, None]:
-        yield self._parent.ts
-        yield from self._parent.replies
-
-    def __len__(self) -> int:
-        return 1 + len(self._parent.replies)
-
-
-class SlackThread(SlackBuffer):
+class SlackThread(SlackMessageBuffer):
     def __init__(self, parent: SlackMessage) -> None:
         super().__init__()
         self.parent = parent
-        self._messages = SlackThreadMessages(parent)
         self._reply_nicks: Set[Nick] = set()
 
     @property
@@ -49,7 +28,7 @@ class SlackThread(SlackBuffer):
         return self.parent.conversation
 
     @property
-    def context(self) -> Literal["conversation", "thread"]:
+    def context(self) -> MessageContext:
         return "thread"
 
     @property
@@ -60,7 +39,7 @@ class SlackThread(SlackBuffer):
 
     @property
     def messages(self) -> Mapping[SlackTs, SlackMessage]:
-        return self._messages
+        return self.parent.replies
 
     @property
     def last_read(self) -> Optional[SlackTs]:
@@ -81,6 +60,7 @@ class SlackThread(SlackBuffer):
             "localvar_set_nick": self.workspace.my_user.nick.raw_nick,
             "localvar_set_channel": name,
             "localvar_set_server": self.workspace.name,
+            "localvar_set_workspace": self.workspace.name,
             "localvar_set_completion_default_template": "${weechat.completion.default_template}|%(slack_channels)|%(slack_emojis)",
         }
 

@@ -8,8 +8,8 @@ import weechat
 from slack.commands import find_command
 from slack.python_compatibility import removeprefix, removesuffix
 from slack.shared import MESSAGE_ID_REGEX_STRING, REACTION_CHANGE_REGEX_STRING, shared
-from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation
+from slack.slack_message_buffer import SlackMessageBuffer
 from slack.slack_user import get_user_nick, name_from_user_info
 from slack.task import run_async
 from slack.util import get_callback_name, get_resolved_futures
@@ -125,8 +125,9 @@ def completion_nicks_cb(
         return weechat.WEECHAT_RC_OK
 
     all_users = get_resolved_futures(slack_buffer.workspace.users.values())
-    all_nicks = sorted([user.nick.raw_nick for user in all_users], key=str.casefold)
-    for nick in all_nicks:
+    all_nicks = [user.nick for user in all_users]
+    all_raw_nicks = sorted([nick.raw_nick for nick in all_nicks], key=str.casefold)
+    for nick in all_raw_nicks:
         weechat.completion_list_add(
             completion,
             f"@{nick}",
@@ -140,8 +141,14 @@ def completion_nicks_cb(
             weechat.WEECHAT_LIST_POS_END,
         )
 
+    members = (
+        slack_buffer.members
+        if isinstance(slack_buffer, SlackMessageBuffer)
+        else all_nicks
+    )
+
     buffer_nicks = sorted(
-        [nick.raw_nick for nick in slack_buffer.members], key=str.casefold, reverse=True
+        [nick.raw_nick for nick in members], key=str.casefold, reverse=True
     )
     for nick in buffer_nicks:
         weechat.completion_list_add(
@@ -157,29 +164,31 @@ def completion_nicks_cb(
             weechat.WEECHAT_LIST_POS_BEGINNING,
         )
 
-    senders = [
-        m.sender_user_id
-        for m in slack_buffer.messages.values()
-        if m.sender_user_id and m.subtype in [None, "me_message", "thread_broadcast"]
-    ]
-    unique_senders = list(dict.fromkeys(senders))
-    sender_users = get_resolved_futures(
-        [slack_buffer.workspace.users[sender] for sender in unique_senders]
-    )
-    nicks = [user.nick.raw_nick for user in sender_users]
-    for nick in nicks:
-        weechat.completion_list_add(
-            completion,
-            nick,
-            1,
-            weechat.WEECHAT_LIST_POS_BEGINNING,
+    if isinstance(slack_buffer, SlackMessageBuffer):
+        senders = [
+            m.sender_user_id
+            for m in slack_buffer.messages.values()
+            if m.sender_user_id
+            and m.subtype in [None, "me_message", "thread_broadcast"]
+        ]
+        unique_senders = list(dict.fromkeys(senders))
+        sender_users = get_resolved_futures(
+            [slack_buffer.workspace.users[sender] for sender in unique_senders]
         )
-        weechat.completion_list_add(
-            completion,
-            f"@{nick}",
-            1,
-            weechat.WEECHAT_LIST_POS_BEGINNING,
-        )
+        nicks = [user.nick.raw_nick for user in sender_users]
+        for nick in nicks:
+            weechat.completion_list_add(
+                completion,
+                nick,
+                1,
+                weechat.WEECHAT_LIST_POS_BEGINNING,
+            )
+            weechat.completion_list_add(
+                completion,
+                f"@{nick}",
+                1,
+                weechat.WEECHAT_LIST_POS_BEGINNING,
+            )
 
     my_user_nick = slack_buffer.workspace.my_user.nick.raw_nick
     weechat.completion_list_add(
@@ -223,7 +232,7 @@ def completion_thread_hashes_cb(
     return weechat.WEECHAT_RC_OK
 
 
-def complete_input(buffer: str, slack_buffer: SlackBuffer, query: str):
+def complete_input(buffer: str, slack_buffer: SlackMessageBuffer, query: str):
     if (
         slack_buffer.completion_context == "ACTIVE_COMPLETION"
         and slack_buffer.completion_values
@@ -248,7 +257,7 @@ def nick_suffix():
 
 
 async def complete_user_next(
-    buffer: str, slack_buffer: SlackBuffer, query: str, is_first_word: bool
+    buffer: str, slack_buffer: SlackMessageBuffer, query: str, is_first_word: bool
 ):
     if slack_buffer.completion_context == "NO_COMPLETION":
         slack_buffer.completion_context = "PENDING_COMPLETION"
@@ -271,7 +280,7 @@ async def complete_user_next(
     complete_input(buffer, slack_buffer, query)
 
 
-def complete_previous(buffer: str, slack_buffer: SlackBuffer, query: str) -> int:
+def complete_previous(buffer: str, slack_buffer: SlackMessageBuffer, query: str) -> int:
     if slack_buffer.completion_context == "ACTIVE_COMPLETION":
         slack_buffer.completion_index -= 1
         if slack_buffer.completion_index < 0:
@@ -283,7 +292,7 @@ def complete_previous(buffer: str, slack_buffer: SlackBuffer, query: str) -> int
 
 def input_complete_cb(data: str, buffer: str, command: str) -> int:
     slack_buffer = shared.buffers.get(buffer)
-    if slack_buffer:
+    if isinstance(slack_buffer, SlackMessageBuffer):
         input_value = weechat.buffer_get_string(buffer, "input")
         input_pos = weechat.buffer_get_integer(buffer, "input_pos")
         input_before_cursor = input_value[:input_pos]

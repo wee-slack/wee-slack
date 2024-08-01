@@ -1,3 +1,5 @@
+from typing import List
+
 from slack_api.slack_conversations_history import (
     SlackMessage,
     SlackMessageMe,
@@ -18,6 +20,7 @@ from slack_api.slack_conversations_history import (
 )
 from slack_api.slack_conversations_info import SlackConversationsInfo
 from slack_api.slack_conversations_replies import SlackMessageThreadCommon
+from slack_api.slack_usergroups_info import SlackUsergroupInfoCommon
 from slack_api.slack_users_info import SlackUserInfoPerson
 from typing_extensions import Literal, NotRequired, TypedDict, final
 
@@ -27,6 +30,20 @@ class SlackRtmHello(TypedDict):
     region: str
     start: bool
     host_id: str
+
+class SlackRtmErrorError(TypedDict):
+    msg: str
+    code: int
+    source: str
+    retry_after: NotRequired[int]  # Only with msg Ratelimited, code 17
+
+class SlackRtmError(TypedDict):
+    type: Literal["error"]
+    error: SlackRtmErrorError
+
+class SlackRtmReconnectUrl(TypedDict):
+    type: Literal["reconnect_url"]
+    url: str
 
 @final
 class SlackMessageStandardRtm(SlackMessageStandardCommon):
@@ -312,6 +329,41 @@ class SlackUserInvalidated(TypedDict):
     user: SlackUserInvalidatedUser
     event_ts: str
 
+class SlackSubteam(SlackUsergroupInfoCommon):
+    users: List[str]
+
+class SlackSubteamCreated(TypedDict):
+    type: Literal["subteam_created"]
+    subteam: SlackSubteam
+    event_ts: str
+
+class SlackSubteamUpdated(TypedDict):
+    type: Literal["subteam_updated"]
+    subteam: SlackSubteam
+    event_ts: str
+
+class SlackSubteamMembersChanged(TypedDict):
+    type: Literal["subteam_members_changed"]
+    subteam_id: str
+    date_previous_update: int
+    date_update: int
+    added_users: List[str]
+    added_users_count: int
+    removed_users: List[str]
+    removed_users_count: int
+    team_id: str
+    event_ts: str
+
+class SlackSubteamSelfAdded(TypedDict):
+    type: Literal["subteam_self_added"]
+    subteam_id: str
+    event_ts: str
+
+class SlackSubteamSelfRemoved(TypedDict):
+    type: Literal["subteam_self_removed"]
+    subteam_id: str
+    event_ts: str
+
 SlackMessageRtm = (
     SlackMessageStandardRtm
     | SlackMessageMeRtm
@@ -331,6 +383,8 @@ SlackMessageRtm = (
 
 SlackRtmMessage = (
     SlackRtmHello
+    | SlackRtmError
+    | SlackRtmReconnectUrl
     | SlackMessageRtm
     | SlackMessageChanged
     | SlackMessageDeleted
@@ -356,4 +410,9 @@ SlackRtmMessage = (
     | SlackPrefChange
     | SlackUserStatusChanged
     | SlackUserInvalidated
+    | SlackSubteamCreated
+    | SlackSubteamUpdated
+    | SlackSubteamMembersChanged
+    | SlackSubteamSelfAdded
+    | SlackSubteamSelfRemoved
 )

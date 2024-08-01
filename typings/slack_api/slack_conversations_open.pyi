@@ -12,7 +12,9 @@ class SlackConversationsOpenSuccessResponse(TypedDict):
     ok: Literal[True]
     no_op: NotRequired[bool]  # Not returned when specifying multiple users
     already_open: NotRequired[bool]  # Not returned when specifying multiple users
-    channel: SlackConversationsInfoIm | SlackConversationsInfoMpim  # only when specifying return_im=True
+    channel: (
+        SlackConversationsInfoIm | SlackConversationsInfoMpim
+    )  # only when specifying return_im=True
 
 SlackConversationsOpenResponse = (
     SlackConversationsOpenSuccessResponse | SlackErrorResponse

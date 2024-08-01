@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any, List, Literal
 
 import pytest
 
@@ -25,7 +25,7 @@ class Case(TypedDict):
     input_message: Any
     input_text_before: str
     output: str
-    link_previews: NotRequired[bool]
+    link_previews: NotRequired[Literal["always", "only_internal", "never"]]
 
 
 cases: List[Case] = [
@@ -446,18 +446,65 @@ cases: List[Case] = [
         ),
     },
     {
+        "input_message": {"attachments": [{"text": "Attachment text"}]},
+        "input_text_before": "",
+        "output": "| Attachment text",
+        "link_previews": "always",
+    },
+    {
+        "input_message": {
+            "attachments": [
+                {"text": "Attachment text", "original_url": "https://example.com"}
+            ]
+        },
+        "input_text_before": "<https://example.com>",
+        "output": "\n| Attachment text",
+        "link_previews": "always",
+    },
+    {
         "input_message": {
             "attachments": [{"text": "Attachment text", "is_app_unfurl": True}]
         },
         "input_text_before": "",
         "output": "| Attachment text",
-        "link_previews": True,
+        "link_previews": "always",
+    },
+    {
+        "input_message": {
+            "attachments": [
+                {
+                    "text": "Attachment text",
+                    "is_msg_unfurl": True,
+                    "channel_id": channel_public_id,
+                    "original_url": f"https://wee-slack-test.slack.com/archives/{channel_public_id}/p1721168022423289",
+                }
+            ]
+        },
+        "input_text_before": f"<https://wee-slack-test.slack.com/archives/{channel_public_id}/p1721168022423289>",
+        "output": "\n".join(
+            [
+                "",
+                "| Attachment text",
+                f"| Posted in <[color:chat_channel]>#channel1{color_default}",
+            ]
+        ),
+        "link_previews": "always",
     },
     {
         "input_message": {"attachments": [{"text": "Attachment text"}]},
         "input_text_before": "",
         "output": "| Attachment text",
-        "link_previews": False,
+        "link_previews": "only_internal",
+    },
+    {
+        "input_message": {
+            "attachments": [
+                {"text": "Attachment text", "original_url": "https://example.com"}
+            ]
+        },
+        "input_text_before": "<https://example.com>",
+        "output": "",
+        "link_previews": "only_internal",
     },
     {
         "input_message": {
@@ -465,7 +512,67 @@ cases: List[Case] = [
         },
         "input_text_before": "",
         "output": "",
-        "link_previews": False,
+        "link_previews": "only_internal",
+    },
+    {
+        "input_message": {
+            "attachments": [
+                {
+                    "text": "Attachment text",
+                    "is_msg_unfurl": True,
+                    "channel_id": channel_public_id,
+                    "original_url": f"https://wee-slack-test.slack.com/archives/{channel_public_id}/p1721168022423289",
+                }
+            ]
+        },
+        "input_text_before": f"<https://wee-slack-test.slack.com/archives/{channel_public_id}/p1721168022423289>",
+        "output": "\n".join(
+            [
+                "",
+                "| Attachment text",
+                f"| Posted in <[color:chat_channel]>#channel1{color_default}",
+            ]
+        ),
+        "link_previews": "only_internal",
+    },
+    {
+        "input_message": {"attachments": [{"text": "Attachment text"}]},
+        "input_text_before": "",
+        "output": "| Attachment text",
+        "link_previews": "never",
+    },
+    {
+        "input_message": {
+            "attachments": [
+                {"text": "Attachment text", "original_url": "https://example.com"}
+            ]
+        },
+        "input_text_before": "<https://example.com>",
+        "output": "",
+        "link_previews": "never",
+    },
+    {
+        "input_message": {
+            "attachments": [{"text": "Attachment text", "is_app_unfurl": True}]
+        },
+        "input_text_before": "",
+        "output": "",
+        "link_previews": "never",
+    },
+    {
+        "input_message": {
+            "attachments": [
+                {
+                    "text": "Attachment text",
+                    "is_msg_unfurl": True,
+                    "channel_id": channel_public_id,
+                    "original_url": f"https://wee-slack-test.slack.com/archives/{channel_public_id}/p1721168022423289",
+                }
+            ]
+        },
+        "input_text_before": f"<https://wee-slack-test.slack.com/archives/{channel_public_id}/p1721168022423289>",
+        "output": "",
+        "link_previews": "never",
     },
     {
         "input_message": {
@@ -635,7 +742,7 @@ cases: List[Case] = [
 @pytest.mark.parametrize("case", cases)
 def test_render_attachments(case: Case, message1_in_channel_public: SlackMessage):
     shared.config.look.render_url_as.value = "${text} (${url})"
-    shared.config.look.display_link_previews.value = case.get("link_previews", True)
+    shared.config.look.display_link_previews.value = case.get("link_previews", "always")
     message1_in_channel_public.update_message_json(case["input_message"])
     parsed = message1_in_channel_public._render_attachments(  # pyright: ignore [reportPrivateUsage]
         [case["input_text_before"]]
