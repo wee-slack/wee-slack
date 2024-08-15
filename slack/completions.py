@@ -170,6 +170,7 @@ def completion_nicks_cb(
             for m in slack_buffer.messages.values()
             if m.sender_user_id
             and m.subtype in [None, "me_message", "thread_broadcast"]
+            and slack_buffer.should_display_message(m)
         ]
         unique_senders = reversed(dict.fromkeys(reversed(senders)))
         sender_users = get_resolved_futures(

@@ -320,6 +320,9 @@ class SlackMessageBuffer(ABC):
             self._typing_self_last_sent = now
             self.workspace.send_typing(self)
 
+    def should_display_message(self, message: SlackMessage) -> bool:
+        return True
+
     async def print_message(self, message: SlackMessage):
         if not self.buffer_pointer:
             return False
