@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -50,6 +51,7 @@ class Future(Awaitable[T]):
         self._state: Literal["PENDING", "CANCELLED", "FINISHED"] = "PENDING"
         self._result: T
         self._exception: Optional[BaseException] = None
+        self._exception_tb: Optional[TracebackType] = None
         self._cancel_message = None
         self._callbacks: List[Callable[[Self], object]] = []
         self._exception_read = False
@@ -82,7 +84,7 @@ class Future(Awaitable[T]):
     def result(self):
         exc = self.exception()
         if exc is not None:
-            raise exc
+            raise exc.with_traceback(self._exception_tb)
         return self._result
 
     def set_result(self, result: T):
@@ -103,6 +105,7 @@ class Future(Awaitable[T]):
                 "and cannot be raised into a Future"
             )
         self._exception = exception
+        self._exception_tb = exception.__traceback__
         self._state = "FINISHED"
         self.__schedule_callbacks()
 
