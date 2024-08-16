@@ -210,13 +210,13 @@ class SlackApi(SlackApiCommon):
         return response
 
     async def fetch_conversations_history_after(
-        self, conversation: SlackConversation, after: SlackTs
+        self, conversation: SlackConversation, oldest: SlackTs, inclusive: bool
     ):
         method = "conversations.history"
         params: Params = {
             "channel": conversation.id,
-            "oldest": after,
-            "inclusive": False,
+            "oldest": oldest,
+            "inclusive": inclusive,
         }
         response: SlackConversationsHistoryResponse = await self._fetch_list(
             method, "messages", params

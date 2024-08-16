@@ -556,7 +556,7 @@ class SlackWorkspace:
                 history = await self.api.fetch_conversations_history(conversation)
             else:
                 history = await self.api.fetch_conversations_history_after(
-                    conversation, conversation.last_read
+                    conversation, conversation.last_read, inclusive=False
                 )
             if not history["messages"]:
                 return

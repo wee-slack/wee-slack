@@ -445,14 +445,13 @@ class SlackConversation(SlackMessageBuffer):
             await self.fill_history()
             return
 
-        if self.last_printed_ts is not None:
-            history_after_ts = (
-                next(iter(self._messages))
-                if self.display_thread_replies()
-                else self.last_printed_ts
-            )
+        if self._messages and self.display_thread_replies():
             history = await self.api.fetch_conversations_history_after(
-                self, history_after_ts
+                self, next(iter(self._messages)), inclusive=True
+            )
+        elif self.last_printed_ts is not None and not self.display_thread_replies():
+            history = await self.api.fetch_conversations_history_after(
+                self, self.last_printed_ts, inclusive=False
             )
         else:
             history = await self.api.fetch_conversations_history(self)
@@ -495,14 +494,13 @@ class SlackConversation(SlackMessageBuffer):
             return
 
         with self.loading():
-            history_after_ts = (
-                next(iter(self._messages), None)
-                if self.history_needs_refresh
-                else self.last_printed_ts
-            )
-            if history_after_ts:
+            if self._messages and self.history_needs_refresh:
                 history = await self.api.fetch_conversations_history_after(
-                    self, history_after_ts
+                    self, next(iter(self._messages)), inclusive=True
+                )
+            elif self.last_printed_ts is not None and not self.history_needs_refresh:
+                history = await self.api.fetch_conversations_history_after(
+                    self, self.last_printed_ts, inclusive=False
                 )
             else:
                 history = await self.api.fetch_conversations_history(self)
