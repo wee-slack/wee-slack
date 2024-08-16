@@ -437,6 +437,18 @@ class SlackConversation(SlackMessageBuffer):
         parent_message.reply_history_filled = True
         return replies
 
+    async def fetch_history(self, all_current_messages: bool):
+        if self._messages and all_current_messages:
+            return await self.api.fetch_conversations_history_after(
+                self, next(iter(self._messages)), inclusive=True
+            )
+        elif self.last_printed_ts is not None and not all_current_messages:
+            return await self.api.fetch_conversations_history_after(
+                self, self.last_printed_ts, inclusive=False
+            )
+        else:
+            return await self.api.fetch_conversations_history(self)
+
     async def set_hotlist(self):
         if self.last_printed_ts is not None:
             self.history_needs_refresh = True
@@ -445,16 +457,9 @@ class SlackConversation(SlackMessageBuffer):
             await self.fill_history()
             return
 
-        if self._messages and self.display_thread_replies():
-            history = await self.api.fetch_conversations_history_after(
-                self, next(iter(self._messages)), inclusive=True
-            )
-        elif self.last_printed_ts is not None and not self.display_thread_replies():
-            history = await self.api.fetch_conversations_history_after(
-                self, self.last_printed_ts, inclusive=False
-            )
-        else:
-            history = await self.api.fetch_conversations_history(self)
+        history = await self.fetch_history(
+            all_current_messages=self.display_thread_replies()
+        )
 
         if self.buffer_pointer and shared.current_buffer_pointer != self.buffer_pointer:
             for message_json in history["messages"]:
@@ -494,17 +499,9 @@ class SlackConversation(SlackMessageBuffer):
             return
 
         with self.loading():
-            if self._messages and self.history_needs_refresh:
-                history = await self.api.fetch_conversations_history_after(
-                    self, next(iter(self._messages)), inclusive=True
-                )
-            elif self.last_printed_ts is not None and not self.history_needs_refresh:
-                history = await self.api.fetch_conversations_history_after(
-                    self, self.last_printed_ts, inclusive=False
-                )
-            else:
-                history = await self.api.fetch_conversations_history(self)
-
+            history = await self.fetch_history(
+                all_current_messages=self.history_needs_refresh
+            )
             conversation_messages = [
                 SlackMessage(self, message) for message in history["messages"]
             ]
