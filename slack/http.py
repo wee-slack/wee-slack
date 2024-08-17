@@ -126,6 +126,8 @@ async def http_request(
             http_status, headers, body = await http_request_process(
                 url, options, timeout
             )
+        if http_status >= 500:
+            raise HttpError(url, options, None, http_status, body)
     except HttpError as e:
         if max_retries > 0:
             log(
