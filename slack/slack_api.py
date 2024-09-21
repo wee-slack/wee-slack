@@ -467,8 +467,12 @@ class SlackApi(SlackApiCommon):
         text: str,
         thread_ts: Optional[SlackTs] = None,
         broadcast: bool = False,
+        me_message: bool = False,
     ):
-        method = "chat.postMessage"
+        if me_message:
+            method = "chat.meMessage"
+        else:
+            method = "chat.postMessage"
         params: Params = {
             "channel": conversation.id,
             "text": text,

@@ -436,10 +436,15 @@ class SlackMessageBuffer(ABC):
         text: str,
         thread_ts: Optional[SlackTs] = None,
         broadcast: bool = False,
+        me_message: bool = False,
     ):
         linkified_text = await self.linkify_text(text)
         await self.api.chat_post_message(
-            self.conversation, linkified_text, thread_ts, broadcast
+            conversation=self.conversation,
+            text=linkified_text,
+            thread_ts=thread_ts,
+            broadcast=broadcast,
+            me_message=me_message,
         )
 
     async def send_change_reaction(

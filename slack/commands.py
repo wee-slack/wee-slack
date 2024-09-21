@@ -84,6 +84,7 @@ class Command:
     args_description: str
     completion: str
     cb: WeechatCommandCallback
+    alias: Optional[str]
 
 
 def weechat_command(
@@ -91,6 +92,7 @@ def weechat_command(
     min_args: int = 0,
     max_split: Optional[int] = None,
     slack_buffer_required: bool = False,
+    alias: Optional[str] = None,
 ) -> Callable[
     [InternalCommandCallback],
     WeechatCommandCallback,
@@ -126,7 +128,8 @@ def weechat_command(
                 run_async(result)
             return
 
-        shared.commands[cmd] = Command(cmd, top_level, "", "", "", completion, wrapper)
+        c = Command(cmd, top_level, "", "", "", completion, wrapper, alias)
+        shared.commands[cmd] = c
 
         return wrapper
 
@@ -316,7 +319,7 @@ def command_slack_workspace_del(buffer: str, args: List[str], options: Options):
     )
 
 
-@weechat_command("%(nicks)", min_args=1, max_split=0)
+@weechat_command("%(nicks)", min_args=1, max_split=0, alias="query")
 async def command_slack_query(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
     if slack_buffer is None:
@@ -399,7 +402,7 @@ async def get_conversation_from_args(buffer: str, args: List[str], options: Opti
     print_error(f'Conversation "{conversation_name}" not found')
 
 
-@weechat_command("")
+@weechat_command("", alias="join")
 async def command_slack_join(buffer: str, args: List[str], options: Options):
     conversation = await get_conversation_from_args(buffer, args, options)
     if conversation is not None:
@@ -407,7 +410,7 @@ async def command_slack_join(buffer: str, args: List[str], options: Options):
         await conversation.open_buffer(switch=not options.get("noswitch"))
 
 
-@weechat_command("")
+@weechat_command("", alias="part")
 async def command_slack_part(buffer: str, args: List[str], options: Options):
     conversation = await get_conversation_from_args(buffer, args, options)
     if conversation is not None:
@@ -421,7 +424,7 @@ async def command_slack_thread(buffer: str, args: List[str], options: Options):
         await slack_buffer.open_thread(args[0], switch=True)
 
 
-@weechat_command("-alsochannel|%(threads)", min_args=1)
+@weechat_command("-alsochannel|%(threads)", min_args=1, alias="reply")
 async def command_slack_reply(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
     broadcast = bool(options.get("alsochannel"))
@@ -441,7 +444,14 @@ async def command_slack_reply(buffer: str, args: List[str], options: Options):
         await slack_buffer.post_message(split_args[1], thread_ts, broadcast)
 
 
-@weechat_command("away|active")
+@weechat_command("", min_args=1, alias="me")
+async def command_slack_memessage(buffer: str, args: List[str], options: Options):
+    slack_buffer = shared.buffers.get(buffer)
+    if isinstance(slack_buffer, SlackMessageBuffer):
+        await slack_buffer.post_message(args[0], me_message=True)
+
+
+@weechat_command("away|active", alias="away")
 async def command_slack_presence(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
     if slack_buffer is None:
@@ -689,6 +699,9 @@ def find_command(start_cmd: str, args: str) -> Optional[Tuple[Command, str]]:
     cmd_args = args[cmd_args_startpos:]
     if cmd in shared.commands:
         return shared.commands[cmd], cmd_args
+    for c in shared.commands.values():
+        if c.alias == cmd:
+            return c, cmd_args
     return None
 
 
@@ -703,7 +716,7 @@ def command_cb(data: str, buffer: str, args: str) -> int:
             f'Error with command "/{data} {args}" (help on command: /help {data})'
         )
 
-    return weechat.WEECHAT_RC_OK
+    return weechat.WEECHAT_RC_OK_EAT
 
 
 async def mark_read(slack_buffer: SlackMessageBuffer):
@@ -805,6 +818,16 @@ def register_commands():
                 "%(slack_commands)|%*",
                 get_callback_name(command_cb),
                 cmd,
+            )
+        if command.alias:
+            weechat.hook_command(
+                command.alias,
+                command.description,
+                command.args,
+                command.args_description,
+                "",
+                get_callback_name(command_cb),
+                command.alias,
             )
 
     for focus_event in focus_events:
