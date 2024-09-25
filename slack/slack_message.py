@@ -271,7 +271,9 @@ class PendingMessageItem:
 
             if self.display_type == "mention":
                 name = f"@{user.nick.format()}"
-                return with_color(shared.config.color.user_mention.value, name)
+                return with_color(
+                    user.nick.color or shared.config.color.user_mention.value, name
+                )
             elif self.display_type == "chat":
                 return user.nick.format(colorize=True)
             else:
