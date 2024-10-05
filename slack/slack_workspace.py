@@ -49,6 +49,7 @@ from slack.weechat_buffer import buffer_new
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfo
+    from slack_api.slack_client_userboot import SlackClientUserbootIm
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_conversations import SlackUsersConversations
     from slack_api.slack_users_info import SlackUserInfo
@@ -471,11 +472,32 @@ class SlackWorkspace(SlackBuffer):
 
         self.usergroups_member = set(user_boot["subteams"]["self"])
 
-        conversation_counts = (
-            client_counts["channels"] + client_counts["mpims"] + client_counts["ims"]
-        )
+        channel_infos: Dict[str, SlackConversationsInfoInternal] = {
+            channel["id"]: channel for channel in user_boot["channels"]
+        }
 
-        conversation_ids = set(
+        channel_counts = client_counts["channels"] + client_counts["mpims"]
+
+        for channel_count in channel_counts:
+            if channel_count["id"] in channel_infos:
+                channel_infos[channel_count["id"]]["last_read"] = channel_count[
+                    "last_read"
+                ]
+
+        im_infos: Dict[str, SlackClientUserbootIm] = {
+            im["id"]: im for im in user_boot["ims"]
+        }
+
+        for im in im_infos.values():
+            # latest is incorrectly set to the current timestamp for all conversations, so delete it
+            del im["latest"]
+
+        for im_count in client_counts["ims"]:
+            if im_count["id"] in im_infos:
+                im_infos[im_count["id"]]["last_read"] = im_count["last_read"]
+                im_infos[im_count["id"]]["latest"] = im_count["latest"]
+
+        channel_ids = set(
             [
                 channel["id"]
                 for channel in user_boot["channels"]
@@ -487,36 +509,29 @@ class SlackWorkspace(SlackBuffer):
                     or self.id in channel["internal_team_ids"]
                 )
             ]
-            + user_boot["is_open"]
-            + [count["id"] for count in conversation_counts if count["has_unreads"]]
+            + [count["id"] for count in channel_counts if count["has_unreads"]]
         )
 
-        conversation_counts_ids = set(count["id"] for count in conversation_counts)
-        if not conversation_ids.issubset(conversation_counts_ids):
-            raise SlackError(
-                self,
-                "Unexpectedly missing some conversations in client.counts",
-                {
-                    "conversation_ids": list(conversation_ids),
-                    "conversation_counts_ids": list(conversation_counts_ids),
-                },
-            )
+        im_ids = set(
+            [
+                im["id"]
+                for im in user_boot["ims"]
+                if "latest" in im and SlackTs(im["last_read"]) < SlackTs(im["latest"])
+            ]
+            + user_boot["is_open"]
+            + [count["id"] for count in client_counts["ims"] if count["has_unreads"]]
+        )
 
-        channel_infos: Dict[str, SlackConversationsInfoInternal] = {
-            channel["id"]: channel for channel in user_boot["channels"]
-        }
-        self.conversations.initialize_items(conversation_ids, channel_infos)
+        conversation_ids = channel_ids | im_ids
+        self.conversations.initialize_items(
+            conversation_ids, {**channel_infos, **im_infos}
+        )
         conversations = {
             conversation_id: await self.conversations[conversation_id]
             for conversation_id in conversation_ids
         }
 
-        for conversation_count in conversation_counts:
-            if conversation_count["id"] in conversations:
-                conversation = conversations[conversation_count["id"]]
-                # TODO: Update without moving unread marker to the bottom
-                if conversation.last_read == SlackTs("0.0"):
-                    conversation.last_read = SlackTs(conversation_count["last_read"])
+        # TODO: Update last_read and other info on reconnect
 
         return list(conversations.values())
 
