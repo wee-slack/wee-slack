@@ -740,6 +740,7 @@ class SlackWorkspace(SlackBuffer):
                     "file_shared",
                     "file_deleted",
                     "dnd_updated_user",
+                    "pong",
                 ]:
                     log(
                         LogLevel.DEBUG,
@@ -875,8 +876,7 @@ class SlackWorkspace(SlackBuffer):
             return
 
         try:
-            self._ws.ping()
-            # workspace.last_ping_time = time.time()
+            self.ws_send({"type": "ping"})
         except (WebSocketConnectionClosedException, socket.error):
             print("lost connection on ping, reconnecting")
             run_async(self.reconnect())
