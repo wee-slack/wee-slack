@@ -12,9 +12,11 @@ from configparser import ConfigParser
 from contextlib import contextmanager
 from pathlib import Path
 from sqlite3 import OperationalError
-from typing import TYPE_CHECKING, Literal, assert_never
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
+    from typing import assert_never
+
     from _typeshed import StrPath
 
 
