@@ -240,6 +240,7 @@ class SlackWorkspace(SlackBuffer):
         self._ws: Optional[WebSocket] = None
         self._hook_ws_fd: Optional[str] = None
         self._last_ws_received_time = time.time()
+        self._last_tickle = time.time()
         self._debug_ws_buffer_pointer: Optional[str] = None
         self._reconnect_url: Optional[str] = None
         self.my_user: SlackUser
@@ -880,6 +881,11 @@ class SlackWorkspace(SlackBuffer):
         except (WebSocketConnectionClosedException, socket.error):
             print("lost connection on ping, reconnecting")
             run_async(self.reconnect())
+
+    def tickle(self, force: bool = False):
+        if force or time.time() - self._last_tickle >= 20:
+            self.ws_send({"type": "tickle"})
+            self._last_tickle = time.time()
 
     def send_typing(self, buffer: SlackMessageBuffer):
         msg = {
