@@ -845,6 +845,16 @@ class SlackWorkspace(SlackBuffer):
             slack_error = SlackRtmError(self, e, data)
             print_error(store_and_format_exception(slack_error))
 
+    def ws_send(self, msg: object):
+        if not self.is_connected:
+            raise SlackError(self, "Can't send to ws when not connected")
+        if self._ws is None:
+            raise SlackError(self, "is_connected is True while _ws is None")
+
+        data = json.dumps(msg)
+        log(LogLevel.DEBUG, DebugMessageType.WEBSOCKET_SEND, data)
+        self._ws.send(data)
+
     def _set_muted_channels(self, muted_channels: Set[str]):
         changed_channels = self.muted_channels ^ muted_channels
         self.muted_channels = muted_channels
@@ -872,18 +882,13 @@ class SlackWorkspace(SlackBuffer):
             run_async(self.reconnect())
 
     def send_typing(self, buffer: SlackMessageBuffer):
-        if not self.is_connected:
-            raise SlackError(self, "Can't send typing when not connected")
-        if self._ws is None:
-            raise SlackError(self, "is_connected is True while _ws is None")
-
         msg = {
             "type": "user_typing",
             "channel": buffer.conversation.id,
         }
         if isinstance(buffer, SlackThread):
             msg["thread_ts"] = buffer.parent.ts
-        self._ws.send(json.dumps(msg))
+        self.ws_send(msg)
 
     async def reconnect(self):
         self.disconnect()
