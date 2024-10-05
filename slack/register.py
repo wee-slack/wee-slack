@@ -91,6 +91,16 @@ def modifier_input_text_display_with_cursor_cb(
     return prefix + string
 
 
+def key_pressed_cb(data: str, signal: str, signal_data: str) -> int:
+    for workspace in shared.workspaces.values():
+        if (
+            workspace.is_connected
+            and workspace.config.keep_active.value == "on_activity"
+        ):
+            workspace.tickle()
+    return weechat.WEECHAT_RC_OK
+
+
 def typing_self_cb(data: str, signal: str, signal_data: str) -> int:
     if not shared.config.look.typing_status_self or signal != "typing_self_typing":
         return weechat.WEECHAT_RC_OK
@@ -98,6 +108,13 @@ def typing_self_cb(data: str, signal: str, signal_data: str) -> int:
     slack_buffer = shared.buffers.get(signal_data)
     if isinstance(slack_buffer, SlackMessageBuffer):
         slack_buffer.set_typing_self()
+    return weechat.WEECHAT_RC_OK
+
+
+def timer_tickle_cb(data: str, remaining_calls: int) -> int:
+    for workspace in shared.workspaces.values():
+        if workspace.is_connected and workspace.config.keep_active.value == "always":
+            workspace.tickle(force=True)
     return weechat.WEECHAT_RC_OK
 
 
@@ -153,7 +170,9 @@ def register():
             get_callback_name(modifier_input_text_display_with_cursor_cb),
             "",
         )
+        weechat.hook_signal("key_pressed", get_callback_name(key_pressed_cb), "")
         weechat.hook_signal("typing_self_*", get_callback_name(typing_self_cb), "")
+        weechat.hook_timer(20000, 0, 0, get_callback_name(timer_tickle_cb), "")
         weechat.hook_timer(5000, 0, 0, get_callback_name(ws_ping_cb), "")
 
         run_async(init_async())

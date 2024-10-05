@@ -364,6 +364,15 @@ class SlackConfigSectionWorkspace:
             False,
         )
 
+        self.keep_active: WeeChatOption[Literal["on_activity", "always"]] = (
+            self._create_option(
+                "keep_active",
+                "keep your presence set to active: on_activity = set active when you interact with WeeChat (Slack sets you away after 30 minutes of inactivity), always = remain active as long as you're connected to the workspace",
+                "on_activity",
+                string_values=["on_activity", "always"],
+            )
+        )
+
         self.network_timeout = self._create_option(
             "network_timeout",
             "timeout (in seconds) for network requests",
