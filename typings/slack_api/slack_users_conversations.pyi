@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Generic, List, TypeVar
 
 from slack_api.slack_common import SlackErrorResponse, SlackResponseMetadata
-from typing_extensions import Literal, TypedDict, final
+from typing_extensions import Literal, NotRequired, TypedDict, final
 
 T = TypeVar("T")
 
@@ -26,6 +26,8 @@ class SlackUsersConversationsCommon(TypedDict):
     is_org_shared: bool
     context_team_id: str
     updated: int
+    # last read is only set for group (prefix G) conversations, but we also set this from other APIs when initializing the workspace
+    last_read: NotRequired[str]
 
 class SlackUsersConversationsCommonNotIm(SlackUsersConversationsCommon):
     name: str

@@ -37,7 +37,8 @@ class SlackClientUserbootIm(TypedDict):
     is_shared: bool
     user: str
     last_read: str
-    latest: str
+    # latest seems to always be present, but is incorrectly set to the current timestamp for all conversations, so we delete the key and set it from client.counts instead
+    latest: NotRequired[str]
     is_open: bool
     topic: NotRequired[SlackTopic]
 
