@@ -640,16 +640,19 @@ class SlackMessage:
 
             if self.is_self_msg:
                 tags.append("self_msg")
-                log_tags = ["notify_none", "no_highlight", "log1"]
-            else:
-                log_tags = ["log1"]
-                notify_tag = self.priority_notify_tag(context)
-                if notify_tag:
-                    log_tags.append(notify_tag)
+
+            log_tags = ["log1"]
 
         if backlog:
             tags += ["no_highlight", "notify_none", "logger_backlog", "no_log"]
         else:
+            if self.is_self_msg:
+                log_tags += ["notify_none", "no_highlight"]
+            else:
+                notify_tag = self.priority_notify_tag(context)
+                if notify_tag:
+                    log_tags.append(notify_tag)
+
             tags += log_tags
 
         return ",".join(tags)
