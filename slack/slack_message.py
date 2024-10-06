@@ -384,7 +384,7 @@ class SlackMessage:
         self._replies = SlackMessageReplies(self)
         self.reply_history_filled = False
         self.thread_buffer: Optional[SlackThread] = None
-        self._last_thread_notify = SlackTs("0.0")
+        self._last_thread_notify: SlackTs = SlackTs("0.0")
         self._deleted = False
 
     def __repr__(self):
@@ -522,7 +522,8 @@ class SlackMessage:
         self._message_json["subscribed"] = subscribed  # pyright: ignore [reportGeneralTypeIssues]
         self.last_read = SlackTs(subscription["last_read"])
         await self.conversation.rerender_message(self)
-        await self.handle_thread_notify_and_auto_open()
+        if subscribed:
+            await self.handle_thread_notify_and_auto_open()
 
     def _get_reaction(self, reaction_name: str):
         for reaction in self._message_json.get("reactions", []):
@@ -670,7 +671,54 @@ class SlackMessage:
 
         return ",".join(tags)
 
-    async def handle_thread_notify_and_auto_open(self):
+    async def get_thread_replies(
+        self, only_if_later_than_ts: Optional[SlackTs] = None
+    ) -> Optional[List[SlackMessage]]:
+        if self.thread_ts is None:
+            return
+
+        if self.latest_reply:
+            latest_reply_ts = self.latest_reply
+        elif self.replies_tss:
+            latest_reply_ts = self.replies_tss[-1]
+        else:
+            _, replies = await self.conversation.fetch_replies(self.thread_ts)
+            if not replies:
+                return
+            latest_reply_ts = replies[-1].ts
+
+        if (
+            only_if_later_than_ts is not None
+            and latest_reply_ts <= only_if_later_than_ts
+        ):
+            return
+
+        _, replies = await self.conversation.fetch_replies(self.thread_ts)
+        return replies
+
+    async def handle_thread_auto_open(self):
+        if not self.conversation.auto_open_threads():
+            return
+
+        if (
+            not self.subscribed
+            and self.conversation.auto_open_threads_only_subscribed()
+        ):
+            return
+
+        last_read = (
+            self.last_read
+            if self.conversation.auto_open_threads_only_unread()
+            else None
+        )
+
+        replies = await self.get_thread_replies(last_read)
+        if not replies:
+            return
+
+        await self.conversation.open_thread(self.hash)
+
+    async def handle_thread_notify(self):
         notify_subscribed_threads = shared.config.look.notify_subscribed_threads.value
         if (
             not self.is_thread_parent
@@ -691,58 +739,38 @@ class SlackMessage:
         ):
             return
 
-        if self.latest_reply:
-            latest_reply_ts = self.latest_reply
-        elif self.replies_tss:
-            latest_reply_ts = self.replies_tss[-1]
-        elif self.thread_ts is not None:
-            _, replies = await self.conversation.fetch_replies(self.thread_ts)
-            if not replies:
-                return
-            latest_reply_ts = replies[-1].ts
-        else:
-            return
-
-        if (
-            latest_reply_ts <= self.last_read
-            or latest_reply_ts <= self._last_thread_notify
-        ):
-            return
-
-        _, replies = await self.conversation.fetch_replies(self.ts)
+        replies_after_ts = max(
+            self.last_read or SlackTs("0.0"), self._last_thread_notify
+        )
+        replies = await self.get_thread_replies(replies_after_ts)
         if not replies:
             return
 
         replies_after_last_read_and_notify = [
-            reply
-            for reply in replies
-            if reply.ts > self.last_read and reply.ts > self._last_thread_notify
+            reply for reply in replies if reply.ts > replies_after_ts
         ]
 
         if all(reply.is_self_msg for reply in replies_after_last_read_and_notify):
             return
 
-        auto_open_threads = self.conversation.auto_open_threads()
-        if notify_subscribed_threads == "always" or not auto_open_threads:
-            channel_name = self.conversation.name_with_prefix(
-                "short_name_without_padding"
+        channel_name = self.conversation.name_with_prefix("short_name_without_padding")
+        if any(
+            reply.should_highlight(only_mention=True)
+            for reply in replies_after_last_read_and_notify
+        ):
+            self.workspace.print(
+                f"You were mentioned in thread {self.hash} in channel {channel_name}"
             )
-            if any(
-                reply.should_highlight(only_mention=True)
-                for reply in replies_after_last_read_and_notify
-            ):
-                self.workspace.print(
-                    f"You were mentioned in thread {self.hash} in channel {channel_name}"
-                )
-            else:
-                self.workspace.print(
-                    f"New message in subscribed thread {self.hash} in channel {channel_name}"
-                )
+        else:
+            self.workspace.print(
+                f"New message in subscribed thread {self.hash} in channel {channel_name}"
+            )
 
-        self._last_thread_notify = latest_reply_ts
+        self._last_thread_notify = replies[-1].ts
 
-        if auto_open_threads:
-            await self.conversation.open_thread(self.hash)
+    async def handle_thread_notify_and_auto_open(self):
+        await self.handle_thread_auto_open()
+        await self.handle_thread_notify()
 
     async def render(
         self,
