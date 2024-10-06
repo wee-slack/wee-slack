@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional, Tuple
 
 import weechat
 
@@ -187,7 +187,7 @@ class SlackConfigSectionLook:
             "color_message_attachments",
             "colorize attachments in a message: prefix = only colorize the prefix, all = colorize the whole line, none = don't colorize",
             "prefix",
-            string_values=["prefix", "all", "none"],
+            string_values=("prefix", "all", "none"),
         )
 
         self.display_link_previews: WeeChatOption[
@@ -197,7 +197,7 @@ class SlackConfigSectionLook:
             "display_link_previews",
             "display previews of URLs in messages: always = always display, only_internal = only display for URLs to messages in the workspace, never = never display",
             "always",
-            string_values=["always", "only_internal", "never"],
+            string_values=("always", "only_internal", "never"),
         )
 
         self.display_reaction_nicks = WeeChatOption(
@@ -235,7 +235,7 @@ class SlackConfigSectionLook:
             "muted_conversations_notify",
             "notify level to set for messages in muted conversations; none: don't notify for any messages; personal_highlights: only notify for personal highlights, i.e. not @channel and @here; all_highlights: notify for all highlights, but not other messages; all: notify for all messages, like other channels; note that this doesn't affect messages in threads you are subscribed to or in open thread buffers, those will always notify",
             "personal_highlights",
-            string_values=["none", "personal_highlights", "all_highlights", "all"],
+            string_values=("none", "personal_highlights", "all_highlights", "all"),
         )
 
         self.notify_subscribed_threads: WeeChatOption[
@@ -245,7 +245,7 @@ class SlackConfigSectionLook:
             "notify_subscribed_threads",
             "send a message to the workspace buffer to notify you of new messages in threads you are subscribed to: auto = only notify if the thread buffer is not open and display_thread_replies_in_channel for the channel is false, unless_thread_buffer = only notify if the thread buffer is not open, always = always notify, never = never notify",
             "auto",
-            string_values=["auto", "unless_thread_buffer", "always", "never"],
+            string_values=("auto", "unless_thread_buffer", "always", "never"),
         )
 
         self.part_closes_buffer = WeeChatOption(
@@ -262,7 +262,7 @@ class SlackConfigSectionLook:
                 "render_emoji_as",
                 "show emojis as: emoji = the emoji unicode character, name = the emoji name, both = both the emoji name and the emoji character",
                 "emoji",
-                string_values=["emoji", "name", "both"],
+                string_values=("emoji", "name", "both"),
             )
         )
 
@@ -287,7 +287,7 @@ class SlackConfigSectionLook:
             "workspace_buffer",
             "merge workspace buffers; this option has no effect if a layout is saved and is conflicting with this value (see /help layout)",
             "merge_with_core",
-            string_values=["merge_with_core", "merge_without_core", "independent"],
+            string_values=("merge_with_core", "merge_without_core", "independent"),
             parent_option="irc.look.server_buffer",
             callback_change=self.config_change_workspace_buffer_cb,
         )
@@ -379,7 +379,7 @@ class SlackConfigSectionWorkspace:
                 "keep_active",
                 "keep your presence set to active: on_activity = set active when you interact with WeeChat (Slack sets you away after 30 minutes of inactivity), always = remain active as long as you're connected to the workspace",
                 "on_activity",
-                string_values=["on_activity", "always"],
+                string_values=("on_activity", "always"),
             )
         )
 
@@ -409,7 +409,7 @@ class SlackConfigSectionWorkspace:
         default_value: WeeChatOptionType,
         min_value: Optional[int] = None,
         max_value: Optional[int] = None,
-        string_values: Optional[list[WeeChatOptionType]] = None,
+        string_values: Tuple[WeeChatOptionType, ...] = (),
         evaluate_func: Optional[
             Callable[[WeeChatOptionType], WeeChatOptionType]
         ] = None,
