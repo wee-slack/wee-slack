@@ -368,6 +368,15 @@ class SlackConfigSectionWorkspace:
             evaluate_func=self._evaluate_with_workspace_name,
         )
 
+        self.auto_open_threads: WeeChatOption[
+            Literal["never", "unless_displayed_in_channel", "always"]
+        ] = self._create_option(
+            "auto_open_threads",
+            "automatically open thread buffers with unread messages when you're subscribed to a thread: unless_displayed_in_channel = only for channels with display_thread_replies_in_channel disabled, always = for threads in all channels, never = never automatically open threads; can be overridden per buffer with the buffer localvar auto_open_threads",
+            "never",
+            string_values=("never", "unless_displayed_in_channel", "always"),
+        )
+
         self.autoconnect = self._create_option(
             "autoconnect",
             "automatically connect to workspace when WeeChat is starting",
