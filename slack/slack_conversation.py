@@ -414,6 +414,16 @@ class SlackConversation(SlackMessageBuffer):
     async def fetch_replies(
         self, thread_ts: SlackTs
     ) -> Tuple[SlackMessage, List[SlackMessage]]:
+        parent_message = self.messages.get(thread_ts)
+        if (
+            parent_message
+            and parent_message.reply_history_filled
+            and not self.history_needs_refresh
+        ):
+            return parent_message, [
+                self.messages[ts] for ts in parent_message.replies_tss
+            ]
+
         replies_response = await self.api.fetch_conversations_replies(self, thread_ts)
         messages = [
             SlackMessage(self, message) for message in replies_response["messages"]
