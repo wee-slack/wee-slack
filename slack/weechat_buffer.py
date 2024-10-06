@@ -17,6 +17,12 @@ def buffer_new(
     input_callback_name = get_callback_name(input_callback)
     close_callback_name = get_callback_name(close_callback)
     if shared.weechat_version >= 0x03050000:
+        # WeeChat < 4.5.0 doesn't send the buffer_switch signal if the display
+        # property is used with buffer_new_props, so set it afterwards instead
+        if shared.weechat_version < 0x04050000:
+            set_display = properties.pop("display", None)
+        else:
+            set_display = None
         buffer_pointer = weechat.buffer_new_props(
             name,
             properties,
@@ -25,6 +31,8 @@ def buffer_new(
             close_callback_name,
             "",
         )
+        if set_display is not None:
+            weechat.buffer_set(buffer_pointer, "display", set_display)
     else:
         buffer_pointer = weechat.buffer_new(
             name,
