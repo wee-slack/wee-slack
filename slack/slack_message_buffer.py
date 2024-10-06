@@ -364,7 +364,11 @@ class SlackMessageBuffer(SlackBuffer):
 
     def set_unread_and_hotlist(self):
         if self.buffer_pointer:
-            # TODO: Move unread marker to correct position according to last_read for WeeChat >= 4.0.0
+            if self.last_read is not None and self.last_read < self.last_printed_ts:
+                # TODO: Move unread marker to correct position according to last_read for WeeChat >= 4.0.0
+                # TODO: Set hotlist correctly if last_read isn't the last message
+                return
+
             weechat.buffer_set(self.buffer_pointer, "unread", "")
             weechat.buffer_set(self.buffer_pointer, "hotlist", "-1")
             self.hotlist_tss.clear()
