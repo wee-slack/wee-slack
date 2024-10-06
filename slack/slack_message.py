@@ -387,6 +387,17 @@ class SlackMessage:
         self._last_thread_notify: SlackTs = SlackTs("0.0")
         self._deleted = False
 
+        # Only subscribed threads have the last_read property, so for other
+        # threads set it to the latest_reply ts if it exists, so existing
+        # messages are considered read, but new messages are not.
+        self._last_read = (
+            SlackTs(self._message_json["last_read"])
+            if "last_read" in self._message_json
+            else SlackTs(self.latest_reply)
+            if self.latest_reply
+            else self.ts
+        )
+
     def __repr__(self):
         return f"{self.__class__.__name__}({self.conversation}, {self.ts})"
 
@@ -438,16 +449,12 @@ class SlackMessage:
         return self._message_json.get("subscribed", False)
 
     @property
-    def last_read(self) -> Optional[SlackTs]:
-        return (
-            SlackTs(self._message_json["last_read"])
-            if "last_read" in self._message_json
-            else None
-        )
+    def last_read(self) -> SlackTs:
+        return self._last_read
 
     @last_read.setter
     def last_read(self, value: SlackTs):
-        self._message_json["last_read"] = value  # pyright: ignore [reportGeneralTypeIssues]
+        self._last_read = value
         if self.thread_buffer:
             self.thread_buffer.set_unread_and_hotlist()
 
@@ -509,6 +516,9 @@ class SlackMessage:
         self._rendered_prefix = None
         self._rendered_message = None
         self._parsed_message = None
+
+        if "last_read" in message_json:
+            self.last_read = SlackTs(message_json["last_read"])
 
     def update_message_json_room(self, room: SlackMessageSubtypeHuddleThreadRoom):
         if "room" in self._message_json:
@@ -739,9 +749,7 @@ class SlackMessage:
         ):
             return
 
-        replies_after_ts = max(
-            self.last_read or SlackTs("0.0"), self._last_thread_notify
-        )
+        replies_after_ts = max(self.last_read, self._last_thread_notify)
         replies = await self.get_thread_replies(replies_after_ts)
         if not replies:
             return

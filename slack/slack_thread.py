@@ -44,7 +44,7 @@ class SlackThread(SlackMessageBuffer):
         return self.parent.replies
 
     @property
-    def last_read(self) -> Optional[SlackTs]:
+    def last_read(self) -> SlackTs:
         return self.parent.last_read
 
     def get_name_and_buffer_props(self) -> Tuple[str, Dict[str, str]]:
@@ -128,8 +128,8 @@ class SlackThread(SlackMessageBuffer):
         if self.workspace.token_type != "session":
             return
 
-        # last_read can only be set if it exists (which is on threads you're subscribed to)
-        if self.last_read is None:
+        # last_read can only be set on subscribed threads
+        if not self.parent.subscribed:
             return
 
         last_read_line_ts = self.last_read_line_ts()

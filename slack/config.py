@@ -382,13 +382,13 @@ class SlackConfigSectionWorkspace:
 
         self.auto_open_threads_only_subscribed = self._create_option(
             "auto_open_threads_only_subscribed",
-            "limit automatically opening threads to only subscribed threads; can be overridden per buffer with the buffer localvar auto_open_threads_only_subscribed",
+            "limit automatically opening threads to only subscribed threads; note that only subscribed threads have a read status on the server, so on script load all messages in unsubscribed threads will be considered read; can be overridden per buffer with the buffer localvar auto_open_threads_only_subscribed",
             True,
         )
 
         self.auto_open_threads_only_unread = self._create_option(
             "auto_open_threads_only_unread",
-            "limit automatically opening threads to only unread threads; note that only subscribed threads have a read status, so this option only applies to subscribed threads; can be overridden per buffer with the buffer localvar auto_open_threads_only_unread",
+            "limit automatically opening threads to only unread threads; note that only subscribed threads have a read status on the server, so this option only applies to subscribed threads; can be overridden per buffer with the buffer localvar auto_open_threads_only_unread",
             True,
         )
 
