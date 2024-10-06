@@ -466,6 +466,7 @@ class SlackConversation(SlackMessageBuffer):
         if self.buffer_pointer and shared.current_buffer_pointer != self.buffer_pointer:
             for message_json in history["messages"]:
                 message = SlackMessage(self, message_json)
+                self._add_or_update_message(message)
                 if message.ts > self.last_read and message.ts not in self.hotlist_tss:
                     priority = message.priority(self.context).value
                     weechat.buffer_set(self.buffer_pointer, "hotlist", priority)
