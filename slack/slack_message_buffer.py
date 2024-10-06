@@ -172,6 +172,10 @@ class SlackMessageBuffer(ABC):
     def api(self) -> SlackApi:
         return self.workspace.api
 
+    @property
+    def buffer_is_open(self) -> bool:
+        return self.buffer_pointer is not None
+
     @contextmanager
     def loading(self):
         self.is_loading = True

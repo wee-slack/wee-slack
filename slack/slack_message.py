@@ -379,6 +379,7 @@ class SlackMessage:
         self._replies = SlackMessageReplies(self)
         self.reply_history_filled = False
         self.thread_buffer: Optional[SlackThread] = None
+        self._last_thread_notify = SlackTs("0.0")
         self._deleted = False
 
     def __repr__(self):
@@ -516,6 +517,7 @@ class SlackMessage:
         self._message_json["subscribed"] = subscribed  # pyright: ignore [reportGeneralTypeIssues]
         self.last_read = SlackTs(subscription["last_read"])
         await self.conversation.rerender_message(self)
+        await self.notify_thread()
 
     def _get_reaction(self, reaction_name: str):
         for reaction in self._message_json.get("reactions", []):
@@ -546,6 +548,20 @@ class SlackMessage:
     def has_reacted(self, reaction_name: str) -> bool:
         reaction = self._get_reaction(reaction_name)
         return reaction is not None and self.workspace.my_user.id in reaction["users"]
+
+    def has_mention(self) -> bool:
+        parsed_message = self.parse_message_text()
+
+        for item in parsed_message:
+            if isinstance(item, PendingMessageItem):
+                if (
+                    item.item_type == "user"
+                    and item.display_type == "mention"
+                    and item.item_id == self.workspace.my_user.id
+                ):
+                    return True
+
+        return False
 
     def should_highlight(self, only_personal: bool) -> bool:
         parsed_message = self.parse_message_text()
@@ -656,6 +672,70 @@ class SlackMessage:
             tags += log_tags
 
         return ",".join(tags)
+
+    async def notify_thread(self):
+        notify_subscribed_threads = shared.config.look.notify_subscribed_threads.value
+        if (
+            not self.is_thread_parent
+            or not self.subscribed
+            or notify_subscribed_threads == "never"
+        ):
+            return
+
+        if (
+            notify_subscribed_threads == "auto"
+            or notify_subscribed_threads == "unless_thread_buffer"
+        ) and (self.thread_buffer is not None and self.thread_buffer.buffer_is_open):
+            return
+
+        if (
+            notify_subscribed_threads == "auto"
+            and self.conversation.display_thread_replies()
+        ):
+            return
+
+        if self.latest_reply:
+            latest_reply_ts = self.latest_reply
+        elif self.replies_tss:
+            latest_reply_ts = self.replies_tss[-1]
+        elif self.thread_ts is not None:
+            _, replies = await self.conversation.fetch_replies(self.thread_ts)
+            if not replies:
+                return
+            latest_reply_ts = replies[-1].ts
+        else:
+            return
+
+        if (
+            latest_reply_ts <= self.last_read
+            or latest_reply_ts <= self._last_thread_notify
+        ):
+            return
+
+        _, replies = await self.conversation.fetch_replies(self.ts)
+        if not replies:
+            return
+
+        replies_after_last_read_and_notify = [
+            reply
+            for reply in replies
+            if reply.ts > self.last_read and reply.ts > self._last_thread_notify
+        ]
+
+        if all(reply.is_self_msg for reply in replies_after_last_read_and_notify):
+            return
+
+        channel_name = self.conversation.name_with_prefix("short_name_without_padding")
+        if any(reply.has_mention() for reply in replies_after_last_read_and_notify):
+            self.workspace.print(
+                f"You were mentioned in thread {self.hash} in channel {channel_name}"
+            )
+        else:
+            self.workspace.print(
+                f"New message in subscribed thread {self.hash} in channel {channel_name}"
+            )
+
+        self._last_thread_notify = latest_reply_ts
 
     async def render(
         self,
