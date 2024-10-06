@@ -368,13 +368,28 @@ class SlackConfigSectionWorkspace:
             evaluate_func=self._evaluate_with_workspace_name,
         )
 
-        self.auto_open_threads: WeeChatOption[
-            Literal["never", "unless_displayed_in_channel", "always"]
-        ] = self._create_option(
+        self.auto_open_threads = self._create_option(
             "auto_open_threads",
-            "automatically open thread buffers with unread messages when you're subscribed to a thread: unless_displayed_in_channel = only for channels with display_thread_replies_in_channel disabled, always = for threads in all channels, never = never automatically open threads; can be overridden per buffer with the buffer localvar auto_open_threads",
-            "never",
-            string_values=("never", "unless_displayed_in_channel", "always"),
+            "automatically open thread buffers; see the other options starting with auto_open_threads for which threads to open; can be overridden per buffer with the buffer localvar auto_open_threads",
+            False,
+        )
+
+        self.auto_open_threads_only_if_replies_not_in_channel = self._create_option(
+            "auto_open_threads_only_if_replies_not_in_channel",
+            "limit automatically opening threads to only threads in conversations where display_thread_replies_in_channel is disabled; can be overridden per buffer with the buffer localvar auto_open_threads_only_if_replies_not_in_channel",
+            True,
+        )
+
+        self.auto_open_threads_only_subscribed = self._create_option(
+            "auto_open_threads_only_subscribed",
+            "limit automatically opening threads to only subscribed threads; can be overridden per buffer with the buffer localvar auto_open_threads_only_subscribed",
+            True,
+        )
+
+        self.auto_open_threads_only_unread = self._create_option(
+            "auto_open_threads_only_unread",
+            "limit automatically opening threads to only unread threads; note that only subscribed threads have a read status, so this option only applies to subscribed threads; can be overridden per buffer with the buffer localvar auto_open_threads_only_unread",
+            True,
         )
 
         self.autoconnect = self._create_option(

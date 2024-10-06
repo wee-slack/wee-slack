@@ -47,7 +47,7 @@ if TYPE_CHECKING:
         SlackShRoomUpdate,
         SlackUserTyping,
     )
-    from typing_extensions import Literal, assert_never
+    from typing_extensions import Literal
 
     from slack.slack_workspace import SlackWorkspace
 
@@ -621,27 +621,51 @@ class SlackConversation(SlackMessageBuffer):
             nick_pointer = self._nicklist.pop(nick)
             weechat.nicklist_remove_nick(self.buffer_pointer, nick_pointer)
 
-    def auto_open_threads(self) -> bool:
+    def _auto_open_threads(self) -> bool:
         if self.buffer_pointer is not None:
             buffer_value = weechat.buffer_get_string(
-                self.buffer_pointer, "localvar_auto_open_threads"
+                self.buffer_pointer,
+                "localvar_auto_open_threads",
             )
-        else:
-            buffer_value = None
+            if buffer_value:
+                return bool(weechat.config_string_to_boolean(buffer_value))
+        return self.workspace.config.auto_open_threads.value
 
-        if buffer_value in self.workspace.config.auto_open_threads.string_values:
-            value = buffer_value
-        else:
-            value = self.workspace.config.auto_open_threads.value
+    def _auto_open_threads_only_if_replies_not_in_channel(self) -> bool:
+        if self.buffer_pointer is not None:
+            buffer_value = weechat.buffer_get_string(
+                self.buffer_pointer,
+                "localvar_auto_open_threads_only_if_replies_not_in_channel",
+            )
+            if buffer_value:
+                return bool(weechat.config_string_to_boolean(buffer_value))
+        return (
+            self.workspace.config.auto_open_threads_only_if_replies_not_in_channel.value
+        )
 
-        if value == "unless_displayed_in_channel":
-            return not self.display_thread_replies()
-        elif value == "always":
-            return True
-        elif value == "never":
-            return False
-        else:
-            assert_never(value)
+    def auto_open_threads(self) -> bool:
+        return self._auto_open_threads() and (
+            not self._auto_open_threads_only_if_replies_not_in_channel()
+            or not self.display_thread_replies()
+        )
+
+    def auto_open_threads_only_subscribed(self) -> bool:
+        if self.buffer_pointer is not None:
+            buffer_value = weechat.buffer_get_string(
+                self.buffer_pointer, "localvar_auto_open_threads_only_subscribed"
+            )
+            if buffer_value:
+                return bool(weechat.config_string_to_boolean(buffer_value))
+        return self.workspace.config.auto_open_threads_only_subscribed.value
+
+    def auto_open_threads_only_unread(self) -> bool:
+        if self.buffer_pointer is not None:
+            buffer_value = weechat.buffer_get_string(
+                self.buffer_pointer, "localvar_auto_open_threads_only_unread"
+            )
+            if buffer_value:
+                return bool(weechat.config_string_to_boolean(buffer_value))
+        return self.workspace.config.auto_open_threads_only_unread.value
 
     def display_thread_replies(self) -> bool:
         if self.buffer_pointer is not None:
