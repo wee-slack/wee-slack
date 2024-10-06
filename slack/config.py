@@ -238,6 +238,16 @@ class SlackConfigSectionLook:
             string_values=["none", "personal_highlights", "all_highlights", "all"],
         )
 
+        self.notify_subscribed_threads: WeeChatOption[
+            Literal["auto", "unless_thread_buffer", "always", "never"]
+        ] = WeeChatOption(
+            self._section,
+            "notify_subscribed_threads",
+            "send a message to the workspace buffer to notify you of new messages in threads you are subscribed to: auto = only notify if the thread buffer is not open and display_thread_replies_in_channel for the channel is false, unless_thread_buffer = only notify if the thread buffer is not open, always = always notify, never = never notify",
+            "auto",
+            string_values=["auto", "unless_thread_buffer", "always", "never"],
+        )
+
         self.part_closes_buffer = WeeChatOption(
             self._section,
             "part_closes_buffer",

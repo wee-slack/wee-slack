@@ -24,3 +24,7 @@ class SlackBuffer(ABC):
     @property
     def buffer_pointer(self) -> Optional[str]:
         return self._buffer_pointer
+
+    @property
+    def buffer_is_open(self) -> bool:
+        return self.buffer_pointer is not None

@@ -94,7 +94,7 @@ class SlackThread(SlackMessageBuffer):
                 await self.print_history()
                 return
 
-            messages = await self.parent.conversation.fetch_replies(self.parent.ts)
+            _, messages = await self.parent.conversation.fetch_replies(self.parent.ts)
 
             if self.history_needs_refresh:
                 await self.rerender_history()

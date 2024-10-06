@@ -411,7 +411,9 @@ class SlackConversation(SlackMessageBuffer):
         self.workspace.users.initialize_items(self._members)
         return self._members
 
-    async def fetch_replies(self, thread_ts: SlackTs) -> List[SlackMessage]:
+    async def fetch_replies(
+        self, thread_ts: SlackTs
+    ) -> Tuple[SlackMessage, List[SlackMessage]]:
         replies_response = await self.api.fetch_conversations_replies(self, thread_ts)
         messages = [
             SlackMessage(self, message) for message in replies_response["messages"]
@@ -435,7 +437,7 @@ class SlackConversation(SlackMessageBuffer):
         self._messages = OrderedDict(sorted(self._messages.items()))
 
         parent_message.reply_history_filled = True
-        return replies
+        return parent_message, replies
 
     async def fetch_history(self, all_current_messages: bool):
         if self._messages and all_current_messages:
@@ -486,6 +488,7 @@ class SlackConversation(SlackMessageBuffer):
                     )
                     weechat.buffer_set(self.buffer_pointer, "hotlist", priority.value)
                     self.hotlist_tss.add(message.latest_reply)
+                await message.notify_thread()
 
     async def fill_history(self, update: bool = False):
         if self.is_loading:
@@ -563,6 +566,7 @@ class SlackConversation(SlackMessageBuffer):
 
             for message in messages:
                 await self.print_message(message)
+                await message.notify_thread()
 
             while self.history_pending_messages:
                 message = self.history_pending_messages.pop(0)
@@ -645,8 +649,12 @@ class SlackConversation(SlackMessageBuffer):
                     thread_buffer.history_pending_messages.append(message)
                 else:
                     await thread_buffer.print_message(message)
+
         elif message.thread_ts is not None:
-            await self.fetch_replies(message.thread_ts)
+            parent_message, _ = await self.fetch_replies(message.thread_ts)
+
+        if parent_message:
+            await parent_message.notify_thread()
 
         if self.should_display_message(message):
             if self.is_loading:
