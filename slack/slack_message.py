@@ -522,7 +522,7 @@ class SlackMessage:
         self._message_json["subscribed"] = subscribed  # pyright: ignore [reportGeneralTypeIssues]
         self.last_read = SlackTs(subscription["last_read"])
         await self.conversation.rerender_message(self)
-        await self.notify_thread()
+        await self.handle_thread_notify_and_auto_open()
 
     def _get_reaction(self, reaction_name: str):
         for reaction in self._message_json.get("reactions", []):
@@ -670,7 +670,7 @@ class SlackMessage:
 
         return ",".join(tags)
 
-    async def notify_thread(self):
+    async def handle_thread_notify_and_auto_open(self):
         notify_subscribed_threads = shared.config.look.notify_subscribed_threads.value
         if (
             not self.is_thread_parent
@@ -722,20 +722,27 @@ class SlackMessage:
         if all(reply.is_self_msg for reply in replies_after_last_read_and_notify):
             return
 
-        channel_name = self.conversation.name_with_prefix("short_name_without_padding")
-        if any(
-            reply.should_highlight(only_mention=True)
-            for reply in replies_after_last_read_and_notify
-        ):
-            self.workspace.print(
-                f"You were mentioned in thread {self.hash} in channel {channel_name}"
+        auto_open_threads = self.conversation.auto_open_threads()
+        if notify_subscribed_threads == "always" or not auto_open_threads:
+            channel_name = self.conversation.name_with_prefix(
+                "short_name_without_padding"
             )
-        else:
-            self.workspace.print(
-                f"New message in subscribed thread {self.hash} in channel {channel_name}"
-            )
+            if any(
+                reply.should_highlight(only_mention=True)
+                for reply in replies_after_last_read_and_notify
+            ):
+                self.workspace.print(
+                    f"You were mentioned in thread {self.hash} in channel {channel_name}"
+                )
+            else:
+                self.workspace.print(
+                    f"New message in subscribed thread {self.hash} in channel {channel_name}"
+                )
 
         self._last_thread_notify = latest_reply_ts
+
+        if auto_open_threads:
+            await self.conversation.open_thread(self.hash)
 
     async def render(
         self,

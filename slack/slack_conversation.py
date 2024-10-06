@@ -47,7 +47,7 @@ if TYPE_CHECKING:
         SlackShRoomUpdate,
         SlackUserTyping,
     )
-    from typing_extensions import Literal
+    from typing_extensions import Literal, assert_never
 
     from slack.slack_workspace import SlackWorkspace
 
@@ -499,7 +499,7 @@ class SlackConversation(SlackMessageBuffer):
                     )
                     weechat.buffer_set(self.buffer_pointer, "hotlist", priority.value)
                     self.hotlist_tss.add(message.latest_reply)
-                await message.notify_thread()
+                await message.handle_thread_notify_and_auto_open()
 
     async def fill_history(self, update: bool = False):
         if self.is_loading:
@@ -577,7 +577,7 @@ class SlackConversation(SlackMessageBuffer):
 
             for message in messages:
                 await self.print_message(message)
-                await message.notify_thread()
+                await message.handle_thread_notify_and_auto_open()
 
             while self.history_pending_messages:
                 message = self.history_pending_messages.pop(0)
@@ -620,6 +620,28 @@ class SlackConversation(SlackMessageBuffer):
         if nick in self._nicklist:
             nick_pointer = self._nicklist.pop(nick)
             weechat.nicklist_remove_nick(self.buffer_pointer, nick_pointer)
+
+    def auto_open_threads(self) -> bool:
+        if self.buffer_pointer is not None:
+            buffer_value = weechat.buffer_get_string(
+                self.buffer_pointer, "localvar_auto_open_threads"
+            )
+        else:
+            buffer_value = None
+
+        if buffer_value in self.workspace.config.auto_open_threads.string_values:
+            value = buffer_value
+        else:
+            value = self.workspace.config.auto_open_threads.value
+
+        if value == "unless_displayed_in_channel":
+            return not self.display_thread_replies()
+        elif value == "always":
+            return True
+        elif value == "never":
+            return False
+        else:
+            assert_never(value)
 
     def display_thread_replies(self) -> bool:
         if self.buffer_pointer is not None:
@@ -665,7 +687,7 @@ class SlackConversation(SlackMessageBuffer):
             parent_message, _ = await self.fetch_replies(message.thread_ts)
 
         if parent_message:
-            await parent_message.notify_thread()
+            await parent_message.handle_thread_notify_and_auto_open()
 
         if self.should_display_message(message):
             if self.is_loading:
@@ -765,6 +787,8 @@ class SlackConversation(SlackMessageBuffer):
             if thread_message.thread_buffer is None:
                 thread_message.thread_buffer = SlackThread(thread_message)
             await thread_message.thread_buffer.open_buffer(switch)
+            if not switch:
+                await thread_message.thread_buffer.fill_history()
 
     async def print_message(self, message: SlackMessage):
         did_print = await super().print_message(message)
