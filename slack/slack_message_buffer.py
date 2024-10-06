@@ -221,7 +221,7 @@ class SlackMessageBuffer(ABC):
 
     @property
     @abstractmethod
-    def last_read(self) -> Optional[SlackTs]:
+    def last_read(self) -> SlackTs:
         raise NotImplementedError()
 
     @abstractmethod
@@ -341,7 +341,7 @@ class SlackMessageBuffer(ABC):
             return False
 
         rendered = await message.render(self.context)
-        backlog = self.last_read is not None and message.ts <= self.last_read
+        backlog = message.ts <= self.last_read
         tags = await message.tags(self.context, backlog)
         if message.ts in self.hotlist_tss:
             tags += ",notify_none"
@@ -378,7 +378,7 @@ class SlackMessageBuffer(ABC):
 
     def set_unread_and_hotlist(self):
         if self.buffer_pointer:
-            if self.last_read is not None and self.last_read < self.last_printed_ts:
+            if self.last_read < self.last_printed_ts:
                 # TODO: Move unread marker to correct position according to last_read for WeeChat >= 4.0.0
                 # TODO: Set hotlist correctly if last_read isn't the last message
                 return
