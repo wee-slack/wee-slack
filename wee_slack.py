@@ -5741,14 +5741,14 @@ def command_users(data, current_buffer, args):
     If regex is given show only users that match the case-insensitive regex.
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
-    pat = re.compile(args, flags=re.IGNORECASE)
 
-    if pat is None:
-        users = team.users.values()
-        header = "Users"
-    else:
+    if args:
+        pat = re.compile(args, flags=re.IGNORECASE)
         users = [v for v in team.users.values() if pat.search(v.name)]
         header = 'Users that match "{}"'.format(args)
+    else:
+        users = team.users.values()
+        header = "Users"
 
     return print_users_info(team, header, users)
 
