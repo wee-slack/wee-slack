@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.11.0 (2024-10-09)
+
+### Slack API changes
+
+- Prevent crash on startup after API response from `users.prefs.get` was changed (fixes #930).
+- Fix muted channels not being updated after API change.
+
+### WeeChat compatibility
+
+- Set buffer property `input_prompt` to the users nick.
+
+### Features
+
+- Make logging "Channel Created" optional (PR #926).
+- Support filtering users list based on regular expression (PR #929).
+- Add option to see the username as the nick (PR #944).
+
+### Bug fixes
+
+- Fix IM title not being updated on user status change.
+
 ## 2.10.2 (2024-02-18)
 
 Note: This will most likely be the last version before version 3.0.0, which is a mostly complete rewrite of the script with some breaking changes. Notably the configuration options have completely changed to be more in line with how the IRC plugin does it with a separate section for each Slack workspace. There will be some new features, but some existing features might also be dropped. Several bugs have been fixed, but of course new ones may have been introduced too.
