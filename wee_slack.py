@@ -5271,11 +5271,14 @@ def modify_buffer_line(buffer_pointer, ts, new_text):
 
 
 def nick_from_profile(profile, username):
-    full_name = profile.get("real_name") or username
-    if config.use_full_names:
-        nick = full_name
+    if config.use_usernames:
+        nick = username
     else:
-        nick = profile.get("display_name") or full_name
+        full_name = profile.get("real_name") or username
+        if config.use_full_names:
+            nick = full_name
+        else:
+            nick = profile.get("display_name") or full_name
     return nick.replace(" ", "")
 
 
@@ -5344,7 +5347,12 @@ def tag(
 
 
 def set_own_presence_active(team):
-    slackbot = team.get_channel_map()["Slackbot"]
+    if config.use_usernames:
+        nick_slackbot = "slackbot"
+    else:
+        nick_slackbot = "Slackbot"
+
+    slackbot = team.get_channel_map()[nick_slackbot]
     channel = team.channels[slackbot]
     request = {"type": "typing", "channel": channel.identifier}
     channel.team.send_to_websocket(request, expect_reply=False)
@@ -6976,6 +6984,11 @@ class PluginConfig(object):
             desc="Use full names as the nicks for all users. When this is"
             " false (the default), display names will be used if set, with a"
             " fallback to the full name if display name is not set.",
+        ),
+        "use_usernames": Setting(
+            default="false",
+            desc="Use usernames as the nicks for all users. Takes priority"
+            " over use_full_names. Default false.",
         ),
     }
 

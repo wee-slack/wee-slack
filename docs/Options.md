@@ -286,3 +286,9 @@ slack` after changing it to take effect.
 
 **Description:** Use full names as the nicks for all users. When this is false (the default), display names will be used if set, with a fallback to the full name if display name is not set.
 
+### use_usernames
+
+**Default:** `false`
+
+**Description:** Use usernames as the nicks for all users. Takes priority over use_full_names. Default false.
+
