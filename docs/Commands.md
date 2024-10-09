@@ -240,8 +240,9 @@ If handle is given show the members in the usergroup
 ### users
 
 ```
-/slack users
+/slack users [regex]
 ```
 
 List the users in the current team.
+If regex is given show only users that match the case-insensitive regex.
 

@@ -5736,11 +5736,21 @@ def command_channels(data, current_buffer, args):
 @utf8_decode
 def command_users(data, current_buffer, args):
     """
-    /slack users
+    /slack users [regex]
     List the users in the current team.
+    If regex is given show only users that match the case-insensitive regex.
     """
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
-    return print_users_info(team, "Users", team.users.values())
+
+    if args:
+        pat = re.compile(args, flags=re.IGNORECASE)
+        users = [v for v in team.users.values() if pat.search(v.name)]
+        header = 'Users that match "{}"'.format(args)
+    else:
+        users = team.users.values()
+        header = "Users"
+
+    return print_users_info(team, header, users)
 
 
 @slack_buffer_required
