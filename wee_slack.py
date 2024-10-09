@@ -6810,15 +6810,15 @@ class PluginConfig(object):
         "colorize_private_chats": Setting(
             default="false", desc="Whether to use nick-colors in DM windows."
         ),
-        "debug_mode": Setting(
-            default="false",
-            desc="Open a dedicated buffer for debug messages and start logging"
-            " to it. How verbose the logging is depends on log_level.",
-        ),
         "debug_level": Setting(
             default="3",
             desc="Show only this level of debug info (or higher) when"
             " debug_mode is on. Lower levels -> more messages.",
+        ),
+        "debug_mode": Setting(
+            default="false",
+            desc="Open a dedicated buffer for debug messages and start logging"
+            " to it. How verbose the logging is depends on log_level.",
         ),
         "distracting_channels": Setting(default="", desc="List of channels to hide."),
         "external_user_suffix": Setting(
@@ -6842,6 +6842,10 @@ class PluginConfig(object):
         "link_previews": Setting(
             default="true", desc="Show previews of website content linked by teammates."
         ),
+        "log_channel_created": Setting(
+            default="true",
+            desc='Log "Channel created" in the Server buffer.',
+        ),
         "map_underline_to": Setting(
             default="_",
             desc="When sending underlined text to slack, use this formatting"
@@ -6857,6 +6861,10 @@ class PluginConfig(object):
             " all highlights, but not other messages. all: Show all activity,"
             " like other channels.",
         ),
+        "never_away": Setting(
+            default="false",
+            desc='Poke Slack every five minutes so that it never marks you "away".',
+        ),
         "notify_subscribed_threads": Setting(
             default="auto",
             desc="Control if you want to see a notification in the team buffer when a"
@@ -6868,10 +6876,6 @@ class PluginConfig(object):
             default="false",
             desc="Control if you want to see a notification in the team buffer when a"
             "usergroup's handle has changed, either true or false.",
-        ),
-        "never_away": Setting(
-            default="false",
-            desc='Poke Slack every five minutes so that it never marks you "away".',
         ),
         "record_events": Setting(
             default="false", desc="Log all traffic from Slack to disk as JSON."
@@ -6945,12 +6949,6 @@ class PluginConfig(object):
             default="false",
             desc="When enabled shows thread messages in the parent channel.",
         ),
-        "unfurl_ignore_alt_text": Setting(
-            default="false",
-            desc='When displaying ("unfurling") links to channels/users/etc,'
-            ' ignore the "alt text" present in the message and instead use the'
-            " canonical name of the thing being linked to.",
-        ),
         "unfurl_auto_link_display": Setting(
             default="both",
             desc='When displaying ("unfurling") links to channels/users/etc,'
@@ -6960,6 +6958,12 @@ class PluginConfig(object):
             ' addresses. Set it to "text" to only display the text written by'
             ' the user, "url" to only display the url or "both" (the default)'
             " to display both.",
+        ),
+        "unfurl_ignore_alt_text": Setting(
+            default="false",
+            desc='When displaying ("unfurling") links to channels/users/etc,'
+            ' ignore the "alt text" present in the message and instead use the'
+            " canonical name of the thing being linked to.",
         ),
         "unhide_buffers_with_activity": Setting(
             default="false",
@@ -6972,10 +6976,6 @@ class PluginConfig(object):
             desc="Use full names as the nicks for all users. When this is"
             " false (the default), display names will be used if set, with a"
             " fallback to the full name if display name is not set.",
-        ),
-        "log_channel_created": Setting(
-            default="true",
-            desc='Log "Channel created" in the Server buffer.',
         ),
     }
 
