@@ -746,6 +746,7 @@ class SlackMessage:
         if (
             notify_subscribed_threads == "auto"
             and self.conversation.display_thread_replies()
+            and not self.conversation.muted
         ):
             return
 
