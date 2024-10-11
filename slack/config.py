@@ -413,12 +413,13 @@ class SlackConfigSectionWorkspace:
             30,
         )
 
-        self.use_real_names = self._create_option(
-            "use_real_names",
-            "use real names as the nicks for all users. When this is"
-            " false, display names will be used if set, with a fallback"
-            " to the real name if display name is not set",
-            False,
+        self.nick_source: WeeChatOption[
+            Literal["display_name", "real_name", "username"]
+        ] = self._create_option(
+            "nick_source",
+            "property from the user profile to use as the nick",
+            "display_name",
+            string_values=("display_name", "real_name", "username"),
         )
 
     def _evaluate_with_workspace_name(self, value: str) -> str:

@@ -51,6 +51,7 @@ from slack.task import Future  # noqa: E402
 
 config_values: Dict[str, str] = {
     "replace_space_in_nicks_with": "_",
+    "workspace_name.nick_source << slack.workspace_default.nick_source": "display_name",
 }
 
 

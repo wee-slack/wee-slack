@@ -797,7 +797,7 @@ class SlackMessage:
             nick = name_from_user_profile(
                 self.workspace,
                 self._message_json["user_profile"],
-                fallback_name=self._message_json["user_profile"]["name"],
+                username=self._message_json["user_profile"]["name"],
             )
             return get_user_nick(nick, is_self=self.is_self_msg)
         if "user" in self._message_json:

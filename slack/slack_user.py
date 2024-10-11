@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_info import SlackUserInfo
     from slack_rtm.slack_rtm_message import SlackSubteam
-    from typing_extensions import Literal
+    from typing_extensions import Literal, assert_never
 
     from slack.slack_workspace import SlackWorkspace
 
@@ -48,19 +48,23 @@ def nick_color(nick: str, is_self: bool = False) -> str:
 def name_from_user_profile(
     workspace: SlackWorkspace,
     profile: Union[SlackProfile, SlackMessageUserProfile],
-    fallback_name: str,
+    username: str,
 ) -> str:
+    nick_source = workspace.config.nick_source.value
     display_name = profile.get("display_name")
-    if display_name and not workspace.config.use_real_names:
-        return display_name
-
-    return profile.get("display_name") or profile.get("real_name") or fallback_name
+    real_name = profile.get("real_name")
+    if nick_source == "display_name":
+        return display_name or real_name or username
+    elif nick_source == "real_name":
+        return real_name or display_name or username
+    elif nick_source == "username":
+        return username
+    else:
+        assert_never(nick_source)
 
 
 def name_from_user_info(workspace: SlackWorkspace, info: SlackUserInfo) -> str:
-    return name_from_user_profile(
-        workspace, info["profile"], info.get("real_name") or info["name"]
-    )
+    return name_from_user_profile(workspace, info["profile"], info["name"])
 
 
 def get_user_nick(
