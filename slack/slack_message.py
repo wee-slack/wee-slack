@@ -1272,7 +1272,7 @@ class SlackMessage:
                 else:
                     return element["url"]
             else:
-                return format_url(element["url"], element.get("text"))
+                return format_url(unhtmlescape(element["url"]), element.get("text"))
         elif element["type"] == "emoji":
             return get_emoji(element["name"], element.get("skin_tone"))
         elif element["type"] == "color":

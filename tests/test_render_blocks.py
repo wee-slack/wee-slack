@@ -444,6 +444,48 @@ cases: List[Case] = [
         ],
         "rendered": [f"#FFAA00 <[color:16755200]>■{color_default}"],
     },
+    {
+        "blocks": [
+            {
+                "type": "rich_text",
+                "block_id": "fZUc/",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "link",
+                                "url": "https://example.com/?a=1&amp;b=2",
+                                "text": "test",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+        "rendered": ["test (https://example.com/?a=1&b=2)"],
+    },
+    {
+        "blocks": [
+            {
+                "type": "rich_text",
+                "block_id": "fZUc/",
+                "elements": [
+                    {
+                        "type": "rich_text_section",
+                        "elements": [
+                            {
+                                "type": "link",
+                                "url": "https://example.com/?a=1&amp;b=2",
+                                "style": {"code": True},
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+        "rendered": ["`https://example.com/?a=1&amp;b=2`"],
+    },
 ]
 
 
