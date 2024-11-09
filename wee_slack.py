@@ -3560,7 +3560,7 @@ class SlackMessage(object):
             self.open_thread()
 
         if message.user_identifier != self.team.myidentifier and (
-            config.notify_subscribed_threads is True
+            config.notify_subscribed_threads == 1
             or config.notify_subscribed_threads == "auto"
             and not config.auto_open_threads
             and not config.thread_messages_in_channel
