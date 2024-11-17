@@ -37,6 +37,7 @@ from slack.log import DebugMessageType, LogLevel, log, print_error
 from slack.proxy import Proxy
 from slack.shared import shared
 from slack.slack_api import SlackApi
+from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation
 from slack.slack_message import SlackMessage, SlackTs
 from slack.slack_message_buffer import SlackMessageBuffer
@@ -226,12 +227,12 @@ class SlackUsergroups(
         return self._item_class(self.workspace, item_info)
 
 
-class SlackWorkspace:
+class SlackWorkspace(SlackBuffer):
     def __init__(self, name: str):
         self.name = name
         self.buffer_pointer: Optional[str] = None
         self.config = shared.config.create_workspace_config(self.name)
-        self.api = SlackApi(self)
+        self._api = SlackApi(self)
         self._initial_connect = True
         self._is_connected = False
         self._connect_task: Optional[Task[bool]] = None
@@ -259,6 +260,10 @@ class SlackWorkspace:
     @property
     def workspace(self) -> SlackWorkspace:
         return self
+
+    @property
+    def api(self) -> SlackApi:
+        return self._api
 
     @property
     def token_type(self) -> Literal["oauth", "session", "unknown"]:

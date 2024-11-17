@@ -4,7 +4,7 @@ shopt -s extglob
 
 mkdir -p build
 
-contents="$(cat slack/python_compatibility.py slack/util.py slack/shared.py slack/task.py slack/slack_message.py slack/slack_message_buffer.py slack/!(python_compatibility|util|shared|task|slack_message|slack_message_buffer).py main.py | \
+contents="$(cat slack/python_compatibility.py slack/util.py slack/shared.py slack/task.py slack/slack_buffer.py slack/slack_message.py slack/slack_message_buffer.py slack/!(python_compatibility|util|shared|task|slack_buffer|slack_message|slack_message_buffer).py main.py | \
   perl -0777 -pe 's/^( *from [^(\n]+\([^)]+\))/$1=~s|\n+||gr/mge' | \
   grep -Ev '^from slack[. ]')"
 

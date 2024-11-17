@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import time
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from contextlib import contextmanager
 from typing import (
     TYPE_CHECKING,
@@ -26,6 +26,7 @@ from slack.shared import (
     REACTION_CHANGE_REGEX_STRING,
     shared,
 )
+from slack.slack_buffer import SlackBuffer
 from slack.slack_message import MessageContext, SlackMessage, SlackTs, ts_from_tag
 from slack.slack_user import Nick
 from slack.task import gather, run_async
@@ -35,9 +36,7 @@ from slack.weechat_buffer import buffer_new
 if TYPE_CHECKING:
     from typing_extensions import Literal, assert_never
 
-    from slack.slack_api import SlackApi
     from slack.slack_conversation import SlackConversation
-    from slack.slack_workspace import SlackWorkspace
 
 
 def hdata_line_ts(line_pointer: str) -> Optional[SlackTs]:
@@ -148,7 +147,7 @@ def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
     return True
 
 
-class SlackMessageBuffer(ABC):
+class SlackMessageBuffer(SlackBuffer):
     def __init__(self):
         self._typing_self_last_sent = 0
         self._should_update_server_on_buffer_close = None
@@ -168,10 +167,6 @@ class SlackMessageBuffer(ABC):
         self.completion_values: List[str] = []
         self.completion_index = 0
 
-    @property
-    def api(self) -> SlackApi:
-        return self.workspace.api
-
     @contextmanager
     def loading(self):
         self.is_loading = True
@@ -189,11 +184,6 @@ class SlackMessageBuffer(ABC):
             yield
         finally:
             self.completion_context = "ACTIVE_COMPLETION"
-
-    @property
-    @abstractmethod
-    def workspace(self) -> SlackWorkspace:
-        raise NotImplementedError()
 
     @property
     @abstractmethod

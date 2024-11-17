@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, List, Optional, Set
 import weechat
 
 from slack.shared import shared
+from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import create_conversation_for_users
 from slack.slack_emoji import get_emoji
 from slack.slack_user import name_from_user_info
@@ -29,14 +30,14 @@ class BufferLine:
     content_id: str
 
 
-class SlackSearchBuffer:
+class SlackSearchBuffer(SlackBuffer):
     def __init__(
         self,
         workspace: SlackWorkspace,
         search_type: SearchType,
         query: Optional[str] = None,
     ):
-        self.workspace = workspace
+        self._workspace = workspace
         self.search_type: SearchType = search_type
         self._query = query or ""
         self._lines: List[BufferLine] = []
@@ -62,7 +63,13 @@ class SlackSearchBuffer:
             self._buffer_close_cb,
         )
 
+        shared.buffers[self.buffer_pointer] = self
+
         run_async(self.search())
+
+    @property
+    def workspace(self) -> SlackWorkspace:
+        return self._workspace
 
     @property
     def selected_line(self) -> int:
@@ -231,4 +238,8 @@ class SlackSearchBuffer:
 
     def _buffer_close_cb(self, data: str, buffer: str) -> int:
         del self.workspace.search_buffers[self.search_type]
+
+        if self.buffer_pointer in shared.buffers:
+            del shared.buffers[self.buffer_pointer]
+
         return weechat.WEECHAT_RC_OK

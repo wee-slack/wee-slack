@@ -26,6 +26,7 @@ from slack.error import SlackError, SlackRtmError, UncaughtError
 from slack.log import open_debug_buffer, print_error
 from slack.python_compatibility import format_exception, removeprefix
 from slack.shared import EMOJI_CHAR_OR_NAME_REGEX_STRING, shared
+from slack.slack_buffer import SlackBuffer
 from slack.slack_conversation import SlackConversation, create_conversation_for_users
 from slack.slack_message import SlackTs, ts_from_tag
 from slack.slack_message_buffer import SlackMessageBuffer
@@ -651,7 +652,7 @@ async def command_slack_status(buffer: str, args: List[str], options: Options):
 
 
 def _get_conversation_from_buffer(
-    slack_buffer: Union[SlackWorkspace, SlackMessageBuffer],
+    slack_buffer: SlackBuffer,
 ) -> Optional[SlackConversation]:
     if isinstance(slack_buffer, SlackConversation):
         return slack_buffer
@@ -661,7 +662,7 @@ def _get_conversation_from_buffer(
 
 
 def _get_linkarchive_url(
-    slack_buffer: Union[SlackWorkspace, SlackMessageBuffer],
+    slack_buffer: SlackBuffer,
     message_ts: Optional[SlackTs],
 ) -> str:
     url = f"https://{slack_buffer.workspace.domain}.slack.com/"
