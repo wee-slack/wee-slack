@@ -12,6 +12,7 @@ from typing import (
     Callable,
     Coroutine,
     Dict,
+    Iterable,
     List,
     Optional,
     Tuple,
@@ -467,7 +468,7 @@ async def command_slack_memessage(buffer: str, args: List[str], options: Options
         await slack_buffer.post_message(args[0], message_type="me_message")
 
 
-@weechat_command("away|active", alias="away")
+@weechat_command("away|active")
 async def command_slack_presence(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
     if slack_buffer is None:
@@ -735,6 +736,38 @@ def command_cb(data: str, buffer: str, args: str) -> int:
     return weechat.WEECHAT_RC_OK
 
 
+async def set_away(workspaces: Iterable[SlackWorkspace], away_message: str):
+    for workspace in workspaces:
+        if not workspace.is_connected:
+            continue
+        if away_message:
+            await workspace.api.set_presence("away")
+            await workspace.api.set_user_status(away_message)
+        else:
+            await workspace.api.set_presence("active")
+            await workspace.api.clear_user_status()
+
+
+def away_cb(data: str, buffer: str, command: str) -> int:
+    command_split = command.strip().split(None, 1)
+    args_split1 = (
+        command_split[1].strip().split(None, 1) if len(command_split) > 1 else []
+    )
+
+    if args_split1 and args_split1[0] == "-all":
+        away_message = args_split1[1] if len(args_split1) > 1 else ""
+        workspaces = shared.workspaces.values()
+    else:
+        away_message = command_split[1] if len(command_split) > 1 else ""
+        slack_buffer = shared.buffers.get(buffer)
+        if slack_buffer is None:
+            return weechat.WEECHAT_RC_OK
+        workspaces = [slack_buffer.workspace]
+
+    run_async(set_away(workspaces, away_message.strip()))
+    return weechat.WEECHAT_RC_OK
+
+
 async def mark_read(slack_buffer: SlackMessageBuffer):
     # Sleep so the read marker is updated before we run slack_buffer.mark_read
     await sleep(1)
@@ -811,6 +844,7 @@ def python_eval_slack_cb(data: str, buffer: str, command: str) -> int:
 
 
 def register_commands():
+    weechat.hook_command_run("/away", get_callback_name(away_cb), "")
     weechat.hook_command_run(
         "/buffer set unread", get_callback_name(buffer_set_unread_cb), ""
     )
