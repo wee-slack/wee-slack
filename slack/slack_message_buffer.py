@@ -499,14 +499,26 @@ class SlackMessageBuffer(SlackBuffer):
             if not isinstance(user, BaseException)
         }
 
+        conversations = await gather(
+            *self.workspace.conversations.values(), return_exceptions=True
+        )
+        name_to_conversation_id = {
+            conversation.name(): conversation.id
+            for conversation in conversations
+            if not isinstance(conversation, BaseException)
+        }
+
         def linkify_word(match: Match[str]) -> str:
             word = match.group(0)
-            nick = match.group(1)
-            if nick in nick_to_user_id:
-                return f"<@{nick_to_user_id[nick]}>"
+            prefix = match.group(1)
+            identifier = match.group(2)
+            if prefix == "@" and identifier in nick_to_user_id:
+                return f"<@{nick_to_user_id[identifier]}>"
+            elif prefix == "#" and identifier in name_to_conversation_id:
+                return f"<#{name_to_conversation_id[identifier]}>"
             return word
 
-        linkify_regex = r"(?:^|(?<=\s))@([\w\(\)\'.-]+)"
+        linkify_regex = r"(?:^|(?<=\s))(@|#)([\w\(\)\'.-]+)"
         return re.sub(linkify_regex, linkify_word, escaped_text, flags=re.UNICODE)
 
     async def process_input(self, input_data: str):
