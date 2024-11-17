@@ -140,6 +140,14 @@ class SlackConfigSectionColor:
             WeeChatColor("blue"),
         )
 
+        self.user_mention_nick_color = WeeChatOption(
+            self._section,
+            "user_mention_nick_color",
+            "",
+            False,
+            callback_change=self.config_change_user_mention_nick_color_cb,
+        )
+
         self.usergroup_mention = WeeChatOption(
             self._section,
             "usergroup_mention",
@@ -151,6 +159,11 @@ class SlackConfigSectionColor:
         self, option: WeeChatOption[WeeChatOptionType], parent_changed: bool
     ):
         update_buffer_props()
+
+    def config_change_user_mention_nick_color_cb(
+        self, option: WeeChatOption[WeeChatOptionType], parent_changed: bool
+    ):
+        self.user_mention.enabled = not option.value
 
 
 class SlackConfigSectionLook:
@@ -502,15 +515,16 @@ def config_section_workspace_write_for_old_weechat_cb(
 
     for workspace in shared.workspaces.values():
         for option in vars(workspace.config).values():
-            if isinstance(option, WeeChatOption):
-                if option.weechat_type != "string" or not weechat.config_option_is_null(
-                    option.pointer
-                ):
-                    if not weechat.config_write_option(
-                        config_file,
-                        option.pointer,
-                    ):
-                        return weechat.WEECHAT_CONFIG_WRITE_ERROR
+            if (
+                isinstance(option, WeeChatOption)
+                and option.pointer is not None
+                and (
+                    option.weechat_type != "string"
+                    or not weechat.config_option_is_null(option.pointer)
+                )
+            ):
+                if not weechat.config_write_option(config_file, option.pointer):
+                    return weechat.WEECHAT_CONFIG_WRITE_ERROR
 
     return weechat.WEECHAT_CONFIG_WRITE_OK
 

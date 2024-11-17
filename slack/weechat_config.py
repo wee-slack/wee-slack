@@ -102,13 +102,14 @@ class WeeChatOption(Generic[WeeChatOptionType]):
     evaluate_func: Optional[Callable[[WeeChatOptionType], WeeChatOptionType]] = None
 
     def __post_init__(self):
+        self._enabled = True
         self._pointer = self._create_weechat_option()
 
     def __bool__(self) -> bool:
         return bool(self.value)
 
     def _raw_value(self) -> WeeChatOptionType:
-        if weechat.config_option_is_null(self._pointer):
+        if self._pointer is None or weechat.config_option_is_null(self._pointer):
             if isinstance(self.parent_option, str):
                 parent_option_pointer = weechat.config_get(self.parent_option)
                 return option_get_value(parent_option_pointer, self.default_value)
@@ -118,8 +119,21 @@ class WeeChatOption(Generic[WeeChatOptionType]):
         return option_get_value(self._pointer, self.default_value)
 
     @property
-    def pointer(self) -> str:
+    def pointer(self) -> Optional[str]:
         return self._pointer
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, value: bool):
+        self._enabled = value
+        if value and self._pointer is None:
+            self._pointer = self._create_weechat_option()
+        elif not value and self._pointer is not None:
+            weechat.config_option_free(self._pointer)
+            self._pointer = None
 
     @property
     def value(self) -> WeeChatOptionType:
@@ -138,9 +152,13 @@ class WeeChatOption(Generic[WeeChatOptionType]):
             raise Exception(f"Failed to set value for option: {self.name}")
 
     def value_set_as_str(self, value: str) -> int:
+        if self._pointer is None:
+            raise Exception(f"Can't set value for disabled option: {self.name}")
         return weechat.config_option_set(self._pointer, value, 1)
 
     def value_set_null(self) -> int:
+        if self._pointer is None:
+            raise Exception(f"Can't set null value for disabled option: {self.name}")
         if self.parent_option is None:
             raise Exception(
                 f"Can't set null value for option without parent: {self.name}"
@@ -162,7 +180,7 @@ class WeeChatOption(Generic[WeeChatOptionType]):
         return "string"
 
     def _changed_cb(self, data: str, option: str, value: Optional[str] = None):
-        if self.callback_change:
+        if self._pointer is not None and self.callback_change:
             parent_changed = data == "parent_changed"
             if not parent_changed or weechat.config_option_is_null(self._pointer):
                 self.callback_change(self, parent_changed)
