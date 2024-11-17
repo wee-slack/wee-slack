@@ -30,7 +30,11 @@ class WeeChatConfig:
     name: str
 
     def __post_init__(self):
-        self.pointer = weechat.config_new(self.name, "", "")
+        self._pointer = weechat.config_new(self.name, "", "")
+
+    @property
+    def pointer(self) -> str:
+        return self._pointer
 
 
 @dataclass
@@ -43,7 +47,7 @@ class WeeChatSection:
     callback_write: str = ""
 
     def __post_init__(self):
-        self.pointer = weechat.config_new_section(
+        self._pointer = weechat.config_new_section(
             self.weechat_config.pointer,
             self.name,
             self.user_can_add_options,
@@ -59,6 +63,10 @@ class WeeChatSection:
             "",
             "",
         )
+
+    @property
+    def pointer(self) -> str:
+        return self._pointer
 
 
 WeeChatOptionTypes = Union[int, str]
