@@ -9,6 +9,8 @@ from slack.slack_user import Nick
 from slack.task import gather
 
 if TYPE_CHECKING:
+    from typing_extensions import Literal
+
     from slack.slack_conversation import SlackConversation
     from slack.slack_workspace import SlackWorkspace
 
@@ -140,12 +142,12 @@ class SlackThread(SlackMessageBuffer):
         self,
         text: str,
         thread_ts: Optional[SlackTs] = None,
-        broadcast: bool = False,
-        me_message: bool = False,
+        # The API doesn't support broadcast for /me messages, so ensure only
+        # either broadcast or me_message is set
+        message_type: Literal["standard", "broadcast", "me_message"] = "standard",
     ):
         await super().post_message(
             text=text,
             thread_ts=thread_ts or self.parent.ts,
-            broadcast=broadcast,
-            me_message=me_message,
+            message_type=message_type,
         )

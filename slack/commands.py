@@ -424,9 +424,9 @@ async def command_slack_thread(buffer: str, args: List[str], options: Options):
 @weechat_command("-alsochannel|%(threads)", min_args=1)
 async def command_slack_reply(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
-    broadcast = bool(options.get("alsochannel"))
+    message_type = "broadcast" if bool(options.get("alsochannel")) else "standard"
     if isinstance(slack_buffer, SlackThread):
-        await slack_buffer.post_message(args[0], broadcast=broadcast)
+        await slack_buffer.post_message(args[0], message_type=message_type)
     elif isinstance(slack_buffer, SlackConversation):
         split_args = re.split(r"\s+", args[0], 1)
         if len(split_args) < 2:
@@ -438,14 +438,16 @@ async def command_slack_reply(buffer: str, args: List[str], options: Options):
         if thread_ts is None:
             print_message_not_found_error(split_args[0])
             return
-        await slack_buffer.post_message(split_args[1], thread_ts, broadcast)
+        await slack_buffer.post_message(
+            split_args[1], thread_ts, message_type=message_type
+        )
 
 
 @weechat_command("", min_args=1)
 async def command_slack_memessage(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
     if isinstance(slack_buffer, SlackMessageBuffer):
-        await slack_buffer.post_message(args[0], me_message=True)
+        await slack_buffer.post_message(args[0], message_type="me_message")
 
 
 @weechat_command("away|active")

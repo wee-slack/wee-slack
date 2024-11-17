@@ -435,17 +435,25 @@ class SlackMessageBuffer(ABC):
         self,
         text: str,
         thread_ts: Optional[SlackTs] = None,
-        broadcast: bool = False,
-        me_message: bool = False,
+        # The API doesn't support broadcast for /me messages, so ensure only
+        # either broadcast or me_message is set
+        message_type: Literal["standard", "broadcast", "me_message"] = "standard",
     ):
         linkified_text = await self.linkify_text(text)
-        await self.api.chat_post_message(
-            conversation=self.conversation,
-            text=linkified_text,
-            thread_ts=thread_ts,
-            broadcast=broadcast,
-            me_message=me_message,
-        )
+        if message_type == "me_message":
+            await self.api.chat_command(
+                conversation=self.conversation,
+                command="/me",
+                text=linkified_text,
+                thread_ts=thread_ts,
+            )
+        else:
+            await self.api.chat_post_message(
+                conversation=self.conversation,
+                text=linkified_text,
+                thread_ts=thread_ts,
+                broadcast=message_type == "broadcast",
+            )
 
     async def send_change_reaction(
         self, ts: SlackTs, emoji_char: str, change_type: Literal["+", "-", "toggle"]
