@@ -424,10 +424,24 @@ async def command_slack_thread(buffer: str, args: List[str], options: Options):
         await slack_buffer.open_thread(args[0], switch=True)
 
 
-@weechat_command("-alsochannel|%(threads)", min_args=1, alias="reply")
+@weechat_command("-alsochannel|-memessage|%(threads)", min_args=1, alias="reply")
 async def command_slack_reply(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
-    message_type = "broadcast" if bool(options.get("alsochannel")) else "standard"
+
+    broadcast = bool(options.get("alsochannel"))
+    me_message = bool(options.get("memessage"))
+    if broadcast and me_message:
+        print_error(
+            "Using both -alsochannel and -memessage simultaneously isn't supported"
+        )
+        return
+    elif broadcast:
+        message_type = "broadcast"
+    elif me_message:
+        message_type = "me_message"
+    else:
+        message_type = "standard"
+
     if isinstance(slack_buffer, SlackThread):
         await slack_buffer.post_message(args[0], message_type=message_type)
     elif isinstance(slack_buffer, SlackConversation):
