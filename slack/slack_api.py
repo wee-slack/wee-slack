@@ -461,24 +461,40 @@ class SlackApi(SlackApiCommon):
             raise SlackApiError(self.workspace, method, response, params)
         return response
 
+    async def chat_command(
+        self,
+        conversation: SlackConversation,
+        command: str,
+        text: str,
+        thread_ts: Optional[SlackTs] = None,
+    ):
+        method = "chat.command"
+        params: Params = {
+            "channel": conversation.id,
+            "command": command,
+            "text": text,
+        }
+        if thread_ts is not None:
+            params["thread_ts"] = thread_ts
+        response: SlackGenericResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
     async def chat_post_message(
         self,
         conversation: SlackConversation,
         text: str,
         thread_ts: Optional[SlackTs] = None,
         broadcast: bool = False,
-        me_message: bool = False,
     ):
+        method = "chat.postMessage"
         params: Params = {
             "channel": conversation.id,
             "text": text,
+            "as_user": True,
+            "link_names": True,
         }
-        if me_message:
-            method = "chat.command"
-            params["command"] = "/me"
-        else:
-            method = "chat.postMessage"
-            params["link_names"] = True
         if thread_ts is not None:
             params["thread_ts"] = thread_ts
             params["reply_broadcast"] = broadcast
