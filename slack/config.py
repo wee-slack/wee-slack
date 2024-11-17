@@ -504,11 +504,11 @@ def config_section_workspace_write_for_old_weechat_cb(
         for option in vars(workspace.config).values():
             if isinstance(option, WeeChatOption):
                 if option.weechat_type != "string" or not weechat.config_option_is_null(
-                    option._pointer  # pyright: ignore [reportPrivateUsage]
+                    option.pointer
                 ):
                     if not weechat.config_write_option(
                         config_file,
-                        option._pointer,  # pyright: ignore [reportPrivateUsage]
+                        option.pointer,
                     ):
                         return weechat.WEECHAT_CONFIG_WRITE_ERROR
 

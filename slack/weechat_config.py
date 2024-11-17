@@ -110,6 +110,10 @@ class WeeChatOption(Generic[WeeChatOptionType]):
         return option_get_value(self._pointer, self.default_value)
 
     @property
+    def pointer(self) -> str:
+        return self._pointer
+
+    @property
     def value(self) -> WeeChatOptionType:
         value = self._raw_value()
         if self.evaluate_func is not None:
