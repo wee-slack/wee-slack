@@ -68,12 +68,22 @@ def print_message_not_found_error(msg_id: str):
 #     return cmd_line[0], args, doc[1].strip()
 
 
-def parse_options(args: str):
-    regex = re.compile("(?:^| )+-([^ =]+)(?:=([^ ]+))?")
-    pos_args = regex.sub("", args).strip()
-    options: Options = {
-        match.group(1): match.group(2) or True for match in regex.finditer(args)
-    }
+def parse_options(args: str, options_only_first: bool):
+    regex = re.compile("(?:^| )+(-([^ =]+)(?:=([^ ]+))?|[^ ]+)")
+    options: Options = {}
+    for match in regex.finditer(args):
+        if match.group(2) is not None:
+            options[match.group(2)] = match.group(3) or True
+        elif options_only_first:
+            break
+    sub_count = len(options) if options_only_first else 0
+    pos_args = (
+        regex.sub(
+            lambda m: m.group(0) if m.group(2) is None else "", args, count=sub_count
+        ).strip()
+        if options
+        else args
+    )
     return pos_args, options
 
 
@@ -107,7 +117,6 @@ def weechat_command(
 
         @wraps(f)
         def wrapper(buffer: str, args: str):
-            pos_args, options = parse_options(args)
             re_maxsplit = (
                 max_split
                 if max_split is not None
@@ -115,6 +124,7 @@ def weechat_command(
                 if min_args == 1
                 else min_args - 1
             )
+            pos_args, options = parse_options(args, options_only_first=re_maxsplit != 0)
             split_args = (
                 re.split(r"\s+", pos_args, maxsplit=re_maxsplit)
                 if re_maxsplit >= 0

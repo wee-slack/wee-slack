@@ -16,26 +16,64 @@ def test_all_parent_commands_exist():
 
 
 def test_parse_options_without_options():
-    pos_args, options = parse_options("workspace add wee-slack-test")
-    assert pos_args == "workspace add wee-slack-test"
+    pos_args, options = parse_options("arg1 arg2", options_only_first=False)
+    assert pos_args == "arg1 arg2"
     assert options == {}
 
 
-def test_parse_options_with_option():
-    pos_args, options = parse_options("workspace add wee-slack-test -autoconnect")
-    assert pos_args == "workspace add wee-slack-test"
-    assert options == {"autoconnect": True}
+def test_parse_options_with_option_first():
+    pos_args, options = parse_options("-option1 arg1", options_only_first=False)
+    assert pos_args == "arg1"
+    assert options == {"option1": True}
 
 
-def test_parse_options_option_in_middle():
-    pos_args, options = parse_options("workspace add -autoconnect wee-slack-test")
-    assert pos_args == "workspace add wee-slack-test"
-    assert options == {"autoconnect": True}
+def test_parse_options_with_option_last():
+    pos_args, options = parse_options("arg1 -option1", options_only_first=False)
+    assert pos_args == "arg1"
+    assert options == {"option1": True}
+
+
+def test_parse_options_with_option_in_middle():
+    pos_args, options = parse_options("arg1 -option1 arg2", options_only_first=False)
+    assert pos_args == "arg1 arg2"
+    assert options == {"option1": True}
 
 
 def test_parse_options_option_with_value():
     pos_args, options = parse_options(
-        "workspace add wee-slack-test -autoconnect -api_token=xoxp-1"
+        "arg1 -option1 -option2=value2", options_only_first=False
     )
-    assert pos_args == "workspace add wee-slack-test"
-    assert options == {"autoconnect": True, "api_token": "xoxp-1"}
+    assert pos_args == "arg1"
+    assert options == {"option1": True, "option2": "value2"}
+
+
+def test_parse_options_without_options_only_first():
+    pos_args, options = parse_options("arg1 arg2", options_only_first=True)
+    assert pos_args == "arg1 arg2"
+    assert options == {}
+
+
+def test_parse_options_with_option_first_only_first():
+    pos_args, options = parse_options("-option1 -option2 arg1", options_only_first=True)
+    assert pos_args == "arg1"
+    assert options == {"option1": True, "option2": True}
+
+
+def test_parse_options_with_option_last_only_first():
+    pos_args, options = parse_options("arg1 -option1", options_only_first=True)
+    assert pos_args == "arg1 -option1"
+    assert options == {}
+
+
+def test_parse_options_with_option_in_middle_only_first():
+    pos_args, options = parse_options("arg1 -option1 arg2", options_only_first=True)
+    assert pos_args == "arg1 -option1 arg2"
+    assert options == {}
+
+
+def test_parse_options_option_with_value_only_first():
+    pos_args, options = parse_options(
+        "arg1 -option1 -option2=value2", options_only_first=True
+    )
+    assert pos_args == "arg1 -option1 -option2=value2"
+    assert options == {}
