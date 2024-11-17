@@ -546,9 +546,7 @@ async def command_slack_search(buffer: str, args: List[str], options: Options):
             search_buffer = slack_buffer.workspace.search_buffers.get(args[0])
             query = args[1] if len(args) > 1 else None
             if search_buffer is not None:
-                search_buffer.switch_to_buffer()
-                if query is not None:
-                    await search_buffer.search(query)
+                await search_buffer.open_buffer(switch=True, query=query)
             else:
                 slack_buffer.workspace.search_buffers[args[0]] = SlackSearchBuffer(
                     slack_buffer.workspace, args[0], query

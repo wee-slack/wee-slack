@@ -44,29 +44,7 @@ class SlackSearchBuffer(SlackBuffer):
         self._lines: List[BufferLine] = []
         self._marked_lines: Set[int] = set()
         self._selected_line = 0
-
-        buffer_name = f"{shared.SCRIPT_NAME}.search.{self.workspace.name}.{search_type}"
-        buffer_props = {
-            "type": "free",
-            "display": "1",
-            "key_bind_up": "/slack search -up",
-            "key_bind_down": "/slack search -down",
-            "key_bind_ctrl-j": "/slack search -join_channel",
-            "key_bind_meta-comma": "/slack search -mark",
-            "key_bind_shift-up": "/slack search -up; /slack search -mark",
-            "key_bind_shift-down": "/slack search -mark; /slack search -down",
-        }
-
-        self._buffer_pointer = buffer_new(
-            buffer_name,
-            buffer_props,
-            self._buffer_input_cb,
-            self._buffer_close_cb,
-        )
-
-        shared.buffers[self._buffer_pointer] = self
-
-        run_async(self.search())
+        run_async(self.open_buffer(switch=True, query=query))
 
     @property
     def workspace(self) -> SlackWorkspace:
@@ -88,6 +66,41 @@ class SlackSearchBuffer(SlackBuffer):
         self.print(old_line)
         self.print(self._selected_line)
 
+    async def open_buffer(
+        self,
+        switch: bool = False,
+        query: Optional[str] = None,
+    ):
+        if self._buffer_pointer is None:
+            buffer_name = (
+                f"{shared.SCRIPT_NAME}.search.{self.workspace.name}.{self.search_type}"
+            )
+            buffer_props = {
+                "type": "free",
+                "display": "1",
+                "key_bind_up": "/slack search -up",
+                "key_bind_down": "/slack search -down",
+                "key_bind_ctrl-j": "/slack search -join_channel",
+                "key_bind_meta-comma": "/slack search -mark",
+                "key_bind_shift-up": "/slack search -up; /slack search -mark",
+                "key_bind_shift-down": "/slack search -mark; /slack search -down",
+            }
+
+            self._buffer_pointer = buffer_new(
+                buffer_name,
+                buffer_props,
+                self._buffer_input_cb,
+                self._buffer_close_cb,
+            )
+            shared.buffers[self._buffer_pointer] = self
+
+        if switch:
+            weechat.buffer_set(self._buffer_pointer, "display", "1")
+
+        if query is not None:
+            self._query = query
+            await self.search()
+
     def update_title(self, searching: bool = False):
         if self.buffer_pointer is None:
             return
@@ -99,11 +112,6 @@ class SlackSearchBuffer(SlackBuffer):
         )
         title = f"{matches} | Filter: {self._query or '*'} | Key(input): ctrl+j=join channel, ($)=refresh, (q)=close buffer"
         weechat.buffer_set(self.buffer_pointer, "title", title)
-
-    def switch_to_buffer(self):
-        if self.buffer_pointer is None:
-            return
-        weechat.buffer_set(self.buffer_pointer, "display", "1")
 
     def mark_line(self, y: int):
         if y < 0 or y >= len(self._lines):
