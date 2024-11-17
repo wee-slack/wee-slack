@@ -31,7 +31,7 @@ with open("docs/Commands.md", "w") as file_cmds:
 
     for name, cmd in sorted(cmds.items()):
         doc = dedent(cmd.__doc__ or "").strip()
-        command, helptext = doc.split("\n", 1)
+        command, helptext = doc.split("\n", maxsplit=1)
         file_cmds.write(
             dedent(
                 """

@@ -465,7 +465,7 @@ class SlackConfigSectionWorkspace:
 def config_section_workspace_read_cb(
     data: str, config_file: str, section: str, option_name: str, value: Optional[str]
 ) -> int:
-    option_split = option_name.split(".", 1)
+    option_split = option_name.split(".", maxsplit=1)
     if len(option_split) < 2:
         return weechat.WEECHAT_CONFIG_OPTION_SET_ERROR
     workspace_name, name = option_split

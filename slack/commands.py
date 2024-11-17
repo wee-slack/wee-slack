@@ -62,8 +62,8 @@ def print_message_not_found_error(msg_id: str):
 
 
 # def parse_help_docstring(cmd):
-#     doc = textwrap.dedent(cmd.__doc__).strip().split("\n", 1)
-#     cmd_line = doc[0].split(None, 1)
+#     doc = textwrap.dedent(cmd.__doc__).strip().split("\n", maxsplit=1)
+#     cmd_line = doc[0].split(None, maxsplit=1)
 #     args = "".join(cmd_line[1:])
 #     return cmd_line[0], args, doc[1].strip()
 
@@ -116,7 +116,7 @@ def weechat_command(
                 else min_args - 1
             )
             split_args = (
-                re.split(r"\s+", pos_args, re_maxsplit)
+                re.split(r"\s+", pos_args, maxsplit=re_maxsplit)
                 if re_maxsplit >= 0
                 else [pos_args]
             )
@@ -447,7 +447,7 @@ async def command_slack_reply(buffer: str, args: List[str], options: Options):
     if isinstance(slack_buffer, SlackThread):
         await slack_buffer.post_message(args[0], message_type=message_type)
     elif isinstance(slack_buffer, SlackConversation):
-        split_args = re.split(r"\s+", args[0], 1)
+        split_args = re.split(r"\s+", args[0], maxsplit=1)
         if len(split_args) < 2:
             print_error(
                 'Too few arguments for command "/slack reply" (help on command: /help slack reply)'
@@ -748,9 +748,11 @@ async def set_away(workspaces: Iterable[SlackWorkspace], away_message: str):
 
 
 def away_cb(data: str, buffer: str, command: str) -> int:
-    command_split = command.strip().split(None, 1)
+    command_split = command.strip().split(None, maxsplit=1)
     args_split1 = (
-        command_split[1].strip().split(None, 1) if len(command_split) > 1 else []
+        command_split[1].strip().split(None, maxsplit=1)
+        if len(command_split) > 1
+        else []
     )
 
     if args_split1 and args_split1[0] == "-all":
@@ -832,7 +834,7 @@ def python_eval_slack_cb(data: str, buffer: str, command: str) -> int:
     if slack_buffer is None:
         print_error("Must be run from a slack buffer")
         return weechat.WEECHAT_RC_OK_EAT
-    args = command.split(" ", 2)
+    args = command.split(" ", maxsplit=2)
     code = compile(
         args[2], "<string>", "exec", flags=getattr(ast, "PyCF_ALLOW_TOP_LEVEL_AWAIT", 0)
     )

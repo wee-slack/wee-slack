@@ -166,7 +166,7 @@ class MessagePriority(Enum):
 
 class SlackTs(str):
     def __init__(self, ts: str):
-        self.major, self.minor = [int(x) for x in ts.split(".", 1)]
+        self.major, self.minor = [int(x) for x in ts.split(".", maxsplit=1)]
 
     def __hash__(self) -> int:
         return hash((self.major, self.minor))

@@ -134,7 +134,7 @@ def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
             weechat.buffer_set(buffer_pointer, "print_hooks_enabled", "1")
     else:
         # Split the message into at most the number of existing lines as we can't insert new lines
-        lines = new_text.split("\n", len(pointers) - 1)
+        lines = new_text.split("\n", maxsplit=len(pointers) - 1)
         # Replace newlines to prevent garbled lines in bare display mode
         lines = [line.replace("\n", " | ") for line in lines]
 
@@ -474,7 +474,9 @@ class SlackMessageBuffer(SlackBuffer):
             f |= re.MULTILINE if "m" in flags else 0
             f |= re.DOTALL if "s" in flags else 0
             old_message_text = message.text
-            new_message_text = re.sub(old, new, old_message_text, num_replace, f)
+            new_message_text = re.sub(
+                old, new, old_message_text, count=num_replace, flags=f
+            )
             if new_message_text != old_message_text:
                 await self.api.chat_update_message(
                     self.conversation, message.ts, new_message_text

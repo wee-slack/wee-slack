@@ -63,7 +63,9 @@ def url_encode_if_not_encoded(value: str) -> str:
 
 
 def get_cookies(cookie_config: str) -> str:
-    cookie_pairs = [cookie.split("=", 1) for cookie in cookie_config.split(";")]
+    cookie_pairs = [
+        cookie.split("=", maxsplit=1) for cookie in cookie_config.split(";")
+    ]
     if len(cookie_pairs) == 1 and len(cookie_pairs[0]) == 1:
         cookie_pairs[0].insert(0, "d")
     for cookie_pair in cookie_pairs:

@@ -84,8 +84,8 @@ async def http_request_process(
         raise HttpError(url, options, return_code, None, err)
 
     parts = out.split("\r\n\r\nHTTP/")
-    headers, body = parts[-1].split("\r\n\r\n", 1)
-    http_status = int(headers.split(None, 2)[1])
+    headers, body = parts[-1].split("\r\n\r\n", maxsplit=1)
+    http_status = int(headers.split(None, maxsplit=2)[1])
     return http_status, headers, body
 
 
@@ -143,7 +143,7 @@ async def http_request(
     if http_status == 429:
         header_lines = headers.split("\r\n")
         for header in header_lines[1:]:
-            name, value = header.split(":", 1)
+            name, value = header.split(":", maxsplit=1)
             if name.lower() == "retry-after":
                 retry_after = int(value.strip())
                 log(
