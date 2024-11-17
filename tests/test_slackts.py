@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from slack.slack_message import SlackTs
 
 str_base = "1234567890.012345"
