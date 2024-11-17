@@ -229,8 +229,8 @@ class SlackUsergroups(
 
 class SlackWorkspace(SlackBuffer):
     def __init__(self, name: str):
+        super().__init__()
         self.name = name
-        self.buffer_pointer: Optional[str] = None
         self.config = shared.config.create_workspace_config(self.name)
         self._api = SlackApi(self)
         self._initial_connect = True
@@ -322,7 +322,7 @@ class SlackWorkspace(SlackBuffer):
         if switch:
             buffer_props["display"] = "1"
 
-        self.buffer_pointer = buffer_new(
+        self._buffer_pointer = buffer_new(
             self.get_full_name(),
             buffer_props,
             self._buffer_input_cb,
@@ -332,11 +332,11 @@ class SlackWorkspace(SlackBuffer):
         buffer_to_merge_with = workspace_get_buffer_to_merge_with()
         if (
             buffer_to_merge_with
-            and weechat.buffer_get_integer(self.buffer_pointer, "layout_number") < 1
+            and weechat.buffer_get_integer(self._buffer_pointer, "layout_number") < 1
         ):
-            weechat.buffer_merge(self.buffer_pointer, buffer_to_merge_with)
+            weechat.buffer_merge(self._buffer_pointer, buffer_to_merge_with)
 
-        shared.buffers[self.buffer_pointer] = self
+        shared.buffers[self._buffer_pointer] = self
 
     def update_buffer_props(self) -> None:
         if self.buffer_pointer is None:
@@ -918,5 +918,5 @@ class SlackWorkspace(SlackBuffer):
         if self.buffer_pointer in shared.buffers:
             del shared.buffers[self.buffer_pointer]
 
-        self.buffer_pointer = None
+        self._buffer_pointer = None
         self._initial_connect = True

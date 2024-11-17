@@ -37,6 +37,7 @@ class SlackSearchBuffer(SlackBuffer):
         search_type: SearchType,
         query: Optional[str] = None,
     ):
+        super().__init__()
         self._workspace = workspace
         self.search_type: SearchType = search_type
         self._query = query or ""
@@ -56,14 +57,14 @@ class SlackSearchBuffer(SlackBuffer):
             "key_bind_shift-down": "/slack search -mark; /slack search -down",
         }
 
-        self.buffer_pointer = buffer_new(
+        self._buffer_pointer = buffer_new(
             buffer_name,
             buffer_props,
             self._buffer_input_cb,
             self._buffer_close_cb,
         )
 
-        shared.buffers[self.buffer_pointer] = self
+        shared.buffers[self._buffer_pointer] = self
 
         run_async(self.search())
 
@@ -88,6 +89,9 @@ class SlackSearchBuffer(SlackBuffer):
         self.print(self._selected_line)
 
     def update_title(self, searching: bool = False):
+        if self.buffer_pointer is None:
+            return
+
         matches = (
             "Searching"
             if searching
@@ -97,6 +101,8 @@ class SlackSearchBuffer(SlackBuffer):
         weechat.buffer_set(self.buffer_pointer, "title", title)
 
     def switch_to_buffer(self):
+        if self.buffer_pointer is None:
+            return
         weechat.buffer_set(self.buffer_pointer, "display", "1")
 
     def mark_line(self, y: int):
@@ -109,6 +115,8 @@ class SlackSearchBuffer(SlackBuffer):
         self.print(y)
 
     def print(self, y: int):
+        if self.buffer_pointer is None:
+            return
         if y < 0 or y >= len(self._lines):
             return
 
@@ -164,6 +172,8 @@ class SlackSearchBuffer(SlackBuffer):
         return f"{name}{real_name_str}{title_str}{status_str}"
 
     async def search(self, query: Optional[str] = None):
+        if self.buffer_pointer is None:
+            return
         if query is not None:
             self._query = query
 
@@ -241,5 +251,7 @@ class SlackSearchBuffer(SlackBuffer):
 
         if self.buffer_pointer in shared.buffers:
             del shared.buffers[self.buffer_pointer]
+
+        self._buffer_pointer = None
 
         return weechat.WEECHAT_RC_OK

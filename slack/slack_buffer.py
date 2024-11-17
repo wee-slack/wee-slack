@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from slack.slack_api import SlackApi
@@ -9,6 +9,9 @@ if TYPE_CHECKING:
 
 
 class SlackBuffer(ABC):
+    def __init__(self):
+        self._buffer_pointer: Optional[str] = None
+
     @property
     @abstractmethod
     def workspace(self) -> SlackWorkspace:
@@ -17,3 +20,7 @@ class SlackBuffer(ABC):
     @property
     def api(self) -> SlackApi:
         return self.workspace.api
+
+    @property
+    def buffer_pointer(self) -> Optional[str]:
+        return self._buffer_pointer

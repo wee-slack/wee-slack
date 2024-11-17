@@ -149,9 +149,9 @@ def modify_buffer_line(buffer_pointer: str, ts: SlackTs, new_text: str):
 
 class SlackMessageBuffer(SlackBuffer):
     def __init__(self):
+        super().__init__()
         self._typing_self_last_sent = 0
         self._should_update_server_on_buffer_close = None
-        self.buffer_pointer: Optional[str] = None
         self.is_loading = False
         self.history_pending_messages: List[SlackMessage] = []
         self.history_needs_refresh = False
@@ -238,14 +238,14 @@ class SlackMessageBuffer(SlackBuffer):
         if switch:
             buffer_props["display"] = "1"
 
-        self.buffer_pointer = buffer_new(
+        self._buffer_pointer = buffer_new(
             full_name,
             buffer_props,
             self._buffer_input_cb,
             self._buffer_close_cb,
         )
 
-        shared.buffers[self.buffer_pointer] = self
+        shared.buffers[self._buffer_pointer] = self
         if switch:
             await self.buffer_switched_to()
 
@@ -567,6 +567,6 @@ class SlackMessageBuffer(SlackBuffer):
         if call_buffer_close and self.buffer_pointer is not None:
             weechat.buffer_close(self.buffer_pointer)
 
-        self.buffer_pointer = None
+        self._buffer_pointer = None
         self.last_printed_ts = None
         self.hotlist_tss.clear()
