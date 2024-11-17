@@ -417,7 +417,7 @@ async def command_slack_part(buffer: str, args: List[str], options: Options):
         await conversation.part()
 
 
-@weechat_command("%(threads)", min_args=1)
+@weechat_command("%(threads)", min_args=1, alias="thread")
 async def command_slack_thread(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
     if isinstance(slack_buffer, SlackConversation):
