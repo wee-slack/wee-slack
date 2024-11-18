@@ -69,6 +69,14 @@ def get_cookies(
             sys.exit(1)
 
 
+def chrome_decrypt_cookie(
+    cipher: AESCipher, cookies_version: int, encrypted_value: bytes
+) -> str:
+    raw_value = cipher.decrypt(encrypted_value[3:])
+    value = raw_value[32:] if cookies_version >= 24 else raw_value
+    return value.decode("utf8")
+
+
 parser = argparse.ArgumentParser(
     description="Extract Slack tokens from the browser files"
 )
@@ -247,11 +255,20 @@ elif browser == "chrome":
     default_profile_path = browser_data.joinpath(profile)
 
     cookies_path = default_profile_path.joinpath("Cookies")
+
+    with sqlite3_connect(cookies_path) as con:
+        version_row = con.execute(
+            "SELECT value FROM meta WHERE key = 'version'"
+        ).fetchone()
+        cookies_version = int(version_row[0]) if version_row else 0
+
     cookie_query = (
         "SELECT encrypted_value FROM cookies WHERE "
         "host_key = '.slack.com' AND name = :name"
     )
-    cookie_d_value, cookie_ds_value = get_cookies(bytes, cookies_path, cookie_query)
+    cookie_d_encrypted_value, cookie_ds_encrypted_value = get_cookies(
+        bytes, cookies_path, cookie_query
+    )
 
     if args.no_secretstorage:
         passwd = "peanuts"
@@ -278,9 +295,14 @@ elif browser == "chrome":
     key = PBKDF2(passwd, salt, length, chrome_key_iterations)
     cipher = AESCipher(key)
 
-    cookie_d_value = cipher.decrypt(cookie_d_value[3:]).decode("utf8")
-    if cookie_ds_value:
-        cookie_ds_value = cipher.decrypt(cookie_ds_value[3:]).decode("utf8")
+    cookie_d_value = chrome_decrypt_cookie(
+        cipher, cookies_version, cookie_d_encrypted_value
+    )
+    cookie_ds_value = (
+        chrome_decrypt_cookie(cipher, cookies_version, cookie_ds_encrypted_value)
+        if cookie_ds_encrypted_value
+        else None
+    )
 
     local_storage_path = default_profile_path.joinpath("Local Storage")
     leveldb_path = local_storage_path.joinpath("leveldb")
