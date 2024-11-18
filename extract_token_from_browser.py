@@ -15,9 +15,8 @@ from sqlite3 import OperationalError
 from typing import TYPE_CHECKING, Literal, Type, TypeVar
 
 if TYPE_CHECKING:
-    from typing import assert_never
-
     from _typeshed import StrPath
+    from typing_extensions import assert_never
 
 T = TypeVar("T")
 
