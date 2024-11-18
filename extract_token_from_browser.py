@@ -12,12 +12,14 @@ from configparser import ConfigParser
 from contextlib import contextmanager
 from pathlib import Path
 from sqlite3 import OperationalError
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Type, TypeVar
 
 if TYPE_CHECKING:
     from typing import assert_never
 
     from _typeshed import StrPath
+
+T = TypeVar("T")
 
 
 class AESCipher:
@@ -42,11 +44,20 @@ def sqlite3_connect(path: StrPath):
 
 
 def get_cookies(
-    cookies_path: StrPath, cookie_query: str, params: dict[str, str] = {}
-) -> tuple[str, str | None]:
+    value_type: Type[T],
+    cookies_path: StrPath,
+    cookie_query: str,
+    params: dict[str, str] = {},
+) -> tuple[T, T | None]:
     with sqlite3_connect(cookies_path) as con:
         cookie_d_value = con.execute(cookie_query, {**params, "name": "d"}).fetchone()
         cookie_ds_value = con.execute(cookie_query, {**params, "name": "ds"}).fetchone()
+
+        if cookie_d_value and type(cookie_d_value[0]) is not value_type:
+            raise TypeError(f"Expected {value_type}, got {type(cookie_d_value[0])}")
+        if cookie_ds_value and type(cookie_ds_value[0]) is not value_type:
+            raise TypeError(f"Expected {value_type}, got {type(cookie_ds_value[0])}")
+
         if cookie_d_value and cookie_ds_value:
             return cookie_d_value[0], cookie_ds_value[0]
         elif cookie_d_value:
@@ -194,7 +205,7 @@ if browser == "firefox":
         "AND host = '.slack.com' AND name = :name"
     )
     cookie_d_value, cookie_ds_value = get_cookies(
-        cookies_path, cookie_query, {"userctx": userctx}
+        str, cookies_path, cookie_query, {"userctx": userctx}
     )
 
     storage_path = default_profile_path.joinpath(
@@ -240,7 +251,7 @@ elif browser == "chrome":
         "SELECT encrypted_value FROM cookies WHERE "
         "host_key = '.slack.com' AND name = :name"
     )
-    cookie_d_value, cookie_ds_value = get_cookies(cookies_path, cookie_query)
+    cookie_d_value, cookie_ds_value = get_cookies(bytes, cookies_path, cookie_query)
 
     if args.no_secretstorage:
         passwd = "peanuts"
