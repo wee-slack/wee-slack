@@ -42,11 +42,11 @@ def sqlite3_connect(path: StrPath):
 
 
 def get_cookies(
-    cookies_path: StrPath, cookie_query: str, params: tuple
+    cookies_path: StrPath, cookie_query: str, params: dict[str, str] = {}
 ) -> tuple[str, str | None]:
     with sqlite3_connect(cookies_path) as con:
-        cookie_d_value = con.execute(cookie_query.format("d"), params).fetchone()
-        cookie_ds_value = con.execute(cookie_query.format("ds"), params).fetchone()
+        cookie_d_value = con.execute(cookie_query, {**params, "name": "d"}).fetchone()
+        cookie_ds_value = con.execute(cookie_query, {**params, "name": "ds"}).fetchone()
         if cookie_d_value and cookie_ds_value:
             return cookie_d_value[0], cookie_ds_value[0]
         elif cookie_d_value:
@@ -190,11 +190,11 @@ if browser == "firefox":
         userctx = ""
 
     cookie_query = (
-        "SELECT value FROM moz_cookies WHERE originAttributes = ? "
-        "AND host = '.slack.com' AND name = '{}'"
+        "SELECT value FROM moz_cookies WHERE originAttributes = :userctx "
+        "AND host = '.slack.com' AND name = :name"
     )
     cookie_d_value, cookie_ds_value = get_cookies(
-        cookies_path, cookie_query, (userctx,)
+        cookies_path, cookie_query, {"userctx": userctx}
     )
 
     storage_path = default_profile_path.joinpath(
@@ -238,9 +238,9 @@ elif browser == "chrome":
     cookies_path = default_profile_path.joinpath("Cookies")
     cookie_query = (
         "SELECT encrypted_value FROM cookies WHERE "
-        "host_key = '.slack.com' AND name = '{}'"
+        "host_key = '.slack.com' AND name = :name"
     )
-    cookie_d_value, cookie_ds_value = get_cookies(cookies_path, cookie_query, ())
+    cookie_d_value, cookie_ds_value = get_cookies(cookies_path, cookie_query)
 
     if args.no_secretstorage:
         passwd = "peanuts"
