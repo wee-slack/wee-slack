@@ -226,9 +226,9 @@ if browser == "firefox":
             is_compressed, conversion, payload = con.execute(storage_query).fetchone()
 
         if is_compressed:
-            from snappy import snappy
+            from cramjam import snappy
 
-            payload = snappy.decompress(payload)
+            payload = bytes(snappy.decompress_raw(payload))
 
         if conversion == 1:
             local_config_str = payload.decode("utf-8")
