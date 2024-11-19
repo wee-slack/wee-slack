@@ -22,7 +22,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - uses: abatilo/actions-poetry@v3
 
-      - run: poetry install
+      - run: poetry install --all-extras
 
       - run: poetry run ruff format --check
 

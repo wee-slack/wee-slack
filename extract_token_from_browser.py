@@ -12,7 +12,7 @@ from configparser import ConfigParser
 from contextlib import contextmanager
 from pathlib import Path
 from sqlite3 import OperationalError
-from typing import TYPE_CHECKING, Literal, Type, TypeVar
+from typing import TYPE_CHECKING, Literal, Type, TypeVar, cast
 
 if TYPE_CHECKING:
     from _typeshed import StrPath
@@ -22,14 +22,14 @@ T = TypeVar("T")
 
 
 class AESCipher:
-    def __init__(self, key):
+    def __init__(self, key: AES.Buffer):
         self.key = key
 
-    def decrypt(self, text):
-        cipher = AES.new(self.key, AES.MODE_CBC, IV=(b" " * 16))
+    def decrypt(self, text: AES.Buffer) -> bytes:
+        cipher = AES.new(self.key, AES.MODE_CBC, IV=(b" " * 16))  # pyright: ignore [reportUnknownMemberType]
         return self._unpad(cipher.decrypt(text))
 
-    def _unpad(self, s):
+    def _unpad(self, s: bytes) -> bytes:
         return s[: -ord(s[len(s) - 1 :])]
 
 
@@ -241,11 +241,10 @@ if browser == "firefox":
         pass
 
 elif browser == "chrome":
+    import plyvel
     import secretstorage
     from Crypto.Cipher import AES
     from Crypto.Protocol.KDF import PBKDF2
-    from plyvel import DB
-    from plyvel._plyvel import IOError as pIOErr
     from secretstorage.exceptions import SecretStorageException
 
     if not profile:
@@ -291,7 +290,7 @@ elif browser == "chrome":
 
     salt = b"saltysalt"
     length = 16
-    key = PBKDF2(passwd, salt, length, chrome_key_iterations)
+    key = PBKDF2(cast(str, passwd), salt, length, chrome_key_iterations)
     cipher = AESCipher(key)
 
     cookie_d_value = chrome_decrypt_cookie(
@@ -307,15 +306,15 @@ elif browser == "chrome":
     leveldb_path = local_storage_path.joinpath("leveldb")
     leveldb_key = b"_https://app.slack.com\x00\x01localConfig_v2"
     try:
-        db = DB(str(leveldb_path))
+        db = plyvel.DB(str(leveldb_path))
         local_storage_value = db.get(leveldb_key)
         db.close()
-    except pIOErr:
+    except plyvel.IOError:
         with tempfile.TemporaryDirectory(
             dir=local_storage_path, prefix="leveldb-", suffix=".tmp"
         ) as tmp_dir:
             shutil.copytree(leveldb_path, tmp_dir, dirs_exist_ok=True)
-            db = DB(tmp_dir)
+            db = plyvel.DB(tmp_dir)
             local_storage_value = db.get(leveldb_key)
             db.close()
 

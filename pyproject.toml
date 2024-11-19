@@ -53,7 +53,13 @@ disable = [
 pythonVersion = "3.8"
 strict = ["**"]
 reportMissingModuleSource = false
-include = ["main.py", "slack", "tests", "typings"]
+include = [
+  "extract_token_from_browser.py",
+  "main.py",
+  "slack",
+  "tests",
+  "typings",
+]
 
 [tool.ruff]
 extend-exclude = ["typings/weechat.pyi"]
