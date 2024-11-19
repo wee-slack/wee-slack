@@ -12,6 +12,14 @@ dependencies = ["websocket-client>=1.8.0"]
 Homepage = "https://github.com/wee-slack/wee-slack"
 Repository = "https://github.com/wee-slack/wee-slack.git"
 
+[project.optional-dependencies]
+extract-token = [
+  "cramjam>=2.9.1",
+  "plyvel>=1.5.1",
+  "pycryptodome>=3.22.0",
+  "secretstorage>=3.3.3",
+]
+
 [dependency-groups]
 dev = [
   "pyright>=1.1.398",
