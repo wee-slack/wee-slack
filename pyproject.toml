@@ -16,6 +16,14 @@ repository = "https://github.com/wee-slack/wee-slack"
 python = "^3.8"
 websocket-client = ">=1.8.0"
 
+cramjam = { version = "^2.9.0", optional = true }
+plyvel = { version = "^1.5.1", optional = true }
+pycryptodome = { version = "^3.21.0", optional = true }
+secretstorage = { version = "^3.3.3", optional = true }
+
+[tool.poetry.extras]
+extract_token = ["cramjam", "plyvel", "pycryptodome", "secretstorage"]
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
 pytest-cov = "^5.0.0"
