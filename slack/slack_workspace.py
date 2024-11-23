@@ -742,6 +742,13 @@ class SlackWorkspace(SlackBuffer):
             elif data["type"] == "subteam_self_removed":
                 self.usergroups_member.remove(data["subteam_id"])
                 return
+            elif data["type"] == "emoji_changed":
+                if data["subtype"] == "add":
+                    self.custom_emojis[data["name"]] = data["value"]
+                elif data["subtype"] == "remove":
+                    for name in data["names"]:
+                        self.custom_emojis.pop(name, None)
+                return
             elif data["type"] == "channel_joined" or data["type"] == "group_joined":
                 channel_id = data["channel"]["id"]
             elif data["type"] == "reaction_added" or data["type"] == "reaction_removed":

@@ -364,6 +364,20 @@ class SlackSubteamSelfRemoved(TypedDict):
     subteam_id: str
     event_ts: str
 
+class SlackEmojiChangedAdd(TypedDict):
+    type: Literal["emoji_changed"]
+    subtype: Literal["add"]
+    name: str
+    value: str
+    collection_id: NotRequired[str]
+    event_ts: str
+
+class SlackEmojiChangedRemove(TypedDict):
+    type: Literal["emoji_changed"]
+    subtype: Literal["remove"]
+    names: List[str]
+    event_ts: str
+
 SlackMessageRtm = (
     SlackMessageStandardRtm
     | SlackMessageMeRtm
@@ -415,4 +429,6 @@ SlackRtmMessage = (
     | SlackSubteamMembersChanged
     | SlackSubteamSelfAdded
     | SlackSubteamSelfRemoved
+    | SlackEmojiChangedAdd
+    | SlackEmojiChangedRemove
 )
