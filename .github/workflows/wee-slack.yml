@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: abatilo/actions-poetry@v3
+      - uses: abatilo/actions-poetry@v4
 
       - run: poetry install
 
@@ -47,7 +47,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: abatilo/actions-poetry@v3
+      - uses: abatilo/actions-poetry@v4
       - run: poetry install
 
       - name: Install WeeChat, tmux and python3-websocket
