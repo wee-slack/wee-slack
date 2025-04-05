@@ -1,8 +1,10 @@
-/build/
-*.pyc
-.cache/
-*.sublime-*
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
 
-# Ignore pipenv's lockfile until support for multiple versions of python is
-# dropped
-/Pipfile.lock
+# Virtual environments
+.venv
