@@ -2060,7 +2060,9 @@ class SlackChannelCommon(object):
             f |= re.MULTILINE if "m" in flags else 0
             f |= re.DOTALL if "s" in flags else 0
             old_message_text = message.message_json["text"]
-            new_message_text = re.sub(old, new, old_message_text, num_replace, f)
+            new_message_text = re.sub(
+                old, new, old_message_text, count=num_replace, flags=f
+            )
             if new_message_text != old_message_text:
                 post_data = {
                     "channel": self.identifier,
