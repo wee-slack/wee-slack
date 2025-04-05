@@ -7179,8 +7179,9 @@ def initiate_connection(token):
                 if response_json["error"] == "user_is_restricted":
                     w.prnt(
                         "",
-                        "You are a restricted user in this team, "
-                        "{} not loaded".format(data_type),
+                        "You are a restricted user in this team, {} not loaded".format(
+                            data_type
+                        ),
                     )
                 else:
                     initial_data["errors"].append(

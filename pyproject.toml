@@ -7,14 +7,14 @@ authors = [{ name = "Trygve Aaberge", email = "trygveaa@gmail.com" }]
 readme = "README.md"
 repository = "https://github.com/wee-slack/wee-slack"
 requires-python = ">= 3.8"
-dependencies = ["websocket-client >= 1.8.0"]
+dependencies = ["websocket-client (>=1.8.0,<2.0.0)"]
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.2.2"
+pytest = "^8.3.5"
 pytest-cov = "^5.0.0"
-typing-extensions = "^4.12.2"
-pyright = "^1.1.368"
-ruff = "^0.4.10"
+typing-extensions = "^4.13.1"
+pyright = "^1.1.398"
+ruff = "^0.11.4"
 
 [tool.pylint.main]
 ignored-modules = ["weechat"]
