@@ -5,9 +5,12 @@ description = ""
 license = "MIT"
 authors = [{ name = "Trygve Aaberge", email = "trygveaa@gmail.com" }]
 readme = "README.md"
-repository = "https://github.com/wee-slack/wee-slack"
 requires-python = ">=3.8"
 dependencies = ["websocket-client>=1.8.0"]
+
+[project.urls]
+Homepage = "https://github.com/wee-slack/wee-slack"
+Repository = "https://github.com/wee-slack/wee-slack.git"
 
 [dependency-groups]
 dev = [
