@@ -1575,6 +1575,49 @@ class SlackSubteam(object):
         return compare_str == self.identifier
 
 
+class SlackChannelSection(object):
+    """
+    Similar to a thread channel, a virtual channel used to organize channels in a group buffer
+    """
+
+    def __init__(self, domain, **kwargs):
+        self.identifier = kwargs["channel_section_id"]
+        self.name = kwargs["name"]
+        self.subdomain = domain
+        self.type = "channel_section"
+        self.emoji = kwargs.get("emoji", "")
+        self.section_buffer = None
+        if config.channel_section_buffer:
+            self.create_buffer()
+
+    def __repr__(self):
+        return "Name:{} Identifier:{}".format(self.name, self.identifier)
+
+    def __eq__(self, compare_str):
+        return compare_str == self.identifier
+
+    def formatted_name(self, style="default"):
+        if style == "sidebar":
+            return self.name
+        else:
+            return "slack.{}.{}".format(self.subdomain, self.name)
+
+    def create_buffer(self):
+        if not self.section_buffer:
+            self.section_buffer = w.buffer_new(self.formatted_name(), "", "", "", "")
+
+            w.buffer_set(
+                self.section_buffer, "short_name", self.formatted_name(style="sidebar")
+            )
+
+            w.buffer_set(
+                self.section_buffer, "localvar_set_type", get_localvar_type(self.type)
+            )
+            w.buffer_set(self.section_buffer, "localvar_set_channel_section", self.name)
+
+            w.buffer_set(self.section_buffer, "localvar_set_slack_type", self.type)
+
+
 class SlackTeam(object):
     """
     incomplete
@@ -2192,6 +2235,11 @@ class SlackChannel(SlackChannelCommon):
         self.last_line_from = None
         self.buffer_name_needs_update = False
         self.last_refresh_typing = False
+        self.channel_section = (
+            kwargs.get("channel_section", None)
+            if config.channel_section_buffer
+            else None
+        )
 
     def __eq__(self, compare_str):
         if (
@@ -2306,7 +2354,12 @@ class SlackChannel(SlackChannelCommon):
             if self.label_full_drop_prefix:
                 return name
             else:
-                return "{}.{}{}".format(self.team.name, prepend, name)
+                channel_section = ""
+                if self.channel_section and self.type != "channel_section":
+                    channel_section = "{}.".format(self.channel_section.name)
+                return "{}.{}{}{}".format(
+                    self.team.name, channel_section, prepend, name
+                )
         else:
             if self.label_full_drop_prefix:
                 return name
@@ -2448,8 +2501,12 @@ class SlackChannel(SlackChannelCommon):
             self.set_topic()
             if self.channel_buffer:
                 w.buffer_set(self.channel_buffer, "localvar_set_server", self.team.name)
-        self.update_nicklist()
-
+            if self.channel_section:
+                w.buffer_set(
+                    self.channel_buffer,
+                    "localvar_set_channel_section",
+                    self.channel_section.name,
+                )
         info_method = self.team.slack_api_translator[self.type].get("info")
         if info_method:
             s = SlackRequest(
@@ -6766,6 +6823,10 @@ class PluginConfig(object):
             " typing in it. Note that this will (temporarily) affect the sort"
             " order if you sort buffers by name rather than by number.",
         ),
+        "channel_section_buffer": Setting(
+            default="false",
+            desc="Enable to create virtual buffers for sorting channels using channel sections. Use autosort.py for better sorting.",
+        ),
         "color_buflist_muted_channels": Setting(
             default="darkgray", desc="Color to use for muted channels in the buflist"
         ),
@@ -7165,11 +7226,13 @@ def initiate_connection(token):
         "channels": [],
         "members": [],
         "usergroups": [],
+        "channel_sections": [],
         "remaining": {
             "channels": 2,
             "members": 1,
             "usergroups": 1,
             "prefs": 1,
+            "channel_sections": 1,
             "presence": 1,
         },
         "errors": [],
@@ -7210,6 +7273,20 @@ def initiate_connection(token):
 
         initial_data["prefs"] = response_json["prefs"]
         initial_data["remaining"]["prefs"] -= 1
+        create_team(token, initial_data)
+
+    def handle_channelSections(response_json, eventrouter, team, channel, metadata):
+        dbg("initial_data {}".format(json.dumps(initial_data["remaining"])), 5)
+        if not response_json["ok"]:
+            initial_data["errors"].append(
+                "channel_sections: {}".format(response_json["error"])
+            )
+            initial_data["remaining"]["channel_sections"] -= 1
+            create_team(token, initial_data)
+            return
+
+        initial_data["channel_sections"] = response_json["channel_sections"]
+        initial_data["remaining"]["channel_sections"] -= 1
         create_team(token, initial_data)
 
     def handle_getPresence(response_json, eventrouter, team, channel, metadata):
@@ -7276,6 +7353,15 @@ def initiate_connection(token):
         token=token,
         callback=handle_getPresence,
     )
+
+    EVENTROUTER.receive(s)
+    s = SlackRequest(
+        None,
+        "users.channelSections.list",
+        token=token,
+        callback=handle_channelSections,
+    )
+
     EVENTROUTER.receive(s)
 
 
@@ -7334,8 +7420,23 @@ def create_team(token, initial_data):
                 users[myidentifier].profile, response_json["self"]["name"]
             )
 
+            channel_sections = {}
+            for channel_section in initial_data["channel_sections"]:
+                # create a channel section if there is at least one channel in the section
+                if len(channel_section["channel_ids_page"]["channel_ids"]) > 0:
+                    section = SlackChannelSection(
+                        response_json["team"]["domain"], **channel_section
+                    )
+                for channel_id in channel_section["channel_ids_page"]["channel_ids"]:
+                    if channel_id not in channel_sections:
+                        channel_sections[channel_id] = section
+
             channels = {}
             for channel_info in initial_data["channels"]:
+                if channel_info["id"] in channel_sections:
+                    channel_info["channel_section"] = channel_sections[
+                        channel_info["id"]
+                    ]
                 channels[channel_info["id"]] = create_channel_from_info(
                     eventrouter, channel_info, None, myidentifier, users
                 )
