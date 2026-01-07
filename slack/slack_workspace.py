@@ -402,25 +402,55 @@ class SlackWorkspace(SlackBuffer):
 
         return True
 
-    def _set_global_keywords(self, all_notifications_prefs: AllNotificationsPrefs):
-        global_keywords = set(
-            all_notifications_prefs["global"]["global_keywords"].split(",")
-        )
-        regex_words = "|".join(re.escape(keyword) for keyword in global_keywords)
-        if regex_words:
-            self.global_keywords_regex = re.compile(
-                rf"\b(?:{regex_words})\b", re.IGNORECASE
+    def _set_all_notification_prefs(self, all_notifications_prefs_json: str):
+        try:
+            all_notifications_prefs: AllNotificationsPrefs = json.loads(
+                all_notifications_prefs_json
             )
+        except json.decoder.JSONDecodeError:
+            print_error(
+                f'Failed to parse all_notifications_prefs for workspace "{self.name}"'
+            )
+            return
+
+        if not isinstance(all_notifications_prefs, dict):  # pyright: ignore [reportUnnecessaryIsInstance]
+            print_error(
+                f'Invalid all_notifications_prefs format for workspace "{self.name}"'
+            )
+
+        channels_prefs = all_notifications_prefs.get("channels")
+        if channels_prefs:
+            new_muted_channels = set(
+                channel_id
+                for channel_id, prefs in channels_prefs.items()
+                if prefs["muted"]
+            )
+            self._set_muted_channels(new_muted_channels)
         else:
-            self.global_keywords_regex = None
+            print_error(
+                f'No channels notification prefs found for workspace "{self.name}"'
+            )
+
+        global_keywords_str = all_notifications_prefs.get("global", {}).get(
+            "global_keywords"
+        )
+        if global_keywords_str:
+            global_keywords = set(global_keywords_str.split(","))
+            regex_words = "|".join(re.escape(keyword) for keyword in global_keywords)
+            if regex_words:
+                self.global_keywords_regex = re.compile(
+                    rf"\b(?:{regex_words})\b", re.IGNORECASE
+                )
+            else:
+                self.global_keywords_regex = None
+        else:
+            print_error(f'No global keywords found for workspace "{self.name}"')
 
     async def _initialize_oauth(self) -> List[SlackConversation]:
-        prefs = await self.api.fetch_users_get_prefs(
-            "muted_channels,all_notifications_prefs"
+        prefs = await self.api.fetch_users_get_prefs("all_notifications_prefs")
+        self._set_all_notification_prefs(
+            prefs["prefs"].get("all_notifications_prefs", "")
         )
-        self.muted_channels = set(prefs["prefs"]["muted_channels"].split(","))
-        all_notifications_prefs = json.loads(prefs["prefs"]["all_notifications_prefs"])
-        self._set_global_keywords(all_notifications_prefs)
 
         usergroups = await self.api.fetch_usergroups_list(include_users=True)
         for usergroup in usergroups["usergroups"]:
@@ -465,11 +495,9 @@ class SlackWorkspace(SlackBuffer):
         my_user_id = user_boot["self"]["id"]
         # self.users.initialize_items(my_user_id, {my_user_id: user_boot["self"]})
         self.my_user = await self.users[my_user_id]
-        self.muted_channels = set(user_boot["prefs"]["muted_channels"].split(","))
-        all_notifications_prefs = json.loads(
-            user_boot["prefs"]["all_notifications_prefs"]
+        self._set_all_notification_prefs(
+            user_boot["prefs"].get("all_notifications_prefs", "")
         )
-        self._set_global_keywords(all_notifications_prefs)
 
         self.usergroups_member = set(user_boot["subteams"]["self"])
 
@@ -673,14 +701,7 @@ class SlackWorkspace(SlackBuffer):
                     new_muted_channels = set(data["value"].split(","))
                     self._set_muted_channels(new_muted_channels)
                 elif data["name"] == "all_notifications_prefs":
-                    new_prefs = json.loads(data["value"])
-                    new_muted_channels = set(
-                        channel_id
-                        for channel_id, prefs in new_prefs["channels"].items()
-                        if prefs["muted"]
-                    )
-                    self._set_muted_channels(new_muted_channels)
-                    self._set_global_keywords(new_prefs)
+                    self._set_all_notification_prefs(data["value"])
                 return
             elif data["type"] == "user_status_changed":
                 user_id = data["user"]["id"]

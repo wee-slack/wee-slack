@@ -3671,6 +3671,27 @@ class SlackTS(object):
 ###### New handlers
 
 
+def parse_all_notifications_prefs(all_notifications_prefs_json):
+    try:
+        all_notifications_prefs = json.loads(all_notifications_prefs_json)
+    except json.decoder.JSONDecodeError:
+        all_notifications_prefs = {}
+
+    channels_prefs = all_notifications_prefs.get("channels")
+    if channels_prefs:
+        muted_channels = set(
+            channel_id
+            for channel_id, channel_prefs in channels_prefs.items()
+            if channel_prefs["muted"]
+        )
+
+    global_keywords = all_notifications_prefs.get("global", {}).get("global_keywords")
+    return {
+        "muted_channels": ",".join(muted_channels),
+        "global_keywords": global_keywords,
+    }
+
+
 def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
     """
     This handles the main entry call to slack, rtm.start
@@ -3747,6 +3768,10 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
             if not item["is_mpim"]:
                 channels[item["id"]] = SlackGroupChannel(eventrouter, **item)
 
+        all_notifications_prefs = parse_all_notifications_prefs(
+            login_data["self"]["prefs"].get("all_notifications_prefs", "")
+        )
+
         t = SlackTeam(
             eventrouter,
             metadata.token,
@@ -3760,8 +3785,8 @@ def handle_rtmstart(login_data, eventrouter, team, channel, metadata):
             users,
             bots,
             channels,
-            muted_channels=login_data["self"]["prefs"]["muted_channels"],
-            highlight_words=login_data["self"]["prefs"]["highlight_words"],
+            muted_channels=notifications_prefs["muted_channels"],
+            highlight_words=notifications_prefs["global_keywords"] or "",
         )
         eventrouter.register_team(t)
 
@@ -4119,15 +4144,11 @@ def process_pref_change(message_json, eventrouter, team, channel, metadata):
     elif message_json["name"] == "highlight_words":
         team.set_highlight_words(message_json["value"])
     elif message_json["name"] == "all_notifications_prefs":
-        new_prefs = json.loads(message_json["value"])
-        new_muted_channels = set(
-            channel_id
-            for channel_id, prefs in new_prefs["channels"].items()
-            if prefs["muted"]
-        )
-        team.set_muted_channels(",".join(new_muted_channels))
-        global_keywords = new_prefs["global"]["global_keywords"]
-        team.set_highlight_words(global_keywords)
+        notifications_prefs = parse_all_notifications_prefs(message_json["value"])
+        if notifications_prefs["muted_channels"] is not None:
+            team.set_muted_channels(notifications_prefs["muted_channels"])
+        if notifications_prefs["global_keywords"] is not None:
+            team.set_highlight_words(notifications_prefs["global_keywords"])
     else:
         dbg("Preference change not implemented: {}\n".format(message_json["name"]))
 
@@ -7351,17 +7372,11 @@ def create_team(token, initial_data):
                 "away" if initial_data["presence"]["manual_away"] else "active"
             )
 
-            try:
-                all_notifications_prefs = json.loads(
-                    initial_data["prefs"].get("all_notifications_prefs")
-                )
-                global_keywords = all_notifications_prefs.get("global", {}).get(
-                    "global_keywords"
-                )
-            except json.decoder.JSONDecodeError:
-                global_keywords = None
+            all_notifications_prefs = parse_all_notifications_prefs(
+                initial_data["prefs"].get("all_notifications_prefs", "")
+            )
 
-            if global_keywords is None:
+            if all_notifications_prefs["global_keywords"] is None:
                 print_error(
                     "global_keywords not found in users.prefs.get", warning=True
                 )
@@ -7371,7 +7386,6 @@ def create_team(token, initial_data):
                     ),
                     level=5,
                 )
-                global_keywords = ""
 
             team_info = {
                 "id": team_id,
@@ -7396,8 +7410,8 @@ def create_team(token, initial_data):
                     users,
                     bots,
                     channels,
-                    muted_channels=initial_data["prefs"]["muted_channels"],
-                    highlight_words=global_keywords,
+                    muted_channels=all_notifications_prefs["muted_channels"],
+                    highlight_words=all_notifications_prefs["global_keywords"] or "",
                 )
                 eventrouter.register_team(team)
                 team.connect()
