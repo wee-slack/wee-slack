@@ -3677,13 +3677,12 @@ def parse_all_notifications_prefs(all_notifications_prefs_json):
     except json.decoder.JSONDecodeError:
         all_notifications_prefs = {}
 
-    channels_prefs = all_notifications_prefs.get("channels")
-    if channels_prefs:
-        muted_channels = set(
-            channel_id
-            for channel_id, channel_prefs in channels_prefs.items()
-            if channel_prefs["muted"]
-        )
+    channels_prefs = all_notifications_prefs.get("channels", {})
+    muted_channels = set(
+        channel_id
+        for channel_id, channel_prefs in channels_prefs.items()
+        if channel_prefs.get("muted")
+    )
 
     global_keywords = all_notifications_prefs.get("global", {}).get("global_keywords")
     return {
