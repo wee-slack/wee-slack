@@ -423,7 +423,7 @@ class SlackWorkspace(SlackBuffer):
             new_muted_channels = set(
                 channel_id
                 for channel_id, prefs in channels_prefs.items()
-                if prefs["muted"]
+                if prefs.get("muted")
             )
             self._set_muted_channels(new_muted_channels)
         else:
