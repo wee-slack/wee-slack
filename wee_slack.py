@@ -1674,6 +1674,9 @@ class SlackTeam(object):
     def generate_usergroup_map(self):
         return {s.handle: s.identifier for s in self.subteams.values()}
 
+    def set_token(self, token):
+        self.token = token
+
     def set_name(self):
         alias = config.server_aliases.get(self.subdomain)
         if alias:
@@ -6382,6 +6385,53 @@ def command_away(data, current_buffer, args):
     team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
     s = SlackRequest(team, "users.setPresence", {"presence": "away"})
     EVENTROUTER.receive(s)
+    return w.WEECHAT_RC_OK
+
+
+@slack_buffer_required
+@utf8_decode
+def command_reload_auth(data, current_buffer, args):
+    """
+    /slack reload_auth [<n>]
+    Re-reads the slack auth token from weechat config, for the team of the current buffer.
+    <n> specifies which entry the token is in the config string (when there's more than 1),
+    zero-indexed, and defaults to 0.
+    """
+    team = EVENTROUTER.weechat_controller.buffers[current_buffer].team
+    n = 0
+    if args:
+        try:
+            n = int(args)
+        except ValueError:
+            w.prnt(
+                "",
+                "Error: argument must be integer (defaults to 0 if absent): '{}'".format(args),
+            )
+            return w.WEECHAT_RC_OK_EAT
+
+    # Force the token value to be re-read from weechat config
+    config.config_changed(None, CONFIG_PREFIX + ".slack_api_token", None)
+    tokens = [
+        token.strip()
+        for token in config.slack_api_token.split(",")
+        if token
+    ]
+    t = tokens[n]
+    if t.startswith("xoxc-") and ":" not in t:
+        w.prnt(
+            "",
+            "{}When using an xoxc token, you need to also provide the d cookie in the format token:cookie".format(
+                w.prefix("error")
+            ),
+        )
+        return w.WEECHAT_RC_OK_EAT
+
+    w.prnt(
+        "",
+        "Reloading auth token with index {} ({}) and applying to team with subdomain {} (prev token {}).".format(n, token_for_print(t), team.subdomain, token_for_print(team.token)),
+    )
+
+    team.set_token(t)
     return w.WEECHAT_RC_OK
 
 
