@@ -2351,10 +2351,8 @@ class SlackChannel(SlackChannelCommon):
             return
 
         if (
-            getattr(self, "is_open", False)
-            or self.unread_count_display
+            self.unread_count_display
             or self.type not in ["im", "mpim"]
-            and getattr(self, "is_member", False)
         ):
             self.create_buffer()
         elif self.type in ["im", "mpim"]:
@@ -2583,7 +2581,7 @@ class SlackChannel(SlackChannelCommon):
             # complete, so we have to fetch members for all channels.
             s = SlackRequest(
                 self.team,
-                "conversations.members",
+                "membership",
                 {"channel": self.identifier, "limit": 1000},
                 channel=self,
             )
@@ -5365,10 +5363,12 @@ def tag(
 
 
 def set_own_presence_active(team):
-    slackbot = team.get_channel_map()["Slackbot"]
-    channel = team.channels[slackbot]
-    request = {"type": "typing", "channel": channel.identifier}
-    channel.team.send_to_websocket(request, expect_reply=False)
+    channel_map = team.get_channel_map()
+    if "Slackbot" in channel_map:
+        slackbot = channel_map["Slackbot"]
+        channel = team.channels[slackbot]
+        request = {"type": "typing", "channel": channel.identifier}
+        channel.team.send_to_websocket(request, expect_reply=False)
 
 
 ###### New/converted command_ commands
@@ -7160,7 +7160,7 @@ def trace_calls(frame, event, arg):
 def get_rtm_connect_request(token, retries=3, team=None, callback=None):
     return SlackRequest(
         team,
-        "rtm.connect",
+        "client.userBoot",
         {"batch_presence_aware": 1},
         retries=retries,
         token=token,
@@ -7186,7 +7186,7 @@ def initiate_connection(token):
         "members": [],
         "usergroups": [],
         "remaining": {
-            "channels": 2,
+            "channels": 1,
             "members": 1,
             "usergroups": 1,
             "prefs": 1,
@@ -7245,22 +7245,10 @@ def initiate_connection(token):
 
     s = SlackRequest(
         None,
-        "conversations.list",
+        "client.userBoot",
         {
             "exclude_archived": True,
             "types": "public_channel,private_channel,im",
-            "limit": 1000,
-        },
-        token=token,
-        callback=handle_initial("channels"),
-    )
-    EVENTROUTER.receive(s)
-    s = SlackRequest(
-        None,
-        "conversations.list",
-        {
-            "exclude_archived": True,
-            "types": "mpim",
             "limit": 1000,
         },
         token=token,
@@ -7290,9 +7278,10 @@ def initiate_connection(token):
         callback=handle_prefs,
     )
     EVENTROUTER.receive(s)
+
     s = SlackRequest(
         None,
-        "users.getPresence",
+        "users.list",
         token=token,
         callback=handle_getPresence,
     )
@@ -7368,7 +7357,7 @@ def create_team(token, initial_data):
                 )
 
             manual_presence = (
-                "away" if initial_data["presence"]["manual_away"] else "active"
+                "away" if ('presence' in initial_data and 'manual_away' in initial_data["presence"] and initial_data["presence"]["manual_away"]) else "active"
             )
 
             all_notifications_prefs = parse_all_notifications_prefs(
@@ -7400,7 +7389,7 @@ def create_team(token, initial_data):
                     eventrouter,
                     token,
                     team_hash,
-                    response_json["url"],
+                    "wss://wss-primary.slack.com/?token={}".format(token.split(":")[0]), 
                     team_info,
                     subteams,
                     self_nick,
