@@ -13,6 +13,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from sqlite3 import OperationalError
 from typing import TYPE_CHECKING, Literal
+from urllib.parse import unquote as uq
 
 if TYPE_CHECKING:
     from typing import assert_never
@@ -25,11 +26,21 @@ class AESCipher:
         self.key = key
 
     def decrypt(self, text):
+        # Use AES-128-CBC with fixed IV for both v10 and v11 on Linux
         cipher = AES.new(self.key, AES.MODE_CBC, IV=(b" " * 16))
-        return self._unpad(cipher.decrypt(text))
-
-    def _unpad(self, s):
-        return s[: -ord(s[len(s) - 1 :])]
+        decrypted = cipher.decrypt(text)
+        # Remove PKCS7 padding
+        padding_len = decrypted[-1]
+        if padding_len < 16:
+            decrypted = decrypted[:-padding_len]
+        # For v11, the first 28 bytes are garbage (nonce+tag treated as ciphertext)
+        # Find the actual cookie data starting with 'xoxd' or 'd='
+        for marker in [b"xoxd", b"d="]:
+            pos = decrypted.find(marker)
+            if pos >= 0:
+                return decrypted[pos:]
+        # If no marker found, return as-is (might be v10 format without garbage)
+        return decrypted
 
 
 @contextmanager
@@ -224,8 +235,13 @@ if browser == "firefox":
 
 elif browser == "chrome":
     import secretstorage
-    from Crypto.Cipher import AES
-    from Crypto.Protocol.KDF import PBKDF2
+
+    try:
+        from Cryptodome.Cipher import AES
+        from Cryptodome.Protocol.KDF import PBKDF2
+    except ImportError:
+        from Crypto.Cipher import AES
+        from Crypto.Protocol.KDF import PBKDF2
     from plyvel import DB
     from plyvel._plyvel import IOError as pIOErr
     from secretstorage.exceptions import SecretStorageException
@@ -263,13 +279,14 @@ elif browser == "chrome":
             passwd = "peanuts"
 
     salt = b"saltysalt"
-    length = 16
-    key = PBKDF2(passwd, salt, length, chrome_key_iterations)
+    key = PBKDF2(passwd, salt, 16, chrome_key_iterations)
     cipher = AESCipher(key)
 
-    cookie_d_value = cipher.decrypt(cookie_d_value[3:]).decode("utf8")
+    decrypted_d = cipher.decrypt(cookie_d_value[3:])
+    cookie_d_value = uq(decrypted_d.decode("utf-8"))
     if cookie_ds_value:
-        cookie_ds_value = cipher.decrypt(cookie_ds_value[3:]).decode("utf8")
+        decrypted_ds = cipher.decrypt(cookie_ds_value[3:])
+        cookie_ds_value = uq(decrypted_ds.decode("utf-8"))
 
     local_storage_path = default_profile_path.joinpath("Local Storage")
     leveldb_path = local_storage_path.joinpath("leveldb")
@@ -279,13 +296,16 @@ elif browser == "chrome":
         local_storage_value = db.get(leveldb_key)
         db.close()
     except pIOErr:
-        with tempfile.TemporaryDirectory(
-            dir=local_storage_path, prefix="leveldb-", suffix=".tmp"
-        ) as tmp_dir:
-            shutil.copytree(leveldb_path, tmp_dir, dirs_exist_ok=True)
-            db = DB(tmp_dir)
-            local_storage_value = db.get(leveldb_key)
-            db.close()
+        try:
+            with tempfile.TemporaryDirectory(
+                dir=local_storage_path, prefix="leveldb-", suffix=".tmp"
+            ) as tmp_dir:
+                shutil.copytree(leveldb_path, tmp_dir, dirs_exist_ok=True)
+                db = DB(tmp_dir)
+                local_storage_value = db.get(leveldb_key)
+                db.close()
+        except OSError:
+            pass
 
     local_config = json.loads(local_storage_value[1:]) if local_storage_value else None
 

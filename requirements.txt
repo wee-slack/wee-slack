@@ -1,0 +1,6 @@
+plyvel
+pycrypto
+keyring
+secretstorage
+snappy
+pycryptodomex
