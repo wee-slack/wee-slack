@@ -501,6 +501,42 @@ class SlackConversation(SlackMessageBuffer):
                     self.hotlist_tss.add(message.latest_reply)
                 await message.handle_thread_notify_and_auto_open()
 
+    def set_hotlist_from_counts(self):
+        """Set hotlist from client_counts data without fetching history."""
+        if not self.buffer_pointer:
+            return
+
+        # Skip if user is viewing this buffer (fill_history will be called by buffer_switched_to)
+        if shared.current_buffer_pointer == self.buffer_pointer:
+            return
+
+        # Get counts from workspace
+        counts = self.workspace.pending_conversation_counts.get(self.id)
+        if not counts:
+            return
+
+        # Skip muted channels
+        if self.muted:
+            return
+
+        has_unreads = counts.get("has_unreads", False)
+        mention_count = counts.get("mention_count", 0)
+
+        # Add highlight entries for mentions
+        for _ in range(mention_count):
+            weechat.buffer_set(
+                self.buffer_pointer, "hotlist", MessagePriority.HIGHLIGHT.value
+            )
+
+        # If there are unreads but no mentions, add one entry
+        if has_unreads and mention_count == 0:
+            priority = (
+                MessagePriority.PRIVATE
+                if self.buffer_type == "private"
+                else MessagePriority.MESSAGE
+            )
+            weechat.buffer_set(self.buffer_pointer, "hotlist", priority.value)
+
     async def fill_history(self, update: bool = False):
         if self.is_loading:
             return
