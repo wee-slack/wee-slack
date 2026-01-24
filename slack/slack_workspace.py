@@ -49,6 +49,7 @@ from slack.weechat_buffer import buffer_new
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfo
+    from slack_api.slack_client_counts import SlackClientCountsConversation
     from slack_api.slack_client_userboot import SlackClientUserbootIm
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_conversations import SlackUsersConversations
@@ -255,6 +256,7 @@ class SlackWorkspace(SlackBuffer):
         self.global_keywords_regex: Optional[re.Pattern[str]] = None
         self.custom_emojis: Dict[str, str] = {}
         self.max_users_per_fetch_request = 512
+        self.pending_conversation_counts: Dict[str, SlackClientCountsConversation] = {}
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name})"
@@ -507,6 +509,13 @@ class SlackWorkspace(SlackBuffer):
 
         channel_counts = client_counts["channels"] + client_counts["mpims"]
 
+        # Build counts lookup from client_counts for session token hotlist
+        self.pending_conversation_counts = {}
+        for count in channel_counts:
+            self.pending_conversation_counts[count["id"]] = count
+        for count in client_counts["ims"]:
+            self.pending_conversation_counts[count["id"]] = count
+
         for channel_count in channel_counts:
             if channel_count["id"] in channel_infos:
                 channel_infos[channel_count["id"]]["last_read"] = channel_count[
@@ -587,13 +596,22 @@ class SlackWorkspace(SlackBuffer):
         ):
             await conversation.open_buffer()
 
-        await gather(
-            *(
-                slack_buffer.set_hotlist()
-                for slack_buffer in shared.buffers.values()
-                if isinstance(slack_buffer, SlackMessageBuffer)
+        if self.token_type == "session":
+            # Use counts-based hotlist (no history fetch)
+            for slack_buffer in shared.buffers.values():
+                if isinstance(slack_buffer, SlackConversation):
+                    slack_buffer.set_hotlist_from_counts()
+            # Clear the temporary counts dict
+            self.pending_conversation_counts = {}
+        else:
+            # OAuth path: use existing history-based approach
+            await gather(
+                *(
+                    slack_buffer.set_hotlist()
+                    for slack_buffer in shared.buffers.values()
+                    if isinstance(slack_buffer, SlackMessageBuffer)
+                )
             )
-        )
 
     async def _conversation_if_should_open(self, info: SlackUsersConversations):
         conversation = await self.conversations[info["id"]]
