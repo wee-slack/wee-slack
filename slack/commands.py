@@ -436,6 +436,209 @@ async def command_slack_thread(buffer: str, args: List[str], options: Options):
         await slack_buffer.open_thread(args[0], switch=True)
 
 
+async def _clean_thread_preview(
+    text: str, workspace: SlackWorkspace, max_len: int = 70
+) -> str:
+    """Clean up message text for thread preview display."""
+    # Remove URLs: <https://...|display> or <https://...>
+    text = re.sub(r"<https?://[^>|]+\|([^>]+)>", r"\1", text)  # Keep display text
+    text = re.sub(r"<https?://[^>]+>", "[link]", text)  # Replace bare URLs
+
+    # Resolve user mentions: <@USERID> -> @username
+    user_pattern = re.compile(r"<@([A-Z0-9]+)>")
+    for match in user_pattern.finditer(text):
+        user_id = match.group(1)
+        try:
+            user = await workspace.users[user_id]
+            text = text.replace(match.group(0), f"@{user.nick.format()}")
+        except Exception:
+            text = text.replace(match.group(0), "@someone")
+
+    # Resolve channel mentions: <#CHANNELID|name> -> #name, <#CHANNELID> -> #name
+    text = re.sub(r"<#[A-Z0-9]+\|([^>]+)>", r"#\1", text)
+    channel_pattern = re.compile(r"<#([A-Z0-9]+)>")
+    for match in channel_pattern.finditer(text):
+        channel_id = match.group(1)
+        try:
+            conv = await workspace.conversations[channel_id]
+            text = text.replace(match.group(0), f"#{conv.name()}")
+        except Exception:
+            text = text.replace(match.group(0), "#channel")
+
+    # Resolve subteam mentions: <!subteam^ID|@name> or <!subteam^ID>
+    text = re.sub(r"<!subteam\^[A-Z0-9]+\|@([^>]+)>", r"@\1", text)
+    subteam_pattern = re.compile(r"<!subteam\^([A-Z0-9]+)>")
+    for match in subteam_pattern.finditer(text):
+        subteam_id = match.group(1)
+        try:
+            usergroup = await workspace.usergroups[subteam_id]
+            text = text.replace(match.group(0), f"@{usergroup.handle}")
+        except Exception:
+            text = text.replace(match.group(0), "@group")
+
+    # Collapse whitespace
+    text = re.sub(r"\s+", " ", text).strip()
+
+    # Truncate
+    if len(text) > max_len:
+        text = text[:max_len] + "..."
+
+    return text
+
+
+@weechat_command("-all|-dump|%(slack_workspaces)")
+async def command_slack_threads(buffer: str, args: List[str], options: Options):
+    """List subscribed threads with unread messages (session tokens only).
+
+    Usage:
+        /slack threads        - List threads with unreads
+        /slack threads -all   - List all subscribed threads (including read)
+        /slack threads <N>    - Open thread number N
+        /slack threads -dump  - Dump raw JSON to ~/threads.json
+    """
+    slack_buffer = shared.buffers.get(buffer)
+    if slack_buffer is None:
+        print_error("Must be run from a slack buffer")
+        return
+
+    workspace = slack_buffer.workspace
+    if workspace.token_type != "session":
+        print_error("The /slack threads command only works with session tokens")
+        return
+
+    # Check if user wants to open a specific thread by number
+    if args[0] and args[0].isdigit():
+        thread_num = int(args[0])
+        if not workspace.cached_thread_subscriptions:
+            print_error(
+                "No cached threads. Run /slack threads first to fetch the list."
+            )
+            return
+
+        threads = workspace.cached_thread_subscriptions
+        if thread_num < 1 or thread_num > len(threads):
+            print_error(f"Invalid thread number. Must be between 1 and {len(threads)}.")
+            return
+
+        thread = threads[thread_num - 1]
+        channel_id = thread["root_msg"]["channel"]
+        thread_ts = SlackTs(thread["root_msg"]["thread_ts"])
+
+        # Get or open the conversation
+        conversation = await workspace.conversations[channel_id]
+        if conversation.buffer_pointer is None:
+            await conversation.open_buffer()
+
+        # Fetch the thread to load the parent message
+        parent_message, _ = await conversation.fetch_replies(thread_ts)
+
+        # Create thread buffer if needed and open it
+        if parent_message.thread_buffer is None:
+            parent_message.thread_buffer = SlackThread(parent_message)
+        await parent_message.thread_buffer.open_buffer(switch=True)
+        return
+
+    workspace.print("Fetching thread subscriptions...")
+
+    try:
+        response = await workspace.api.fetch_subscriptions_thread_get_view(limit=50)
+    except Exception as e:
+        print_error(f"Failed to fetch threads: {e}")
+        return
+
+    # Dump to file if -dump option
+    if options.get("dump"):
+        import os
+
+        output_path = os.path.expanduser("~/threads.json")
+        with open(output_path, "w") as f:
+            json.dump(response, f, indent=2)
+        workspace.print(f"Raw JSON written to {output_path}")
+
+    if not response.get("ok"):
+        error = response.get("error", "unknown error")
+        workspace.print(f"Error: {error}")
+        return
+
+    all_threads = response.get("threads", [])
+
+    # Filter to only threads with unreads, unless -all is specified
+    show_all = options.get("all")
+    if show_all:
+        threads = all_threads
+    else:
+        threads = [t for t in all_threads if t.get("unread_replies")]
+
+    # Cache the displayed threads for later reference (so numbers match)
+    workspace.cached_thread_subscriptions = threads
+
+    # Check for mentions (user's ID appears in unread replies)
+    my_user_id = workspace.my_user.id
+    threads_with_mentions = 0
+    for thread in threads:
+        for reply in thread.get("unread_replies", []):
+            reply_text = reply.get("text", "")
+            if f"<@{my_user_id}>" in reply_text:
+                threads_with_mentions += 1
+                break
+
+    # Summary line
+    has_more = response.get("has_more", False)
+    more_indicator = "+" if has_more else ""
+    mention_info = (
+        f", {with_color('lightred', str(threads_with_mentions) + ' with mentions')}"
+        if threads_with_mentions
+        else ""
+    )
+    workspace.print(
+        f"Threads with unreads: {with_color('bold', str(len(threads)) + more_indicator)}{mention_info}"
+    )
+    workspace.print("")
+
+    for i, thread in enumerate(threads, 1):
+        root_msg = thread.get("root_msg", {})
+        channel_id = root_msg.get("channel", "unknown")
+        root_text = await _clean_thread_preview(root_msg.get("text", ""), workspace)
+
+        unread_count = len(thread.get("unread_replies", []))
+
+        # Check if this thread has a mention for the user
+        has_mention = False
+        for reply in thread.get("unread_replies", []):
+            if f"<@{my_user_id}>" in reply.get("text", ""):
+                has_mention = True
+                break
+
+        # Try to get channel name
+        channel_name = channel_id
+        if channel_id in workspace.conversations:
+            try:
+                conv = await workspace.conversations[channel_id]
+                channel_name = conv.name_with_prefix("short_name_without_padding")
+            except Exception:
+                pass
+
+        # Format unread count with color (lightred for mentions, yellow otherwise)
+        unread_str = with_color(
+            "lightred" if has_mention else "yellow", str(unread_count)
+        )
+        mention_marker = with_color("lightred", " @") if has_mention else ""
+
+        workspace.print(
+            f"  {with_color('bold', str(i)):>3}. {with_color('chat_channel', channel_name)} "
+            f"({unread_str} unread){mention_marker}"
+        )
+        workspace.print(f"       {with_color('darkgray', root_text)}")
+
+    if has_more:
+        workspace.print("")
+        workspace.print(
+            with_color("darkgray", "(more threads available, showing first 50)")
+        )
+    workspace.print("")
+    workspace.print("Use /slack threads <N> to open a thread")
+
+
 @weechat_command("-alsochannel|-memessage|%(threads)", min_args=1, alias="reply")
 async def command_slack_reply(buffer: str, args: List[str], options: Options):
     slack_buffer = shared.buffers.get(buffer)
