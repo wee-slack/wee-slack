@@ -8,6 +8,7 @@ import time
 from abc import ABC, abstractmethod
 from typing import (
     TYPE_CHECKING,
+    Any,
     Dict,
     Generic,
     Iterable,
@@ -49,6 +50,7 @@ from slack.weechat_buffer import buffer_new
 
 if TYPE_CHECKING:
     from slack_api.slack_bots_info import SlackBotInfo
+    from slack_api.slack_client_counts import SlackClientCountsThreads
     from slack_api.slack_client_userboot import SlackClientUserbootIm
     from slack_api.slack_usergroups_info import SlackUsergroupInfo
     from slack_api.slack_users_conversations import SlackUsersConversations
@@ -255,6 +257,10 @@ class SlackWorkspace(SlackBuffer):
         self.global_keywords_regex: Optional[re.Pattern[str]] = None
         self.custom_emojis: Dict[str, str] = {}
         self.max_users_per_fetch_request = 512
+        self._pending_thread_counts: Union[
+            SlackClientCountsThreads, Dict[str, object]
+        ] = {}
+        self.cached_thread_subscriptions: List[Any] = []
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.name})"
@@ -507,6 +513,9 @@ class SlackWorkspace(SlackBuffer):
 
         channel_counts = client_counts["channels"] + client_counts["mpims"]
 
+        # Store thread counts for notification
+        self._pending_thread_counts = client_counts.get("threads", {})
+
         for channel_count in channel_counts:
             if channel_count["id"] in channel_infos:
                 channel_infos[channel_count["id"]]["last_read"] = channel_count[
@@ -594,6 +603,30 @@ class SlackWorkspace(SlackBuffer):
                 if isinstance(slack_buffer, SlackMessageBuffer)
             )
         )
+
+        # Handle thread mentions (session tokens only)
+        if self.token_type == "session":
+            thread_mention_count = self._pending_thread_counts.get("mention_count", 0)
+            thread_has_unreads = self._pending_thread_counts.get("has_unreads", False)
+            if isinstance(thread_mention_count, int) and thread_mention_count > 0:
+                # Add hotlist entries to workspace buffer for thread mentions
+                if self.buffer_pointer:
+                    for _ in range(thread_mention_count):
+                        weechat.buffer_set(
+                            self.buffer_pointer, "hotlist", "3"
+                        )  # HIGHLIGHT
+                self.print(
+                    f"You have {thread_mention_count} unread mention(s) in threads. "
+                    f"Use /slack threads to view them."
+                )
+            elif thread_has_unreads:
+                # Add hotlist entry with message priority for unread threads
+                if self.buffer_pointer:
+                    weechat.buffer_set(self.buffer_pointer, "hotlist", "1")  # MESSAGE
+                self.print(
+                    "You have unread thread messages. Use /slack threads to view them."
+                )
+            self._pending_thread_counts = {}
 
     async def _conversation_if_should_open(self, info: SlackUsersConversations):
         conversation = await self.conversations[info["id"]]
