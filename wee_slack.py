@@ -6285,7 +6285,7 @@ def command_nodistractions(data, current_buffer, args):
 def command_upload(data, current_buffer, args):
     """
     /slack upload <filename>
-    Uploads a file to the current buffer.
+    Uploads a file to the current buffer using the v2 API.
     """
     channel = EVENTROUTER.weechat_controller.buffers[current_buffer]
     weechat_dir = w.info_get("weechat_data_dir", "") or w.info_get("weechat_dir", "")
@@ -6303,31 +6303,143 @@ def command_upload(data, current_buffer, args):
             w.prnt("", "ERROR: Could not find file: {}".format(file_path))
             return w.WEECHAT_RC_ERROR
 
+    # Step 1: Request Upload URL
+    file_size = os.path.getsize(file_path)
+    filename = os.path.basename(file_path)
+
     post_data = {
-        "channels": channel.identifier,
+        "filename": filename,
+        "length": file_size,
     }
-    if isinstance(channel, SlackThreadChannel):
-        post_data["thread_ts"] = channel.thread_ts
 
-    request = SlackRequest(channel.team, "files.upload", post_data, channel=channel)
-    options = request.options_as_cli_args() + [
-        "-s",
-        "-Ffile=@{}".format(file_path),
-        request.request_string(),
-    ]
+    # FIX: Get the thread timestamp and convert it to a string explicitly
+    thread_ts = getattr(channel, "thread_ts", None)
+    if thread_ts is not None:
+        thread_ts = str(thread_ts)
 
-    proxy_string = ProxyWrapper().curl()
-    if proxy_string:
-        options.append(proxy_string)
+    context = {
+        "buffer_ptr": current_buffer,
+        "file_path": file_path,
+        "filename": filename,
+        "channel_id": channel.identifier,
+        "thread_ts": thread_ts,  # Now safely a string or None
+    }
+
+    request = SlackRequest(
+        channel.team, "files.getUploadURLExternal", post_data, channel=channel
+    )
+    options = request.options_as_cli_args() + [request.request_string()]
 
     options_hashtable = {"arg{}".format(i + 1): arg for i, arg in enumerate(options)}
+
     w.hook_process_hashtable(
-        "curl", options_hashtable, config.slack_timeout, "upload_callback", ""
+        "curl",
+        options_hashtable,
+        config.slack_timeout,
+        "upload_step_1_got_url",
+        json.dumps(context),
     )
     return w.WEECHAT_RC_OK_EAT
 
 
+# Preserve the completion hook
 command_upload.completion = "%(filename) %-"
+
+
+@utf8_decode
+def upload_step_1_got_url(data, command, return_code, out, err):
+    """
+    Callback for Step 1: Received Upload URL from Slack.
+    Now we must upload the raw file bits to that URL.
+    """
+    context = json.loads(data)
+
+    if return_code != 0:
+        w.prnt(
+            "",
+            "ERROR: Failed to get upload URL. Return code: {}. Err: {}".format(
+                return_code, err
+            ),
+        )
+        return w.WEECHAT_RC_OK_EAT
+
+    try:
+        response = json.loads(out)
+    except Exception:
+        w.prnt(
+            "", "ERROR: Invalid JSON response from Slack (Step 1). Out: {}".format(out)
+        )
+        return w.WEECHAT_RC_OK_EAT
+
+    if not response.get("ok"):
+        w.prnt("", "ERROR: Slack API Error (Step 1): {}".format(response.get("error")))
+        return w.WEECHAT_RC_OK_EAT
+
+    # Extract URL and File ID
+    upload_url = response["upload_url"]
+    file_id = response["file_id"]
+    context["file_id"] = file_id
+
+    # Step 2: Upload the actual file content to the URL provided
+    # We use --data-binary to send raw bytes.
+    options = ["--data-binary", "@{}".format(context["file_path"]), upload_url]
+    options_hashtable = {"arg{}".format(i + 1): arg for i, arg in enumerate(options)}
+
+    # Hook process -> Go to Step 2 Callback
+    w.hook_process_hashtable(
+        "curl",
+        options_hashtable,
+        config.slack_timeout,
+        "upload_step_2_uploaded",
+        json.dumps(context),
+    )
+    return w.WEECHAT_RC_OK_EAT
+
+
+@utf8_decode
+def upload_step_2_uploaded(data, command, return_code, out, err):
+    """
+    Callback for Step 2: File bits uploaded.
+    Now we must tell Slack to complete the upload and show it in the channel.
+    """
+    context = json.loads(data)
+
+    # If curl returns 0, the upload (POST) likely succeeded.
+    if return_code != 0:
+        w.prnt(
+            "",
+            "ERROR: Failed to upload file bits to Slack URL. Return code: {}".format(
+                return_code
+            ),
+        )
+        return w.WEECHAT_RC_OK_EAT
+
+    # Step 3: Complete the upload
+    # We need to retrieve the channel object again to create a valid SlackRequest
+    channel = EVENTROUTER.weechat_controller.buffers.get(context["buffer_ptr"])
+    if not channel:
+        w.prnt("", "ERROR: Buffer was closed before upload completed.")
+        return w.WEECHAT_RC_OK_EAT
+
+    post_data = {
+        "files": [{"id": context["file_id"], "title": context["filename"]}],
+        "channel_id": context["channel_id"],
+    }
+
+    if context.get("thread_ts"):
+        post_data["thread_ts"] = context["thread_ts"]
+
+    request = SlackRequest(
+        channel.team, "files.completeUploadExternal", post_data, channel=channel
+    )
+    options = request.options_as_cli_args() + [request.request_string()]
+    options_hashtable = {"arg{}".format(i + 1): arg for i, arg in enumerate(options)}
+
+    # Final Callback -> Reuse the existing upload_callback for the final success/fail message
+    w.hook_process_hashtable(
+        "curl", options_hashtable, config.slack_timeout, "upload_callback", ""
+    )
+    return w.WEECHAT_RC_OK_EAT
 
 
 @utf8_decode
