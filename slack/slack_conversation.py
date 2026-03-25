@@ -696,9 +696,18 @@ class SlackConversation(SlackMessageBuffer):
             or self.display_thread_replies()
         )
 
+    def _free_old_messages(self):
+        max_count = shared.config.look.messages_max_count.value
+        if max_count <= 0:
+            return
+        while len(self._messages) > max_count:
+            oldest_ts = next(iter(self._messages))
+            del self._messages[oldest_ts]
+            del self.message_hashes[oldest_ts]
+
     async def add_new_message(self, message: SlackMessage):
-        # TODO: Remove old messages
         self._add_or_update_message(message)
+        self._free_old_messages()
 
         parent_message = message.parent_message
         if parent_message:
