@@ -6762,7 +6762,6 @@ def dbg(message, level=0, main_buffer=False, fout=False):
     """
     # TODO: do this smarter
     if level >= config.debug_level:
-        global debug_string
         message = "DEBUG: {}".format(message)
         if fout:
             with open("/tmp/debug.log", "a+") as log_file:
@@ -7163,7 +7162,6 @@ def setup_trace():
 
 
 def trace_calls(frame, event, arg):
-    global f
     if event != "call":
         return
     co = frame.f_code
