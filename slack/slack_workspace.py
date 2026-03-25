@@ -747,6 +747,8 @@ class SlackWorkspace(SlackBuffer):
                 return
             elif data["type"] == "channel_joined" or data["type"] == "group_joined":
                 channel_id = data["channel"]["id"]
+            elif data["type"] == "channel_rename" or data["type"] == "group_rename":
+                channel_id = data["channel"]["id"]
             elif data["type"] == "reaction_added" or data["type"] == "reaction_removed":
                 channel_id = data["item"]["channel"]
             elif (
@@ -859,6 +861,8 @@ class SlackWorkspace(SlackBuffer):
                     await message.update_subscribed(subscribed, data["subscription"])
             elif data["type"] == "sh_room_join" or data["type"] == "sh_room_update":
                 await channel.update_message_room(data)
+            elif data["type"] == "channel_rename" or data["type"] == "group_rename":
+                channel.set_name(str(data["channel"]["name"]))
             elif data["type"] == "user_typing":
                 await channel.typing_add_user(data)
             else:

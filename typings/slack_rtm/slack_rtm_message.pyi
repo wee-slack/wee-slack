@@ -378,6 +378,15 @@ class SlackEmojiChangedRemove(TypedDict):
     names: List[str]
     event_ts: str
 
+class SlackChannelRenameChannel(TypedDict):
+    id: str
+    name: str
+
+@final
+class SlackChannelRename(TypedDict):
+    type: Literal["channel_rename", "group_rename"]
+    channel: SlackChannelRenameChannel
+
 SlackMessageRtm = (
     SlackMessageStandardRtm
     | SlackMessageMeRtm
@@ -431,4 +440,5 @@ SlackRtmMessage = (
     | SlackSubteamSelfRemoved
     | SlackEmojiChangedAdd
     | SlackEmojiChangedRemove
+    | SlackChannelRename
 )
