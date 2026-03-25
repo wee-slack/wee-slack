@@ -18,12 +18,11 @@ FROM alpine:latest
 RUN apk add --no-cache \
 	ca-certificates \
 	python3 \
+	py3-websocket-client \
 	py-pip \
 	weechat \
 	weechat-perl \
 	weechat-python
-
-RUN pip install websocket-client
 
 ENV HOME /home/user
 
