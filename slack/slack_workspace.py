@@ -705,6 +705,18 @@ class SlackWorkspace(SlackBuffer):
                     user = await self.users[user_id]
                     user.update_info_json(data["user"])
                 return
+            elif data["type"] == "presence_change":
+                presence = data["presence"]
+                user_ids = (
+                    data.get("users", [data["user"]])
+                    if "user" in data
+                    else data.get("users", [])
+                )
+                for uid in user_ids:
+                    if uid in self.users:
+                        user = await self.users[uid]
+                        user.set_presence(presence)
+                return
             elif data["type"] == "user_invalidated":
                 user_id = data["user"]["id"]
                 if user_id in self.users:
