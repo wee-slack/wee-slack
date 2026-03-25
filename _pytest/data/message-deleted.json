@@ -1,9 +1,0 @@
-{
-    "type": "message",
-    "subtype": "message_deleted",
-    "hidden": true,
-    "channel": "C2147483705",
-    "ts": "1358878755.000001",
-    "deleted_ts": "1355517519.000005",
-    "_server": "test.slack.com"
-}

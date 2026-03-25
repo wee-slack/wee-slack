@@ -1,1 +1,0 @@
-{"event_ts": "1485975723.881563", "ts": "1485975723.000006", "subtype": "message_deleted", "hidden": true, "previous_message": {"text": "surely", "type": "message", "user": "U407ABLLW", "ts": "1485975698.000002"}, "type": "message", "wee_slack_metadata": {"team": "d80c2b6c3127dbb1991917394ed219e8212a2606"}, "channel": "G3ZGMF4RZ", "deleted_ts": "1485975698.000002"}
