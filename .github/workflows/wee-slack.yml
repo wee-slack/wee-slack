@@ -22,6 +22,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - uses: astral-sh/setup-uv@v5
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install libleveldb-dev
+
       - run: uv sync --locked --all-extras
 
       - run: uv run ruff format --check
