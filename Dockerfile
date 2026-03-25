@@ -5,7 +5,7 @@
 # 		docker run -it \
 # 			-v /etc/localtime:/etc/localtime:ro \ # for your time
 # 			wee-slack
-# 	Running (saved state; note that in this case you need wee_slack.py in the ~/.local/share/weechat/python directory outside docker)
+# 	Running (saved state; note that in this case you need slack.py in the ~/.local/share/weechat/python directory outside docker)
 # 		docker run -it -u $(id -u):$(id -g) \
 # 			-v /etc/localtime:/etc/localtime:ro \ # for your time
 # 			-v "${HOME}/.config/weechat:/home/user/.config/weechat" \
@@ -26,7 +26,7 @@ RUN apk add --no-cache \
 
 ENV HOME /home/user
 
-COPY wee_slack.py /home/user/.local/share/weechat/python/autoload/wee_slack.py
+COPY build/slack.py /home/user/.local/share/weechat/python/autoload/slack.py
 
 RUN adduser -S user -h $HOME \
 	&& chown -R user $HOME
