@@ -517,10 +517,6 @@ class SlackWorkspace(SlackBuffer):
             im["id"]: im for im in user_boot["ims"]
         }
 
-        for im in im_infos.values():
-            # latest is incorrectly set to the current timestamp for all conversations, so delete it
-            del im["latest"]
-
         for im_count in client_counts["ims"]:
             if im_count["id"] in im_infos:
                 im_infos[im_count["id"]]["last_read"] = im_count["last_read"]
