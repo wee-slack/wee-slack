@@ -577,7 +577,11 @@ class EventRouter(object):
             random.choice(string.ascii_uppercase + string.digits) for _ in range(40)
         )
         self.context[identifier] = data
-        dbg("stored context {} {} ".format(identifier, data.url))
+        if isinstance(data, dict):
+            url = data.get("url", "")
+        else:
+            url = getattr(data, "url", "")
+        dbg("stored context {} {} ".format(identifier, url))
         return identifier
 
     def retrieve_context(self, identifier):
@@ -6322,35 +6326,82 @@ def command_upload(data, current_buffer, args):
             w.prnt("", "ERROR: Could not find file: {}".format(file_path))
             return w.WEECHAT_RC_ERROR
 
+    filename = os.path.basename(file_path)
     post_data = {
-        "channels": channel.identifier,
+        "filename": filename,
+        "length": os.path.getsize(file_path),
     }
-    if isinstance(channel, SlackThreadChannel):
-        post_data["thread_ts"] = channel.thread_ts
+    metadata = {
+        "file_path": file_path,
+        "filename": filename,
+        "thread_ts": getattr(channel, "thread_ts", None),
+    }
 
-    request = SlackRequest(channel.team, "files.upload", post_data, channel=channel)
-    options = request.options_as_cli_args() + [
-        "-s",
-        "-Ffile=@{}".format(file_path),
-        request.request_string(),
-    ]
-
-    proxy_string = ProxyWrapper().curl()
-    if proxy_string:
-        options.append(proxy_string)
-
-    options_hashtable = {"arg{}".format(i + 1): arg for i, arg in enumerate(options)}
-    w.hook_process_hashtable(
-        "curl", options_hashtable, config.slack_timeout, "upload_callback", ""
+    request = SlackRequest(
+        channel.team,
+        "files.getUploadURLExternal",
+        post_data,
+        channel=channel,
+        callback=upload_get_url_callback,
+        metadata=metadata,
     )
+    EVENTROUTER.receive(request)
     return w.WEECHAT_RC_OK_EAT
 
 
 command_upload.completion = "%(filename) %-"
 
 
+def upload_get_url_callback(response, eventrouter, team, channel, metadata):
+    if not response.get("ok"):
+        w.prnt(
+            "",
+            "ERROR: Couldn't get upload URL. Error: {}".format(response.get("error")),
+        )
+        return
+
+    upload_url = response["upload_url"]
+    file_id = response["file_id"]
+    file_path = metadata["file_path"]
+
+    context_data = {
+        "url": upload_url,
+        "team": team,
+        "channel": channel,
+        "file_id": file_id,
+        "thread_ts": metadata.get("thread_ts"),
+        "filename": metadata.get("filename"),
+    }
+    context_id = eventrouter.store_context(context_data)
+
+    options = [
+        "-s",
+        "-H",
+        "Content-Type: application/octet-stream",
+        "--data-binary",
+        "@" + file_path,
+        upload_url,
+    ]
+    proxy_string = ProxyWrapper().curl()
+    if proxy_string:
+        options.append(proxy_string)
+
+    options_hashtable = {"arg{}".format(i + 1): arg for i, arg in enumerate(options)}
+    w.hook_process_hashtable(
+        "curl",
+        options_hashtable,
+        config.slack_timeout,
+        "upload_file_callback",
+        context_id,
+    )
+
+
 @utf8_decode
-def upload_callback(data, command, return_code, out, err):
+def upload_file_callback(data, command, return_code, out, err):
+    context_data = EVENTROUTER.retrieve_context(data)
+    if not context_data:
+        return w.WEECHAT_RC_OK_EAT
+
     if return_code != 0:
         w.prnt(
             "",
@@ -6358,19 +6409,41 @@ def upload_callback(data, command, return_code, out, err):
                 return_code, err
             ),
         )
+        EVENTROUTER.delete_context(data)
         return w.WEECHAT_RC_OK_EAT
 
-    try:
-        response = json.loads(out)
-    except JSONDecodeError:
-        w.prnt(
-            "", "ERROR: Couldn't process response from file upload. Got: {}".format(out)
-        )
-        return w.WEECHAT_RC_OK_EAT
+    team = context_data["team"]
+    channel = context_data["channel"]
+    file_id = context_data["file_id"]
+    thread_ts = context_data.get("thread_ts")
+    filename = context_data.get("filename")
 
-    if not response["ok"]:
-        w.prnt("", "ERROR: Couldn't upload file. Error: {}".format(response["error"]))
+    post_data = {
+        "files": json.dumps([{"id": file_id, "title": filename}]),
+        "channel_id": channel.identifier,
+    }
+    if thread_ts:
+        post_data["thread_ts"] = thread_ts
+
+    request = SlackRequest(
+        team,
+        "files.completeUploadExternal",
+        post_data,
+        channel=channel,
+        callback=upload_complete_callback,
+    )
+    EVENTROUTER.receive(request)
+
+    EVENTROUTER.delete_context(data)
     return w.WEECHAT_RC_OK_EAT
+
+
+def upload_complete_callback(response, eventrouter, team, channel, metadata):
+    if not response.get("ok"):
+        w.prnt(
+            "",
+            "ERROR: Couldn't complete upload. Error: {}".format(response.get("error")),
+        )
 
 
 @utf8_decode
