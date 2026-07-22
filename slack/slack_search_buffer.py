@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Optional, Set
+from typing import TYPE_CHECKING, Dict, List, Optional, Set
 
 import weechat
 
@@ -17,10 +18,11 @@ from slack.weechat_buffer import buffer_new
 
 if TYPE_CHECKING:
     from slack_api.slack_conversations_info import SlackConversationsInfoPublic
+    from slack_api.slack_search_messages import SlackSearchMessageMatch
     from slack_api.slack_users_info import SlackUserInfo
     from typing_extensions import Literal, assert_never
 
-    SearchType = Literal["channels", "users"]
+    SearchType = Literal["channels", "users", "messages"]
 
 
 @dataclass
@@ -75,16 +77,19 @@ class SlackSearchBuffer(SlackBuffer):
             buffer_name = (
                 f"{shared.SCRIPT_NAME}.search.{self.workspace.name}.{self.search_type}"
             )
-            buffer_props = {
+            buffer_props: Dict[str, str] = {
                 "type": "free",
                 "display": "1",
                 "key_bind_up": "/slack search -up",
                 "key_bind_down": "/slack search -down",
-                "key_bind_ctrl-j": "/slack search -join_channel",
                 "key_bind_meta-comma": "/slack search -mark",
                 "key_bind_shift-up": "/slack search -up; /slack search -mark",
                 "key_bind_shift-down": "/slack search -mark; /slack search -down",
             }
+            # Joining/opening is only meaningful for channels and users. Jumping
+            # to a message result is not implemented yet.
+            if self.search_type != "messages":
+                buffer_props["key_bind_ctrl-j"] = "/slack search -join_channel"
 
             self._buffer_pointer = buffer_new(
                 buffer_name,
@@ -110,7 +115,9 @@ class SlackSearchBuffer(SlackBuffer):
             if searching
             else f"First {len(self._lines)} matching {self.search_type}"
         )
-        title = f"{matches} | Filter: {self._query or '*'} | Key(input): ctrl+j=join channel, ($)=refresh, (q)=close buffer"
+        join_key = "" if self.search_type == "messages" else "ctrl+j=join channel, "
+        keys = f"{join_key}($)=refresh, (q)=close buffer"
+        title = f"{matches} | Filter: {self._query or '*'} | Key(input): {keys}"
         weechat.buffer_set(self.buffer_pointer, "title", title)
 
     def mark_line(self, y: int):
@@ -179,6 +186,28 @@ class SlackSearchBuffer(SlackBuffer):
 
         return f"{name}{real_name_str}{title_str}{status_str}"
 
+    def format_message(self, match: SlackSearchMessageMatch) -> str:
+        channel = match["channel"]
+        channel_name = channel.get("name")
+        if channel_name:
+            prefix = "#" if not channel.get("is_im") else ""
+            channel_str = f"{prefix}{channel_name}"
+        else:
+            channel_str = channel["id"]
+
+        sender = match.get("username") or match.get("user") or "?"
+
+        try:
+            timestamp = float(match["ts"])
+            date_str = time.strftime("%Y-%m-%d %H:%M", time.localtime(timestamp))
+        except (KeyError, ValueError):
+            date_str = ""
+        date_part = f"{date_str} " if date_str else ""
+
+        text = match.get("text", "").replace("\n", " ")
+
+        return f"[{channel_str}] {date_part}<{sender}> {text}"
+
     async def search(self, query: Optional[str] = None):
         if self.buffer_pointer is None:
             return
@@ -213,6 +242,19 @@ class SlackSearchBuffer(SlackBuffer):
                 for user in results["results"]
                 if user["id"] not in marked_lines_ids
             ]
+        elif self.search_type == "messages":
+            messages_results = await self.workspace.api.fetch_search_messages(
+                self._query
+            )
+            self._lines = marked_lines + [
+                BufferLine(
+                    "messages",
+                    self.format_message(match),
+                    f"{match['channel']['id']}:{match['ts']}",
+                )
+                for match in messages_results["messages"]["matches"]
+                if f"{match['channel']['id']}:{match['ts']}" not in marked_lines_ids
+            ]
         else:
             assert_never(self.search_type)
         self._marked_lines = set(range(len(marked_lines)))
@@ -227,6 +269,10 @@ class SlackSearchBuffer(SlackBuffer):
             self.print(i)
 
     async def join_channel(self):
+        # Jumping to a message result is not implemented yet.
+        if self.search_type == "messages":
+            return
+
         marked_lines = (
             self._marked_lines if self._marked_lines else {self.selected_line}
         )

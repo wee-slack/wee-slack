@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from slack_api.slack_files_info import SlackFilesInfoResponse
     from slack_api.slack_profile import SlackSetProfile, SlackUsersProfileSetResponse
     from slack_api.slack_rtm_connect import SlackRtmConnectResponse
+    from slack_api.slack_search_messages import SlackSearchMessagesResponse
     from slack_api.slack_team_info import SlackTeamInfoResponse
     from slack_api.slack_usergroups_info import SlackUsergroupsInfoResponse
     from slack_api.slack_users_conversations import SlackUsersConversationsResponse
@@ -191,6 +192,19 @@ class SlackApi(SlackApiCommon):
         response: SlackRtmConnectResponse = await self._fetch(method)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response)
+        return response
+
+    async def fetch_search_messages(self, query: str):
+        method = "search.messages"
+        params: Params = {
+            "query": query,
+            "count": 25,
+            "sort": "timestamp",
+            "highlight": False,
+        }
+        response: SlackSearchMessagesResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
         return response
 
     async def fetch_users_get_prefs(self, prefs: Optional[str] = None):
