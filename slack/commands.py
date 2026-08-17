@@ -524,7 +524,7 @@ async def command_slack_mute(buffer: str, args: List[str], options: Options):
     )
 
 
-@weechat_command("channels|users", max_split=1)
+@weechat_command("channels|users|messages", max_split=1)
 async def command_slack_search(buffer: str, args: List[str], options: Options):
     if args[0] == "":
         search_buffer = next(
@@ -552,7 +552,7 @@ async def command_slack_search(buffer: str, args: List[str], options: Options):
         if slack_buffer is None:
             return
 
-        if args[0] == "channels" or args[0] == "users":
+        if args[0] == "channels" or args[0] == "users" or args[0] == "messages":
             search_buffer = slack_buffer.workspace.search_buffers.get(args[0])
             query = args[1] if len(args) > 1 else None
             if search_buffer is not None:
