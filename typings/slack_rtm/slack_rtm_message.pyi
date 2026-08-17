@@ -212,6 +212,16 @@ class SlackChannelLeft(TypedDict):
     actor_id: str
     event_ts: str
 
+@final
+class SlackChannelRenameChannel(TypedDict):
+    id: str
+    name: str
+
+@final
+class SlackChannelRename(TypedDict):
+    type: Literal["channel_rename", "group_rename"]
+    channel: SlackChannelRenameChannel
+
 class SlackNotImMarked(TypedDict):
     channel: str
     ts: str
@@ -411,6 +421,7 @@ SlackRtmMessage = (
     | SlackMpimClose
     | SlackChannelJoined
     | SlackChannelLeft
+    | SlackChannelRename
     | SlackChannelMarked
     | SlackGroupMarked
     | SlackMpImMarked

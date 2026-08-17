@@ -347,6 +347,10 @@ class SlackConversation(SlackMessageBuffer):
             return " | ".join(part for part in parts if part)
         return topic
 
+    def set_name(self, name: str):
+        self._info["name"] = name
+        self.update_buffer_props()
+
     def set_topic(self, title: str):
         self._topic["value"] = title
         self.update_buffer_props()

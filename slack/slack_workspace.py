@@ -745,7 +745,12 @@ class SlackWorkspace(SlackBuffer):
                     for name in data["names"]:
                         self.custom_emojis.pop(name, None)
                 return
-            elif data["type"] == "channel_joined" or data["type"] == "group_joined":
+            elif (
+                data["type"] == "channel_joined"
+                or data["type"] == "group_joined"
+                or data["type"] == "channel_rename"
+                or data["type"] == "group_rename"
+            ):
                 channel_id = data["channel"]["id"]
             elif data["type"] == "reaction_added" or data["type"] == "reaction_removed":
                 channel_id = data["item"]["channel"]
@@ -859,6 +864,8 @@ class SlackWorkspace(SlackBuffer):
                     await message.update_subscribed(subscribed, data["subscription"])
             elif data["type"] == "sh_room_join" or data["type"] == "sh_room_update":
                 await channel.update_message_room(data)
+            elif data["type"] == "channel_rename" or data["type"] == "group_rename":
+                channel.set_name(data["channel"]["name"])
             elif data["type"] == "user_typing":
                 await channel.typing_add_user(data)
             else:
