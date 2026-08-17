@@ -212,6 +212,7 @@ class SlackChannelLeft(TypedDict):
     actor_id: str
     event_ts: str
 
+@final
 class SlackChannelRenameChannel(TypedDict):
     id: str
     name: str

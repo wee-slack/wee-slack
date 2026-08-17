@@ -865,7 +865,7 @@ class SlackWorkspace(SlackBuffer):
             elif data["type"] == "sh_room_join" or data["type"] == "sh_room_update":
                 await channel.update_message_room(data)
             elif data["type"] == "channel_rename" or data["type"] == "group_rename":
-                channel.set_name(str(data["channel"]["name"]))
+                channel.set_name(data["channel"]["name"])
             elif data["type"] == "user_typing":
                 await channel.typing_add_user(data)
             else:
