@@ -77,6 +77,7 @@ class SlackConversationsInfoIm(SlackConversationsInfoCommon):
     is_open: bool
     priority: int
     topic: NotRequired[SlackTopic]
+    name: NotRequired[str]  # not an API property, but included so we can set it
 
 SlackConversationsInfoNotIm = (
     SlackConversationsInfoPublic

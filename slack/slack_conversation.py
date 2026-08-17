@@ -348,7 +348,7 @@ class SlackConversation(SlackMessageBuffer):
         return topic
 
     def set_name(self, name: str):
-        self._info["name"] = name  # pyright: ignore [reportGeneralTypeIssues]
+        self._info["name"] = name
         self.update_buffer_props()
 
     def set_topic(self, title: str):

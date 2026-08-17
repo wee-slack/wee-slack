@@ -41,6 +41,7 @@ class SlackClientUserbootIm(TypedDict):
     latest: NotRequired[str]
     is_open: bool
     topic: NotRequired[SlackTopic]
+    name: NotRequired[str]  # not an API property, but included so we can set it
 
 @final
 class SlackClientUserbootSubteams(TypedDict):
