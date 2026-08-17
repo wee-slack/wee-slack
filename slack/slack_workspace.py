@@ -745,9 +745,12 @@ class SlackWorkspace(SlackBuffer):
                     for name in data["names"]:
                         self.custom_emojis.pop(name, None)
                 return
-            elif data["type"] == "channel_joined" or data["type"] == "group_joined":
-                channel_id = data["channel"]["id"]
-            elif data["type"] == "channel_rename" or data["type"] == "group_rename":
+            elif (
+                data["type"] == "channel_joined"
+                or data["type"] == "group_joined"
+                or data["type"] == "channel_rename"
+                or data["type"] == "group_rename"
+            ):
                 channel_id = data["channel"]["id"]
             elif data["type"] == "reaction_added" or data["type"] == "reaction_removed":
                 channel_id = data["item"]["channel"]
