@@ -790,11 +790,12 @@ class SlackConversation(SlackMessageBuffer):
 
         user = await self.workspace.users[data["user"]]
         if "thread_ts" not in data:
-            weechat.hook_signal_send(
-                "typing_set_nick",
-                weechat.WEECHAT_HOOK_SIGNAL_STRING,
-                f"{self.buffer_pointer};typing;{user.nick.format()}",
-            )
+            if self.buffer_pointer is not None:
+                weechat.hook_signal_send(
+                    "typing_set_nick",
+                    weechat.WEECHAT_HOOK_SIGNAL_STRING,
+                    f"{self.buffer_pointer};typing;{user.nick.format()}",
+                )
         else:
             thread_ts = SlackTs(data["thread_ts"])
             parent_message = self._messages.get(thread_ts)
