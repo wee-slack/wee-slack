@@ -241,6 +241,13 @@ class SlackConfigSectionLook:
             True,
         )
 
+        self.messages_max_count = WeeChatOption(
+            self._section,
+            "messages_max_count",
+            "maximum number of messages to keep in memory per conversation (0 = unlimited); oldest messages are freed when this limit is exceeded",
+            10000,
+        )
+
         self.muted_conversations_notify: WeeChatOption[
             Literal["none", "personal_highlights", "all_highlights", "all"]
         ] = WeeChatOption(
