@@ -388,6 +388,13 @@ class SlackEmojiChangedRemove(TypedDict):
     names: List[str]
     event_ts: str
 
+@final
+class SlackPresenceChange(TypedDict):
+    type: Literal["presence_change"]
+    user: NotRequired[str]
+    users: NotRequired[List[str]]
+    presence: str
+
 SlackMessageRtm = (
     SlackMessageStandardRtm
     | SlackMessageMeRtm
@@ -442,4 +449,5 @@ SlackRtmMessage = (
     | SlackSubteamSelfRemoved
     | SlackEmojiChangedAdd
     | SlackEmojiChangedRemove
+    | SlackPresenceChange
 )

@@ -96,6 +96,7 @@ class SlackUser:
     def __init__(self, workspace: SlackWorkspace, info: SlackUserInfo):
         self.workspace = workspace
         self._info = info
+        self.presence: str = info.get("presence", "active") or "active"
 
     @classmethod
     async def create(cls, workspace: SlackWorkspace, id: str):
@@ -139,6 +140,13 @@ class SlackUser:
     def nick(self) -> Nick:
         nick = name_from_user_info(self.workspace, self._info)
         return get_user_nick(nick, self.is_external, self.is_self)
+
+    def set_presence(self, presence: str):
+        if self.presence == presence:
+            return
+        self.presence = presence
+        for conversation in self.workspace.open_conversations.values():
+            conversation.nicklist_set_presence(self.nick, presence)
 
     def update_info_json(self, info_json: SlackUserInfo):
         self._info.update(info_json)  # pyright: ignore [reportArgumentType, reportCallIssue]

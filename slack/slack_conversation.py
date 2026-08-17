@@ -603,20 +603,38 @@ class SlackConversation(SlackMessageBuffer):
                     *(self.workspace.users[user_id] for user_id in members)
                 )
                 for user in users:
-                    self.nicklist_add_nick(user.nick)
+                    self.nicklist_add_nick(user.nick, user.presence)
 
-    def nicklist_add_nick(self, nick: Nick):
+    def nicklist_add_nick(self, nick: Nick, presence: str = "active"):
         if nick in self._nicklist or self.type == "im" or self.buffer_pointer is None:
             return
 
-        # TODO: weechat.color.nicklist_away
-        color = nick.color if shared.config.look.color_nicks_in_nicklist else ""
+        if presence == "away":
+            color = weechat.color("nicklist_away")
+        elif shared.config.look.color_nicks_in_nicklist:
+            color = nick.color
+        else:
+            color = ""
         visible = 1 if nick.type == "user" else 0
 
         nick_pointer = weechat.nicklist_add_nick(
             self.buffer_pointer, "", nick.raw_nick, color, nick.suffix, "", visible
         )
         self._nicklist[nick] = nick_pointer
+
+    def nicklist_set_presence(self, nick: Nick, presence: str):
+        if self.type == "im" or self.buffer_pointer is None:
+            return
+        if nick not in self._nicklist:
+            return
+        nick_pointer = self._nicklist[nick]
+        if presence == "away":
+            color = weechat.color("nicklist_away")
+        elif shared.config.look.color_nicks_in_nicklist:
+            color = nick.color
+        else:
+            color = ""
+        weechat.nicklist_nick_set(self.buffer_pointer, nick_pointer, "color", color)
 
     def nicklist_remove_nick(self, nick: Nick):
         if self.type == "im" or self.buffer_pointer is None:
