@@ -461,6 +461,20 @@ class SlackApi(SlackApiCommon):
             raise SlackApiError(self.workspace, method, response, params)
         return response
 
+    async def fetch_subscriptions_thread_get_view(
+        self,
+        current_ts: Optional[str] = None,
+        limit: int = 50,
+    ):
+        """Fetch subscribed threads (internal API, session tokens only)."""
+        method = "subscriptions.thread.getView"
+        params: Params = {"limit": limit}
+        if current_ts is not None:
+            params = {**params, "current_ts": current_ts}
+        response = await self._fetch(method, params)
+        # Don't raise on error - this is an undocumented API that may not work
+        return response
+
     async def chat_command(
         self,
         conversation: SlackConversation,
