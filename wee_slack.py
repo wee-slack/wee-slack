@@ -1055,6 +1055,7 @@ def buffer_input_callback(signal, buffer_ptr, data):
         data,
     )
     substitute = re.match("{}?s/".format(MESSAGE_ID_REGEX_STRING), data)
+    edit = re.match("{}?>EDIT".format(MESSAGE_ID_REGEX_STRING), data)
     if reaction:
         emoji = reaction.group("emoji_char") or reaction.group("emoji_name")
         if reaction.group("reaction_change") == "+":
@@ -1077,6 +1078,9 @@ def buffer_input_callback(signal, buffer_ptr, data):
             channel.edit_nth_previous_message(
                 substitute.group("msg_id"), old, new, flags
             )
+    elif edit:
+        start = re.search(r"EDIT\s*(\S|$)", data).start(1)
+        channel.edit_nth_previous_message_full(edit.group("msg_id"), data[start:])
     else:
         if data.startswith(("//", " ")):
             data = data[1:]
@@ -2037,6 +2041,33 @@ class SlackChannelCommon(object):
             self.team, method, data, channel=self, metadata={"reaction": reaction}
         )
         self.eventrouter.receive(s)
+
+    def edit_nth_previous_message_full(self, msg_id, new_message_text):
+        message_filter = (
+            lambda message: message.user_identifier == self.team.myidentifier
+        )
+        message = self.message_from_hash_or_index(msg_id, message_filter)
+        if message is None:
+            if msg_id:
+                print_error(
+                    "Invalid id given, must be an existing id to one of your "
+                    + "messages or a number greater than 0 and less than the number "
+                    + "of your messages in the channel"
+                )
+            else:
+                print_error("You don't have any messages in this channel")
+            return
+        old_message_text = message.message_json["text"]
+        if new_message_text != old_message_text:
+            post_data = {
+                "channel": self.identifier,
+                "ts": message.ts,
+                "text": new_message_text,
+            }
+            s = SlackRequest(self.team, "chat.update", post_data, channel=self)
+            self.eventrouter.receive(s)
+        else:
+            print_error("The message was unchanged", warning=True)
 
     def edit_nth_previous_message(self, msg_id, old, new, flags):
         message_filter = (
@@ -6552,6 +6583,18 @@ def line_event_cb(data, signal, hashtable):
         elif data == "thread":
             w.command(buffer_pointer, "/cursor stop")
             w.command(buffer_pointer, "/thread {}".format(message_hash))
+        elif data == "edit":
+            w.command(buffer_pointer, "/cursor stop")
+            message = channel.message_from_hash(message_hash)
+            if message is not None:
+                if message.user_identifier != channel.team.myidentifier:
+                    print_error("You can only edit your own message", warning=True)
+                else:
+                    text = "{}>EDIT\n{}".format(
+                        message_hash, message.message_json["text"]
+                    )
+                    w.buffer_set(buffer_pointer, "input", text)
+                    w.buffer_set(buffer_pointer, "input_pos", "0")
     return w.WEECHAT_RC_OK
 
 
@@ -6802,6 +6845,7 @@ def setup_hooks():
             "@chat(python.*):M": "hsignal:slack_cursor_message",
             "@chat(python.*):R": "hsignal:slack_cursor_reply",
             "@chat(python.*):T": "hsignal:slack_cursor_thread",
+            "@chat(python.*):E": "hsignal:slack_cursor_edit",
         },
     )
 
@@ -6811,6 +6855,7 @@ def setup_hooks():
     w.hook_hsignal("slack_cursor_message", "line_event_cb", "message")
     w.hook_hsignal("slack_cursor_reply", "line_event_cb", "reply")
     w.hook_hsignal("slack_cursor_thread", "line_event_cb", "thread")
+    w.hook_hsignal("slack_cursor_edit", "line_event_cb", "edit")
 
     w.hook_info(
         "slack_message",
