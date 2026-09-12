@@ -48,6 +48,7 @@ Features
   * Emoji reactions
   * Edited messages work just like the official clients, where the original message changes and has (edited) appended.
   * Unfurled urls dont generate a new message, but replace the original with more info as it is received.
+  * Message editing
   * Regex message editing (s/oldtext/newtext/)
   * Smarter redraw of dynamic buffer info (much lower CPU %)
   * Multiple Teams supported. Just add multiple api tokens separated by commas
@@ -277,6 +278,18 @@ Modify 3rd previous message using regex:
 3s/old text/new text/
 ```
 
+Modify previous message directly:
+```
+>EDIT new text
+```
+
+Modify 5th previous message directly:
+```
+5>EDIT
+the new text can also be
+spread across multiple lines
+```
+
 The regex also supports the flags `g` for replacing all instances, `i` for
 ignoring case, `m` for making `^` and `$` match the start/end of each line and
 `s` for making `.` match a newline too. Use them by appending one or more of
@@ -340,11 +353,12 @@ and pressing tab.
 
 The cursor mode and mouse mode can be used to interact with older messages, for editing, deleting, reacting and replying to a message. Mouse mode can be toggled by pressing `Alt`+`m` and cursor mode can be entered by running `/cursor` (see `/help cursor`).
 
-If mouse mode is enabled, the default behavior when right-clicking on a message is to paste its id in the input. It can be used in `/reply`, `s/` substitution/deletion and in `+:emoji:` commands instead of a message number.
+If mouse mode is enabled, the default behavior when right-clicking on a message is to paste its id in the input. It can be used in `/reply`, `s/` substitution/deletion, `>EDIT` editing, and in `+:emoji:` commands instead of a message number.
 It can also be used as an argument to the `/slack linkarchive` command.
 
 In cursor mode, the `M` key achieves the same result (memo: the default for WeeChat is to paste the message with `m`, `M` simply copies the id).
 In addition, `R` will prepare a `/reply id` and `D` will delete the message (provided it's yours).
+`E` will copy the message (if it is your own) and prepend it with `<message id>>EDIT` so you can edit it.
 `T` will open the thread associated to a message, equivalent to `/thread id`
 `L` will call the `/slack linkarchive` command behind the hood and paste it to the current input.
 
@@ -354,6 +368,7 @@ Default key bindings:
 ```
 /key bindctxt mouse @chat(python.*):button2 hsignal:slack_mouse
 /key bindctxt cursor @chat(python.*):D hsignal:slack_cursor_delete
+/key bindctxt cursor @chat(python.*):E hsignal:slack_cursor_edit
 /key bindctxt cursor @chat(python.*):L hsignal:slack_cursor_linkarchive
 /key bindctxt cursor @chat(python.*):M hsignal:slack_cursor_message
 /key bindctxt cursor @chat(python.*):R hsignal:slack_cursor_reply
