@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from itertools import chain
 from typing import (
     TYPE_CHECKING,
@@ -13,7 +14,7 @@ from typing import (
 from urllib.parse import urlencode
 
 from slack.error import HttpError, SlackApiError
-from slack.http import http_request
+from slack.http import hook_process_hashtable, http_request
 from slack.shared import shared
 from slack.slack_message import SlackTs
 from slack.task import gather
@@ -418,6 +419,39 @@ class SlackApi(SlackApiCommon):
         method = "conversations.join"
         params: Params = {"channel": conversation_id}
         response: SlackConversationsJoinResponse = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+        return response
+
+    async def upload_file(
+        self, conversation_id: str, path: str, thread_ts: Optional[SlackTs] = None
+    ):
+        method = "files.getUploadURLExternal"
+        params: Params = {
+            "filename": os.path.basename(path),
+            "length": os.path.getsize(path),
+        }
+        response = await self._fetch(method, params)
+        if response["ok"] is False:
+            raise SlackApiError(self.workspace, method, response, params)
+
+        upload_url: str = response["upload_url"]
+        _, return_code, _, err = await hook_process_hashtable(
+            "curl",
+            {"arg1": "-sSf", "arg2": "-F", "arg3": f"file=@{path}", "arg4": upload_url},
+            self.workspace.config.network_timeout.value * 1000,
+        )
+        if return_code != 0:
+            raise HttpError(upload_url, {}, return_code, None, err)
+
+        method = "files.completeUploadExternal"
+        params = {
+            "files": json.dumps([{"id": response["file_id"]}]),
+            "channel_id": conversation_id,
+        }
+        if thread_ts is not None:
+            params["thread_ts"] = thread_ts
+        response = await self._fetch(method, params)
         if response["ok"] is False:
             raise SlackApiError(self.workspace, method, response, params)
         return response
