@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import pprint
 import re
 from dataclasses import dataclass
@@ -477,6 +478,21 @@ async def command_slack_memessage(buffer: str, args: List[str], options: Options
     slack_buffer = shared.buffers.get(buffer)
     if isinstance(slack_buffer, SlackMessageBuffer):
         await slack_buffer.post_message(args[0], message_type="me_message")
+
+
+@weechat_command("%(filename)", min_args=1)
+async def command_slack_upload(buffer: str, args: List[str], options: Options):
+    slack_buffer = shared.buffers.get(buffer)
+    path = os.path.expanduser(args[0])
+    if not os.path.isfile(path):
+        print_error(f"File not found: {path}")
+        return
+    if isinstance(slack_buffer, SlackThread):
+        await slack_buffer.api.upload_file(
+            slack_buffer.parent.conversation.id, path, slack_buffer.parent.ts
+        )
+    elif isinstance(slack_buffer, SlackConversation):
+        await slack_buffer.api.upload_file(slack_buffer.id, path)
 
 
 @weechat_command("away|active")
